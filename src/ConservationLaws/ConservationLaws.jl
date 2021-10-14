@@ -6,6 +6,6 @@ module ConservationLaws
     abstract type SteadyConservationLaw  <: AbstractConservationLaw end
     abstract type UnsteadyConservationLaw  <: AbstractConservationLaw end
 
-    include("LinearAdvection.jl")
+    include("linear_advection.jl")
 
 end
