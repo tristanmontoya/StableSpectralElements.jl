@@ -4,4 +4,5 @@ authors = ["Tristan Montoya <montoya.tristan@gmail.com>"]
 version = "0.1.0"
 
 [deps]
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"

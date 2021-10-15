@@ -1,14 +1,30 @@
-struct ConstantCoefficientLinearAdvectionEquation <: UnsteadyConservationLaw 
-    d::Int64
-    n_eq::Int64
-    a::Array{Float64}
+abstract type AbstractConstantLinearAdvectionEquation <: AbstractConservationLaw 
 end
 
-function ConstantCoefficientLinearAdvectionEquation(a::Array{Float64})
-    d = length(a)
-    return ConstantCoefficientLinearAdvectionEquation(d,1,a)
+struct ConstantLinearAdvectionEquation1D <: AbstractConstantLinearAdvectionEquation 
+    N_d::Int64 # spatial dimension
+    N_eq::Int64 # number of equations
+    a::Float64 # advection velocity
 end
 
-function first_order_flux(conservation_law::ConstantCoefficientLinearAdvectionEquation)
-    return u ->  u .* conservation_law.a
+
+struct ConstantLinearAdvectionEquation2D <: AbstractConstantLinearAdvectionEquation 
+    N_d::Int64 # spatial dimension
+    N_eq::Int64 # number of equations
+    a::Vector{Float64} # advection velocity
+end
+
+
+function ConstantLinearAdvectionEquation1D(a::Float64)
+    return ConstantLinearAdvectionEquation1D(1,1,a)
+end 
+
+
+function ConstantLinearAdvectionEquation2D(a::Vector{Float64})
+    return ConstantLinearAdvectionEquation2D(2,1,a)
+end
+
+
+function first_order_flux(cl::AbstractConstantLinearAdvectionEquation)
+    return u -> u .* cl.a
 end
