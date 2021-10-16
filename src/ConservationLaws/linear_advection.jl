@@ -2,14 +2,14 @@ abstract type AbstractConstantLinearAdvectionEquation <: AbstractConservationLaw
 end
 
 struct ConstantLinearAdvectionEquation1D <: AbstractConstantLinearAdvectionEquation 
-    N_d::Int64 # spatial dimension
+    d::Int64 # spatial dimension
     N_eq::Int64 # number of equations
     a::Float64 # advection velocity
 end
 
 
 struct ConstantLinearAdvectionEquation2D <: AbstractConstantLinearAdvectionEquation 
-    N_d::Int64 # spatial dimension
+    d::Int64 # spatial dimension
     N_eq::Int64 # number of equations
     a::Vector{Float64} # advection velocity
 end
