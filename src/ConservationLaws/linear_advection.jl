@@ -1,30 +1,14 @@
-abstract type AbstractConstantLinearAdvectionEquation <: AbstractConservationLaw end
-
-abstract type AbstractVariableLinearAdvectionEquation <: AbstractConservationLaw end
-
-struct ConstantLinearAdvectionEquation1D <: AbstractConstantLinearAdvectionEquation 
-    d::Int # spatial dimension
-    N_eq::Int # number of equations
-    a::Float64 # advection velocity
+struct ConstantLinearAdvectionFlux <: AbstractFirstOrderFlux
+    a::Union{Float64,Vector{Float64}} # advection velocity
 end
 
-struct ConstantLinearAdvectionEquation2D <: AbstractConstantLinearAdvectionEquation 
-    d::Int # spatial dimension
-    N_eq::Int # number of equations
-    a::Vector{Float64} # advection velocity
-end
-
-
-function ConstantLinearAdvectionEquation1D(a::Float64)
-    return ConstantLinearAdvectionEquation1D(1,1,a)
+function linear_advection_equation(a::Float64)
+    return ConservationLaw(1, 1, ConstantLinearAdvectionFlux(a), nothing)
 end 
 
-
-function ConstantLinearAdvectionEquation2D(a::Vector{Float64})
-    return ConstantLinearAdvectionEquation2D(2,1,a)
+function linear_advection_equation(a::Vector{Float64})
+    return ConservationLaw(
+        size(a,1), 1, ConstantLinearAdvectionFlux(a), nothing)
 end
 
-
-function first_order_flux(cl::AbstractConstantLinearAdvectionEquation)
-    return u -> u .* cl.a
-end
+physical_flux(flux::ConstantLinearAdvectionFlux, u) = flux.a * u
