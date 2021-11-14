@@ -39,6 +39,7 @@ function SpatialDiscretization(
         rxJ = one.(J)
         nxJ = repeat([-1.0; 1.0],1,mesh.K)
         sJ = abs.(nxJ)  
+        
     else
         return nothing
     end

@@ -15,7 +15,7 @@ module Solvers
     end
 
     function make_ode_problem(spatial_discretization::SpatialDiscretization,
-        initial_condition::AbstractInitialCondition)
+        initial_condition::AbstractInitialCondition, tspan::NTuple{2,Float64})
 
         u0 = evaluate_initial_condition(
             initial_condition,
