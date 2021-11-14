@@ -6,5 +6,6 @@ module CLOUD
 
     include("ConservationLaws/ConservationLaws.jl")
     include("SpatialDiscretizations/SpatialDiscretizations.jl")
+    include("Solvers/Solvers.jl")
 
 end

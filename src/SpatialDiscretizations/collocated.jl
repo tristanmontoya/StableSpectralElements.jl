@@ -12,23 +12,47 @@ function SpatialDiscretization(
     conservation_law::ConservationLaw,
     mesh::MeshData,
     reference_element::RefElemData, 
-    approx_type::AbstractCollocatedApproximation,
+    approx_type::DGSEM,
     form::StrongConservationForm)
 
-    volume_operator = nothing # d-tuple, volume nodes to DOF
-    facet_operator = nothing # all facet nodes to DOF
-    solution_to_volume_nodes = LinearMap(I, size(reference_element.Vq,2))
-    solution_to_facet_nodes =  LinearMap(
-        reference_element.Vf * reference_element.Pq)
+    # create refrence element operators
+
+    if reference_element.elementType == Line
+
+        V_tilde, grad_V_tilde = basis(
+            Line(), approx_type.p,reference_element.rq)
+        V = LinearMap(I, size(V_tilde,2))
+        R = LinearMap(vandermonde(
+            Line(), approx_type.p, reference_element.rf) / V_tilde)
+        M = LinearMap(diagm(reference_element.wq))
+        B = LinearMap(diagm(reference_element.wf))
+
+        # reference strong and weak differentiation matrices
+        D_strong = LinearMap(grad_V_tilde / V_tilde)
+        D_weak = inv(M) * transpose(D_strong) * M
+
+        # reference lifting matrix
+        L = inv(M) * transpose(R) * B
+
+        # geometric factors
+        J = repeat(transpose(diff(mesh.VX)/2),length(reference_element.rq),1)
+        rxJ = one.(J)
+        nxJ = repeat([-1.0; 1.0],1,mesh.K)
+        sJ = abs.(nxJ)  
+    else
+        return nothing
+    end
+
+    # for first-order flux, need to store reference operators 
+    # (D_strong, D_weak, P, V, R, L)
+
+    reference_operators = nothing
+    geometric_factors = nothing
 
     return SpatialDiscretization(
         conservation_law,
         mesh, 
-        reference_element,
-        approx_type, 
         form, 
-        volume_operator,
-        facet_operator,
-        solution_to_volume_nodes,
-        solution_to_facet_nodes)
+        reference_operators,
+        geometric_factors)
 end

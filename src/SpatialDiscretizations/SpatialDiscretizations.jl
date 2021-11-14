@@ -1,11 +1,12 @@
 module SpatialDiscretizations
 
-    using StartUpDG
-    using LinearAlgebra
-    using LinearMaps
+    using LinearAlgebra: I
+    using LinearMaps: LinearMap, UniformScalingMap
+    using Reexport
+    @reexport using StartUpDG: MeshData, RefElemData
     using ..ConservationLaws
 
-    export AbstractApproximationType, AbstractResidualForm, StrongConservationForm, WeakConservationForm, SpatialDiscretization
+    export AbstractApproximationType, AbstractResidualForm, StrongConservationForm, WeakConservationForm, ReferenceOperators, GeometricFactors, SpatialDiscretization
     
     abstract type AbstractApproximationType end
     abstract type AbstractResidualForm end
@@ -13,18 +14,18 @@ module SpatialDiscretizations
     struct StrongConservationForm <: AbstractResidualForm end
     struct WeakConservationForm <: AbstractResidualForm end
 
+    # define in dimension-independent way
+    struct ReferenceOperators end
+    struct GeometricFactors end
+
     struct SpatialDiscretization
+
         conservation_law::ConservationLaw
         mesh::MeshData
-        reference_element::RefElemData
-        approx_type::AbstractApproximationType
         form::AbstractResidualForm
-        volume_operator::Union{Tuple{Vararg{Vector{LinearMap{Float64}}}},
-            Nothing}
-        facet_operator::Union{Vector{LinearMap{Float64}},Nothing}
-        solution_to_volume_nodes::Union{LinearMap{Float64},
-            LinearMaps.UniformScalingMap}
-        solution_to_facet_nodes::LinearMap{Float64}
+        reference_operators::ReferenceOperators
+        geometric_factors::GeometricFactors
+        
     end
 
     # collocated discretizations
