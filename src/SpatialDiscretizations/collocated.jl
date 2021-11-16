@@ -25,14 +25,10 @@ function SpatialDiscretization(
         R = LinearMap(vandermonde(
             Line(), approx_type.p, reference_element.rf) / V_tilde)
         M = diagm(reference_element.wq)
-        B = diagm(reference_element.wf)
 
-        # reference strong and weak differentiation matrices
         D_strong = LinearMap(grad_V_tilde / V_tilde)
         D_weak = inv(M) * transpose(D_strong) * M
-
-        # reference lifting matrix
-        L = inv(M) * transpose(R) * B
+        L = inv(M) * transpose(R) * diagm(reference_element.wf)
 
     else
         return nothing

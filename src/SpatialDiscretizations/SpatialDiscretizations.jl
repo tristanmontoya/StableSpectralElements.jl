@@ -7,7 +7,7 @@ module SpatialDiscretizations
 
     @reexport using StartUpDG: MeshData, RefElemData, Line, Quad, Tri, Tet, Hex, Pyr
 
-    export AbstractApproximationType, AbstractResidualForm, AbstractQuadratureRule, StrongConservationForm, WeakConservationForm, ReferenceOperators, GeometricFactors, LGLQuadrature, LGQuadrature, SpatialDiscretization, ReferenceOperators, volume_quadrature
+    export AbstractApproximationType, AbstractResidualForm, AbstractQuadratureRule, StrongConservationForm, WeakConservationForm, ReferenceOperators, GeometricFactors, LGLQuadrature, LGQuadrature, SpatialDiscretization, ReferenceOperators, volume_quadrature, l2_projection
     
     abstract type AbstractApproximationType end
     abstract type AbstractResidualForm end
@@ -44,6 +44,14 @@ module SpatialDiscretizations
         ::LGLQuadrature,
         num_quad_nodes::Int)
             return gauss_lobatto_quad(0,0,num_quad_nodes-1)
+    end
+
+    function l2_projection(spatial_discretization::SpatialDiscretization,
+        u0::Function)
+        #figure out structure of xq
+
+        return nothing
+
     end
 
     # collocated discretizations

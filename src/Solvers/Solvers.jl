@@ -3,7 +3,7 @@ module Solvers
     using OrdinaryDiffEq: ODEProblem
     using ..ConservationLaws: ConservationLaw
     using ..SpatialDiscretizations: SpatialDiscretization
-    using ..InitialConditions: AbstractInitialCondition, evaluate_initial_condition
+    using ..InitialConditions: AbstractInitialData, initial_condition, initialize
     
     export compute_residual, solver
 
@@ -17,11 +17,11 @@ module Solvers
 
     function solver(
         conservation_law::ConservationLaw,spatial_discretization::SpatialDiscretization,
-        initial_condition::AbstractInitialCondition, 
+        initial_data::AbstractInitialData, 
         tspan::NTuple{2,Float64})
 
-        u0 = evaluate_initial_condition(
-            initial_condition,
+        u0 = initialize(
+            initial_data,
             conservation_law,
             spatial_discretization)
 
