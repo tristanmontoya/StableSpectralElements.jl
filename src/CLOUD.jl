@@ -6,6 +6,8 @@ module CLOUD
 
     include("ConservationLaws/ConservationLaws.jl")
     include("SpatialDiscretizations/SpatialDiscretizations.jl")
+    include("InitialConditions/InitialConditions.jl")
     include("Solvers/Solvers.jl")
+    include("Mesh/Mesh.jl")
 
 end

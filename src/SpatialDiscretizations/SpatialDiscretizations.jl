@@ -1,31 +1,49 @@
 module SpatialDiscretizations
 
-    using LinearAlgebra: I
+    using LinearAlgebra: I, inv, transpose, diagm
     using LinearMaps: LinearMap, UniformScalingMap
     using Reexport
-    @reexport using StartUpDG: MeshData, RefElemData
-    using ..ConservationLaws
+    using StartUpDG: basis, vandermonde, gauss_quad, gauss_lobatto_quad
 
-    export AbstractApproximationType, AbstractResidualForm, StrongConservationForm, WeakConservationForm, ReferenceOperators, GeometricFactors, SpatialDiscretization
+    @reexport using StartUpDG: MeshData, RefElemData, Line, Quad, Tri, Tet, Hex, Pyr
+
+    export AbstractApproximationType, AbstractResidualForm, AbstractQuadratureRule, StrongConservationForm, WeakConservationForm, ReferenceOperators, GeometricFactors, LGLQuadrature, LGQuadrature, SpatialDiscretization, ReferenceOperators, volume_quadrature
     
     abstract type AbstractApproximationType end
     abstract type AbstractResidualForm end
+    abstract type AbstractQuadratureRule end
 
     struct StrongConservationForm <: AbstractResidualForm end
     struct WeakConservationForm <: AbstractResidualForm end
+    
+    struct LGLQuadrature <: AbstractQuadratureRule end
+    struct LGQuadrature <: AbstractQuadratureRule end
 
-    # define in dimension-independent way
-    struct ReferenceOperators end
-    struct GeometricFactors end
+    struct ReferenceOperators{d}
+        D_strong::Union{NTuple{d, LinearMap{Float64}}, LinearMap{Float64}}
+        D_weak::Union{NTuple{d, LinearMap{Float64}}, LinearMap{Float64}}
+        V::LinearMap
+        P::LinearMap
+        R::LinearMap{Float64}
+        L::LinearMap{Float64}
+    end
 
     struct SpatialDiscretization
-
-        conservation_law::ConservationLaw
         mesh::MeshData
         form::AbstractResidualForm
         reference_operators::ReferenceOperators
-        geometric_factors::GeometricFactors
-        
+    end
+
+    function volume_quadrature(::Line,
+        quadrature_rule::LGQuadrature,
+        num_quad_nodes::Int)
+            return gauss_quad(0,0,num_quad_nodes-1) 
+    end
+
+    function volume_quadrature(::Line, 
+        ::LGLQuadrature,
+        num_quad_nodes::Int)
+            return gauss_lobatto_quad(0,0,num_quad_nodes-1)
     end
 
     # collocated discretizations

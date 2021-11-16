@@ -1,33 +1,34 @@
 module Solvers
 
     using OrdinaryDiffEq: ODEProblem
-    using ..SpatialDiscretizations
+    using ..ConservationLaws: ConservationLaw
+    using ..SpatialDiscretizations: SpatialDiscretization
+    using ..InitialConditions: AbstractInitialCondition, evaluate_initial_condition
     
-    export compute_residual, make_ode_problem
+    export compute_residual, solver
 
     function compute_residual(
+        conservation_law::ConservationLaw,
         spatial_discretization::SpatialDiscretization,
         u::Vector{Float64})
-
-        # use if statement for form
 
         return nothing
     end
 
-    function make_ode_problem(spatial_discretization::SpatialDiscretization,
-        initial_condition::AbstractInitialCondition, tspan::NTuple{2,Float64})
+    function solver(
+        conservation_law::ConservationLaw,spatial_discretization::SpatialDiscretization,
+        initial_condition::AbstractInitialCondition, 
+        tspan::NTuple{2,Float64})
 
         u0 = evaluate_initial_condition(
             initial_condition,
+            conservation_law,
             spatial_discretization)
 
-        R(u) = compute_residual(spatial_discretization, u)
+        R(u) = compute_residual(conservation_law, 
+            spatial_discretization, u)
 
-        return ODEProblem(R, u0)
+        return ODEProblem(R, u0, tspan)
     end
-
-    include("initial_conditions.jl")
-    export AbstractInitialCondition, InitialConditionSine
-
 
 end
