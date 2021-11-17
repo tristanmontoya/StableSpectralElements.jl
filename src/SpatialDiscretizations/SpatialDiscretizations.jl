@@ -2,9 +2,9 @@ module SpatialDiscretizations
 
     using LinearAlgebra: I, inv, transpose, diagm
     using LinearMaps: LinearMap, UniformScalingMap
-    using Reexport
     using StartUpDG: basis, vandermonde, gauss_quad, gauss_lobatto_quad
 
+    using Reexport
     @reexport using StartUpDG: MeshData, RefElemData, Line, Quad, Tri, Tet, Hex, Pyr
 
     export AbstractApproximationType, AbstractResidualForm, AbstractQuadratureRule, StrongConservationForm, WeakConservationForm, ReferenceOperators, GeometricFactors, LGLQuadrature, LGQuadrature, SpatialDiscretization, ReferenceOperators, volume_quadrature, l2_projection
@@ -20,15 +20,16 @@ module SpatialDiscretizations
     struct LGQuadrature <: AbstractQuadratureRule end
 
     struct ReferenceOperators{d}
-        D_strong::Union{NTuple{d, LinearMap{Float64}}, LinearMap{Float64}}
-        D_weak::Union{NTuple{d, LinearMap{Float64}}, LinearMap{Float64}}
+        D_strong::NTuple{d, LinearMap{Float64}}
+        D_weak::NTuple{d, LinearMap{Float64}}
         V::LinearMap
+        V_plot::LinearMap
         P::LinearMap
         R::LinearMap{Float64}
         L::LinearMap{Float64}
     end
 
-    struct SpatialDiscretization
+    struct SpatialDiscretization{d}
         mesh::MeshData
         form::AbstractResidualForm
         reference_operators::ReferenceOperators
@@ -48,14 +49,16 @@ module SpatialDiscretizations
 
     function l2_projection(spatial_discretization::SpatialDiscretization,
         u0::Function)
-        #figure out structure of xq
+
+        nodal_values = @. u0(spatial_discretization.mesh.xyzq)
+
+        #as test don't weight projection
 
         return nothing
 
     end
-
-    # collocated discretizations
-    include("collocated.jl")
+    
     export AbstractCollocatedApproximation, DGSEM, DGMulti
+    include("collocated.jl")
 
 end

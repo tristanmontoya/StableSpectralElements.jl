@@ -1,8 +1,6 @@
 module ConservationLaws
 
-    export AbstractFirstOrderFlux, 
-        AbstractSecondOrderFlux, 
-        ConservationLaw
+    export AbstractFirstOrderFlux, AbstractSecondOrderFlux, ConservationLaw
 
     abstract type AbstractFirstOrderFlux end
     abstract type AbstractSecondOrderFlux end
@@ -14,11 +12,8 @@ module ConservationLaws
         second_order_flux::Union{AbstractSecondOrderFlux, Nothing}
     end
 
-    # linear advection equation
-    include("linear_advection.jl")
-
     export ConstantLinearAdvectionFlux, 
         linear_advection_equation,
         physical_flux
-
+    include("linear_advection.jl")
 end

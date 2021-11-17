@@ -20,15 +20,15 @@ module Solvers
         initial_data::AbstractInitialData, 
         tspan::NTuple{2,Float64})
 
-        u0 = initialize(
-            initial_data,
-            conservation_law,
-            spatial_discretization)
+        u0 = 0
+        #initialize(
+        #    initial_data,
+        #    conservation_law,
+        #    spatial_discretization)
 
         R(u) = compute_residual(conservation_law, 
             spatial_discretization, u)
 
         return ODEProblem(R, u0, tspan)
     end
-
 end

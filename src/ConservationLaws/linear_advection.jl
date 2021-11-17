@@ -1,14 +1,16 @@
-struct ConstantLinearAdvectionFlux <: AbstractFirstOrderFlux
-    a::Union{Float64,Vector{Float64}} # advection velocity
+struct ConstantLinearAdvectionFlux{d} <: AbstractFirstOrderFlux
+    a::NTuple{d,Float64} # advection velocity
 end
 
 function linear_advection_equation(a::Float64)
-    return ConservationLaw(1, 1, ConstantLinearAdvectionFlux(a), nothing)
+    return ConservationLaw(1, 1, ConstantLinearAdvectionFlux{1}((a,)), nothing)
 end 
 
-function linear_advection_equation(a::Vector{Float64})
+function linear_advection_equation(a::NTuple{d,Float64}) where {d}
     return ConservationLaw(
-        size(a,1), 1, ConstantLinearAdvectionFlux(a), nothing)
+        size(a,1), 1, ConstantLinearAdvectionFlux{d}(a), nothing)
 end
 
-physical_flux(flux::ConstantLinearAdvectionFlux, u) = flux.a * u
+function physical_flux(flux::ConstantLinearAdvectionFlux{d}, u) where {d}
+    return (flux.a[m] * u for m in 1:d)
+end
