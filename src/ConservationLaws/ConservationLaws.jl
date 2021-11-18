@@ -2,12 +2,10 @@ module ConservationLaws
 
     export AbstractFirstOrderFlux, AbstractSecondOrderFlux, ConservationLaw
 
-    abstract type AbstractFirstOrderFlux end
-    abstract type AbstractSecondOrderFlux end
+    abstract type AbstractFirstOrderFlux{d, N_eq} end
+    abstract type AbstractSecondOrderFlux{d, N_eq} end
 
-    struct ConservationLaw
-        d::Int # spatial dimension
-        N_eq::Int # number of equations
+    struct ConservationLaw{d, N_eq}
         first_order_flux::Union{AbstractFirstOrderFlux, Nothing}
         second_order_flux::Union{AbstractSecondOrderFlux, Nothing}
     end
