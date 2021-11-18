@@ -17,7 +17,8 @@ module InitialConditions
     end
 
     function initial_condition(initial_data::InitialDataSine{d}) where {d}
-        return x -> initial_data.A*prod((sin(initial_data.k*x[m]) for m in 1:d))
+        return x -> initial_data.A*prod(Tuple(sin.(initial_data.k[m]*x[m]) 
+            for m in 1:d))
     end
 
     function initialize(initial_data::AbstractInitialData, 

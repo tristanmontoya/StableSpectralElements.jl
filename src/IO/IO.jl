@@ -1,29 +1,41 @@
 module IO
 
     using LinearMaps: LinearMap
-    using Plots: scatter
+    using Plots: plot, scatter, savefig
+    using LaTeXStrings
+
     using ..SpatialDiscretizations: SpatialDiscretization
 
+    export Plotter, plot_function
+
     struct Plotter{d}
-        x_plot::NTuple{d,Vector{Float64}}
-        V_plot::LinearMap{Float64}
+        x_plot::NTuple{d,Matrix{Float64}}
+        V_plot::LinearMap
+        directory_name::String
     end
 
+    function Plotter(spatial_discretization::SpatialDiscretization{d},directory_name::String) where {d}
+        mkpath(directory_name) 
+        return Plotter{d}(spatial_discretization.x_plot, 
+            spatial_discretization.reference_operators.V_plot, directory_name)
+    end
+    
     function Plotter(spatial_discretization::SpatialDiscretization{d}) where {d}
-        
-        map_to_plot = spatial_discretization.reference_element.Vp
-        x_plot = Tuple(map_to_plot*spatial_discretization.mesh.x[m] 
-            for m in 1:d)
-
-        return Plotter{d}(x_plot, 
-            spatial_discretization.reference_operators.V_plot)
+        mkpath("../plots") 
+        return Plotter{d}(spatial_discretization.x_plot, 
+            spatial_discretization.reference_operators.V_plot, "../plots/")
     end
         
-    function plot_function(f, plotter::Plotter{2})
-        u = @. f(plotter.x_plot)
+    function plot_function(f::Function, plotter::Plotter{1}, file_name::String; label::String="U(x,t)")
+        p = plot(plotter.x_plot[1],f(plotter.x_plot), leg=false, xlabel=latexstring("x"), ylabel=latexstring(label))
+        savefig(p, string(plotter.directory_name, file_name))
+    end
 
-        scatter(plotter.x_plot[0],plotter.x_plot[1],
-            u,zcolor=up,msw=0,leg=false,ratio=1,cam=(0,90))
+    function plot_function(f::Function, plotter::Plotter{2})
+        scatter(plotter.x_plot[1],plotter.x_plot[2],
+            f(plotter.x_plot),
+            zcolor=up,msw=0,leg=false,ratio=1,cam=(0,90))
+        savefig(p, string(plotter.directory_name, file_name))
     end
 
 end

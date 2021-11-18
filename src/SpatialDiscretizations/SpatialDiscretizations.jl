@@ -33,6 +33,7 @@ module SpatialDiscretizations
         mesh::MeshData
         form::AbstractResidualForm
         reference_operators::ReferenceOperators
+        x_plot::NTuple{d, Matrix{Float64}}
     end
 
     function volume_quadrature(::Line,
