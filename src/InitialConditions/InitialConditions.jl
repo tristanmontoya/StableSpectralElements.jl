@@ -1,7 +1,7 @@
 module InitialConditions
 
     using ..ConservationLaws: ConservationLaw
-    using ..SpatialDiscretizations: SpatialDiscretization, l2_projection
+    using ..SpatialDiscretizations: SpatialDiscretization
 
     export AbstractInitialData, InitialDataSine, initial_condition
     
@@ -21,18 +21,6 @@ module InitialConditions
         return x -> Tuple(initial_data.A*prod(Tuple(sin.(initial_data.k[m]*x[m])
             for m in 1:d)) 
             for e in 1:N_eq)
-    end
-
-    function initialize(initial_data::AbstractInitialData,
-        conservation_law::ConservationLaw,
-        spatial_discretization::SpatialDiscretization)
-        
-        # make initial data into function returninng tuple of length N_eq
-        u0 = initial_condition(initial_data, conservation_law)
-
-        # project onto solution DOF
-        return l2_projection(spatial_discretization, u0)
-        
     end
 
 end

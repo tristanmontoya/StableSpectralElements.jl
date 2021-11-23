@@ -15,11 +15,17 @@ function SpatialDiscretization(
     approx_type::DGSEM,
     form::StrongConservationForm) where {d}
 
+    N_p = size(mesh.xyzq[1])[1]
+    N_q = N_p
+    N_f = size(mesh.xyzf[1])[1]
+    N_el =  size(mesh.xyzq[1])[2]
+
     V_tilde, grad_V_tilde = basis(
         reference_element.elementType, 
         approx_type.p,reference_element.rq)
-    V = LinearMap(I, size(V_tilde,2))
-    P = LinearMap(I, size(V_tilde,2))
+
+    V = LinearMap(I, N_q)
+    P = LinearMap(I, N_q)
     R = LinearMap(vandermonde(reference_element.elementType, 
         approx_type.p, reference_element.rf) / V_tilde)
     M = diagm(reference_element.wq)
@@ -43,10 +49,17 @@ function SpatialDiscretization(
     reference_operators = ReferenceOperators{d}(D_strong, 
         D_weak, P, V, V_plot, R, L)
 
+    projection = fill(LinearMap(I,N_q),N_el)
+
     return SpatialDiscretization{d}(
-        mesh, 
+        mesh,
+        N_p, 
+        N_q,
+        N_f,
+        N_el,
         form, 
         reference_operators,
+        projection,
         x_plot)
         
 end
