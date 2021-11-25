@@ -12,8 +12,7 @@ end
 function SpatialDiscretization(
     mesh::MeshData{d},
     reference_element::RefElemData, 
-    approx_type::DGSEM,
-    form::StrongConservationForm) where {d}
+    approx_type::DGSEM) where {d}
 
     N_p = size(mesh.xyzq[1])[1]
     N_q = N_p
@@ -57,7 +56,6 @@ function SpatialDiscretization(
         N_q,
         N_f,
         N_el,
-        form, 
         reference_operators,
         projection,
         x_plot)

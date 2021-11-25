@@ -7,14 +7,10 @@ module SpatialDiscretizations
     using Reexport
     @reexport using StartUpDG: MeshData, RefElemData, Line, Quad, Tri, Tet, Hex, Pyr
 
-    export AbstractApproximationType, AbstractResidualForm, AbstractQuadratureRule, StrongConservationForm, WeakConservationForm, ReferenceOperators, GeometricFactors, LGLQuadrature, LGQuadrature, SpatialDiscretization, ReferenceOperators, volume_quadrature, reference_element, apply_to_all_nodes, apply_to_all_dof
+    export AbstractApproximationType, AbstractQuadratureRule, ReferenceOperators, GeometricFactors, LGLQuadrature, LGQuadrature, SpatialDiscretization, ReferenceOperators, volume_quadrature, reference_element, apply_to_all_nodes, apply_to_all_dof
     
     abstract type AbstractApproximationType end
-    abstract type AbstractResidualForm end
     abstract type AbstractQuadratureRule end
-
-    struct StrongConservationForm <: AbstractResidualForm end
-    struct WeakConservationForm <: AbstractResidualForm end
     
     struct LGLQuadrature <: AbstractQuadratureRule end
     struct LGQuadrature <: AbstractQuadratureRule end
@@ -28,13 +24,13 @@ module SpatialDiscretizations
         R::LinearMap{Float64}
         L::LinearMap{Float64}
     end
+    
     struct SpatialDiscretization{d}
         mesh::MeshData
         N_p::Int
         N_q::Int
         N_f::Int
         N_el::Int
-        form::AbstractResidualForm
         reference_operators::ReferenceOperators
         projection::Vector{LinearMap}
         x_plot::NTuple{d, Matrix{Float64}}
@@ -93,7 +89,6 @@ module SpatialDiscretizations
         end
         return output
     end
-
     
     export AbstractCollocatedApproximation, DGSEM, DGMulti
     include("collocated.jl")
