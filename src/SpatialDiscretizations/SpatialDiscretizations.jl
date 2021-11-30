@@ -1,11 +1,13 @@
 module SpatialDiscretizations
 
-    using LinearAlgebra: I, inv, transpose, diagm
+    using LinearAlgebra: I, inv, transpose, Diagonal
     using LinearMaps: LinearMap, UniformScalingMap
-    using StartUpDG: basis, vandermonde, gauss_quad, gauss_lobatto_quad
+    using StartUpDG: MeshData, RefElemData, basis, vandermonde, gauss_quad, gauss_lobatto_quad
+
+    using ..Mesh: GeometricFactors
 
     using Reexport
-    @reexport using StartUpDG: MeshData, RefElemData, Line, Quad, Tri, Tet, Hex, Pyr
+    @reexport using StartUpDG: Line, Quad, Tri, Tet, Hex, Pyr
 
     export AbstractApproximationType, AbstractQuadratureRule, ReferenceOperators, GeometricFactors, LGLQuadrature, LGQuadrature, SpatialDiscretization, ReferenceOperators, volume_quadrature, reference_element, apply_to_all_nodes, apply_to_all_dof
     
@@ -16,23 +18,29 @@ module SpatialDiscretizations
     struct LGQuadrature <: AbstractQuadratureRule end
 
     struct ReferenceOperators{d}
-        D_strong::NTuple{d, LinearMap{Float64}}
-        D_weak::NTuple{d, LinearMap{Float64}}
-        P::LinearMap
+        D::NTuple{d, LinearMap{Float64}}
+        ADV::NTuple{d, LinearMap{Float64}}
         V::LinearMap
         V_plot::LinearMap
         R::LinearMap{Float64}
-        L::LinearMap{Float64}
+        invM::LinearMap
+        P::LinearMap
+        W::LinearMap
+        B::LinearMap
     end
     
     struct SpatialDiscretization{d}
-        mesh::MeshData
+        mesh::MeshData{d}
         N_p::Int
         N_q::Int
         N_f::Int
         N_el::Int
-        reference_operators::ReferenceOperators
-        projection::Vector{LinearMap}
+        reference_element::RefElemData{d}
+        reference_operators::ReferenceOperators{d}
+        geometric_factors::GeometricFactors{d}
+        physical_mass_inverse::Vector{LinearMap}
+        physical_projection::Vector{LinearMap}
+        jacobian_inverse::Vector{LinearMap}
         x_plot::NTuple{d, Matrix{Float64}}
     end
 
@@ -56,12 +64,12 @@ module SpatialDiscretizations
         x::NTuple{d, Matrix{Float64}}, N_eq::Int=1) where {d}
         # f maps tuple of length d to tuple of length N_eq
         
-        N_vol_nodes = size(x[1])[1]
+        N_nodes = size(x[1])[1]
         N_el = size(x[1])[2]
-        nodal_values = Array{Float64}(undef, N_vol_nodes, N_eq, N_el)
+        nodal_values = Array{Float64}(undef, N_nodes, N_eq, N_el)
         
         for k in 1:N_el
-            for i in 1:N_vol_nodes
+            for i in 1:N_nodes
                 # get tuple of length N_eq at node i of elem k
                 vector_at_node = f(Tuple(x[m][i,k] for m in 1:d)) 
                 for e in 1:N_eq
