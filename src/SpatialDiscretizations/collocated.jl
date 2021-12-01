@@ -76,5 +76,4 @@ function SpatialDiscretization(
         physical_projection,
         jacobian_inverse,
         x_plot)
-        
 end

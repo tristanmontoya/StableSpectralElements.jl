@@ -67,13 +67,13 @@ module Mesh
             for i in 1:N_f
                 JinvG_at_facet =  det(G_at_facet[i,:,:,k])*inv(G_at_facet[i,:,:,k])
                 for m in 1:d
-                    nJf[m][i] = sum(
+                    nJf[m][i,k] = sum(
                         JinvG_at_facet[n,m]*reference_element.nrstJ[n][i] 
                             for n in 1:d)
                 end
             end
         end
-        return GeometricFactors{d}(J,JinvG, nJf)
+        return GeometricFactors{d}(J,JinvG,nJf)
     end
 
 end

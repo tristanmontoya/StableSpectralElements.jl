@@ -49,9 +49,10 @@ function rhs!(dudt::Array{Float64,3}, u::Array{Float64,3},
 
     # get all facet state values
     for k in 1:N_el
-        u_facet[:,:,k] = convert(Matrix,operators[k].EXTRAPOLATE_SOLUTION * u[:,:,k])
+        u_facet[:,:,k] = convert(Matrix,
+            operators[k].EXTRAPOLATE_SOLUTION * u[:,:,k])
     end
-    
+
     # evaluate all local residuals 
     for k in 1:N_el
         # gather external state to element
@@ -59,17 +60,31 @@ function rhs!(dudt::Array{Float64,3}, u::Array{Float64,3},
         for e in 1:N_eq
             u_out[:,e] = u_facet[:,e,:][connectivity[:,k]]
         end
-
+        
         # evaluate physical and numerical flux
         f = physical_flux(conservation_law.first_order_flux, u[:,:,k])
         f_star = numerical_flux(conservation_law.first_order_numerical_flux,
             u_facet[:,:,k], u_out, operators[k].scaled_normal)
         
+        SAT=operators[k].FAC * 
+            (f_star - sum(operators[k].NORMAL_TRACE[m] * f[m] 
+            for m in 1:d))
+
+        #=
+        println("-----")
+        println("k: ", k)
+        println("u_in, u_out:")
+        println(u_facet[:,:,k], u_out)
+        println("f_n, f_star")
+        println(convert(Matrix,sum(operators[k].NORMAL_TRACE[m] * f[m] 
+        for m in 1:d)), f_star)
+        println("SAT:")
+        println(convert(Matrix,SAT))
+        =#
+
         # apply operators
         dudt[:,:,k] = convert(Matrix, sum(operators[k].VOL[m] * f[m] 
-            for m in 1:d) + operators[k].FAC * 
-                (f_star - sum(operators[k].NORMAL_TRACE[m] * f[m] 
-                for m in 1:d)))
+            for m in 1:d) + SAT)
     end
     return nothing
 end
