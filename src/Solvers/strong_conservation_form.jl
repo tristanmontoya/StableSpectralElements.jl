@@ -41,17 +41,17 @@ end
 function rhs!(dudt::Array{Float64,3}, u::Array{Float64,3}, 
     solver::Solver{StrongConservationForm, d, N_eq}, t::Float64) where {d, N_eq}
 
-    @unpack conservation_law, operators, normals, connectivity, form = solver
+    @unpack conservation_law, operators, connectivity, form = solver
 
     N_el = size(operators)[1]
-    N_f = size(operators[1].EXTRAPOLATE_SOLUTION)(1)
+    N_f = size(operators[1].EXTRAPOLATE_SOLUTION)[1]
     u_facet = Array{Float64}(undef, N_f, N_eq, N_el)
 
     # get all facet state values
     for k in 1:N_el
-        u_facet = operators[k].EXTRAPOLATE_SOLUTION * u[:,:,k]
+        u_facet[:,:,k] = convert(Matrix,operators[k].EXTRAPOLATE_SOLUTION * u[:,:,k])
     end
-
+    
     # evaluate all local residuals 
     for k in 1:N_el
         # gather external state to element
