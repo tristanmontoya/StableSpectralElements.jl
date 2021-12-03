@@ -1,4 +1,3 @@
-*.ipynb linguist-vendored
 notebooks/* linguist-vendored
 results/* linguist-vendored
 mesh/* linguist-vendored
