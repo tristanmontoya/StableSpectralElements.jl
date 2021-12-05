@@ -1,4 +1,4 @@
-struct StrongConservationForm<:AbstractResidualForm end
+struct StrongConservationForm <: AbstractResidualForm end
 
 function semidiscretize(
     conservation_law::ConservationLaw{d,N_eq},spatial_discretization::SpatialDiscretization{d},
@@ -7,8 +7,9 @@ function semidiscretize(
     tspan::NTuple{2,Float64}) where {d, N_eq}
 
     @unpack N_el, jacobian_inverse = spatial_discretization
-    @unpack D, R, P, invM, B = spatial_discretization.reference_operators
-    @unpack nrstJ = spatial_discretization.reference_element
+    @unpack D, R, P, invM, B = spatial_discretization.reference_approximation
+    @unpack nrstJ = 
+        spatial_discretization.reference_approximation.reference_element
     @unpack JinvG, nJf = spatial_discretization.geometric_factors
 
     u0 = initialize(
@@ -20,16 +21,16 @@ function semidiscretize(
     for k in 1:N_el
         if d == 1
             VOL = (-jacobian_inverse[k] * D[1] * P,)
-            NORMAL_TRACE = (Diagonal(nJf[1][:,k]) * R * P,)
+            NTR = (Diagonal(nJf[1][:,k]) * R * P,)
         else
             VOL = Tuple(-jacobian_inverse[k] * sum(D[m] * P *
                     Diagonal(JinvG[:,m,n,k]) for m in 1:d) for n in 1:d) 
-            NORMAL_TRACE = Tuple(sum(
+            NTR = Tuple(sum(
                 Diagonal(nrstJ[m][:,k]) * R * P * Diagonal(JinvG[:,m,n,k]) for m in 1:d) for n in 1:d)
         end
         operators[k] = PhysicalOperatorsLinear(VOL,
             -jacobian_inverse[k] * invM * transpose(R) * B, R, 
-            NORMAL_TRACE, Tuple(nJf[m][:,k] for m in 1:d))
+            NTR, Tuple(nJf[m][:,k] for m in 1:d))
     end
 
     solver = Solver(conservation_law, operators,
@@ -44,13 +45,12 @@ function rhs!(dudt::Array{Float64,3}, u::Array{Float64,3},
     @unpack conservation_law, operators, connectivity, form = solver
 
     N_el = size(operators)[1]
-    N_f = size(operators[1].EXTRAPOLATE_SOLUTION)[1]
+    N_f = size(operators[1].R)[1]
     u_facet = Array{Float64}(undef, N_f, N_eq, N_el)
 
     # get all facet state values
     for k in 1:N_el
-        u_facet[:,:,k] = convert(Matrix,
-            operators[k].EXTRAPOLATE_SOLUTION * u[:,:,k])
+        u_facet[:,:,k] = convert(Matrix, operators[k].R * u[:,:,k])
     end
 
     # evaluate all local residuals 
@@ -66,9 +66,7 @@ function rhs!(dudt::Array{Float64,3}, u::Array{Float64,3},
         f_star = numerical_flux(conservation_law.first_order_numerical_flux,
             u_facet[:,:,k], u_out, operators[k].scaled_normal)
         
-        SAT=operators[k].FAC * 
-            (f_star - sum(operators[k].NORMAL_TRACE[m] * f[m] 
-            for m in 1:d))
+        SAT=
 
         #=
         println("-----")
@@ -77,14 +75,13 @@ function rhs!(dudt::Array{Float64,3}, u::Array{Float64,3},
         println(u_facet[:,:,k], u_out)
         println("f_n, f_star")
         println(convert(Matrix,sum(operators[k].NORMAL_TRACE[m] * f[m] 
-        for m in 1:d)), f_star)
-        println("SAT:")
-        println(convert(Matrix,SAT))
-        =#
+        for m in 1:d)), f_star) =#
 
         # apply operators
         dudt[:,:,k] = convert(Matrix, sum(operators[k].VOL[m] * f[m] 
-            for m in 1:d) + SAT)
+                for m in 1:d) + 
+            operators[k].FAC * (f_star - sum(operators[k].NTR[m] * f[m] 
+                for m in 1:d)))
     end
     return nothing
 end

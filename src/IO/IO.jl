@@ -18,13 +18,13 @@ module IO
     function Plotter(spatial_discretization::SpatialDiscretization{d},directory_name::String) where {d}
         mkpath(directory_name) 
         return Plotter{d}(spatial_discretization.x_plot, 
-            spatial_discretization.reference_operators.V_plot, spatial_discretization.N_el, directory_name)
+            spatial_discretization.reference_approximation.V_plot, spatial_discretization.N_el, directory_name)
     end
     
     function Plotter(spatial_discretization::SpatialDiscretization{d}) where {d}
         mkpath("../plots") 
         return Plotter{d}(spatial_discretization.x_plot, 
-            spatial_discretization.reference_operators.V_plot, 
+            spatial_discretization.reference_approximation.V_plot, 
             spatial_discretization.N_el, "../plots/")
     end
 
@@ -52,15 +52,18 @@ module IO
         u = vec(apply_to_all_dof(
             fill(plotter.V_plot, plotter.N_el), sol)[:,e,:])
         
-        p = plot(vec(plotter.x_plot[1]),u, label=latexstring(label), 
-            xlabel=latexstring("x"))
 
         if !isnothing(exact_solution)
-            plot!(p, vec(plotter.x_plot[1]),
+            p = plot(vec(plotter.x_plot[1]),
                 vec(exact_solution(plotter.x_plot)[e]), 
                 label=latexstring(label_exact))
+            plot!(p, vec(plotter.x_plot[1]),u, label=latexstring(label), 
+                xlabel=latexstring("x"))
+        else 
+            p = plot(vec(plotter.x_plot[1]),u, label=latexstring(label), 
+                xlabel=latexstring("x"))
         end
-        
+
         savefig(p, string(plotter.directory_name, 
         file_name))   
         return p

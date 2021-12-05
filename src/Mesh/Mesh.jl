@@ -6,6 +6,7 @@ module Mesh
     export GeometricFactors, uniform_periodic_mesh
 
     struct GeometricFactors{d}
+        
         # first dimension is node index, second is element
         J::Matrix{Float64}
 
@@ -30,6 +31,7 @@ module Mesh
     function GeometricFactors(mesh::MeshData{d}, 
         reference_element::RefElemData{d}) where {d}
 
+        # note, here we assume that mesh is same N_q, N_f every element
         N_q = size(mesh.xyzq[1],1)
         N_f = size(mesh.xyzf[1],1)
         N_el = size(mesh.xyzq[1],2)

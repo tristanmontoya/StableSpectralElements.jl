@@ -4,8 +4,7 @@ module Solvers
     using UnPack
     using LinearAlgebra: Diagonal, inv
     using LinearMaps: LinearMap
-    using StaticArrays: SMatrix
-
+    
     using ..ConservationLaws: ConservationLaw, physical_flux, numerical_flux
     using ..SpatialDiscretizations: SpatialDiscretization, apply_to_all_nodes, apply_to_all_dof
     using ..InitialConditions: AbstractInitialData, initial_condition
@@ -36,8 +35,8 @@ module Solvers
     struct PhysicalOperatorsLinear{d} <: AbstractPhysicalOperators{d}
         VOL::NTuple{d,LinearMap}
         FAC::LinearMap
-        EXTRAPOLATE_SOLUTION::LinearMap
-        NORMAL_TRACE::NTuple{d,LinearMap}  # only needed for strong form
+        R::LinearMap
+        NTR::NTuple{d,LinearMap}  # only needed for strong form
         scaled_normal::NTuple{d, Vector{Float64}}
     end
 

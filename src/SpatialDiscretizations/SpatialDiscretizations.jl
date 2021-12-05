@@ -2,22 +2,28 @@ module SpatialDiscretizations
 
     using LinearAlgebra: I, inv, transpose, Diagonal
     using LinearMaps: LinearMap, UniformScalingMap
-    using StartUpDG: MeshData, RefElemData, basis, vandermonde, gauss_quad, gauss_lobatto_quad
+    using StartUpDG: MeshData, RefElemData, AbstractElemShape, basis, vandermonde, gauss_quad, gauss_lobatto_quad
 
     using ..Mesh: GeometricFactors
 
     using Reexport
     @reexport using StartUpDG: Line, Quad, Tri, Tet, Hex, Pyr
 
-    export AbstractApproximationType, AbstractQuadratureRule, ReferenceOperators, GeometricFactors, LGLQuadrature, LGQuadrature, SpatialDiscretization, ReferenceOperators, volume_quadrature, reference_element, apply_to_all_nodes, apply_to_all_dof
+    export AbstractApproximationType, AbstractCollocatedApproximation, AbstractQuadratureRule, ReferenceApproximation, GeometricFactors, LGLQuadrature, LGQuadrature, SpatialDiscretization, ReferenceApproximation, volume_quadrature, apply_to_all_nodes, apply_to_all_dof
     
     abstract type AbstractApproximationType end
     abstract type AbstractQuadratureRule end
+    abstract type AbstractCollocatedApproximation <: AbstractApproximationType end
     
     struct LGLQuadrature <: AbstractQuadratureRule end
     struct LGQuadrature <: AbstractQuadratureRule end
 
-    struct ReferenceOperators{d}
+    struct ReferenceApproximation{d}
+        approx_type::AbstractApproximationType
+        N_p::Int
+        N_q::Int
+        N_f::Int
+        reference_element::RefElemData{d}
         D::NTuple{d, LinearMap{Float64}}
         ADV::NTuple{d, LinearMap{Float64}}
         V::LinearMap
@@ -31,17 +37,40 @@ module SpatialDiscretizations
     
     struct SpatialDiscretization{d}
         mesh::MeshData{d}
-        N_p::Int
-        N_q::Int
-        N_f::Int
         N_el::Int
-        reference_element::RefElemData{d}
-        reference_operators::ReferenceOperators{d}
+        reference_approximation::ReferenceApproximation{d}
         geometric_factors::GeometricFactors{d}
         physical_mass_inverse::Vector{LinearMap}
         physical_projection::Vector{LinearMap}
         jacobian_inverse::Vector{LinearMap}
         x_plot::NTuple{d, Matrix{Float64}}
+    end
+
+    function SpatialDiscretization(mesh::MeshData{d},
+        reference_approximation::ReferenceApproximation{d}) where {d}
+
+        N_el = size(mesh.xyz[1])[2]
+        geometric_factors = GeometricFactors(mesh,
+            reference_approximation.reference_element)
+
+        if reference_approximation.approx_type isa AbstractCollocatedApproximation
+            
+            return SpatialDiscretization{d}(
+                mesh,
+                N_el,
+                reference_approximation,
+                geometric_factors,
+                [LinearMap(inv(Diagonal(reference_approximation.reference_element.wq)*
+                    Diagonal(geometric_factors.J[:,k]))) for k in 1:N_el],
+                fill(LinearMap(I,reference_approximation.N_q),N_el),
+                [LinearMap(inv(Diagonal(geometric_factors.J[:,k]))) for k in 1:N_el],
+                Tuple(reference_approximation.reference_element.Vp * 
+                mesh.xyz[m] for m in 1:d))
+
+        else 
+            # do the actual inverse
+            return nothing
+        end
     end
 
     function volume_quadrature(::Line,
@@ -54,10 +83,6 @@ module SpatialDiscretizations
         ::LGLQuadrature,
         num_quad_nodes::Int)
             return gauss_lobatto_quad(0,0,num_quad_nodes-1)
-    end
-
-    function reference_element(elem_type::Line, quadrature_rule, num_quad_nodes)
-        return RefElemData(Line(),1,quad_rule_vol=volume_quadrature(elem_type, quadrature_rule, num_quad_nodes))
     end
 
     function apply_to_all_nodes(f::Function,
@@ -98,7 +123,7 @@ module SpatialDiscretizations
         return output
     end
     
-    export AbstractCollocatedApproximation, DGSEM, DGMulti
-    include("collocated.jl")
+    export DGSEM
+    include("dgsem.jl")
 
 end
