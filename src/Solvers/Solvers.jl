@@ -7,7 +7,7 @@ module Solvers
     using TimerOutputs
 
     using ..ConservationLaws: ConservationLaw, physical_flux, numerical_flux
-    using ..SpatialDiscretizations: SpatialDiscretization, apply_to_all_nodes, apply_to_all_dof
+    using ..SpatialDiscretizations: SpatialDiscretization
     using ..InitialConditions: AbstractInitialData, initial_condition
     
     export AbstractResidualForm, AbstractPhysicalOperators, AbstractStrategy, Solver, PhysicalOperatorsEager, PhysicalOperatorsEager, Eager, Lazy, initialize, semidiscretize, apply_operators, rhs!
@@ -18,8 +18,7 @@ module Solvers
     
     function initialize(initial_data::AbstractInitialData,
         conservation_law::ConservationLaw{d,N_eq},
-        spatial_discretization::SpatialDiscretization{d},
-        ) where {d, N_eq}
+        spatial_discretization::SpatialDiscretization{d}) where {d, N_eq}
 
         @unpack N_el, M, geometric_factors = spatial_discretization
         @unpack N_p, N_q, V, W = spatial_discretization.reference_approximation

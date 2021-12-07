@@ -10,15 +10,11 @@ module SpatialDiscretizations
     using Reexport
     @reexport using StartUpDG: Line, Quad, Tri, Tet, Hex, Pyr
 
-    export AbstractApproximationType, AbstractCollocatedApproximation, AbstractQuadratureRule, ReferenceApproximation, GeometricFactors, LGLQuadrature, LGQuadrature, SpatialDiscretization, ReferenceApproximation, volume_quadrature, apply_to_all_nodes, apply_to_all_dof
+    export AbstractApproximationType, AbstractCollocatedApproximation, ReferenceApproximation, GeometricFactors, SpatialDiscretization, ReferenceApproximation
     
     abstract type AbstractApproximationType end
-    abstract type AbstractQuadratureRule end
     abstract type AbstractCollocatedApproximation <: AbstractApproximationType end
     
-    struct LGLQuadrature <: AbstractQuadratureRule end
-    struct LGQuadrature <: AbstractQuadratureRule end
-
     struct ReferenceApproximation{d}
         approx_type::AbstractApproximationType
         N_p::Int
@@ -81,55 +77,8 @@ module SpatialDiscretizations
         end
     end
 
-    function volume_quadrature(::Line,
-        quadrature_rule::LGQuadrature,
-        num_quad_nodes::Int)
-            return gauss_quad(0,0,num_quad_nodes-1) 
-    end
-
-    function volume_quadrature(::Line, 
-        ::LGLQuadrature,
-        num_quad_nodes::Int)
-            return gauss_lobatto_quad(0,0,num_quad_nodes-1)
-    end
-
-    function apply_to_all_nodes(f::Function,
-        x::NTuple{d, Matrix{Float64}}, N_eq::Int=1) where {d}
-        # f maps tuple of length d to tuple of length N_eq
-        
-        N_nodes = size(x[1])[1]
-        N_el = size(x[1])[2]
-        nodal_values = Array{Float64}(undef, N_nodes, N_eq, N_el)
-        
-        for k in 1:N_el
-            for i in 1:N_nodes
-                # get tuple of length N_eq at node i of elem k
-                vector_at_node = f(Tuple(x[m][i,k] for m in 1:d)) 
-                for e in 1:N_eq
-                    nodal_values[i,e,k] = vector_at_node[e]
-                end
-            end
-        end
-        return nodal_values
-    end
-
-    function apply_to_all_dof(f::Vector{<:LinearMap},
-        dof::Array{Float64,3})
-        # dof may be volume/facet/solution nodal values 
-
-        N_eq = size(dof)[2]
-        N_el = size(dof)[3]
-
-        # assumes matrix for f same size for all elements
-        output = Array{Float64}(undef, size(f[1],1), N_eq, N_el)
-        
-        for k in 1:N_el
-            for e in 1:N_eq
-                output[:,e,k] = f[k] * dof[:,e,k]
-            end
-        end
-        return output
-    end
+    export AbstractQuadratureRule, LGLQuadrature, LGQuadrature, volume_quadrature
+    include("quadrature.jl")
     
     export DGSEM
     include("dgsem.jl")

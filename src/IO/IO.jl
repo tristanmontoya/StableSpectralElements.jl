@@ -4,7 +4,7 @@ module IO
     using Plots: plot, plot!, scatter, savefig
     using LaTeXStrings
     using OrdinaryDiffEq: ODEProblem, ODESolution
-    using ..SpatialDiscretizations: SpatialDiscretization, apply_to_all_dof
+    using ..SpatialDiscretizations: SpatialDiscretization
 
     export Plotter, visualize
 
@@ -49,18 +49,15 @@ module IO
         exact_solution::Union{Function,Nothing}=nothing,
         label::String="U^h(x,t)", label_exact::String="U(x,t)")
 
-        u = vec(apply_to_all_dof(
-            fill(plotter.V_plot, plotter.N_el), sol)[:,e,:])
-        
-
+        u = convert(Matrix, plotter.V_plot * sol[:,e,:])
         if !isnothing(exact_solution)
             p = plot(vec(plotter.x_plot[1]),
                 vec(exact_solution(plotter.x_plot)[e]), 
                 label=latexstring(label_exact))
-            plot!(p, vec(plotter.x_plot[1]),u, label=latexstring(label), 
+            plot!(p, vec(plotter.x_plot[1]), vec(u), label=latexstring(label), 
                 xlabel=latexstring("x"))
         else 
-            p = plot(vec(plotter.x_plot[1]),u, label=latexstring(label), 
+            p = plot(vec(plotter.x_plot[1]), vec(u), label=latexstring(label), 
                 xlabel=latexstring("x"))
         end
 
