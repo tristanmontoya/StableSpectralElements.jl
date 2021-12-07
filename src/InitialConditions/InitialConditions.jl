@@ -12,6 +12,8 @@ module InitialConditions
         k::NTuple{d,Float64}  # wave number in each direction
     end
 
+    struct InitialDataHeaviside <: AbstractInitialData end
+
     function InitialDataSine(A::Float64, k::Float64)
         return InitialDataSine{1}(A,(k,))
     end
@@ -21,8 +23,6 @@ module InitialConditions
         return x -> fill(initial_data.A*prod(Tuple(sin.(initial_data.k[m]*x[m])
             for m in 1:d)), N_eq)
     end
-
-    struct InitialDataHeaviside <: AbstractInitialData end
 
     function initial_condition(::InitialDataHeaviside,
         ::ConservationLaw{d,N_eq}) where {d, N_eq}

@@ -15,6 +15,32 @@ module Solvers
     abstract type AbstractResidualForm end
     abstract type AbstractPhysicalOperators{d} end
     abstract type AbstractStrategy end
+
+    struct Eager <: AbstractStrategy end
+    struct Lazy <: AbstractStrategy end
+    struct Solver{ResidualForm,PhysicalOperators,d,N_eq}
+        conservation_law::ConservationLaw{d,N_eq}
+        operators::Vector{PhysicalOperators}
+        connectivity::Matrix{Int}
+        form::ResidualForm
+    end
+
+    struct PhysicalOperatorsEager{d} <: AbstractPhysicalOperators{d}
+        VOL::NTuple{d,LinearMap}
+        FAC::LinearMap
+        R::LinearMap
+        NTR::NTuple{d,Union{LinearMap,AbstractMatrix}}  # only needed for strong form
+        scaled_normal::NTuple{d, Vector{Float64}}
+    end
+
+    struct PhysicalOperatorsLazy{d} <: AbstractPhysicalOperators{d}
+        vol::NTuple{d,LinearMap}  # not pre-multipled by mass inverse
+        fac::LinearMap  # not pre-multiplied by mass inverse
+        M::AbstractMatrix
+        R::LinearMap
+        NTR::NTuple{d,Union{LinearMap,AbstractMatrix}}  # only needed for strong form
+        scaled_normal::NTuple{d, Vector}
+    end
     
     function initialize(initial_data::AbstractInitialData,
         conservation_law::ConservationLaw{d,N_eq},
@@ -34,10 +60,6 @@ module Solvers
             for i in 1:N_q
                 u0q[i,:] = f(Tuple(xyzq[m][i,k] for m in 1:d)) 
             end
-
-            #= println("matrix: ", convert(Matrix, transpose(V) * W * 
-            Diagonal(geometric_factors.J[:,k])))
-            println("u0q: ", u0q) =#
             
             # project to solution DOF
             u0[:,:,k] = M[k] \ convert(Matrix, transpose(V) * W * 
@@ -45,33 +67,6 @@ module Solvers
         end
         return u0
     end
-
-    struct Solver{ResidualForm,PhysicalOperators,d,N_eq}
-        conservation_law::ConservationLaw{d,N_eq}
-        operators::Vector{PhysicalOperators}
-        connectivity::Matrix{Int}
-        form::ResidualForm
-    end
-
-    struct PhysicalOperatorsEager{d} <: AbstractPhysicalOperators{d}
-        VOL::NTuple{d,LinearMap}
-        FAC::LinearMap
-        R::LinearMap
-        NTR::NTuple{d,Union{LinearMap,Matrix}}  # only needed for strong form
-        scaled_normal::NTuple{d, Vector{Float64}}
-    end
-
-    struct PhysicalOperatorsLazy{d} <: AbstractPhysicalOperators{d}
-        vol::NTuple{d,LinearMap}  # not pre-multipled by mass inverse
-        fac::LinearMap  # not pre-multiplied by mass inverse
-        M::AbstractMatrix
-        R::LinearMap
-        NTR::NTuple{d,Union{LinearMap,Matrix}}  # only needed for strong form
-        scaled_normal::NTuple{d, Vector{Float64}}
-    end
-    
-    struct Eager <: AbstractStrategy end
-    struct Lazy <: AbstractStrategy end
 
     function apply_operators(operators::PhysicalOperatorsEager{d},
         f::NTuple{d,Matrix{Float64}}, f_fac::Matrix{Float64}) where {d}

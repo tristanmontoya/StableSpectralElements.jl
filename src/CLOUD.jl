@@ -10,5 +10,6 @@ module CLOUD
     include("InitialConditions/InitialConditions.jl")
     include("Solvers/Solvers.jl")
     include("IO/IO.jl")
+    include("Analysis/Analysis.jl")
 
 end

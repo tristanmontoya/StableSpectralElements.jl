@@ -21,14 +21,14 @@ module SpatialDiscretizations
         N_q::Int
         N_f::Int
         reference_element::RefElemData{d}
-        D::NTuple{d, LinearMap{Float64}}
+        D::NTuple{d, LinearMap}
         V::LinearMap
-        R::LinearMap{Float64}
+        R::LinearMap
         P::LinearMap
         W::LinearMap
         B::LinearMap
-        ADVs::NTuple{d, LinearMap{Float64}}
-        ADVw::NTuple{d, LinearMap{Float64}}
+        ADVs::NTuple{d, LinearMap}
+        ADVw::NTuple{d, LinearMap}
         V_plot::LinearMap 
     end
     
