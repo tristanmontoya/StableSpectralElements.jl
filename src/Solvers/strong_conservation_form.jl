@@ -4,10 +4,10 @@ function semidiscretize(
     conservation_law::ConservationLaw{d,N_eq},spatial_discretization::SpatialDiscretization{d},
     initial_data::AbstractInitialData, 
     form::StrongConservationForm,
-    tspan::NTuple{2,Float64}) where {d, N_eq}
+    tspan::NTuple{2,Float64}, ::Eager) where {d, N_eq}
 
-    @unpack N_el, jacobian_inverse = spatial_discretization
-    @unpack D, R, P, invM, B = spatial_discretization.reference_approximation
+    @unpack N_el, M = spatial_discretization
+    @unpack ADVs, R, P, B = spatial_discretization.reference_approximation
     @unpack nrstJ = 
         spatial_discretization.reference_approximation.reference_element
     @unpack JinvG, nJf = spatial_discretization.geometric_factors
@@ -17,20 +17,66 @@ function semidiscretize(
         conservation_law,
         spatial_discretization)
 
-    operators = Array{PhysicalOperatorsLinear}(undef, N_el)
+    operators = Array{PhysicalOperatorsEager}(undef, N_el)
     for k in 1:N_el
+        invM = inv(M[k])
         if d == 1
-            VOL = (-jacobian_inverse[k] * D[1] * P,)
+            VOL = (combine(-invM * ADVs[1]),)
+            NTR = (combine(Diagonal(nJf[1][:,k]) * R * P),)
+        else
+            VOL = Tuple(combine(-invM * sum(ADVs[1] * Diagonal(JinvG[:,m,n,k])
+                for m in 1:d) for n in 1:d)) 
+            NTR = Tuple(combine(sum(Diagonal(nrstJ[m][:,k]) * R * P * 
+                Diagonal(JinvG[:,m,n,k]) for m in 1:d)) for n in 1:d)
+        end
+
+        FAC = combine(-invM * transpose(R) * B)
+
+        operators[k] = PhysicalOperatorsEager(VOL, FAC, R, NTR,
+            Tuple(nJf[m][:,k] for m in 1:d))
+    end
+
+    solver = Solver(conservation_law, operators,
+        spatial_discretization.mesh.mapP, form)
+
+    return ODEProblem(rhs!, u0, tspan, solver)
+end
+
+function semidiscretize(
+    conservation_law::ConservationLaw{d,N_eq},spatial_discretization::SpatialDiscretization{d},
+    initial_data::AbstractInitialData, 
+    form::StrongConservationForm,
+    tspan::NTuple{2,Float64}, ::Lazy) where {d, N_eq}
+
+    @unpack N_el, M = spatial_discretization
+    @unpack ADVs, R, P, B = spatial_discretization.reference_approximation
+    @unpack nrstJ = 
+        spatial_discretization.reference_approximation.reference_element
+    @unpack JinvG, nJf = spatial_discretization.geometric_factors
+
+    u0 = initialize(
+        initial_data,
+        conservation_law,
+        spatial_discretization)
+
+    operators = Array{PhysicalOperatorsLazy}(undef, N_el)
+    for k in 1:N_el
+
+        if d == 1
+            vol = (-ADVs[1],)
             NTR = (Diagonal(nJf[1][:,k]) * R * P,)
         else
-            VOL = Tuple(-jacobian_inverse[k] * sum(D[m] * P *
-                    Diagonal(JinvG[:,m,n,k]) for m in 1:d) for n in 1:d) 
-            NTR = Tuple(sum(
-                Diagonal(nrstJ[m][:,k]) * R * P * Diagonal(JinvG[:,m,n,k]) for m in 1:d) for n in 1:d)
+            vol = Tuple(-sum(ADVs[1] *
+                Diagonal(JinvG[:,m,n,k]) 
+                for m in 1:d) for n in 1:d) 
+            NTR = Tuple(sum(Diagonal(nrstJ[m][:,k]) * R * P *
+                Diagonal(JinvG[:,m,n,k]) for m in 1:d) for n in 1:d)
         end
-        operators[k] = PhysicalOperatorsLinear(VOL,
-            -jacobian_inverse[k] * invM * transpose(R) * B, R, 
-            NTR, Tuple(nJf[m][:,k] for m in 1:d))
+
+        fac = -transpose(R) * B
+
+        operators[k] = PhysicalOperatorsLazy(vol, fac,
+            M[k], R, NTR, Tuple(nJf[m][:,k] for m in 1:d))
     end
 
     solver = Solver(conservation_law, operators,
@@ -40,7 +86,8 @@ function semidiscretize(
 end
 
 function rhs!(dudt::Array{Float64,3}, u::Array{Float64,3}, 
-    solver::Solver{StrongConservationForm, d, N_eq}, t::Float64) where {d, N_eq}
+    solver::Solver{StrongConservationForm, <:AbstractPhysicalOperators, d, N_eq}, t::Float64) where {d, N_eq}
+    @timeit "rhs!" begin   
 
     @unpack conservation_law, operators, connectivity, form = solver
 
@@ -50,38 +97,36 @@ function rhs!(dudt::Array{Float64,3}, u::Array{Float64,3},
 
     # get all facet state values
     for k in 1:N_el
-        u_facet[:,:,k] = convert(Matrix, operators[k].R * u[:,:,k])
+        u_facet[:,:,k] = 
+            @timeit "extrapolate solution" convert(
+                Matrix, operators[k].R * u[:,:,k])
     end
 
-    # evaluate all local residuals 
+    # evaluate all local residuals
     for k in 1:N_el
         # gather external state to element
         u_out = Matrix{Float64}(undef, N_f, N_eq)
         for e in 1:N_eq
-            u_out[:,e] = u_facet[:,e,:][connectivity[:,k]]
+            u_out[:,e] = @timeit  "gather external state" u_facet[
+                :,e,:][connectivity[:,k]]
         end
         
         # evaluate physical and numerical flux
-        f = physical_flux(conservation_law.first_order_flux, u[:,:,k])
-        f_star = numerical_flux(conservation_law.first_order_numerical_flux,
+        f = @timeit "eval flux" physical_flux(
+            conservation_law.first_order_flux, u[:,:,k])
+
+        f_star = @timeit "eval numerical flux" numerical_flux(
+            conservation_law.first_order_numerical_flux,
             u_facet[:,:,k], u_out, operators[k].scaled_normal)
+
+        f_fac = @timeit "eval flux diff" f_star - 
+            sum(convert(Matrix,operators[k].NTR[m] * f[m]) 
+                for m in 1:d)
         
-        SAT=
-
-        #=
-        println("-----")
-        println("k: ", k)
-        println("u_in, u_out:")
-        println(u_facet[:,:,k], u_out)
-        println("f_n, f_star")
-        println(convert(Matrix,sum(operators[k].NORMAL_TRACE[m] * f[m] 
-        for m in 1:d)), f_star) =#
-
         # apply operators
-        dudt[:,:,k] = convert(Matrix, sum(operators[k].VOL[m] * f[m] 
-                for m in 1:d) + 
-            operators[k].FAC * (f_star - sum(operators[k].NTR[m] * f[m] 
-                for m in 1:d)))
+        dudt[:,:,k] = @timeit "eval residual" apply_operators(
+            operators[k], f, f_fac)
+    end
     end
     return nothing
 end

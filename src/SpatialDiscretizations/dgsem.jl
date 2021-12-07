@@ -39,9 +39,6 @@ function ReferenceApproximation(approx_type::DGSEM,
     W = LinearMap(Diagonal(reference_element.wq))
     B = LinearMap(Diagonal(reference_element.wf))
 
-    # mass matrix inverse
-    invM = LinearMap(inv(Diagonal(reference_element.wq)))
-
     # strong-form derivative operator
     if reference_element.elementType isa Line
         D = (LinearMap(grad_V_tilde / V_tilde),)
@@ -50,8 +47,11 @@ function ReferenceApproximation(approx_type::DGSEM,
             for m in 1:d)
     end
 
-    # weak-form advection operator
-    ADV = Tuple(transpose(D[m]) * W for m in 1:d)
+    # strong-form reference advection operator (no mass matrix)
+    ADVs = Tuple(W * D[m] * P for m in 1:d)
+
+    # weak-form reference advection operator (no mass matrix)
+    ADVw = Tuple(transpose(D[m]) * W for m in 1:d)
 
     # solution to plotting nodes
     V_plot = LinearMap(vandermonde(
@@ -59,6 +59,5 @@ function ReferenceApproximation(approx_type::DGSEM,
         reference_element.rp) / V_tilde)
 
     return ReferenceApproximation{d}(approx_type, N_p, N_q, N_f, 
-        reference_element, D, ADV, V, V_plot, R, 
-        invM, P, W, B)
+        reference_element, D, V, R, P, W, B, ADVs, ADVw, V_plot,)
 end

@@ -1,5 +1,6 @@
 module SpatialDiscretizations
 
+    using UnPack
     using LinearAlgebra: I, inv, transpose, Diagonal
     using LinearMaps: LinearMap, UniformScalingMap
     using StartUpDG: MeshData, RefElemData, AbstractElemShape, basis, vandermonde, gauss_quad, gauss_lobatto_quad
@@ -25,14 +26,14 @@ module SpatialDiscretizations
         N_f::Int
         reference_element::RefElemData{d}
         D::NTuple{d, LinearMap{Float64}}
-        ADV::NTuple{d, LinearMap{Float64}}
         V::LinearMap
-        V_plot::LinearMap
         R::LinearMap{Float64}
-        invM::LinearMap
         P::LinearMap
         W::LinearMap
         B::LinearMap
+        ADVs::NTuple{d, LinearMap{Float64}}
+        ADVw::NTuple{d, LinearMap{Float64}}
+        V_plot::LinearMap 
     end
     
     struct SpatialDiscretization{d}
@@ -40,14 +41,14 @@ module SpatialDiscretizations
         N_el::Int
         reference_approximation::ReferenceApproximation{d}
         geometric_factors::GeometricFactors{d}
-        physical_mass_inverse::Vector{LinearMap}
-        physical_projection::Vector{LinearMap}
-        jacobian_inverse::Vector{LinearMap}
+        M::Vector{AbstractMatrix}
         x_plot::NTuple{d, Matrix{Float64}}
     end
 
     function SpatialDiscretization(mesh::MeshData{d},
         reference_approximation::ReferenceApproximation{d}) where {d}
+
+        @unpack reference_element = reference_approximation
 
         N_el = size(mesh.xyz[1])[2]
         geometric_factors = GeometricFactors(mesh,
@@ -60,16 +61,23 @@ module SpatialDiscretizations
                 N_el,
                 reference_approximation,
                 geometric_factors,
-                [LinearMap(inv(Diagonal(reference_approximation.reference_element.wq)*
-                    Diagonal(geometric_factors.J[:,k]))) for k in 1:N_el],
-                fill(LinearMap(I,reference_approximation.N_q),N_el),
-                [LinearMap(inv(Diagonal(geometric_factors.J[:,k]))) for k in 1:N_el],
-                Tuple(reference_approximation.reference_element.Vp * 
-                mesh.xyz[m] for m in 1:d))
+                [Diagonal(reference_element.wq) *
+                    Diagonal(geometric_factors.J[:,k]) for k in 1:N_el],
+                Tuple(reference_element.Vp * mesh.xyz[m] for m in 1:d))
 
         else 
-            # do the actual inverse
-            return nothing
+
+            return SpatialDiscretization{d}(
+                mesh,
+                N_el,
+                reference_approximation,
+                geometric_factors,
+                [convert(Matrix, 
+                transpose(reference_approximation.V) * 
+                    Diagonal(reference_element.wq) *
+                    Diagonal(geometric_factors.J[:,k]) * 
+                    reference_approximation.V) for k in 1:N_el],
+                Tuple(reference_element.Vp * mesh.xyz[m] for m in 1:d))
         end
     end
 

@@ -34,11 +34,6 @@ function numerical_flux(flux::ConstantLinearAdvectionNumericalFlux{d},
     # the flux will be appropriately scaled by Jacobian too 
     a_n = sum(flux.a[m]*n[m] for m in 1:d) 
     
-    #=println("a, n, a_n: ", flux.a, n, a_n)
-    println("-0.5*lambda*abs(a_n)", 0.5*flux.λ*abs.(a_n))
-    println(u_in + u_out)
-    println(u_out + u_in)=#
-
     # returns vector of length N_zeta 
     return 0.5*a_n.*(u_in + u_out) - 0.5*flux.λ*abs.(a_n).*(u_out - u_in)
 end
