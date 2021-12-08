@@ -9,7 +9,7 @@ module CLOUD
     include("SpatialDiscretizations/SpatialDiscretizations.jl")
     include("InitialConditions/InitialConditions.jl")
     include("Solvers/Solvers.jl")
-    include("IO/IO.jl")
     include("Analysis/Analysis.jl")
+    include("IO/IO.jl")
 
 end
