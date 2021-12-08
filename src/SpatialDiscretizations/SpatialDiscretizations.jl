@@ -10,7 +10,7 @@ module SpatialDiscretizations
     using Reexport
     @reexport using StartUpDG: Line, Quad, Tri, Tet, Hex, Pyr
 
-    export AbstractApproximationType, AbstractCollocatedApproximation, ReferenceApproximation, GeometricFactors, SpatialDiscretization, ReferenceApproximation
+    export AbstractApproximationType, AbstractCollocatedApproximation, ReferenceApproximation, GeometricFactors, SpatialDiscretization
     
     abstract type AbstractApproximationType end
     abstract type AbstractCollocatedApproximation <: AbstractApproximationType end

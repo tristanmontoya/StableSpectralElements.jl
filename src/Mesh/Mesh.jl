@@ -6,7 +6,7 @@ module Mesh
     export GeometricFactors, uniform_periodic_mesh
 
     struct GeometricFactors{d}
-        
+
         # first dimension is node index, second is element
         J::Matrix{Float64}
 

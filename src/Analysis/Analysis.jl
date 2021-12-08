@@ -1,30 +1,31 @@
 module Analysis
 
     using LinearMaps: LinearMap
-    using LinearAlgebra: Diagonal
+    using LinearAlgebra: Diagonal, dot
     using UnPack
+    using StartUpDG: MeshData
+    using OrdinaryDiffEq: OrdinaryDiffEqAlgorithm, solve
 
-    using ..ConservationLaws
-    using ..Mesh
-    using ..SpatialDiscretizations
-    using ..InitialConditions
-    using ..Solvers
-    using ..IO
+    using ..ConservationLaws: ConservationLaw
+    using ..Mesh: uniform_periodic_mesh
+    using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation
+    using ..InitialConditions: AbstractInitialData
+    using ..Solvers: AbstractResidualForm, AbstractStrategy, semidiscretize
 
-    export AbstractAnalysis, AbstractNorm, QuadratureL2, RMS, l∞, ErrorAnalysis
+    export AbstractAnalysis, AbstractNorm, QuadratureL2, RMS, l∞, ErrorAnalysis, calculate_error
 
     abstract type AbstractAnalysis{d} end
     abstract type AbstractNorm end
 
     struct QuadratureL2 <: AbstractNorm 
-        WJ_err::Vector{AbstractMatrix}
+        WJ::Vector{AbstractMatrix}
     end
 
     struct RMS <: AbstractNorm end
     struct l∞ <: AbstractNorm end
 
-    struct ErrorAnalysis{d} <: AbstractAnalysis{d}
-        norm::AbstractNorm
+    struct ErrorAnalysis{NormType, d} <: AbstractAnalysis{d}
+        norm::NormType
         N_el::Int
         V_err::LinearMap
         x_err::NTuple{d, Matrix{Float64}}
@@ -40,7 +41,15 @@ module Analysis
             Diagonal(geometric_factors.J[:,k]) for k in 1:N_el]), 
             N_el, V, mesh.xyzq)
     end
-        
+
+    function calculate_error(error_analysis::ErrorAnalysis{QuadratureL2, d}, 
+        sol::Array{Float64,3}, exact_solution::Function; e::Int=1) where {d}
+        @unpack norm, N_el, V_err, x_err = error_analysis 
+        err = exact_solution(x_err)[e] - convert(Matrix, V_err * sol[:,e,:])
+        return sqrt(sum(dot(err[:,k], norm.WJ[k]*err[:,k]) 
+            for k in 1:error_analysis.N_el ))
+    end
+    
     export grid_refine
     include("grid_refine.jl")
 
