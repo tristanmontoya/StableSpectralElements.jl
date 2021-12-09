@@ -2,16 +2,16 @@ module IO
 
     using LinearMaps: LinearMap
     using Plots: plot, plot!, scatter, savefig
-    using LaTeXStrings
-    using OrdinaryDiffEq: ODEProblem, ODESolution, DiscreteCallback
+    using LaTeXStrings: latexstring
+    using JLD2: save, load
+    using OrdinaryDiffEq: ODEIntegrator, ODEProblem, ODESolution, DiscreteCallback
     using ..SpatialDiscretizations: SpatialDiscretization
     using ..Analysis: AbstractAnalysis
 
     export Plotter, visualize
     include("visualize.jl")
 
-    export write_solution
-    include("write.jl")
+    export save_solution, load_solution
+    include("file.jl")
 
-    include("read.jl")
 end

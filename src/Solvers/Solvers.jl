@@ -18,6 +18,7 @@ module Solvers
 
     struct Eager <: AbstractStrategy end
     struct Lazy <: AbstractStrategy end
+
     struct Solver{ResidualForm,PhysicalOperators,d,N_eq}
         conservation_law::ConservationLaw{d,N_eq}
         operators::Vector{PhysicalOperators}
@@ -70,13 +71,15 @@ module Solvers
 
     function apply_operators(operators::PhysicalOperatorsEager{d},
         f::NTuple{d,Matrix{Float64}}, f_fac::Matrix{Float64}) where {d}
-        return convert(Matrix, sum(operators.VOL[m] * f[m] for m in 1:d) + 
-            operators.FAC * f_fac)
+        return sum(convert(Matrix, operators.VOL[m] * f[m]) for m in 1:d) +     
+            convert(Matrix,operators.FAC * f_fac)
     end
 
     function apply_operators(operators::PhysicalOperatorsLazy{d},
         f::NTuple{d,Matrix{Float64}}, f_fac::Matrix{Float64}) where {d}
-        return operators.M \ convert(Matrix, sum(operators.vol[m] * f[m] for m in 1:d) + operators.fac * f_fac)
+        rhs = sum(convert(Matrix, operators.vol[m] * f[m]) for m in 1:d) +  convert(Matrix,operators.fac * f_fac)
+
+        return operators.M \ rhs
     end
 
     # utils
@@ -86,5 +89,5 @@ module Solvers
 
     export StrongConservationForm
     include("strong_conservation_form.jl")
-
+    
 end
