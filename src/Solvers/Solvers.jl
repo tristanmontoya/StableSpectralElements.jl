@@ -1,13 +1,13 @@
 module Solvers
 
-    using OrdinaryDiffEq: ODEProblem
+    using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
     using UnPack
     using LinearAlgebra: Diagonal, inv
     using LinearMaps: LinearMap
     using TimerOutputs
 
     using ..ConservationLaws: ConservationLaw, physical_flux, numerical_flux
-    using ..SpatialDiscretizations: SpatialDiscretization
+    using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization
     using ..InitialConditions: AbstractInitialData, initial_condition
     
     export AbstractResidualForm, AbstractPhysicalOperators, AbstractStrategy, Solver, PhysicalOperatorsEager, PhysicalOperatorsEager, Eager, Lazy, initialize, semidiscretize, apply_operators, rhs!
@@ -89,5 +89,5 @@ module Solvers
 
     export StrongConservationForm
     include("strong_conservation_form.jl")
-    
+
 end

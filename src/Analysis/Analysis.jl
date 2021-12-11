@@ -4,7 +4,6 @@ module Analysis
     using LinearAlgebra: Diagonal, dot
     using UnPack
     using StartUpDG: MeshData
-    using OrdinaryDiffEq: OrdinaryDiffEqAlgorithm, solve
 
     using ..ConservationLaws: ConservationLaw
     using ..Mesh: uniform_periodic_mesh
@@ -18,9 +17,6 @@ module Analysis
     
     export ErrorAnalysis, AbstractNorm, QuadratureL2, error_analysis
     include("error.jl")
-
-    export run_refinement
-    include("refinement.jl")
 
     include("koopman.jl")
 
