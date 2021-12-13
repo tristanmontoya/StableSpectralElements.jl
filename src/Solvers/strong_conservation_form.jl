@@ -2,7 +2,7 @@ struct StrongConservationForm <: AbstractResidualForm end
 
 function semidiscretize(
     conservation_law::ConservationLaw{d,N_eq},spatial_discretization::SpatialDiscretization{d},
-    initial_data::AbstractInitialData, 
+    u0::Array{Float64,3}, 
     form::StrongConservationForm,
     tspan::NTuple{2,Float64}, ::Eager) where {d, N_eq}
 
@@ -11,11 +11,6 @@ function semidiscretize(
     @unpack nrstJ = 
         spatial_discretization.reference_approximation.reference_element
     @unpack JinvG, nJf = spatial_discretization.geometric_factors
-
-    u0 = initialize(
-        initial_data,
-        conservation_law,
-        spatial_discretization)
 
     operators = Array{PhysicalOperatorsEager}(undef, N_el)
     for k in 1:N_el
@@ -87,7 +82,7 @@ end
 
 function rhs!(dudt::Array{Float64,3}, u::Array{Float64,3}, 
     solver::Solver{StrongConservationForm, <:AbstractPhysicalOperators, d, N_eq}, t::Float64) where {d, N_eq}
-    @timeit "rhs!" begin   
+    @timeit "rhs!" begin
 
     @unpack conservation_law, operators, connectivity, form = solver
 

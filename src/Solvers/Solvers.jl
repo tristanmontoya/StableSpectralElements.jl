@@ -69,6 +69,23 @@ module Solvers
         return u0
     end
 
+    function semidiscretize(
+        conservation_law::ConservationLaw,spatial_discretization::SpatialDiscretization,
+        initial_data::AbstractInitialData, 
+        form::AbstractResidualForm,
+        tspan::NTuple{2,Float64}, 
+        strategy::AbstractStrategy)
+
+        u0 = initialize(
+            initial_data,
+            conservation_law,
+            spatial_discretization)
+
+
+        return semidiscretize(conservation_law, spatial_discretization, 
+            u0,form,tspan, strategy)
+    end
+
     function apply_operators(operators::PhysicalOperatorsEager{d},
         f::NTuple{d,Matrix{Float64}}, f_fac::Matrix{Float64}) where {d}
         return sum(convert(Matrix, operators.VOL[m] * f[m]) for m in 1:d) +     

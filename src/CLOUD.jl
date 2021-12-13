@@ -11,6 +11,6 @@ module CLOUD
     include("Solvers/Solvers.jl")
     include("Analysis/Analysis.jl")
     include("IO/IO.jl")
-    include("Utils/Utils.jl")
+    include("RunUtils/RunUtils.jl")
 
 end
