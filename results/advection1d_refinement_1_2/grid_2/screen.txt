@@ -1,4 +1,0 @@
-writing time step 100  t = 0.25000000000000017
-writing time step 200  t = 0.5000000000000003
-writing time step 300  t = 0.749999999999995
-writing time step 400  t = 1.0

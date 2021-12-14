@@ -10,7 +10,7 @@ module Solvers
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization
     using ..InitialConditions: AbstractInitialData, initial_condition
     
-    export AbstractResidualForm, AbstractPhysicalOperators, AbstractStrategy, Solver, PhysicalOperatorsEager, PhysicalOperatorsEager, Eager, Lazy, initialize, semidiscretize, apply_operators, rhs!
+    export AbstractResidualForm, AbstractPhysicalOperators, AbstractStrategy, Solver, PhysicalOperatorsEager, PhysicalOperatorsEager, Eager, Lazy, initialize, semidiscretize, apply_operators, combine, get_dof, rhs!
 
     abstract type AbstractResidualForm end
     abstract type AbstractPhysicalOperators{d} end
@@ -81,7 +81,6 @@ module Solvers
             conservation_law,
             spatial_discretization)
 
-
         return semidiscretize(conservation_law, spatial_discretization, 
             u0,form,tspan, strategy)
     end
@@ -102,6 +101,12 @@ module Solvers
     # utils
     function combine(operator::LinearMap)
         return LinearMap(convert(Matrix,operator))
+    end
+
+    function get_dof(spatial_discretization::SpatialDiscretization{d}, 
+        ::ConservationLaw{d,N_eq}) where {d, N_eq}
+        return (spatial_discretization.reference_approximation.N_p, 
+            N_eq, spatial_discretization.N_el)
     end
 
     export StrongConservationForm

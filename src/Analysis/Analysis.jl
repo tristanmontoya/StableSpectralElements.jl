@@ -18,6 +18,5 @@ module Analysis
     export ErrorAnalysis, AbstractNorm, QuadratureL2, error_analysis
     include("error.jl")
 
-    include("koopman.jl")
-
+    include("dynamics.jl")
 end

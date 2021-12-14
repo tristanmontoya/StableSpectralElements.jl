@@ -7,7 +7,10 @@ function save_project(
     results_path::String; 
     overwrite::Bool=false)
 
-    if !isdir(results_path) || overwrite
+    if !isdir(results_path)
+        new_path = results_path
+    elseif overwrite  
+        rm(results_path, force=true, recursive=true)
         new_path = results_path
     else
         dir_exists = true
@@ -20,9 +23,7 @@ function save_project(
             suffix = suffix + 1
         end
     end
-
     mkpath(new_path)
-
     save(string(new_path, "project.jld2"), 
         Dict("conservation_law" => conservation_law,
             "spatial_discretization" => spatial_discretization,
@@ -30,6 +31,8 @@ function save_project(
             "form" => form,
             "tspan" => tspan,
             "strategy" => strategy))
+    
+    save_object(string(new_path, "time_steps.jld2"), Int64[])
 
     return new_path
 
@@ -42,11 +45,19 @@ function save_solution(integrator::ODEIntegrator, results_path::String)
     end
     save(string(results_path, "res_", integrator.iter, ".jld2"),
         Dict("u" => integrator.u, "t" => integrator.t))
+    time_steps=load_object(string(results_path, "time_steps.jld2"))
+    save_object(string(results_path, "time_steps.jld2"),
+        push!(time_steps, integrator.iter))
 end
 
 function save_solution(u::Array{Float64,3}, t::Float64, results_path::String, time_step::Union{Int,String}=0)
     save(string(results_path, "res_", time_step, ".jld2"), 
         Dict("u" => u, "t" => t))
+    if time_step isa Int
+        time_steps=load_object(string(results_path, "time_steps.jld2"))
+        save_object(string(results_path, "time_steps.jld2"), 
+            push!(time_steps, time_step))
+    end
 end
 
 function save_callback(results_path::String, interval::Int=0) 
@@ -57,9 +68,9 @@ end
 
 function load_solution(results_path::String, time_step::Union{Int,String}=0)
     if time_step == 0
-        project = load(string(results_path, "project.jld2"))
-        return initialize(project["initial_data"], project["conservation_law"],
-            project["spatial_discretization"]), project["tspan"][1]
+        dict = load(string(results_path, "project.jld2"))
+        return initialize(dict["initial_data"], dict["conservation_law"],
+            dict["spatial_discretization"]), dict["tspan"][1]
     else
         dict = load(string(results_path, "res_", time_step, ".jld2"))
         return dict["u"], dict["t"]
@@ -67,5 +78,29 @@ function load_solution(results_path::String, time_step::Union{Int,String}=0)
 end
 
 function load_project(results_path::String)
-    return load(string(results_path,"project.jld2"))
+    dict = load(string(results_path,"project.jld2"))
+    return (dict["conservation_law"], 
+        dict["spatial_discretization"], 
+        dict["initial_data"],
+        dict["form"],
+        dict["tspan"],
+        dict["strategy"])
+end
+
+function load_time_steps(results_path::String)
+    return load_object(string(results_path, "time_steps.jld2"))
+end
+
+function load_snapshots(results_path::String, time_steps::Vector{Int})
+    dict = load(string(results_path,"project.jld2"))
+    N_p, N_eq, N_el = get_dof(dict["spatial_discretization"], 
+        dict["conservation_law"])
+    N_dof = N_p*N_eq*N_el
+    N_t = length(time_steps)
+    A = Matrix{Float64}(undef, N_dof, N_t)
+    for i in 1:N_t
+        u, = load_solution(results_path, time_steps[i])
+        A[:,i] = vec(u)
+    end
+    return A
 end
