@@ -1,5 +1,10 @@
-writing time step 100  t = 0.20000000000000015
-writing time step 200  t = 0.4000000000000003
-writing time step 300  t = 0.6000000000000004
-writing time step 400  t = 0.8000000000000006
-writing time step 500  t = 1.0
+writing time step 28  t = 0.10000000000000002
+writing time step 56  t = 0.19999999999999976
+writing time step 84  t = 0.29999999999999943
+writing time step 112  t = 0.3999999999999991
+writing time step 140  t = 0.4999999999999987
+writing time step 168  t = 0.5999999999999984
+writing time step 196  t = 0.6999999999999981
+writing time step 224  t = 0.7999999999999977
+writing time step 252  t = 0.8999999999999974
+writing time step 280  t = 1.0

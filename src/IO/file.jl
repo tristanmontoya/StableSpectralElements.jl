@@ -1,3 +1,28 @@
+function new_path(results_path::String,
+    overwrite::Bool=false, clear::Bool=false)
+
+    if !isdir(results_path)
+        path = results_path
+    elseif overwrite
+        if clear  
+            rm(results_path, force=true, recursive=true)
+        end
+        path = results_path
+    else
+        dir_exists = true
+        suffix = 1
+        while dir_exists
+            path = string(rstrip(results_path, '/'), "_", suffix, "/")
+            if !isdir(path)
+                dir_exists = false
+            end
+            suffix = suffix + 1
+        end
+    end
+    mkpath(path)
+    return path
+end
+
 function save_project(
     conservation_law::ConservationLaw,spatial_discretization::SpatialDiscretization,
     initial_data::AbstractInitialData, 
@@ -5,26 +30,12 @@ function save_project(
     tspan::NTuple{2,Float64}, 
     strategy::AbstractStrategy, 
     results_path::String; 
-    overwrite::Bool=false)
+    overwrite::Bool=false,
+    clear::Bool=false)
 
-    if !isdir(results_path)
-        new_path = results_path
-    elseif overwrite  
-        rm(results_path, force=true, recursive=true)
-        new_path = results_path
-    else
-        dir_exists = true
-        suffix = 1
-        while dir_exists
-            new_path = string(rstrip(results_path, '/'), "_", suffix, "/")
-            if !isdir(new_path)
-                dir_exists = false
-            end
-            suffix = suffix + 1
-        end
-    end
-    mkpath(new_path)
-    save(string(new_path, "project.jld2"), 
+    results_path = new_path(results_path, overwrite, clear)
+
+    save(string(results_path, "project.jld2"), 
         Dict("conservation_law" => conservation_law,
             "spatial_discretization" => spatial_discretization,
             "initial_data" => initial_data,
@@ -32,9 +43,9 @@ function save_project(
             "tspan" => tspan,
             "strategy" => strategy))
     
-    save_object(string(new_path, "time_steps.jld2"), Int64[])
+    save_object(string(results_path, "time_steps.jld2"), Int64[])
 
-    return new_path
+    return results_path
 
 end
 
@@ -97,10 +108,11 @@ function load_snapshots(results_path::String, time_steps::Vector{Int})
         dict["conservation_law"])
     N_dof = N_p*N_eq*N_el
     N_t = length(time_steps)
-    A = Matrix{Float64}(undef, N_dof, N_t)
+    X = Matrix{Float64}(undef, N_dof, N_t)
     for i in 1:N_t
         u, = load_solution(results_path, time_steps[i])
-        A[:,i] = vec(u)
+        X[:,i] = vec(u)
     end
-    return A
+    
+    return X[:,1:N_t-1], X[:,2:N_t]
 end

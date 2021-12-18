@@ -112,4 +112,7 @@ module Solvers
     export StrongConservationForm
     include("strong_conservation_form.jl")
 
+    export WeakConservationForm
+    include("weak_conservation_form.jl")
+
 end

@@ -6,16 +6,10 @@ struct Plotter{d}
 end
 
 function Plotter(spatial_discretization::SpatialDiscretization{d},directory_name::String) where {d}
-    mkpath(directory_name) 
-    return Plotter{d}(spatial_discretization.x_plot, 
-        spatial_discretization.reference_approximation.V_plot, spatial_discretization.N_el, directory_name)
-end
+    path = new_path(directory_name, true, false)
 
-function Plotter(spatial_discretization::SpatialDiscretization{d}) where {d}
-    mkpath("../plots") 
     return Plotter{d}(spatial_discretization.x_plot, 
-        spatial_discretization.reference_approximation.V_plot, 
-        spatial_discretization.N_el, "../plots/")
+        spatial_discretization.reference_approximation.V_plot, spatial_discretization.N_el, path)
 end
 
 function visualize(f::Function, plotter::Plotter{1}, file_name::String; label::String="U(x,t)", e::Int=1)
@@ -51,7 +45,6 @@ function visualize(sol::Array{Float64,3},
             xlabel=latexstring("x"))
     end
 
-    savefig(p, string(plotter.directory_name, 
-    file_name))   
+    savefig(p, string(plotter.directory_name, file_name))   
     return p
 end

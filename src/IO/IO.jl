@@ -11,10 +11,9 @@ module IO
     using ..InitialConditions: AbstractInitialData
     using ..Solvers: AbstractResidualForm, AbstractStrategy, initialize, get_dof
 
-    export Plotter, visualize
-    include("visualize.jl")
-
-    export save_callback, save_project, save_solution, load_solution, load_project, load_time_steps, load_snapshots
+    export new_path, save_callback, save_project, save_solution, load_solution, load_project, load_time_steps, load_snapshots
     include("file.jl")
 
+    export Plotter, visualize
+    include("visualize.jl")
 end
