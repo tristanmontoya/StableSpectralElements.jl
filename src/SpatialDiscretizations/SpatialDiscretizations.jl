@@ -3,7 +3,7 @@ module SpatialDiscretizations
     using UnPack
     using LinearAlgebra: I, inv, transpose, Diagonal
     using LinearMaps: LinearMap, UniformScalingMap
-    using StartUpDG: MeshData, RefElemData, AbstractElemShape, basis, vandermonde, gauss_quad, gauss_lobatto_quad
+    using StartUpDG: MeshData, RefElemData, AbstractElemShape, face_type,basis, vandermonde, quad_nodes, gauss_quad, gauss_lobatto_quad
 
     using ..Mesh: GeometricFactors
 
@@ -82,5 +82,8 @@ module SpatialDiscretizations
     
     export DGSEM
     include("dgsem.jl")
+
+    export DGMulti
+    include("dgmulti.jl")
 
 end
