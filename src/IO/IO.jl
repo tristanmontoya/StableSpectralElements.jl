@@ -9,7 +9,7 @@ module IO
 
     using ..ConservationLaws: ConservationLaw
     using ..SpatialDiscretizations: SpatialDiscretization
-    using ..InitialConditions: AbstractInitialData
+    using ..InitialConditions: AbstractInitialData, evaluate
     using ..Solvers: AbstractResidualForm, AbstractStrategy, initialize, get_dof
 
     export new_path, save_callback, save_project, save_solution, load_solution, load_project, load_time_steps, load_snapshots

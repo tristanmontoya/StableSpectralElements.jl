@@ -35,10 +35,10 @@ function ReferenceApproximation(approx_type::DGSEM,
         R = LinearMap(vandermonde(elem_type,p,rstf[1]) / V_tilde) 
         V_plot = LinearMap(vandermonde(elem_type, p, rstp[1]) / V_tilde)
     else
-        V_tilde, grad_V_tilde = basis(elem_type, p, rstq)
+        V_tilde, grad_V_tilde... = basis(elem_type, p, rstq...)
         D = Tuple(LinearMap(grad_V_tilde[m] / V_tilde) for m in 1:d)
-        R = LinearMap(vandermonde(elem_type,p,rstf) / V_tilde) 
-        V_plot = LinearMap(vandermonde(elem_type, p, rstp) / V_tilde)
+        R = LinearMap(vandermonde(elem_type,p,rstf...) / V_tilde) 
+        V_plot = LinearMap(vandermonde(elem_type, p, rstp...) / V_tilde)
     end
 
     V = LinearMap(I, N_q)

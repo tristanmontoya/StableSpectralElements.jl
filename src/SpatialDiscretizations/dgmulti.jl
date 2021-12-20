@@ -19,34 +19,38 @@ function ReferenceApproximation(approx_type::DGMulti,
    
     @unpack p = approx_type
 
-    # get reference element data
-    reference_element = RefElemData(elem_type, 
-        mapping_degree,
-        quad_rule_vol=quad_nodes(elem_type, p),
-        quad_rule_face=quad_nodes(face_type(elem_type), p))
+    if elem_type isa Line
+        reference_element = RefElemData(elem_type, 
+            mapping_degree, quad_rule_vol=quad_nodes(elem_type, p))
 
-    @unpack rstp, rstq, rstf, wq, wf = reference_element
+        @unpack rstp, rstq, rstf, wq, wf = reference_element    
 
-    # dimensions of operators
-    N_p = binomial(p+d, d)
-
-    if reference_element.elementType isa Line
         V_tilde, grad_V_tilde = basis(elem_type, p, rstq[1])     
         grad_V = (LinearMap(grad_V_tilde),)
         R = LinearMap(vandermonde(elem_type,p,rstf[1]))
         V_plot = LinearMap(vandermonde(elem_type, p, rstp[1]))
     else
-        V_tilde, grad_V_tilde = basis(elem_type, p, rstq)  
+        reference_element = RefElemData(elem_type, 
+            mapping_degree, quad_rule_vol=quad_nodes(elem_type, p),
+            quad_rule_face=quad_nodes(face_type(elem_type), p))
+
+        @unpack rstp, rstq, rstf, wq, wf = reference_element
+
+        V_tilde, grad_V_tilde... = basis(elem_type, p, rstq...) 
         grad_V = Tuple(LinearMap(grad_V_tilde[m]) for m in 1:d)
-        R = LinearMap(vandermonde(elem_type,p,rstf))
-        V_plot = LinearMap(vandermonde(elem_type, p, rstp))
+        R = LinearMap(vandermonde(elem_type,p,rstf...))
+        V_plot = LinearMap(vandermonde(elem_type, p, rstp...))
     end
+
+    N_p = binomial(p+d, d)
+    N_q = length(wq)
+    N_f = length(wf)
     
     V = LinearMap(V_tilde)
-    inv_M = LinearMap(inv(transpose(V_tilde) * Diagonal(w_q) * V_tilde))
-    P = inv_M * transpose(V) * LinearMap(Diagonal(w_q))
+    inv_M = LinearMap(inv(transpose(V_tilde) * Diagonal(wq) * V_tilde))
     W = LinearMap(Diagonal(wq))
     B = LinearMap(Diagonal(wf))
+    P = inv_M * transpose(V) * W
     D = Tuple(inv_M * transpose(V) * W * grad_V[m] 
         for m in 1:d)
 

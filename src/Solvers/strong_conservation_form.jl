@@ -7,7 +7,7 @@ function semidiscretize(
     tspan::NTuple{2,Float64}, ::Eager) where {d, N_eq}
 
     @unpack N_el, M = spatial_discretization
-    @unpack ADVs, R, P, B = spatial_discretization.reference_approximation
+    @unpack ADVs, V, R, P, B = spatial_discretization.reference_approximation
     @unpack nrstJ = 
         spatial_discretization.reference_approximation.reference_element
     @unpack JinvG, nJf = spatial_discretization.geometric_factors
@@ -17,17 +17,17 @@ function semidiscretize(
         invM = inv(M[k])
         if d == 1
             VOL = (combine(-invM * ADVs[1]),)
-            NTR = (combine(Diagonal(nJf[1][:,k]) * R * P),)
+            NTR = (combine(Diagonal(nrstJ[1]) * R * P),)
         else
-            VOL = Tuple(combine(-invM * sum(ADVs[1] * Diagonal(JinvG[:,m,n,k])
-                for m in 1:d) for n in 1:d)) 
-            NTR = Tuple(combine(sum(Diagonal(nrstJ[m][:,k]) * R * P * 
+            VOL = Tuple(combine(-invM * sum(ADVs[n] * Diagonal(JinvG[:,m,n,k])
+                for m in 1:d)) for n in 1:d) 
+            NTR = Tuple(combine(sum(Diagonal(nrstJ[m]) * R * P * 
                 Diagonal(JinvG[:,m,n,k]) for m in 1:d)) for n in 1:d)
         end
 
         FAC = combine(-invM * transpose(R) * B)
 
-        operators[k] = PhysicalOperatorsEager(VOL, FAC, R, NTR,
+        operators[k] = PhysicalOperatorsEager(VOL, FAC, V, R, NTR,
             Tuple(nJf[m][:,k] for m in 1:d))
     end
 
@@ -44,7 +44,7 @@ function semidiscretize(
     tspan::NTuple{2,Float64}, ::Lazy) where {d, N_eq}
 
     @unpack N_el, M = spatial_discretization
-    @unpack ADVs, R, P, B = spatial_discretization.reference_approximation
+    @unpack ADVs, V, R, P, B = spatial_discretization.reference_approximation
     @unpack nrstJ = 
         spatial_discretization.reference_approximation.reference_element
     @unpack JinvG, nJf = spatial_discretization.geometric_factors
@@ -64,14 +64,14 @@ function semidiscretize(
             vol = Tuple(-sum(ADVs[1] *
                 Diagonal(JinvG[:,m,n,k]) 
                 for m in 1:d) for n in 1:d) 
-            NTR = Tuple(sum(Diagonal(nrstJ[m][:,k]) * R * P *
+            NTR = Tuple(sum(Diagonal(nrstJ[m]) * R * P *
                 Diagonal(JinvG[:,m,n,k]) for m in 1:d) for n in 1:d)
         end
 
         fac = -transpose(R) * B
 
         operators[k] = PhysicalOperatorsLazy(vol, fac,
-            M[k], R, NTR, Tuple(nJf[m][:,k] for m in 1:d))
+            M[k], V, R, NTR, Tuple(nJf[m][:,k] for m in 1:d))
     end
 
     solver = Solver(conservation_law, operators,
@@ -102,13 +102,14 @@ function rhs!(dudt::Array{Float64,3}, u::Array{Float64,3},
         # gather external state to element
         u_out = Matrix{Float64}(undef, N_f, N_eq)
         for e in 1:N_eq
-            u_out[:,e] = @timeit  "gather external state" u_facet[
+            u_out[:,e] = @timeit "gather external state" u_facet[
                 :,e,:][connectivity[:,k]]
         end
         
         # evaluate physical and numerical flux
         f = @timeit "eval flux" physical_flux(
-            conservation_law.first_order_flux, u[:,:,k])
+            conservation_law.first_order_flux, 
+            convert(Matrix,operators[k].V * u[:,:,k]))
 
         f_star = @timeit "eval numerical flux" numerical_flux(
             conservation_law.first_order_numerical_flux,

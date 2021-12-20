@@ -8,7 +8,7 @@ module Solvers
 
     using ..ConservationLaws: ConservationLaw, physical_flux, numerical_flux
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization
-    using ..InitialConditions: AbstractInitialData, initial_condition
+    using ..InitialConditions: AbstractInitialData, evaluate
     
     export AbstractResidualForm, AbstractPhysicalOperators, AbstractStrategy, Solver, PhysicalOperatorsEager, PhysicalOperatorsEager, Eager, Lazy, initialize, semidiscretize, apply_operators, combine, get_dof, rhs!
 
@@ -29,6 +29,7 @@ module Solvers
     struct PhysicalOperatorsEager{d} <: AbstractPhysicalOperators{d}
         VOL::NTuple{d,LinearMap}
         FAC::LinearMap
+        V::LinearMap
         R::LinearMap
         NTR::NTuple{d,Union{LinearMap,AbstractMatrix}}  # only needed for strong form
         scaled_normal::NTuple{d, Vector{Float64}}
@@ -38,6 +39,7 @@ module Solvers
         vol::NTuple{d,LinearMap}  # not pre-multipled by mass inverse
         fac::LinearMap  # not pre-multiplied by mass inverse
         M::AbstractMatrix
+        V::LinearMap
         R::LinearMap
         NTR::NTuple{d,Union{LinearMap,AbstractMatrix}}  # only needed for strong form
         scaled_normal::NTuple{d, Vector}
@@ -51,21 +53,16 @@ module Solvers
         @unpack N_p, N_q, V, W = spatial_discretization.reference_approximation
         @unpack xyzq = spatial_discretization.mesh
 
-        f = initial_condition(initial_data, conservation_law)
-        
         u0 = Array{Float64}(undef, N_p, N_eq, N_el)
         u0q = Matrix{Float64}(undef, N_q, N_eq)
         for k in 1:N_el
-        
-            #evaluate initial condition at each node
-            for i in 1:N_q
-                u0q[i,:] = f(Tuple(xyzq[m][i,k] for m in 1:d)) 
-            end
             
             # project to solution DOF
             u0[:,:,k] = M[k] \ convert(Matrix, transpose(V) * W * 
-                Diagonal(geometric_factors.J[:,k]) * u0q)
+                Diagonal(geometric_factors.J[:,k]) * 
+                evaluate(initial_data, Tuple(xyzq[m][:,k] for m in 1:d)))
         end
+
         return u0
     end
 

@@ -30,9 +30,10 @@ function ErrorAnalysis(::ConservationLaw{d,N_eq},
 end
 
 function analyze(error_analysis::ErrorAnalysis{QuadratureL2, d}, 
-    sol::Array{Float64,3}, exact_solution::Function) where {d}
+    sol::Array{Float64,3}, exact_solution::AbstractInitialData{d}) where {d}
     @unpack norm, N_eq, N_el, V_err, x_err = error_analysis 
-    nodal_error = Tuple(exact_solution(x_err)[e] - convert(Matrix, V_err * sol[:,e,:]) for e in 1:N_eq)
+    u_exact = evaluate(exact_solution, x_err)
+    nodal_error = Tuple(u_exact[:,e,:] - convert(Matrix, V_err * sol[:,e,:]) for e in 1:N_eq)
 
     #return nodal_error
     return [sqrt(sum(dot(nodal_error[e][:,k], norm.WJ[k]*nodal_error[e][:,k]) 

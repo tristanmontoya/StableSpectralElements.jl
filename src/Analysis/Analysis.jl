@@ -11,7 +11,7 @@ module Analysis
     using ..ConservationLaws: ConservationLaw
     using ..Mesh: uniform_periodic_mesh
     using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation
-    using ..InitialConditions: AbstractInitialData
+    using ..InitialConditions: AbstractInitialData, evaluate
     using ..Solvers: AbstractResidualForm, AbstractStrategy, semidiscretize
     using ..IO: new_path, load_solution, load_time_steps, Plotter
 
