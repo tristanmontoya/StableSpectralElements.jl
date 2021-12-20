@@ -21,7 +21,7 @@ function ReferenceApproximation(approx_type::DGSEM,
     # get reference element data
     reference_element = RefElemData(elem_type, mapping_degree,
         quad_rule_vol=volume_quadrature(elem_type, 
-        quadrature_rule, p+1))
+        quadrature_rule, p+1), Nplot=20)
     @unpack rstp, rstq, rstf, wq, wf = reference_element
 
     # dimensions of operators

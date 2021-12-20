@@ -19,7 +19,7 @@ module InitialConditions
     end
 
     function initial_condition(initial_data::InitialDataSine{d},
-        conservation_law::ConservationLaw{d,N_eq}) where {d, N_eq}
+        ::ConservationLaw{d,N_eq}) where {d, N_eq}
         return x -> fill(initial_data.A*prod(Tuple(sin.(initial_data.k[m]*x[m])
             for m in 1:d)), N_eq)
     end

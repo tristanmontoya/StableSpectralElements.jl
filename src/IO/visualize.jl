@@ -33,18 +33,21 @@ function visualize(sol::Array{Float64,3},
     exact_solution::Union{Function,Nothing}=nothing,
     label::String="U^h(x,t)", label_exact::String="U(x,t)")
 
-    u = convert(Matrix, plotter.V_plot * sol[:,e,:])
+    @unpack x_plot, V_plot, N_el, directory_name = plotter
+
+    u = convert(Matrix, V_plot * sol[:,e,:])
     if !isnothing(exact_solution)
-        p = plot(vec(plotter.x_plot[1]),
-            vec(exact_solution(plotter.x_plot)[e]), 
+        p = plot(vec(x_plot[1]), vec(exact_solution(x_plot)[e]), 
             label=latexstring(label_exact))
-        plot!(p, vec(plotter.x_plot[1]), vec(u), label=latexstring(label), 
-            xlabel=latexstring("x"))
+        plot!(p, vec(vcat(x_plot[1],fill(NaN,1,N_el))), 
+            vec(vcat(u,fill(NaN,1,N_el))), 
+            label=latexstring(label), xlabel=latexstring("x"))
     else 
-        p = plot(vec(plotter.x_plot[1]), vec(u), label=latexstring(label), 
-            xlabel=latexstring("x"))
+        p = plot(vec(vcat(x_plot[1],fill(NaN,1,N_el))), 
+        vec(vcat(u,fill(NaN,1,N_el))), 
+        label=latexstring(label), xlabel=latexstring("x"))
     end
 
-    savefig(p, string(plotter.directory_name, file_name))   
+    savefig(p, string(directory_name, file_name))   
     return p
 end

@@ -84,19 +84,22 @@ function plot_spectrum(analysis::AbstractDynamicalAnalysis,
 end
 
 function plot_modes(analysis::AbstractDynamicalAnalysis, 
-    plotter::Plotter{1}, ϕ::Matrix{ComplexF64}, e::Int)
+    plotter::Plotter{1}, ϕ::Matrix{Float64}, e::Int)
 
     @unpack N_p, N_eq, N_el = analysis
-    
+    @unpack x_plot, V_plot, directory_name = plotter
+
     n_modes = size(ϕ,2)
     p = plot()
     for j in 1:n_modes
         sol = reshape(ϕ[:,j],(N_p, N_eq, N_el))
         linelabel = string("\\mathrm{Mode} \\, \\,", j)
-        u = convert(Matrix, plotter.V_plot * sol[:,e,:])
-        plot!(p, vec(plotter.x_plot[1]), real(vec(u)), label=latexstring(linelabel), xlabel=latexstring("x"), ylabel=latexstring("\\mathrm{Re}(\\phi(x))"))
+        u = convert(Matrix, V_plot * sol[:,e,:])
+        plot!(p,vec(vcat(x_plot[1],fill(NaN,1,N_el))), 
+            vec(vcat(u,fill(NaN,1,N_el))), 
+            label=latexstring(linelabel), xlabel=latexstring("x"))
     end
 
-    savefig(p, string(plotter.directory_name, "modes.pdf")) 
+    savefig(p, string(directory_name, "modes.pdf")) 
     return p 
 end

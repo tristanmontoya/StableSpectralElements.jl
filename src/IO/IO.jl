@@ -5,6 +5,7 @@ module IO
     using LaTeXStrings: latexstring
     using JLD2: save, load, save_object, load_object
     using OrdinaryDiffEq: ODEIntegrator, ODEProblem, ODESolution, DiscreteCallback
+    using UnPack
 
     using ..ConservationLaws: ConservationLaw
     using ..SpatialDiscretizations: SpatialDiscretization
