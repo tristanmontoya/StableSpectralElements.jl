@@ -10,7 +10,7 @@ module SpatialDiscretizations
     using Reexport
     @reexport using StartUpDG: Line, Quad, Tri, Tet, Hex, Pyr
 
-    export AbstractApproximationType, AbstractCollocatedApproximation, ReferenceApproximation, GeometricFactors, SpatialDiscretization
+    export AbstractApproximationType, AbstractCollocatedApproximation, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes
     
     abstract type AbstractApproximationType end
     abstract type AbstractCollocatedApproximation <: AbstractApproximationType end
@@ -75,6 +75,22 @@ module SpatialDiscretizations
                     reference_approximation.V) for k in 1:N_el],
                 Tuple(reference_element.Vp * mesh.xyz[m] for m in 1:d))
         end
+    end
+
+    function check_normals(
+        spatial_discretization::SpatialDiscretization{d}) where {d}
+        @unpack geometric_factors, mesh, N_el = spatial_discretization
+        return Tuple([maximum(abs.(geometric_factors.nJf[m][:,k] + 
+                geometric_factors.nJf[m][mesh.mapP[:,k]])) for k in 1:N_el]
+                for m in 1:d)
+    end
+
+    function check_facet_nodes(
+        spatial_discretization::SpatialDiscretization{d}) where {d}
+        @unpack geometric_factors, mesh, N_el = spatial_discretization
+        return Tuple([maximum(abs.(mesh.xyzf[m][:,k] -
+                mesh.xyzf[m][mesh.mapP[:,k]])) for k in 1:N_el]
+                for m in 1:d)
     end
 
     export AbstractQuadratureRule, LGLQuadrature, LGQuadrature, volume_quadrature

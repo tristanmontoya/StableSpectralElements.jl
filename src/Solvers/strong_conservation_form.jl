@@ -81,7 +81,7 @@ function semidiscretize(
 end
 
 function rhs!(dudt::Array{Float64,3}, u::Array{Float64,3}, 
-    solver::Solver{StrongConservationForm, <:AbstractPhysicalOperators, d, N_eq}, t::Float64) where {d, N_eq}
+    solver::Solver{StrongConservationForm, <:AbstractPhysicalOperators, d, N_eq}, t::Float64; print::Bool=false) where {d, N_eq}
     @timeit "rhs!" begin
 
     @unpack conservation_law, operators, connectivity, form = solver
@@ -101,6 +101,7 @@ function rhs!(dudt::Array{Float64,3}, u::Array{Float64,3},
     for k in 1:N_el
         # gather external state to element
         u_out = Matrix{Float64}(undef, N_f, N_eq)
+
         for e in 1:N_eq
             u_out[:,e] = @timeit "gather external state" u_facet[
                 :,e,:][connectivity[:,k]]
@@ -118,6 +119,11 @@ function rhs!(dudt::Array{Float64,3}, u::Array{Float64,3},
         f_fac = @timeit "eval flux diff" f_star - 
             sum(convert(Matrix,operators[k].NTR[m] * f[m]) 
                 for m in 1:d)
+
+        if print
+            println("numerical flux: \n", f_star)
+            println("normal trace difference: \n", f_fac)
+        end
         
         # apply operators
         dudt[:,:,k] = @timeit "eval residual" apply_operators(

@@ -5,8 +5,8 @@ struct DGMulti <: AbstractApproximationType
 end
 
 function ReferenceApproximation(approx_type::DGMulti, 
-    elem_type::Union{Line,Tri,Tet},
-    mapping_degree::Int=1)
+    elem_type::Union{Line,Tri,Tet};
+    mapping_degree::Int=1, N_plot=10)
 
     # get spatial dimension
     if elem_type isa Line
@@ -21,7 +21,7 @@ function ReferenceApproximation(approx_type::DGMulti,
 
     if elem_type isa Line
         reference_element = RefElemData(elem_type, 
-            mapping_degree, quad_rule_vol=quad_nodes(elem_type, p))
+            mapping_degree, quad_rule_vol=quad_nodes(elem_type, p),Nplot=N_plot)
 
         @unpack rstp, rstq, rstf, wq, wf = reference_element    
 
@@ -32,7 +32,7 @@ function ReferenceApproximation(approx_type::DGMulti,
     else
         reference_element = RefElemData(elem_type, 
             mapping_degree, quad_rule_vol=quad_nodes(elem_type, p),
-            quad_rule_face=quad_nodes(face_type(elem_type), p))
+            quad_rule_face=quad_nodes(face_type(elem_type), p), Nplot=N_plot)
 
         @unpack rstp, rstq, rstf, wq, wf = reference_element
 

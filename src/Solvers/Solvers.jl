@@ -31,7 +31,7 @@ module Solvers
         FAC::LinearMap
         V::LinearMap
         R::LinearMap
-        NTR::NTuple{d,Union{LinearMap,AbstractMatrix}}  # only needed for strong form
+        NTR::NTuple{d,Union{LinearMap,AbstractMatrix}} 
         scaled_normal::NTuple{d, Vector{Float64}}
     end
 
@@ -41,7 +41,7 @@ module Solvers
         M::AbstractMatrix
         V::LinearMap
         R::LinearMap
-        NTR::NTuple{d,Union{LinearMap,AbstractMatrix}}  # only needed for strong form
+        NTR::NTuple{d,Union{LinearMap,AbstractMatrix}}  
         scaled_normal::NTuple{d, Vector}
     end
     
@@ -54,15 +54,12 @@ module Solvers
         @unpack xyzq = spatial_discretization.mesh
 
         u0 = Array{Float64}(undef, N_p, N_eq, N_el)
-        u0q = Matrix{Float64}(undef, N_q, N_eq)
         for k in 1:N_el
-            
             # project to solution DOF
             u0[:,:,k] = M[k] \ convert(Matrix, transpose(V) * W * 
                 Diagonal(geometric_factors.J[:,k]) * 
                 evaluate(initial_data, Tuple(xyzq[m][:,k] for m in 1:d)))
         end
-
         return u0
     end
 

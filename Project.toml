@@ -4,12 +4,15 @@ authors = ["Tristan Montoya <montoya.tristan@gmail.com>"]
 version = "0.1.0"
 
 [deps]
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+Gmsh = "705231aa-382f-11e9-3f0c-b7cb4346fdeb"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LinearMaps = "7a12625a-238d-50fd-b39a-03d52299707e"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+PyPlot = "d330b81b-6aea-500a-939a-2ce795aea3ee"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 StartUpDG = "472ebc20-7c99-4d4b-9470-8fde4e9faa0f"
