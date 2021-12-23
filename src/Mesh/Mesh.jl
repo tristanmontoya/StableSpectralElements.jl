@@ -18,7 +18,7 @@ module Mesh
         nJf::NTuple{d, Matrix{Float64}}
 
     end
-
+    
     function uniform_periodic_mesh(reference_element::RefElemData, 
         x_lim::NTuple{2,Float64}, K1D::Int)
 
@@ -99,5 +99,4 @@ module Mesh
         end
         return GeometricFactors{d}(J,JinvG,nJf)
     end
-
 end
