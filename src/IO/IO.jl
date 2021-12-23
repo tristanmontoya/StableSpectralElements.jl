@@ -1,9 +1,7 @@
 module IO
 
-    ENV["MPLBACKEND"]="tkagg"
     using LinearMaps: LinearMap
     using Plots: plot, plot!, scatter, savefig
-    import PyPlot; const plt = PyPlot
     using LaTeXStrings: latexstring
     using StartUpDG: map_face_nodes
     using JLD2: save, load, save_object, load_object

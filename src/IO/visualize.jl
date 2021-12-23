@@ -53,7 +53,7 @@ function visualize(sol::Union{Array{Float64,3},AbstractInitialData},
         u_range = (minimum(u), maximum(u))
     end
 
-    p = plt.figure(1)
+    p = plt.figure()
     ax = plt.axes()
     ax.set_aspect("equal")
     contour = ax.tricontourf(vec(x_plot[1]),vec(x_plot[2]), u,
