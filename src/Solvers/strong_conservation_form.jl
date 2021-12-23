@@ -61,7 +61,7 @@ function semidiscretize(
             vol = (-ADVs[1],)
             NTR = (Diagonal(nJf[1][:,k]) * R * P,)
         else
-            vol = Tuple(-sum(ADVs[1] *
+            vol = Tuple(-sum(ADVs[m] *
                 Diagonal(JinvG[:,m,n,k]) 
                 for m in 1:d) for n in 1:d) 
             NTR = Tuple(sum(Diagonal(nrstJ[m]) * R * P *
