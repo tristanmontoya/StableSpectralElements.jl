@@ -2,8 +2,9 @@ module IO
 
     using LinearMaps: LinearMap
     using Plots: plot, plot!, scatter, savefig
+    import PyPlot; const plt = PyPlot
     using LaTeXStrings: latexstring
-    using StartUpDG: map_face_nodes
+    using StartUpDG: MeshPlotter
     using JLD2: save, load, save_object, load_object
     using OrdinaryDiffEq: ODEIntegrator, ODEProblem, ODESolution, DiscreteCallback
     using UnPack

@@ -66,3 +66,11 @@ function visualize(sol::Union{Array{Float64,3},AbstractInitialData},
     cbar.ax.set_ylabel(latexstring(label))
     p.savefig(string(directory_name, file_name))
 end
+
+function visualize(spatial_discretization::SpatialDiscretization, file::String)
+    p = plot(MeshPlotter(
+        spatial_discretization.reference_approximation.reference_element,
+        spatial_discretization.mesh))
+    savefig(p, file)  
+    return p
+end
