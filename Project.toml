@@ -4,8 +4,6 @@ authors = ["Tristan Montoya <montoya.tristan@gmail.com>"]
 version = "0.1.0"
 
 [deps]
-Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
-FiniteMesh = "d3ebd857-6980-4843-ad12-8da20c4645b4"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"

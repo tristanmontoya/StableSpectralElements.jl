@@ -47,7 +47,7 @@ function ReferenceApproximation(approx_type::DGSEM,
     B = LinearMap(Diagonal(wf))
 
     # strong-form reference advection operator (no mass matrix)
-    ADVs = Tuple(W * D[m] * P for m in 1:d)
+    ADVs = Tuple(-W * D[m] * P for m in 1:d)
 
     # weak-form reference advection operator (no mass matrix)
     ADVw = Tuple(transpose(D[m]) * W for m in 1:d)

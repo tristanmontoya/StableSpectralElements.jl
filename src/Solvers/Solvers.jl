@@ -10,7 +10,7 @@ module Solvers
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization
     using ..InitialConditions: AbstractInitialData, evaluate
     
-    export AbstractResidualForm, AbstractPhysicalOperators, AbstractStrategy, Solver, PhysicalOperatorsEager, PhysicalOperatorsEager, Eager, Lazy, initialize, semidiscretize, apply_operators, combine, get_dof, rhs!
+    export AbstractResidualForm, AbstractPhysicalOperators, PhysicaOperators, AbstractStrategy, Eager, Lazy, Solver, initialize, semidiscretize, precompute, apply_operators, combine, get_dof, rhs!
 
     abstract type AbstractResidualForm end
     abstract type AbstractPhysicalOperators{d} end
@@ -24,27 +24,19 @@ module Solvers
         operators::Vector{PhysicalOperators}
         connectivity::Matrix{Int}
         form::ResidualForm
+        strategy::AbstractStrategy
     end
 
-    struct PhysicalOperatorsEager{d} <: AbstractPhysicalOperators{d}
+    struct PhysicalOperators{d} <: AbstractPhysicalOperators{d}
         VOL::NTuple{d,LinearMap}
         FAC::LinearMap
+        M::AbstractMatrix
         V::LinearMap
         R::LinearMap
         NTR::NTuple{d,Union{LinearMap,AbstractMatrix}} 
         scaled_normal::NTuple{d, Vector{Float64}}
     end
 
-    struct PhysicalOperatorsLazy{d} <: AbstractPhysicalOperators{d}
-        vol::NTuple{d,LinearMap}  # not pre-multipled by mass inverse
-        fac::LinearMap  # not pre-multiplied by mass inverse
-        M::AbstractMatrix
-        V::LinearMap
-        R::LinearMap
-        NTR::NTuple{d,Union{LinearMap,AbstractMatrix}}  
-        scaled_normal::NTuple{d, Vector}
-    end
-    
     function initialize(initial_data::AbstractInitialData,
         conservation_law::ConservationLaw{d,N_eq},
         spatial_discretization::SpatialDiscretization{d}) where {d, N_eq}
@@ -76,20 +68,51 @@ module Solvers
             spatial_discretization)
 
         return semidiscretize(conservation_law, spatial_discretization, 
-            u0,form,tspan, strategy)
+            u0, form, tspan, strategy)
     end
 
-    function apply_operators(operators::PhysicalOperatorsEager{d},
-        f::NTuple{d,Matrix{Float64}}, f_fac::Matrix{Float64}) where {d}
+    function semidiscretize(conservation_law::ConservationLaw{d,N_eq},
+        spatial_discretization::SpatialDiscretization{d},
+        u0::Array{Float64,3},
+        form::AbstractResidualForm,
+        tspan::NTuple{2,Float64}, strategy::Lazy) where {d,N_eq}
+        
+        return ODEProblem(rhs!, u0, tspan, Solver(conservation_law,            
+            make_operators(spatial_discretization, form),
+            spatial_discretization.mesh.mapP, form, strategy))
+    end
+
+    function semidiscretize(conservation_law::ConservationLaw{d,N_eq},
+        spatial_discretization::SpatialDiscretization{d},
+        u0::Array{Float64,3}, 
+        form::AbstractResidualForm,
+        tspan::NTuple{2,Float64}, strategy::Eager) where{d, N_eq}
+        
+        operators = make_operators(spatial_discretization, form)
+
+        return ODEProblem(rhs!, u0, tspan, Solver(conservation_law, 
+        [precompute(operators[k]) for k in 1:spatial_discretization.N_el],
+            spatial_discretization.mesh.mapP, form, strategy))
+    end
+
+    function apply_operators(operators::PhysicalOperators{d},       
+        f::NTuple{d,Matrix{Float64}}, f_fac::Matrix{Float64}, ::Eager) where {d}
         return sum(convert(Matrix, operators.VOL[m] * f[m]) for m in 1:d) +     
             convert(Matrix,operators.FAC * f_fac)
     end
 
-    function apply_operators(operators::PhysicalOperatorsLazy{d},
-        f::NTuple{d,Matrix{Float64}}, f_fac::Matrix{Float64}) where {d}
-        rhs = sum(convert(Matrix, operators.vol[m] * f[m]) for m in 1:d) +  convert(Matrix,operators.fac * f_fac)
-
+    function apply_operators(operators::PhysicalOperators{d},
+        f::NTuple{d,Matrix{Float64}}, f_fac::Matrix{Float64}, ::Lazy) where {d}
+        rhs = sum(convert(Matrix, operators.VOL[m] * f[m]) for m in 1:d) +  convert(Matrix,operators.FAC * f_fac)
         return operators.M \ rhs
+    end
+
+    function precompute(operators::PhysicalOperators{d}) where {d}
+        @unpack VOL, FAC, M, V, R, NTR, scaled_normal = operators
+        inv_M = inv(M)
+        return PhysicalOperators(
+            Tuple(combine(inv_M*VOL[n]) for n in 1:d),
+            combine(inv_M*FAC), M, V, R, NTR, scaled_normal)
     end
 
     # utils

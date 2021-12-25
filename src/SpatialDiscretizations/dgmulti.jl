@@ -55,7 +55,7 @@ function ReferenceApproximation(approx_type::DGMulti,
         for m in 1:d)
 
     # strong-form reference advection operator (no mass matrix)
-    ADVs = Tuple(transpose(V) * W * grad_V[m] * P for m in 1:d)
+    ADVs = Tuple(-transpose(V) * W * grad_V[m] * P for m in 1:d)
 
     # weak-form reference advection operator (no mass matrix)
     ADVw = Tuple(transpose(grad_V[m]) * W for m in 1:d)
