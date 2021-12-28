@@ -1,6 +1,6 @@
 module Mesh
 
-    using StartUpDG: RefElemData, MeshData, make_periodic, meshgrid, Line, Tri
+    using StartUpDG: RefElemData, MeshData, uniform_mesh, make_periodic, meshgrid, Line, Tri
     using LinearAlgebra: inv, det
 
     export GeometricFactors, uniform_periodic_mesh
@@ -19,35 +19,25 @@ module Mesh
 
     end
     
-    function uniform_periodic_mesh(reference_element::RefElemData, 
-        x_lim::NTuple{2,Float64}, K1D::Int)
+    function uniform_periodic_mesh(reference_element::RefElemData{1}, 
+        limits::NTuple{2,Float64}, M::Int)
 
-        if reference_element.elementType isa Line
-            mesh = MeshData((collect(LinRange(x_lim[1], x_lim[2], K1D + 1)),),
-                Matrix(transpose(reshape(sort([1:K1D; 2:K1D+1]), 2, K1D))),
-                reference_element)
-        elseif reference_element.elementType isa Tri
-            (VY, VX) = meshgrid(LinRange(x_lim[1], x_lim[2], K1D + 1), 
-                LinRange(x_lim[1], x_lim[2], K1D + 1))
-            sk = 1
-            EToV = zeros(Int, 2 * K1D^2, 3)
-            for ey = 1:K1D
-                for ex = 1:K1D  
-                    id(ex, ey) = ex + (ey - 1) * (K1D + 1) # index function
-                    id1 = id(ex, ey)
-                    id2 = id(ex + 1, ey)
-                    id3 = id(ex + 1, ey + 1)
-                    id4 = id(ex, ey + 1)
-                    EToV[2*sk-1, :] = [id1 id3 id2]
-                    EToV[2*sk, :] = [id3 id1 id4]
-                    sk += 1
-                end
-            end
-            mesh = MeshData((VX[:], VY[:]), EToV, reference_element)
-        else
-            return nothing
-        end
+        VX, EtoV = uniform_mesh(reference_element.elementType, M)
+        mesh =  MeshData(limits[1] .+ 0.5*(limits[2]-limits[1])*(VX[1] .+ 1.0), EtoV,reference_element)
+
         return make_periodic(mesh)
+    end
+
+    function uniform_periodic_mesh(reference_element::RefElemData{2}, 
+        limits::NTuple{2,NTuple{2,Float64}}, M::NTuple{2,Int})
+
+        (VX, VY), EtoV = uniform_mesh(reference_element.elementType, M[1], M[2])
+
+        return make_periodic(
+            MeshData(limits[1][1] .+ 
+                0.5*(limits[1][2]-limits[1][1])*(VX .+ 1.0),
+                limits[2][1] .+ 0.5*(limits[2][2]-limits[2][1])*(VY .+ 1.0),
+                EtoV, reference_element))
     end
 
     function GeometricFactors(mesh::MeshData{d}, 

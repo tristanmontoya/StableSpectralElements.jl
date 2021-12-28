@@ -47,12 +47,13 @@ function rhs!(dudt::Array{Float64,3}, u::Array{Float64,3},
 
         # evaluate all local residuals
         for k in 1:N_el
-            # gather external state to element
-            u_out = Matrix{Float64}(undef, N_f, N_eq)
-
-            for e in 1:N_eq
-                u_out[:,e] = @timeit "gather external state" u_facet[
-                    :,e,:][connectivity[:,k]]
+            @timeit "gather external state" begin
+                # gather external state to element
+                u_out = Matrix{Float64}(undef, N_f, N_eq)
+                for e in 1:N_eq
+                    u_out[:,e] = u_facet[
+                        :,e,:][connectivity[:,k]]
+                end
             end
             
             # evaluate physical and numerical flux
@@ -63,10 +64,6 @@ function rhs!(dudt::Array{Float64,3}, u::Array{Float64,3},
             f_star = @timeit "eval numerical flux" numerical_flux(
                 conservation_law.first_order_numerical_flux,
                 u_facet[:,:,k], u_out, operators[k].scaled_normal)
-
-            if print
-                println("numerical flux: \n", f_star)
-            end
             
             # apply operators
             dudt[:,:,k] = @timeit "eval residual" apply_operators(

@@ -3,7 +3,7 @@ module SpatialDiscretizations
     using UnPack
     using LinearAlgebra: I, inv, transpose, Diagonal
     using LinearMaps: LinearMap, UniformScalingMap
-    using StartUpDG: MeshData, RefElemData, AbstractElemShape, face_type,basis, vandermonde, quad_nodes, gauss_quad, gauss_lobatto_quad
+    using StartUpDG: MeshData, RefElemData, AbstractElemShape, face_type, basis, vandermonde, quad_nodes, gauss_quad, gauss_lobatto_quad
 
     using ..Mesh: GeometricFactors
 
@@ -92,6 +92,12 @@ module SpatialDiscretizations
                 mesh.xyzf[m][mesh.mapP[:,k]])) for k in 1:N_el]
                 for m in 1:d)
     end
+
+    function meshgrid(x::Vector{Float64}, y::Vector{Float64})
+        return ([x[i] for i in 1:length(x), j in 1:length(y)],
+            [y[j] for i in 1:length(x), j in 1:length(y)])
+    end
+
 
     export AbstractQuadratureRule, LGLQuadrature, LGQuadrature, volume_quadrature
     include("quadrature.jl")

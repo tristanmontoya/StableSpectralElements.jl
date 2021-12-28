@@ -3,9 +3,9 @@ struct DGSEM <:AbstractCollocatedApproximation
 end
 
 function ReferenceApproximation(approx_type::DGSEM, 
-    elem_type::Union{Line,Quad,Hex},
+    elem_type::Union{Line,Quad,Hex};
     quadrature_rule::AbstractQuadratureRule=LGLQuadrature(),
-    mapping_degree::Int=1)
+    mapping_degree::Int=1, N_plot::Int=10)
 
     # get spatial dimension
     if elem_type isa Line
@@ -18,23 +18,25 @@ function ReferenceApproximation(approx_type::DGSEM,
 
     @unpack p = approx_type
 
-    # get reference element data
-    reference_element = RefElemData(elem_type, mapping_degree,
-        quad_rule_vol=volume_quadrature(elem_type, 
-        quadrature_rule, p+1), Nplot=20)
-    @unpack rstp, rstq, rstf, wq, wf = reference_element
-
     # dimensions of operators
     N_p = (p+1)^d
     N_q = (p+1)^d
     N_f = 2*d*(p+1)^(d-1)
 
-    if reference_element.elementType isa Line
+    if elem_type isa Line
+        reference_element = RefElemData(elem_type, mapping_degree,
+            quad_rule_vol=volume_quadrature(elem_type, 
+            quadrature_rule, p+1), Nplot=N_plot)
+        @unpack rstp, rstq, rstf, wq, wf = reference_element
         V_tilde, grad_V_tilde = basis(elem_type, p, rstq[1])
         D = (LinearMap(grad_V_tilde / V_tilde),)
         R = LinearMap(vandermonde(elem_type,p,rstf[1]) / V_tilde) 
         V_plot = LinearMap(vandermonde(elem_type, p, rstp[1]) / V_tilde)
-    else
+    else   
+        reference_element = RefElemData(elem_type, mapping_degree,
+            quad_rule_vol=volume_quadrature(elem_type, quadrature_rule, p+1),
+            quad_rule_face=volume_quadrature(face_type(elem_type), quadrature_rule, p+1), Nplot=N_plot)
+        @unpack rstp, rstq, rstf, wq, wf = reference_element
         V_tilde, grad_V_tilde... = basis(elem_type, p, rstq...)
         D = Tuple(LinearMap(grad_V_tilde[m] / V_tilde) for m in 1:d)
         R = LinearMap(vandermonde(elem_type,p,rstf...) / V_tilde) 

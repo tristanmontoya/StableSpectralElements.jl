@@ -67,10 +67,14 @@ function visualize(sol::Union{Array{Float64,3},AbstractInitialData},
     p.savefig(string(directory_name, file_name))
 end
 
-function visualize(spatial_discretization::SpatialDiscretization, file::String)
+function visualize(spatial_discretization::SpatialDiscretization,
+    directory_name::String, file::String)
+
+    path = new_path(directory_name, true, false)
+
     p = plot(MeshPlotter(
         spatial_discretization.reference_approximation.reference_element,
         spatial_discretization.mesh))
-    savefig(p, file)  
+    savefig(p, string(path,file))  
     return p
 end

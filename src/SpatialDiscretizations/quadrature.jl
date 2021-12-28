@@ -13,3 +13,15 @@ function volume_quadrature(::Line,
     num_quad_nodes::Int)
         return gauss_lobatto_quad(0,0,num_quad_nodes-1)
 end
+
+function volume_quadrature(::Quad,
+    quadrature_rule::AbstractQuadratureRule,
+    num_quad_nodes::Int)
+    
+    r1d, w1d = volume_quadrature(Line(), 
+        quadrature_rule, num_quad_nodes)
+    mgw = meshgrid(w1d,w1d)
+    mgr = meshgrid(r1d,r1d)
+    w2d = @. mgw[1] * mgw[2] 
+    return mgr[1][:], mgr[2][:], w2d[:]
+end

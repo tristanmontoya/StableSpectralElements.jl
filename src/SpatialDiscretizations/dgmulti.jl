@@ -6,7 +6,7 @@ end
 
 function ReferenceApproximation(approx_type::DGMulti, 
     elem_type::Union{Line,Tri,Tet};
-    mapping_degree::Int=1, N_plot=10)
+    mapping_degree::Int=1, N_plot::Int=10)
 
     # get spatial dimension
     if elem_type isa Line

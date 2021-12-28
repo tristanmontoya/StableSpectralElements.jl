@@ -1,0 +1,9 @@
+writing time step 40  t = 0.10101525445522115
+writing time step 80  t = 0.20203050891044233
+writing time step 120  t = 0.3030457633656635
+writing time step 160  t = 0.4040610178208847
+writing time step 200  t = 0.5050762722761057
+writing time step 240  t = 0.6060915267313247
+writing time step 280  t = 0.7071067811865437
+writing time step 320  t = 0.8081220356417627
+writing time step 360  t = 0.9091372900969816
