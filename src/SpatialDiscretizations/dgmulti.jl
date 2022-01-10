@@ -1,6 +1,6 @@
 struct DGMulti <: AbstractApproximationType
     p::Int  # polynomial degree
-    #q::Int  # volume_quadrature degree
+    #q::Int  # quadrature degree
     #qf::Int  # facet quadrature degree 
 end
 

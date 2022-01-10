@@ -1,12 +1,12 @@
 module SpatialDiscretizations
 
     using UnPack
-    using LinearAlgebra: I, inv, transpose, Diagonal
+    using LinearAlgebra: I, inv, transpose, Diagonal, UniformScaling
     using LinearMaps: LinearMap, UniformScalingMap
     using StartUpDG: MeshData, RefElemData, AbstractElemShape, face_type, basis, vandermonde, quad_nodes, gauss_quad, gauss_lobatto_quad
 
     using ..Mesh: GeometricFactors
-
+    using ..TensorProducts: TensorProductMap
     using Reexport
     @reexport using StartUpDG: Line, Quad, Tri, Tet, Hex, Pyr
 
@@ -99,7 +99,7 @@ module SpatialDiscretizations
     end
 
 
-    export AbstractQuadratureRule, LGLQuadrature, LGQuadrature, volume_quadrature
+    export AbstractQuadratureRule, LGLQuadrature, LGQuadrature, quadrature
     include("quadrature.jl")
     
     export DGSEM
@@ -107,5 +107,4 @@ module SpatialDiscretizations
 
     export DGMulti
     include("dgmulti.jl")
-
 end
