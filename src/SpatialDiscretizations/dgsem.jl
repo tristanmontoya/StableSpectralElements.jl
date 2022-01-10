@@ -25,6 +25,7 @@ function ReferenceApproximation(approx_type::DGSEM,
     N_f = 2*d*(p+1)^(d-1)
 
     if elem_type isa Line
+
         reference_element = RefElemData(elem_type, mapping_degree,
             quad_rule_vol=quadrature(elem_type, 
             quadrature_rule, p+1), Nplot=N_plot)
@@ -47,32 +48,40 @@ function ReferenceApproximation(approx_type::DGSEM,
 
         @unpack rstp, rstq, rstf, wq, wf = reference_element
 
-        V_tilde, grad_V_tilde... = basis(elem_type, p, rstq...)
-
+        # one-dimensional operators
         ref_elem_1D = RefElemData(Line(), mapping_degree,
             quad_rule_vol=quadrature(Line(), 
             quadrature_rule, p+1), Nplot=N_plot)
-
-            V_tilde_1D, grad_V_tilde_1D = basis(Line(), p, 
-                ref_elem_1D.rstq[1])
-
-            D_1D = grad_V_tilde_1D / V_tilde_1D
+        V_tilde_1D, grad_V_tilde_1D = basis(Line(), p, 
+            ref_elem_1D.rstq[1])
+        D_1D = grad_V_tilde_1D / V_tilde_1D
+        R_1D = vandermonde(Line(),p, ref_elem_1D.rstf[1]) / V_tilde_1D
+        R_L = R_1D[1:1,:]
+        R_R = R_1D[2:2,:]
 
         # scalar ordering of multi-indices
         sigma = [(p+1)*(i-1) + j for i in 1:p+1, j in 1:p+1]
 
-        # sum-factorized lazy evaluation of (D₁, D₂) = (D ⊗ I, I ⊗ D) 
-        D = (TensorProductMap(D_1D, I, sigma, sigma),
-            TensorProductMap(I, D_1D, sigma, sigma))
+        # sum-factorized lazy evaluation of (D₁, D₂) = (I ⊗ D, D ⊗ I) 
+        D = (TensorProductMap(I, D_1D, sigma, sigma),
+            TensorProductMap(D_1D, I, sigma, sigma))
 
-        R = LinearMap(vandermonde(elem_type,p,rstf...) / V_tilde) 
-        V_plot = LinearMap(vandermonde(elem_type, p, rstp...) / V_tilde)
+        # extrapolate in each direction as a series of 1D operations
+        R = [
+            TensorProductMap(I, R_L, sigma, [i for i in 1:p+1, j in 1:1]) ; # L
+            TensorProductMap(I, R_R, sigma, [i for i in 1:p+1, j in 1:1]) ; # R 
+            TensorProductMap(R_L, I, sigma, [j for i in 1:1, j in 1:p+1]) ; # T 
+            TensorProductMap(R_R, I ,sigma, [j for i in 1:1, j in 1:p+1])] # B
+
+        V_plot = LinearMap(vandermonde(elem_type, p, rstp...) / 
+            vandermonde(elem_type, p, rstp...))
         V = LinearMap(I, N_q)
         P = LinearMap(I, N_q)
         W = LinearMap(Diagonal(wq))
         B = LinearMap(Diagonal(wf))
                 
     else   
+
         reference_element = RefElemData(elem_type, mapping_degree,
             quad_rule_vol=quadrature(elem_type, quadrature_rule, p+1),
             quad_rule_face=quadrature(face_type(elem_type), quadrature_rule, p+1), Nplot=N_plot)
@@ -85,6 +94,7 @@ function ReferenceApproximation(approx_type::DGSEM,
         P = LinearMap(I, N_q)
         W = LinearMap(Diagonal(wq))
         B = LinearMap(Diagonal(wf))
+        
     end
 
     V = LinearMap(I, N_q)

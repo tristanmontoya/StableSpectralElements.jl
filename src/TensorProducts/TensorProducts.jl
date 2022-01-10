@@ -50,20 +50,20 @@ module TensorProducts
         ``                = ∑_{β1} A[α1,β1] Z[α2,β1] ``
     """
     function tensor_mul!(y::AbstractVector, 
-        A::NotIdentity, B::NotIdentity,
+        A::NotIdentity{T}, B::NotIdentity{T},
         σᵢ::Matrix{Int}, σₒ::Matrix{Int},
-        x::AbstractVector)
+        x::AbstractVector) where {T}
 
         (M1,M2) = size(σₒ)
         (N1,N2) = size(σᵢ)
 
-        Z = zeros(Float64,M2,N1)
+        Z = Matrix{T}(undef,M2,N1)
         for α2 in 1:M2, β1 in 1:N1
-            Z[α2,β1] += sum(B[α2,β2]*x[σᵢ[β1,β2]] for β2 in 1:N2)
+            Z[α2,β1] = sum(B[α2,β2]*x[σᵢ[β1,β2]] for β2 in 1:N2)
         end
 
         for α1 in 1:M1, α2 in 1:M2
-            y[σₒ[α1,α2]] += sum(A[α1,β1]*Z[α2,β1] for β1 in 1:N1)
+            y[σₒ[α1,α2]] = sum(A[α1,β1]*Z[α2,β1] for β1 in 1:N1)
         end
 
         return y
@@ -88,7 +88,7 @@ module TensorProducts
         (N1,N2) = size(σᵢ)
 
         for α1 in 1:M1, α2 in 1:M2
-            y[σₒ[α1,α2]] += sum(A[α1,β1]*x[σᵢ[β1,α2]] for β1 in 1:N1)
+            y[σₒ[α1,α2]] = sum(A[α1,β1]*x[σᵢ[β1,α2]] for β1 in 1:N1)
         end
         return y
     end
@@ -111,7 +111,7 @@ module TensorProducts
         (N1,N2) = size(σᵢ)
 
         for α1 in 1:M1, α2 in 1:M2
-            y[σₒ[α1,α2]] += sum(B[α2,β2]*x[σᵢ[α1,β2]] for β2 in 1:N2)
+            y[σₒ[α1,α2]] = sum(B[α2,β2]*x[σᵢ[α1,β2]] for β2 in 1:N2)
         end
         return y
     end
