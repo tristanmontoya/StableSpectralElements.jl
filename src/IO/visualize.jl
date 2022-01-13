@@ -67,6 +67,7 @@ function visualize(sol::Union{Array{Float64,3},AbstractInitialData},
     p.savefig(string(directory_name, file_name))
 end
 
+#=
 function visualize(spatial_discretization::SpatialDiscretization,
     directory_name::String, file::String)
 
@@ -77,4 +78,58 @@ function visualize(spatial_discretization::SpatialDiscretization,
         spatial_discretization.mesh))
     savefig(p, string(path,file))  
     return p
+end
+=#
+
+function visualize(spatial_discretization::SpatialDiscretization{2},
+    directory_name::String, file_name::String; geometry_resolution=5, 
+    markersize=4, plot_nodes=true)
+
+    @unpack N_el, mesh, reference_approximation = spatial_discretization
+    @unpack elementType, N, VDM = reference_approximation.reference_element
+    p = plt.figure()
+    ax = plt.axes()
+                 
+    ax.set_aspect("equal")
+    plt.xlabel(latexstring("x_1"))
+    plt.ylabel(latexstring("x_2"))
+    
+    ref_edge_nodes = map_face_nodes(elementType,
+        collect(LinRange(-1.0,1.0, geometry_resolution)))
+
+    edges = find_face_nodes(elementType, ref_edge_nodes...)
+
+    edge_maps = Tuple(vandermonde(elementType, N, 
+        ref_edge_nodes[1][edge], ref_edge_nodes[2][edge]) / VDM 
+        for edge ∈ edges)
+
+    for k in 1:N_el
+        
+        if plot_nodes
+            # plot volume nodes
+            ax.plot(mesh.xq[:,k], mesh.yq[:,k], "o",
+                  markersize=markersize)
+
+             # plot facet nodes
+            ax.plot(mesh.xf[:,k], mesh.yf[:,k], "s", 
+                markersize=markersize, 
+                markeredgewidth=markersize*0.25,
+                color="black",
+                fillstyle="none")
+        end
+            
+        # plot facet edge curves
+        for V_edge ∈ edge_maps
+            edge_points = (V_edge * mesh.x[:,k], 
+                V_edge * mesh.y[:,k])
+            
+            ax.plot(edge_points[1], 
+                    edge_points[2], 
+                    "-", 
+                    linewidth=markersize*0.25,
+                    color="black")
+        end
+    end
+
+    p.savefig(string(directory_name, file_name))
 end

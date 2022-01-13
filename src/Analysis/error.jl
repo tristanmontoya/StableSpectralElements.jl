@@ -24,7 +24,7 @@ function ErrorAnalysis(::ConservationLaw{d,N_eq},
     @unpack geometric_factors, mesh, N_el = spatial_discretization
     
     norm = QuadratureL2([Diagonal(reference_element.wq) *
-    Diagonal(geometric_factors.J[:,k]) for k in 1:N_el])
+        Diagonal(geometric_factors.J_q[:,k]) for k in 1:N_el])
 
     return ErrorAnalysis(norm, N_eq, N_el, V, mesh.xyzq, results_path)
 end
@@ -32,8 +32,10 @@ end
 function analyze(error_analysis::ErrorAnalysis{QuadratureL2, d}, 
     sol::Array{Float64,3}, exact_solution::AbstractInitialData{d}) where {d}
     @unpack norm, N_eq, N_el, V_err, x_err = error_analysis 
+
     u_exact = evaluate(exact_solution, x_err)
-    nodal_error = Tuple(u_exact[:,e,:] - convert(Matrix, V_err * sol[:,e,:]) for e in 1:N_eq)
+    nodal_error = Tuple(u_exact[:,e,:] - convert(Matrix, V_err * sol[:,e,:])
+        for e in 1:N_eq)
 
     #return nodal_error
     return [sqrt(sum(dot(nodal_error[e][:,k], norm.WJ[k]*nodal_error[e][:,k]) 

@@ -8,11 +8,11 @@ module Mesh
     struct GeometricFactors{d}
 
         # first dimension is node index, second is element
-        J::Matrix{Float64}
+        J_q::Matrix{Float64}
 
         # first dimension is node index, second and third are matrix indices mn,
         # fourth is element
-        JinvG::Array{Float64,4}
+        Jdrdx_q ::Array{Float64,4}
 
         # d-tuple of matrices, where first is element index,
         nJf::NTuple{d, Matrix{Float64}}
@@ -48,15 +48,15 @@ module Mesh
         N_f = size(mesh.xyzf[1],1)
         N_el = size(mesh.xyzq[1],2)
 
-        J = Matrix{Float64}(undef, N_q, N_el)
+        J_q = Matrix{Float64}(undef, N_q, N_el)
         nJf = Tuple(Matrix{Float64}(undef, N_f, N_el) for m in 1:d)
 
         # first dimension is node index, 
         # second and third are matrix indices mn,
         # fourth is element index.
-        G = Array{Float64, 4}(undef, N_q, d, d, N_el)
-        JinvG = Array{Float64, 4}(undef, N_q, d, d, N_el)
-        G_at_facet = Array{Float64, 4}(undef, N_f, d, d, N_el)        
+        dxdr_q = Array{Float64, 4}(undef, N_q, d, d, N_el)
+        Jdrdx_q = Array{Float64, 4}(undef, N_q, d, d, N_el)
+        dxdr_f = Array{Float64, 4}(undef, N_f, d, d, N_el)        
 
         for k in 1:N_el
             for m in 1:d, n in 1:d
@@ -65,28 +65,29 @@ module Mesh
                     dxdr = reference_element.Drst[n]*mesh.xyz[m][:,k]
 
                     # use mapping basis to interpolate to quadrature nodes
-                    G[:,m,n,k] = reference_element.Vq*dxdr
-                    G_at_facet[:,m,n,k] = reference_element.Vf*dxdr
+                    dxdr_q[:,m,n,k] = reference_element.Vq*dxdr
+                    dxdr_f[:,m,n,k] = reference_element.Vf*dxdr
                 end
             end
 
             # loops over slower indices
             for i in 1:N_q
-                J[i,k] = det(G[i,:,:,k])
-                JinvG[i,:,:,k] = J[i,k]*inv(G[i,:,:,k])
+                J_q[i,k] = det(dxdr_q[i,:,:,k])
+                Jdrdx_q[i,:,:,k] = J_q[i,k]*inv(dxdr_q[i,:,:,k])
             end
         
             # get scaled normal vectors - this includes scaling for ref. quadrature weights on long side of right-angled triangle.
             # don't need actual facet Jacobian for now, probably will.
             for i in 1:N_f
-                JinvG_at_facet =  det(G_at_facet[i,:,:,k])*inv(G_at_facet[i,:,:,k])
+                Jdrdx_f = det(dxdr_f[i,:,:,k]) *
+                    inv(dxdr_f[i,:,:,k])
                 for m in 1:d
                     nJf[m][i,k] = sum(
-                        JinvG_at_facet[n,m]*reference_element.nrstJ[n][i] 
+                        Jdrdx_f[n,m]*reference_element.nrstJ[n][i] 
                             for n in 1:d)
                 end
             end
         end
-        return GeometricFactors{d}(J,JinvG,nJf)
+        return GeometricFactors{d}(J_q, Jdrdx_q, nJf)
     end
 end

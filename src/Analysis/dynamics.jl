@@ -101,5 +101,5 @@ function plot_modes(analysis::AbstractDynamicalAnalysis,
     end
 
     savefig(p, string(directory_name, "modes.pdf")) 
-    return p 
+    return p
 end

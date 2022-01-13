@@ -49,7 +49,7 @@ module Solvers
         for k in 1:N_el
             # project to solution DOF
             u0[:,:,k] = M[k] \ convert(Matrix, transpose(V) * W * 
-                Diagonal(geometric_factors.J[:,k]) * 
+                Diagonal(geometric_factors.J_q[:,k]) * 
                 evaluate(initial_data, Tuple(xyzq[m][:,k] for m in 1:d)))
         end
         return u0

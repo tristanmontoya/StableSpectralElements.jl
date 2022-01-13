@@ -4,7 +4,7 @@ module IO
     using Plots: plot, plot!, scatter, savefig
     import PyPlot; const plt = PyPlot
     using LaTeXStrings: latexstring
-    using StartUpDG: MeshPlotter
+    using StartUpDG: MeshPlotter, map_face_nodes, vandermonde, find_face_nodes
     using JLD2: save, load, save_object, load_object
     using OrdinaryDiffEq: ODEIntegrator, ODEProblem, ODESolution, DiscreteCallback
     using UnPack

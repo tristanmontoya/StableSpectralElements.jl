@@ -5,7 +5,6 @@ end
 function ReferenceApproximation(approx_type::DGSEM, 
     elem_type::Union{Line,Quad,Hex};
     quadrature_rule::AbstractQuadratureRule=LGLQuadrature(),
-    sum_factorize::Bool=false,
     mapping_degree::Int=1, N_plot::Int=10)
 
     # get spatial dimension
@@ -39,7 +38,7 @@ function ReferenceApproximation(approx_type::DGSEM,
         W = LinearMap(Diagonal(wq))
         B = LinearMap(Diagonal(wf))
 
-    elseif elem_type isa Quad && sum_factorize
+    elseif elem_type isa Quad
 
         reference_element = RefElemData(elem_type, mapping_degree,
             quad_rule_vol=quadrature(elem_type, quadrature_rule, p+1),

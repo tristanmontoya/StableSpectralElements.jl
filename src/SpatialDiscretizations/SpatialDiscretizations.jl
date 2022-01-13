@@ -10,11 +10,14 @@ module SpatialDiscretizations
     using Reexport
     @reexport using StartUpDG: Line, Quad, Tri, Tet, Hex, Pyr
 
-    export AbstractApproximationType, AbstractCollocatedApproximation, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes
+    export AbstractApproximationType, AbstractCollocatedApproximation, NonsymmetricElemShape, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes
     
     abstract type AbstractApproximationType end
     abstract type AbstractCollocatedApproximation <: AbstractApproximationType end
-    
+    abstract type NonsymmetricElemShape <: AbstractElemShape end
+
+    struct DuffyTri <: NonsymmetricElemShape end
+    struct OneToOneTri <: NonsymmetricElemShape end
     struct ReferenceApproximation{d}
         approx_type::AbstractApproximationType
         N_p::Int
@@ -58,7 +61,7 @@ module SpatialDiscretizations
                 reference_approximation,
                 geometric_factors,
                 [Diagonal(reference_element.wq) *
-                    Diagonal(geometric_factors.J[:,k]) for k in 1:N_el],
+                    Diagonal(geometric_factors.J_q[:,k]) for k in 1:N_el],
                 Tuple(reference_element.Vp * mesh.xyz[m] for m in 1:d))
 
         else 
@@ -71,7 +74,7 @@ module SpatialDiscretizations
                 [convert(Matrix, 
                 transpose(reference_approximation.V) * 
                     Diagonal(reference_element.wq) *
-                    Diagonal(geometric_factors.J[:,k]) * 
+                    Diagonal(geometric_factors.J_q[:,k]) * 
                     reference_approximation.V) for k in 1:N_el],
                 Tuple(reference_element.Vp * mesh.xyz[m] for m in 1:d))
         end
@@ -98,13 +101,16 @@ module SpatialDiscretizations
             [y[j] for i in 1:length(x), j in 1:length(y)])
     end
 
-
     export AbstractQuadratureRule, LGLQuadrature, LGQuadrature, quadrature
     include("quadrature.jl")
-    
+
     export DGSEM
     include("dgsem.jl")
 
     export DGMulti
     include("dgmulti.jl")
+
+    export OneToOneTri, DuffyTri
+    include("tensor_tri.jl")
+
 end

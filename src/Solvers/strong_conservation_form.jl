@@ -7,7 +7,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     @unpack ADVs, V, R, P, B = spatial_discretization.reference_approximation
     @unpack nrstJ = 
         spatial_discretization.reference_approximation.reference_element
-    @unpack JinvG, nJf = spatial_discretization.geometric_factors
+    @unpack Jdrdx_q, nJf = spatial_discretization.geometric_factors
 
     operators = Array{PhysicalOperators}(undef, N_el)
     for k in 1:N_el
@@ -15,10 +15,10 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
             VOL = (ADVs[1],)
             NTR = (Diagonal(nrstJ[1]) * R * P,)
         else
-            VOL = Tuple(sum(ADVs[m] * Diagonal(JinvG[:,m,n,k])
+            VOL = Tuple(sum(ADVs[m] * Diagonal(Jdrdx_q[:,m,n,k])
                 for m in 1:d) for n in 1:d) 
             NTR = Tuple(sum(Diagonal(nrstJ[m]) * R * P * 
-                Diagonal(JinvG[:,m,n,k]) for m in 1:d) for n in 1:d)
+                Diagonal(Jdrdx_q[:,m,n,k]) for m in 1:d) for n in 1:d)
         end
         FAC = -transpose(R) * B
         operators[k] = PhysicalOperators(VOL, FAC, M[k], V, R, NTR,
