@@ -10,7 +10,7 @@ module IO
     using UnPack
 
     using ..ConservationLaws: ConservationLaw
-    using ..SpatialDiscretizations: SpatialDiscretization
+    using ..SpatialDiscretizations: SpatialDiscretization, centroids
     using ..InitialConditions: AbstractInitialData, evaluate
     using ..Solvers: AbstractResidualForm, AbstractStrategy, initialize, get_dof
 

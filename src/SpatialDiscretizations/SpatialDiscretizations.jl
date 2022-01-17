@@ -2,15 +2,18 @@ module SpatialDiscretizations
 
     using UnPack
     using LinearAlgebra: I, inv, transpose, Diagonal, UniformScaling
-    using LinearMaps: LinearMap, UniformScalingMap
-    using StartUpDG: MeshData, RefElemData, AbstractElemShape, face_type, basis, vandermonde, quad_nodes, gauss_quad, gauss_lobatto_quad
+    using LinearMaps: LinearMap, UniformScalingMap, TransposeMap
+    using StartUpDG: MeshData, RefElemData, AbstractElemShape, basis, vandermonde, quad_nodes, gauss_quad, gauss_lobatto_quad
+    using Jacobi: zgrjm, wgrjm
+
+    import StartUpDG: face_type
 
     using ..Mesh: GeometricFactors
-    using ..TensorProducts: TensorProductMap
+    using ..Operators: TensorProductMap, SelectionMap
     using Reexport
     @reexport using StartUpDG: Line, Quad, Tri, Tet, Hex, Pyr
 
-    export AbstractApproximationType, AbstractCollocatedApproximation, NonsymmetricElemShape, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes
+    export AbstractApproximationType, AbstractCollocatedApproximation, NonsymmetricElemShape, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, centroids
     
     abstract type AbstractApproximationType end
     abstract type AbstractCollocatedApproximation <: AbstractApproximationType end
@@ -18,6 +21,8 @@ module SpatialDiscretizations
 
     struct DuffyTri <: NonsymmetricElemShape end
     struct OneToOneTri <: NonsymmetricElemShape end
+    @inline face_type(::Union{DuffyTri,OneToOneTri}) = Line()
+
     struct ReferenceApproximation{d}
         approx_type::AbstractApproximationType
         N_p::Int
@@ -101,7 +106,18 @@ module SpatialDiscretizations
             [y[j] for i in 1:length(x), j in 1:length(y)])
     end
 
-    export AbstractQuadratureRule, LGLQuadrature, LGQuadrature, quadrature
+    function centroids(
+        spatial_discretization::SpatialDiscretization{d}) where {d}
+        
+        vertices = Tuple(spatial_discretization.mesh.VXYZ[m][
+            spatial_discretization.mesh.EToV] for m in 1:d)
+
+        return [Tuple(sum(vertices[m][k,:])/length(vertices[m][k,:]) 
+            for m in 1:d)
+            for k in 1:spatial_discretization.N_el]
+    end
+
+    export AbstractQuadratureRule, LGLQuadrature, LGQuadrature, JGRQuadrature, quadrature, facet_node_ids
     include("quadrature.jl")
 
     export DGSEM
@@ -111,6 +127,6 @@ module SpatialDiscretizations
     include("dgmulti.jl")
 
     export OneToOneTri, DuffyTri
-    include("tensor_tri.jl")
+    include("duffy.jl")
 
 end

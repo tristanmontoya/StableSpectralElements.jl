@@ -6,7 +6,7 @@ function new_path(results_path::String,
     elseif overwrite
         if clear  
             rm(results_path, force=true, recursive=true)
-        end
+        end 
         path = results_path
     else
         dir_exists = true
@@ -18,7 +18,7 @@ function new_path(results_path::String,
             end
             suffix = suffix + 1
         end
-    end
+    end 
     mkpath(path)
     return path
 end

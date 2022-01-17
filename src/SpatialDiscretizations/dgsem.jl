@@ -31,7 +31,13 @@ function ReferenceApproximation(approx_type::DGSEM,
         @unpack rstp, rstq, rstf, wq, wf = reference_element
         V_tilde, grad_V_tilde = basis(elem_type, p, rstq[1])
         D = (LinearMap(grad_V_tilde / V_tilde),)
-        R = LinearMap(vandermonde(elem_type,p,rstf[1]) / V_tilde) 
+
+        if quadrature_rule isa LGLQuadrature
+            R = SelectionMap(facet_node_ids(Line(),p+1),p+1)
+        else
+            R = LinearMap(vandermonde(elem_type,p,rstf[1]) / V_tilde) 
+        end
+
         V_plot = LinearMap(vandermonde(elem_type, p, rstp[1]) / V_tilde)
         V = LinearMap(I, N_q)
         P = LinearMap(I, N_q)
@@ -65,15 +71,21 @@ function ReferenceApproximation(approx_type::DGSEM,
         D = (TensorProductMap(I, D_1D, sigma, sigma),
             TensorProductMap(D_1D, I, sigma, sigma))
 
-        # extrapolate in each direction as a series of 1D operations
-        R = [
-            TensorProductMap(I, R_L, sigma, [i for i in 1:p+1, j in 1:1]) ; # L
-            TensorProductMap(I, R_R, sigma, [i for i in 1:p+1, j in 1:1]) ; # R 
-            TensorProductMap(R_L, I, sigma, [j for i in 1:1, j in 1:p+1]) ; # T 
-            TensorProductMap(R_R, I ,sigma, [j for i in 1:1, j in 1:p+1])] # B
+        # select facet nodes if LGL
+        if quadrature_rule isa LGLQuadrature
+            R = SelectionMap(facet_node_ids(Quad(),(p+1,p+1)),N_p)
+
+        # otherwise extrapolate in each direction
+        else
+            R = [
+                TensorProductMap(I, R_L, sigma, [i for i in 1:p+1, j in 1:1]) ; 
+                TensorProductMap(I, R_R, sigma, [i for i in 1:p+1, j in 1:1]) ; 
+                TensorProductMap(R_L, I, sigma, [j for i in 1:1, j in 1:p+1]) ; 
+                TensorProductMap(R_R, I ,sigma, [j for i in 1:1, j in 1:p+1])] 
+        end
 
         V_plot = LinearMap(vandermonde(elem_type, p, rstp...) / 
-            vandermonde(elem_type, p, rstp...))
+            vandermonde(elem_type, p, rstq...))
         V = LinearMap(I, N_q)
         P = LinearMap(I, N_q)
         W = LinearMap(Diagonal(wq))

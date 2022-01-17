@@ -67,29 +67,21 @@ function visualize(sol::Union{Array{Float64,3},AbstractInitialData},
     p.savefig(string(directory_name, file_name))
 end
 
-#=
-function visualize(spatial_discretization::SpatialDiscretization,
-    directory_name::String, file::String)
+function visualize(spatial_discretization::SpatialDiscretization{2},
+    directory_name::String, file_name::String; geometry_resolution=5, 
+    markersize=4, plot_volume_nodes=true, plot_facet_nodes=true,label_elements=false, grid_lines=false, stride=nothing)
 
     path = new_path(directory_name, true, false)
 
-    p = plot(MeshPlotter(
-        spatial_discretization.reference_approximation.reference_element,
-        spatial_discretization.mesh))
-    savefig(p, string(path,file))  
-    return p
-end
-=#
-
-function visualize(spatial_discretization::SpatialDiscretization{2},
-    directory_name::String, file_name::String; geometry_resolution=5, 
-    markersize=4, plot_nodes=true)
-
     @unpack N_el, mesh, reference_approximation = spatial_discretization
     @unpack elementType, N, VDM = reference_approximation.reference_element
+    
+    if grid_lines == true && stride isa Nothing
+        stride = convert(Int,sqrt(reference_approximation.N_q))
+    end
+
     p = plt.figure()
     ax = plt.axes()
-                 
     ax.set_aspect("equal")
     plt.xlabel(latexstring("x_1"))
     plt.ylabel(latexstring("x_2"))
@@ -103,33 +95,57 @@ function visualize(spatial_discretization::SpatialDiscretization{2},
         ref_edge_nodes[1][edge], ref_edge_nodes[2][edge]) / VDM 
         for edge ∈ edges)
 
-    for k in 1:N_el
-        
-        if plot_nodes
-            # plot volume nodes
-            ax.plot(mesh.xq[:,k], mesh.yq[:,k], "o",
-                  markersize=markersize)
+    if label_elements
+        x_c = centroids(spatial_discretization)
+    end
 
-             # plot facet nodes
-            ax.plot(mesh.xf[:,k], mesh.yf[:,k], "s", 
-                markersize=markersize, 
-                markeredgewidth=markersize*0.25,
-                color="black",
-                fillstyle="none")
+    for k in 1:N_el
+
+        if grid_lines
+            N1 = stride
+            N2 = reference_approximation.N_q ÷ stride
+            for i in 1:N1
+                ax.plot(mesh.xq[i:N2:(N2*(N1-1) + i),k], 
+                mesh.yq[i:N2:(N2*(N1-1) + i),k],
+                        "-",
+                        linewidth=markersize*0.2,
+                        color="grey")
+            end
+            for i in 1:N2
+                ax.plot(mesh.xq[(i-1)*N1+1:i*N1,k], 
+                mesh.yq[(i-1)*N1+1:i*N1,k],
+                        "-",
+                        linewidth=markersize*0.2,
+                        color="grey")
+            end
         end
             
         # plot facet edge curves
         for V_edge ∈ edge_maps
             edge_points = (V_edge * mesh.x[:,k], 
                 V_edge * mesh.y[:,k])
-            
             ax.plot(edge_points[1], 
                     edge_points[2], 
                     "-", 
                     linewidth=markersize*0.25,
                     color="black")
         end
-    end
 
-    p.savefig(string(directory_name, file_name))
+        if plot_volume_nodes
+            ax.plot(mesh.xq[:,k], mesh.yq[:,k], "o",
+                  markersize=markersize)
+        end
+        if plot_facet_nodes
+            ax.plot(mesh.xf[:,k], mesh.yf[:,k], "s", 
+                markersize=markersize, 
+                markeredgewidth=markersize*0.25,
+                color="black",
+                fillstyle="none")
+        end
+
+        if label_elements
+            ax.text(x_c[k][1], x_c[k][2], string(k))
+        end
+    end
+    p.savefig(string(path, file_name))
 end

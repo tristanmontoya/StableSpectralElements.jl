@@ -1,9 +1,9 @@
-module TensorProducts
+module Operators
 
     using LinearAlgebra, LinearMaps
     using UnPack
 
-    export TensorProductMap
+    export TensorProductMap, SelectionMap
     
     const Operator1D{T} = Union{UniformScaling{Bool}, 
         Matrix{T}, Transpose{T,Matrix{T}}}
@@ -116,4 +116,62 @@ module TensorProducts
         return y
     end
 
+    struct SelectionMap{T} <: LinearMaps.LinearMap{T}
+        facet_ids::Vector{Int}
+        volume_ids::Tuple{Vararg{Vector{Int}}}
+        N_vol::Int
+    end
+
+    function SelectionMap(facet_ids::Vector{Int}, N_vol::Int)
+        return SelectionMap{Float64}(facet_ids, 
+            Tuple(findall(j->j==i, facet_ids) for i in 1:N_vol),
+            N_vol)
+    end
+
+    Base.size(R::SelectionMap) = (length(R.facet_ids),R.N_vol)
+
+    function LinearAlgebra.mul!(y::AbstractVector, 
+        R::SelectionMap,
+        x::AbstractVector)
+        
+        LinearMaps.check_dim_mul(y, R, x)
+        @unpack facet_ids = R
+        y[:] = x[facet_ids]
+        return y
+    end
+
+    function LinearMaps._unsafe_mul!(y::AbstractVector, 
+        transR::LinearMaps.TransposeMap{T, SelectionMap{T}},
+        x::AbstractVector) where {T}
+        
+        LinearMaps.check_dim_mul(y, transR, x)
+        @unpack volume_ids, facet_ids, N_vol = transR.lmap
+        for i in 1:N_vol
+            if isempty(volume_ids[i])
+                y[i] = 0.0
+            else
+                y[i] = sum(x[j] for j in volume_ids[i])
+            end
+        end
+        return y
+    end
+#=
+    function LinearMaps._unsafe_mul!(y::AbstractMatrix, 
+        transR::LinearMaps.TransposeMap{T, SelectionMap{T}},
+        x::AbstractVector) where {T}
+        
+        LinearMaps.check_dim_mul(y, transR, x)
+        @unpack volume_ids, facet_ids, N_vol = transR.lmap
+        for k in 1:size(y,2)
+            for i in 1:N_vol
+                if isempty(volume_ids[i])
+                    y[i,k] = 0.0
+                else
+                    y[i,k] = sum(x[j,k] for j in volume_ids[i])
+                end
+            end
+        end
+        return y
+    end
+=#
 end

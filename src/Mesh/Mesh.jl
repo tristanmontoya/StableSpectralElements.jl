@@ -1,9 +1,11 @@
 module Mesh
 
-    using StartUpDG: RefElemData, MeshData, uniform_mesh, make_periodic, meshgrid, Line, Tri
-    using LinearAlgebra: inv, det
+    using UnPack
+    using StartUpDG: RefElemData, MeshData, uniform_mesh, connect_mesh, build_node_maps, diff, make_periodic, geometric_factors, compute_normals, Line, Tri
+    using StaticArrays: SMatrix
+    using LinearAlgebra: inv, det, transpose, diagm
 
-    export GeometricFactors, uniform_periodic_mesh
+    export GeometricFactors, uniform_periodic_mesh, nonsymmetric_mesh
 
     struct GeometricFactors{d}
 
@@ -19,6 +21,49 @@ module Mesh
 
     end
     
+    function nonsymmetric_mesh(VX, VY, EToV, rd::RefElemData{2})
+
+        @unpack fv = rd
+        FToF = connect_mesh(EToV, fv)
+        Nfaces, K = size(FToF)
+    
+        vx = VX[transpose(EToV)]
+        vy = VY[transpose(EToV)]
+
+        # in progress - define reordering for one-to-one scheme
+
+        @unpack V1 = rd
+        x = V1 * vx[[2,3,1], :]
+        y = V1 * vy[[2,3,1], :]
+    
+        @unpack Vf = rd
+        xf = Vf * x
+        yf = Vf * y
+        mapM, mapP, mapB = build_node_maps(FToF, xf, yf)
+        Nfp = size(Vf, 1) ÷ Nfaces
+        mapM = reshape(mapM, Nfp * Nfaces, K)
+        mapP = reshape(mapP, Nfp * Nfaces, K)
+    
+        @unpack Dr, Ds = rd
+        rxJ, sxJ, ryJ, syJ, J = geometric_factors(x, y, Dr, Ds)
+        rstxyzJ = SMatrix{2, 2}(rxJ, ryJ, sxJ, syJ)
+    
+        @unpack Vq, wq = rd
+        xq,yq = (x -> Vq * x).((x, y))
+        wJq = diagm(wq) * (Vq * J)
+    
+        nxJ, nyJ, sJ = compute_normals(rstxyzJ, rd.Vf, rd.nrstJ...)
+    
+        is_periodic = (false, false)
+        return MeshData(tuple(VX, VY), EToV, FToF,
+                        tuple(x, y), tuple(xf, yf), tuple(xq, yq), wJq,
+                        mapM, mapP, mapB,
+                        SMatrix{2, 2}(tuple(rxJ, ryJ, sxJ, syJ)), J,
+                        tuple(nxJ, nyJ), sJ,
+                        is_periodic)
+    
+    end
+
     function uniform_periodic_mesh(reference_element::RefElemData{1}, 
         limits::NTuple{2,Float64}, M::Int)
 
@@ -28,13 +73,13 @@ module Mesh
         return make_periodic(mesh)
     end
 
+
     function uniform_periodic_mesh(reference_element::RefElemData{2}, 
         limits::NTuple{2,NTuple{2,Float64}}, M::NTuple{2,Int})
 
         (VX, VY), EtoV = uniform_mesh(reference_element.elementType, M[1], M[2])
 
-        return make_periodic(
-            MeshData(limits[1][1] .+ 
+        return make_periodic(MeshData(limits[1][1] .+ 
                 0.5*(limits[1][2]-limits[1][1])*(VX .+ 1.0),
                 limits[2][1] .+ 0.5*(limits[2][2]-limits[2][1])*(VY .+ 1.0),
                 EtoV, reference_element))
