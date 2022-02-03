@@ -29,16 +29,16 @@ function ReferenceApproximation(approx_type::DGSEM,
             quad_rule_vol=quadrature(elem_type, 
             quadrature_rule, p+1), Nplot=N_plot)
         @unpack rstp, rstq, rstf, wq, wf = reference_element
-        V_tilde, grad_V_tilde = basis(elem_type, p, rstq[1])
-        D = (LinearMap(grad_V_tilde / V_tilde),)
+        VDM, ∇VDM = basis(elem_type, p, rstq[1])
+        D = (LinearMap(∇VDM / VDM),)
 
         if quadrature_rule isa LGLQuadrature
             R = SelectionMap(facet_node_ids(Line(),p+1),p+1)
         else
-            R = LinearMap(vandermonde(elem_type,p,rstf[1]) / V_tilde) 
+            R = LinearMap(vandermonde(elem_type,p,rstf[1]) / VDM) 
         end
 
-        V_plot = LinearMap(vandermonde(elem_type, p, rstp[1]) / V_tilde)
+        V_plot = LinearMap(vandermonde(elem_type, p, rstp[1]) / VDM)
         V = LinearMap(I, N_q)
         P = LinearMap(I, N_q)
         W = LinearMap(Diagonal(wq))
@@ -57,10 +57,9 @@ function ReferenceApproximation(approx_type::DGSEM,
         ref_elem_1D = RefElemData(Line(), mapping_degree,
             quad_rule_vol=quadrature(Line(), 
             quadrature_rule, p+1), Nplot=N_plot)
-        V_tilde_1D, grad_V_tilde_1D = basis(Line(), p, 
-            ref_elem_1D.rstq[1])
-        D_1D = grad_V_tilde_1D / V_tilde_1D
-        R_1D = vandermonde(Line(),p, ref_elem_1D.rstf[1]) / V_tilde_1D
+        VDM_1D, ∇VDM_1D = basis(Line(), p, ref_elem_1D.rstq[1])
+        D_1D = ∇VDM_1D / VDM_1D
+        R_1D = vandermonde(Line(),p, ref_elem_1D.rstf[1]) / VDM_1D
         R_L = R_1D[1:1,:]
         R_R = R_1D[2:2,:]
 
@@ -97,10 +96,10 @@ function ReferenceApproximation(approx_type::DGSEM,
             quad_rule_vol=quadrature(elem_type, quadrature_rule, p+1),
             quad_rule_face=quadrature(face_type(elem_type), quadrature_rule, p+1), Nplot=N_plot)
         @unpack rstp, rstq, rstf, wq, wf = reference_element
-        V_tilde, grad_V_tilde... = basis(elem_type, p, rstq...)
-        D = Tuple(LinearMap(grad_V_tilde[m] / V_tilde) for m in 1:d)
-        R = LinearMap(vandermonde(elem_type,p,rstf...) / V_tilde) 
-        V_plot = LinearMap(vandermonde(elem_type, p, rstp...) / V_tilde)
+        VDM, ∇VDM... = basis(elem_type, p, rstq...)
+        D = Tuple(LinearMap(∇VDM[m] / VDM) for m in 1:d)
+        R = LinearMap(vandermonde(elem_type,p,rstf...) / VDM) 
+        V_plot = LinearMap(vandermonde(elem_type, p, rstp...) / VDM)
         V = LinearMap(I, N_q)
         P = LinearMap(I, N_q)
         W = LinearMap(Diagonal(wq))
@@ -117,7 +116,7 @@ function ReferenceApproximation(approx_type::DGSEM,
     ADVs = Tuple(-W * D[m] for m in 1:d)
 
     # weak-form reference advection operator (no mass matrix)
-    ADVw = Tuple(transpose(D[m]) * W for m in 1:d)
+    ADVw = Tuple(D[m]' * W for m in 1:d)
 
     return ReferenceApproximation{d}(approx_type, N_p, N_q, N_f, 
         reference_element, D, V, R, P, W, B, ADVs, ADVw, V_plot)

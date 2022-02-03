@@ -116,6 +116,9 @@ module Operators
         return y
     end
 
+    """
+    Select the nodes corresponding to `facet_node_ids` from a vector of volume nodes (avoids multiplication by zeros)
+    """
     struct SelectionMap{T} <: LinearMaps.LinearMap{T}
         facet_ids::Vector{Int}
         volume_ids::Tuple{Vararg{Vector{Int}}}
@@ -155,23 +158,4 @@ module Operators
         end
         return y
     end
-#=
-    function LinearMaps._unsafe_mul!(y::AbstractMatrix, 
-        transR::LinearMaps.TransposeMap{T, SelectionMap{T}},
-        x::AbstractVector) where {T}
-        
-        LinearMaps.check_dim_mul(y, transR, x)
-        @unpack volume_ids, facet_ids, N_vol = transR.lmap
-        for k in 1:size(y,2)
-            for i in 1:N_vol
-                if isempty(volume_ids[i])
-                    y[i,k] = 0.0
-                else
-                    y[i,k] = sum(x[j,k] for j in volume_ids[i])
-                end
-            end
-        end
-        return y
-    end
-=#
 end

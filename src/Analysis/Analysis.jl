@@ -22,6 +22,9 @@ module Analysis
     export ErrorAnalysis, AbstractNorm, QuadratureL2, error_analysis
     include("error.jl")
 
-    export DMDAnalysis, plot_spectrum, plot_modes
+    export DMDAnalysis, plot_spectrum, plot_modes 
     include("dynamics.jl")
+
+    export ConservationAnalysis, PrimaryConservationAnalysis, EnergyConservationAnalysis
+    include("conservation.jl")
 end

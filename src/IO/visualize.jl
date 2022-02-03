@@ -149,3 +149,102 @@ function visualize(spatial_discretization::SpatialDiscretization{2},
     end
     p.savefig(string(path, file_name))
 end
+
+function visualize(reference_approximation::ReferenceApproximation{2},
+    directory_name::String, file_name::String;  markersize=4, plot_volume_nodes=true, plot_facet_nodes=true,grid_lines=false, full_connect=false, labels::NTuple{2,String}=("ξ₁","ξ₂"), stride=nothing, axes=false)
+
+    path = new_path(directory_name, true, false)
+    
+    @unpack rq, sq, rf, sf, elementType = reference_approximation.reference_element
+    ref_edge_nodes = map_face_nodes(elementType,
+        collect(LinRange(-1.0,1.0, 10)))
+
+
+    if grid_lines == true && stride isa Nothing
+        stride = convert(Int,sqrt(reference_approximation.N_q))
+    end
+
+    p = plt.figure()
+    ax = plt.axes()
+    ax.set_aspect("equal")
+
+    if axes
+        plt.xlabel(latexstring(labels[1]), fontsize=markersize*3)
+        plt.ylabel(latexstring(labels[2]), fontsize=markersize*3)
+        ax.spines["top"].set_visible(false)
+        ax.spines["right"].set_visible(false)
+        plt.xticks([-1.0, -0.5, 0.0, 0.5, 1.0], fontsize=markersize*2)
+        plt.yticks([-1.0, -0.5, 0.0, 0.5, 1.0], fontsize=markersize*2)
+    else
+        ax.set_axis_off()
+    end
+    
+    if grid_lines
+        N1 = stride
+        N2 = reference_approximation.N_q ÷ stride
+
+        if elementType isa Tri
+            
+            for i in 1:N1
+                ax.plot(vcat([rf[stride*0+i]], rq[i:N2:(N2*(N1-1) + i)], [-1.0]),
+                vcat([sf[stride*0+i]], sq[i:N2:(N2*(N1-1) + i)],[1.0]),
+                        "-",
+                        linewidth=markersize*0.2,
+                        color="grey")
+            end
+            for i in 1:N2
+                ax.plot(vcat([rf[3*stride-i+1]], rq[(i-1)*N1+1:i*N1],[rf[1*stride+i]]), vcat([sf[3*stride-i+1]], sq[(i-1)*N1+1:i*N1],[sf[1*stride+i]]),
+                        "-",
+                        linewidth=markersize*0.2,
+                        color="grey")
+            end
+
+        elseif elementType isa Quad
+
+            for i in 1:N1
+                ax.plot(vcat([rf[stride*2+i]], rq[i:N2:(N2*(N1-1) + i)], [rf[stride*3+i]]),
+                vcat([sf[stride*2+i]], sq[i:N2:(N2*(N1-1) + i)], [sf[stride*3+i]]),
+                        "-",
+                        linewidth=markersize*0.2,
+                        color="grey")
+            end
+            for i in 1:N2
+                ax.plot(vcat([rf[0*stride+i]], rq[(i-1)*N1+1:i*N1],[rf[1*stride+i]]), vcat([sf[0*stride+i]], sq[(i-1)*N1+1:i*N1],[sf[1*stride+i]]),
+                        "-",
+                        linewidth=markersize*0.2,
+                        color="grey")
+            end
+        end
+
+    end
+
+    if full_connect
+        combs = collect(combinations(1:reference_approximation.N_q,2))
+        for comb ∈ combs
+            ax.plot(rq[comb], sq[comb], "-", markersize=markersize, color="lightgrey")
+        end
+    end
+    
+    # plot facet edge curves
+    edges = find_face_nodes(elementType, ref_edge_nodes...)
+    for edge ∈ edges
+        ax.plot(ref_edge_nodes[1][edge], 
+                ref_edge_nodes[2][edge], 
+                "-", 
+                linewidth=markersize*0.3,
+                color="black")
+    end
+    if plot_volume_nodes
+        ax.plot(rq, sq, "o", markersize=markersize, color="black")
+    end
+
+    if plot_facet_nodes
+        ax.plot(rf, sf, "s", 
+            markersize=markersize, 
+            markeredgewidth=markersize*0.25,
+            color="black",
+            fillstyle="none")
+    end
+
+    p.savefig(string(path, file_name),bbox_inches="tight")
+end

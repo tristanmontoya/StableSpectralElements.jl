@@ -39,23 +39,37 @@ end
 function analyze(dmd::DMDAnalysis, X::Matrix{Float64}, 
     Y::Matrix{Float64})
 
-    # SVD (i.e. POD) of initial states
-    U_full, S_full, V_full = svd(X)
-    
-    U = U_full[:,1:dmd.rank]
-    S = S_full[1:dmd.rank]
-    V = V_full[:,1:dmd.rank]
 
-    # eigendecomposition of reduced DMD matrix (projected onto singular vectors)
-    F = eigen((U') * Y * V * inv(Diagonal(S)))
-    # eigenvectors and eigenvalues of A = Y*pinv(X)
-    ϕ = Y*V*inv(Diagonal(S))*F.vectors
-    σ = F.values
+    if dmd.rank > 0
+        # SVD (i.e. POD) of initial states
+        U_full, S_full, V_full = svd(X)
+
+        U = U_full[:,1:dmd.rank]
+        S = S_full[1:dmd.rank]
+        V = V_full[:,1:dmd.rank]
+
+        # eigendecomposition of reduced DMD matrix 
+        # (projected onto singular vectors)
+        F = eigen((U') * Y * V * inv(Diagonal(S)))
+
+        # eigenvectors and eigenvalues of A = Y*pinv(X)
+        ϕ = Y*V*inv(Diagonal(S))*F.vectors
+
+    else
+        F = eigen(Y*pinv(X))
+        ϕ = F.vectors
+    end
+
+    # coefficients for each mode
+    c = ϕ\X[:,1]
+    inds_full = sortperm(-abs.(c))
+    inds = inds_full[imag(F.values[inds_full]) .> 0]
+    σ = F.values[inds]
 
     # continuous-time eigenvalues such that σ = exp(λdt)
     λ = log.(σ)/dmd.dt
     
-    return σ, λ, ϕ
+    return σ, λ, ϕ[:,inds], c[inds]
 
 end
 
@@ -72,11 +86,20 @@ function save_analysis(dmd_analysis::DMDAnalysis,
 end
 
 function plot_spectrum(analysis::AbstractDynamicalAnalysis, 
-    eigs::Vector{ComplexF64}, symbol::String="\\lambda")
+    eigs::Vector{ComplexF64}; symbol::String="\\lambda", unit_circle=true)
 
-    p = scatter(eigs, xlabel=latexstring(string("\\mathrm{Re}(", symbol, ")")), 
-        ylabel=latexstring(string("\\mathrm{Im}(", symbol, ")")), legend=false, 
-        series_annotations = text.(1:length(eigs), :bottom))
+    if unit_circle
+        t=collect(LinRange(0.0, 2.0*π,100))
+        p = plot(cos.(t), sin.(t), aspect_ratio=:equal)
+    else
+        p = plot()
+    end
+
+    plot!(p, eigs, xlabel=latexstring(string("\\mathrm{Re}\\,(", symbol, ")")), 
+        ylabel=latexstring(string("\\mathrm{Im}\\,(", symbol, ")")), legend=false, 
+        series_annotations = text.(1:length(eigs), :bottom),
+        seriestype=:scatter, 
+        markercolor="black")
 
     savefig(p, string(analysis.path, "spectrum.pdf"))
 
@@ -84,20 +107,36 @@ function plot_spectrum(analysis::AbstractDynamicalAnalysis,
 end
 
 function plot_modes(analysis::AbstractDynamicalAnalysis, 
-    plotter::Plotter{1}, ϕ::Matrix{Float64}, e::Int)
+    plotter::Plotter{1}, ϕ::Matrix{Float64}, e::Int; coeffs=nothing)
 
     @unpack N_p, N_eq, N_el = analysis
     @unpack x_plot, V_plot, directory_name = plotter
 
     n_modes = size(ϕ,2)
     p = plot()
-    for j in 1:n_modes
+
+    if isnothing(coeffs)
+        coeffs = ones(n_modes)
+    end
+
+    sol = reshape(ϕ[:,1],(N_p, N_eq, N_el))
+        linelabel = string("\\mathrm{Mode} \\, \\,", 1)
+        u = convert(Matrix, V_plot * sol[:,e,:])
+        scale_factor = 1.0/maximum(abs.(u))
+        plot!(p,vec(vcat(x_plot[1],fill(NaN,1,N_el))), 
+            vec(vcat(scale_factor*u,fill(NaN,1,N_el))), 
+            label=latexstring(linelabel), xlabel=latexstring("x"), ylabel=latexstring("\\mathrm{Re}\\,(\\Phi(x))"),
+            linewidth=3, linecolor="black")
+
+    for j in 2:n_modes
         sol = reshape(ϕ[:,j],(N_p, N_eq, N_el))
         linelabel = string("\\mathrm{Mode} \\, \\,", j)
         u = convert(Matrix, V_plot * sol[:,e,:])
+        scale_factor = exp(abs(coeffs[j])/abs(coeffs[1]))/(maximum(abs.(u))*exp(1))
+        println(abs(coeffs[j])/abs(coeffs[1]), " ", maximum(abs.(u)))
         plot!(p,vec(vcat(x_plot[1],fill(NaN,1,N_el))), 
-            vec(vcat(u,fill(NaN,1,N_el))), 
-            label=latexstring(linelabel), xlabel=latexstring("x"))
+            vec(vcat(scale_factor*u,fill(NaN,1,N_el))), 
+            label=latexstring(linelabel),linewidth=2)
     end
 
     savefig(p, string(directory_name, "modes.pdf")) 

@@ -1,16 +1,17 @@
 module IO
 
     using LinearMaps: LinearMap
+    using Combinatorics: combinations
     using Plots: plot, plot!, scatter, savefig
     import PyPlot; const plt = PyPlot
     using LaTeXStrings: latexstring
-    using StartUpDG: MeshPlotter, map_face_nodes, vandermonde, find_face_nodes
+    using StartUpDG: MeshPlotter, map_face_nodes, vandermonde, find_face_nodes, Tri, Quad
     using JLD2: save, load, save_object, load_object
     using OrdinaryDiffEq: ODEIntegrator, ODEProblem, ODESolution, DiscreteCallback
     using UnPack
 
     using ..ConservationLaws: ConservationLaw
-    using ..SpatialDiscretizations: SpatialDiscretization, centroids
+    using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation, centroids
     using ..InitialConditions: AbstractInitialData, evaluate
     using ..Solvers: AbstractResidualForm, AbstractStrategy, initialize, get_dof
 

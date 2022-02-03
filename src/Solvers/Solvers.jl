@@ -2,7 +2,7 @@ module Solvers
 
     using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
     using UnPack
-    using LinearAlgebra: Diagonal, inv
+    using LinearAlgebra: Diagonal, inv, mul!
     using LinearMaps: LinearMap
     using TimerOutputs
 
@@ -10,7 +10,7 @@ module Solvers
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization
     using ..InitialConditions: AbstractInitialData, evaluate
     
-    export AbstractResidualForm, AbstractPhysicalOperators, PhysicaOperators, AbstractStrategy, Eager, Lazy, Solver, initialize, semidiscretize, precompute, apply_operators, combine, get_dof, rhs!
+    export AbstractResidualForm, AbstractPhysicalOperators, PhysicaOperators, AbstractStrategy, Eager, Lazy, Solver, initialize, semidiscretize, precompute, apply_operators!, combine, get_dof, rhs!
 
     abstract type AbstractResidualForm end
     abstract type AbstractPhysicalOperators{d} end
@@ -48,7 +48,7 @@ module Solvers
         u0 = Array{Float64}(undef, N_p, N_eq, N_el)
         for k in 1:N_el
             # project to solution DOF
-            u0[:,:,k] = M[k] \ convert(Matrix, transpose(V) * W * 
+            u0[:,:,k] = M[k] \ convert(Matrix, V' * W * 
                 Diagonal(geometric_factors.J_q[:,k]) * 
                 evaluate(initial_data, Tuple(xyzq[m][:,k] for m in 1:d)))
         end
@@ -95,16 +95,56 @@ module Solvers
             spatial_discretization.mesh.mapP, form, strategy))
     end
 
-    function apply_operators(operators::PhysicalOperators{d},       
-        f::NTuple{d,Matrix{Float64}}, f_fac::Matrix{Float64}, ::Eager) where {d}
-        return sum(convert(Matrix, operators.VOL[m] * f[m]) for m in 1:d) +     
-            convert(Matrix,operators.FAC * f_fac)
+    function apply_operators!(residual::Matrix{Float64},
+        operators::PhysicalOperators{d},  
+        f::NTuple{d,Matrix{Float64}}, 
+        f_fac::Matrix{Float64}, ::Eager) where {d}
+        
+        @timeit "volume terms" begin
+            # compute volume terms
+            volume_terms = zero(residual)
+            for m in 1:d
+                volume_terms += mul!(residual, operators.VOL[m], f[m])
+            end
+        end
+
+        @timeit "facet terms" begin
+            # compute facet terms
+            facet_terms = mul!(residual, operators.FAC, f_fac)
+        end
+
+        # add together
+        residual = volume_terms + facet_terms
+
+        return residual
     end
 
-    function apply_operators(operators::PhysicalOperators{d},
-        f::NTuple{d,Matrix{Float64}}, f_fac::Matrix{Float64}, ::Lazy) where {d}
-        rhs = sum(convert(Matrix, operators.VOL[m] * f[m]) for m in 1:d) +  convert(Matrix,operators.FAC * f_fac)
-        return operators.M \ rhs
+    function apply_operators!(residual::Matrix{Float64},
+        operators::PhysicalOperators{d},
+        f::NTuple{d,Matrix{Float64}}, 
+        f_fac::Matrix{Float64}, ::Lazy) where {d}
+
+        @timeit "volume terms" begin
+            # compute volume terms
+            volume_terms = zero(residual)
+            for m in 1:d
+                volume_terms += mul!(residual, operators.VOL[m], f[m])
+            end
+        end
+
+        @timeit "facet terms" begin
+            # compute facet terms
+            facet_terms = mul!(residual, operators.FAC, f_fac)
+        end
+
+        rhs = volume_terms + facet_terms
+
+        @timeit "mass matrix solve" begin
+            # add together and solve
+            residual = operators.M \ rhs
+        end
+        
+        return residual
     end
 
     function precompute(operators::PhysicalOperators{d}) where {d}
@@ -115,7 +155,6 @@ module Solvers
             combine(inv_M*FAC), M, V, R, NTR, scaled_normal)
     end
 
-    # utils
     function combine(operator::LinearMap)
         return LinearMap(convert(Matrix,operator))
     end

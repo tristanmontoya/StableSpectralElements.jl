@@ -20,7 +20,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
             NTR = Tuple(sum(Diagonal(nrstJ[m]) * R * P * 
                 Diagonal(Jdrdx_q[:,m,n,k]) for m in 1:d) for n in 1:d)
         end
-        FAC = -transpose(R) * B
+        FAC = -R' * B
         operators[k] = PhysicalOperators(VOL, FAC, M[k], V, R, NTR,
             Tuple(nJf[m][:,k] for m in 1:d))
     end
@@ -66,8 +66,8 @@ function rhs!(dudt::Array{Float64,3}, u::Array{Float64,3},
                 u_facet[:,:,k], u_out, operators[k].scaled_normal)
             
             # apply operators
-            dudt[:,:,k] = @timeit "eval residual" apply_operators(
-                operators[k], f, f_star, strategy)
+            dudt[:,:,k] = @timeit "eval residual" apply_operators!(
+                dudt[:,:,k], operators[k], f, f_star, strategy)
         end
     end
     return nothing

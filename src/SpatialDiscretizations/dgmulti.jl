@@ -1,7 +1,5 @@
 struct DGMulti <: AbstractApproximationType
     p::Int  # polynomial degree
-    #q::Int  # quadrature degree
-    #qf::Int  # facet quadrature degree 
 end
 
 function ReferenceApproximation(approx_type::DGMulti, 
@@ -25,8 +23,8 @@ function ReferenceApproximation(approx_type::DGMulti,
 
         @unpack rstp, rstq, rstf, wq, wf = reference_element    
 
-        V_tilde, grad_V_tilde = basis(elem_type, p, rstq[1])     
-        grad_V = (LinearMap(grad_V_tilde),)
+        VDM, ∇VDM = basis(elem_type, p, rstq[1])     
+        ∇V = (LinearMap(∇VDM),)
         R = LinearMap(vandermonde(elem_type,p,rstf[1]))
         V_plot = LinearMap(vandermonde(elem_type, p, rstp[1]))
     else
@@ -36,8 +34,8 @@ function ReferenceApproximation(approx_type::DGMulti,
 
         @unpack rstp, rstq, rstf, wq, wf = reference_element
 
-        V_tilde, grad_V_tilde... = basis(elem_type, p, rstq...) 
-        grad_V = Tuple(LinearMap(grad_V_tilde[m]) for m in 1:d)
+        VDM, ∇VDM... = basis(elem_type, p, rstq...) 
+        ∇V = Tuple(LinearMap(∇VDM[m]) for m in 1:d)
         R = LinearMap(vandermonde(elem_type,p,rstf...))
         V_plot = LinearMap(vandermonde(elem_type, p, rstp...))
     end
@@ -46,19 +44,18 @@ function ReferenceApproximation(approx_type::DGMulti,
     N_q = length(wq)
     N_f = length(wf)
     
-    V = LinearMap(V_tilde)
-    inv_M = LinearMap(inv(transpose(V_tilde) * Diagonal(wq) * V_tilde))
+    V = LinearMap(VDM)
+    inv_M = LinearMap(inv(VDM' * Diagonal(wq) * VDM))
     W = LinearMap(Diagonal(wq))
     B = LinearMap(Diagonal(wf))
-    P = inv_M * transpose(V) * W
-    D = Tuple(inv_M * transpose(V) * W * grad_V[m] 
-        for m in 1:d)
+    P = inv_M * V' * W
+    D = Tuple(inv_M * V' * W * ∇V[m] for m in 1:d)
 
     # strong-form reference advection operator (no mass matrix)
-    ADVs = Tuple(-transpose(V) * W * grad_V[m] * P for m in 1:d)
+    ADVs = Tuple(-V' * W * ∇V[m] * P for m in 1:d)
 
     # weak-form reference advection operator (no mass matrix)
-    ADVw = Tuple(transpose(grad_V[m]) * W for m in 1:d)
+    ADVw = Tuple(∇V[m]' * W for m in 1:d)
 
 
     return ReferenceApproximation{d}(approx_type, N_p, N_q, N_f, 

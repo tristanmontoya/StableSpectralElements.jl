@@ -34,27 +34,27 @@ function quadrature(::Quad,
     quadrature_rule::NTuple{2,AbstractQuadratureRule{1}}, N::NTuple{2,Int})
 
     r1d_1, w1d_1 = quadrature(Line(), 
-        quadrature_rule_1, N_1)
+        quadrature_rule[1], N[1])
     r1d_2, w1d_2 = quadrature(Line(), 
-        quadrature_rule_2, N_2)
+        quadrature_rule[2], N[2])
     mgw = meshgrid(w1d_1,w1d_2)
     mgr = meshgrid(r1d_1,r1d_2)
     w2d = @. mgw[1] * mgw[2] 
     return mgr[1][:], mgr[2][:], w2d[:]
 end
 
-function quadrature(::DuffyTri,
+function quadrature(::CollapsedTri,
     quadrature_rule::NTuple{2,AbstractQuadratureRule{1}}, N::NTuple{2,Int})
 
     r1d_1, w1d_1 = quadrature(Line(), 
         quadrature_rule[1], N[1])
     r1d_2, w1d_2 = quadrature(Line(), 
         quadrature_rule[2], N[2])
-    J =  0.5*(1 .- r1d_2)
-    mgw = meshgrid(w1d_1, J.* w1d_2)
+    mgw = meshgrid(w1d_1, w1d_2)
     mgr = meshgrid(r1d_1,r1d_2)
     w2d = @. mgw[1] * mgw[2] 
-    return χ(DuffyTri(), (mgr[1][:], mgr[2][:]))..., w2d[:]
+    return χ(CollapsedTri(), (mgr[1][:], mgr[2][:]))..., 
+        (η -> 0.5*(1-η)).(mgr[2][:]) .* w2d[:]
 end
 
 function facet_node_ids(::Line, N::Int)
