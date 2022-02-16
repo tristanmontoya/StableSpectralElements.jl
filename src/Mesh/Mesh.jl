@@ -73,7 +73,6 @@ module Mesh
         return make_periodic(mesh)
     end
 
-
     function uniform_periodic_mesh(reference_element::RefElemData{2}, 
         limits::NTuple{2,NTuple{2,Float64}}, M::NTuple{2,Int})
 

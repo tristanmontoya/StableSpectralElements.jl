@@ -2,9 +2,10 @@ module Solvers
 
     using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
     using UnPack
+    import LinearAlgebra
     using LinearAlgebra: Diagonal, inv, mul!
-    using LinearMaps: LinearMap
     using TimerOutputs
+    using LinearMaps: LinearMap
 
     using ..ConservationLaws: ConservationLaw, physical_flux, numerical_flux
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization
@@ -25,6 +26,16 @@ module Solvers
         connectivity::Matrix{Int}
         form::ResidualForm
         strategy::AbstractStrategy
+    end
+
+    function Solver(
+        conservation_law::ConservationLaw,spatial_discretization::SpatialDiscretization, 
+        form::AbstractResidualForm,
+        strategy::AbstractStrategy)
+
+        return Solver(conservation_law,            
+            make_operators(spatial_discretization, form),
+            spatial_discretization.mesh.mapP, form, strategy)
     end
 
     struct PhysicalOperators{d} <: AbstractPhysicalOperators{d}
@@ -170,5 +181,8 @@ module Solvers
 
     export WeakConservationForm
     include("weak_conservation_form.jl")
+
+    export LinearResidual
+    include("linear.jl")
 
 end

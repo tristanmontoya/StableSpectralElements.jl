@@ -27,7 +27,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     return operators
 end
 
-function rhs!(dudt::Array{Float64,3}, u::Array{Float64,3}, 
+function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
     solver::Solver{WeakConservationForm, <:AbstractPhysicalOperators, d, N_eq}, t::Float64; print::Bool=false) where {d, N_eq}
 
     @timeit "rhs!" begin

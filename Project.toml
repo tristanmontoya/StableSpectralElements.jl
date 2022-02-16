@@ -4,7 +4,9 @@ authors = ["Tristan Montoya <montoya.tristan@gmail.com>"]
 version = "0.1.0"
 
 [deps]
+Arpack = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
+DataDrivenDiffEq = "2445eb08-9709-466a-b3fc-47e12bd697a2"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 Jacobi = "83f21c0b-4282-5fbc-9e3f-f6da3d2e584c"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
@@ -16,6 +18,7 @@ PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
 PyPlot = "d330b81b-6aea-500a-939a-2ce795aea3ee"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StartUpDG = "472ebc20-7c99-4d4b-9470-8fde4e9faa0f"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"

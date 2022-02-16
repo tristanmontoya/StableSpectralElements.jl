@@ -1,0 +1,16 @@
+writing time step 375  t = 0.06250000000000039
+writing time step 750  t = 0.12499999999999871
+writing time step 1125  t = 0.18750000000000222
+writing time step 1500  t = 0.2500000000000057
+writing time step 1875  t = 0.31249999999999883
+writing time step 2250  t = 0.37499999999999195
+writing time step 2625  t = 0.43749999999998507
+writing time step 3000  t = 0.4999999999999782
+writing time step 3375  t = 0.5624999999999714
+writing time step 3750  t = 0.6249999999999645
+writing time step 4125  t = 0.6874999999999576
+writing time step 4500  t = 0.7499999999999507
+writing time step 4875  t = 0.8124999999999438
+writing time step 5250  t = 0.8749999999999369
+writing time step 5625  t = 0.9374999999999301
+writing time step 6000  t = 0.9999999999999232

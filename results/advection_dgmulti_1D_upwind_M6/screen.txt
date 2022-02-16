@@ -1,0 +1,10 @@
+writing time step 720  t = 0.09999999999999862
+writing time step 1440  t = 0.19999999999999427
+writing time step 2160  t = 0.2999999999999999
+writing time step 2880  t = 0.4000000000000155
+writing time step 3600  t = 0.5000000000000311
+writing time step 4320  t = 0.6000000000000467
+writing time step 5040  t = 0.7000000000000624
+writing time step 5760  t = 0.800000000000078
+writing time step 6480  t = 0.9000000000000936
+writing time step 7200  t = 1.0

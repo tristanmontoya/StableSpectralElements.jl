@@ -102,17 +102,24 @@ function load_time_steps(results_path::String)
     return load_object(string(results_path, "time_steps.jld2"))
 end
 
-function load_snapshots(results_path::String, time_steps::Vector{Int})
+function load_snapshots(results_path::String, time_steps::Vector{Int};      
+    single_matrix=true)
+
     dict = load(string(results_path,"project.jld2"))
     N_p, N_eq, N_el = get_dof(dict["spatial_discretization"], 
         dict["conservation_law"])
     N_dof = N_p*N_eq*N_el
     N_t = length(time_steps)
+
     X = Matrix{Float64}(undef, N_dof, N_t)
     for i in 1:N_t
         u, = load_solution(results_path, time_steps[i])
         X[:,i] = vec(u)
     end
     
-    return X[:,1:N_t-1], X[:,2:N_t]
+    if single_matrix
+        return X
+    else
+        return X[:,1:N_t-1], X[:,2:N_t]
+    end
 end
