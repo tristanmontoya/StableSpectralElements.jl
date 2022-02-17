@@ -1,4 +1,4 @@
-abstract type AbstractDynamicalAnalysis <: AbstractAnalysis end
+abstract type AbstractDynamicalAnalysis{d} <: AbstractAnalysis end
 
 struct DynamicalAnalysisResults 
     σ::Vector{ComplexF64}
@@ -10,70 +10,70 @@ struct DynamicalAnalysisResults
     E::Union{Matrix{Float64},Nothing}
 end
 
-struct LinearAnalysis <: AbstractDynamicalAnalysis
-    path::String
+struct LinearAnalysis{d} <: AbstractDynamicalAnalysis{d}
+    results_path::String
+    analysis_path::String
     r::Int
     tol::Float64
     N_p::Int
     N_eq::Int
     N_el::Int
-    dt::Float64
     M::AbstractMatrix
-    plotter::Plotter
+    plotter::Plotter{d}
     L::LinearMap
-    X::Union{Matrix{Float64},Nothing}
+    use_data::Bool
 end
 
-struct DMDAnalysis <: AbstractDynamicalAnalysis
-    path::String
+struct DMDAnalysis{d} <: AbstractDynamicalAnalysis{d}
+    results_path::String
+    analysis_path::String
     r::Int
     tol::Float64
-    time_steps::Vector{Int64}
-    N_t::Int
     N_p::Int
     N_eq::Int
     N_el::Int
-    dt::Float64
     M::AbstractMatrix
-    plotter::Plotter
-    X::Matrix{Float64}
+    plotter::Plotter{d}
 end
 
-function LinearAnalysis(results_path::String; dt=1.0, r=4, 
-    tol=1.0e-12, X=nothing, name="linear_analysis")
+function LinearAnalysis(results_path::String,
+    conservation_law::ConservationLaw, 
+    spatial_discretization::SpatialDiscretization, 
+    L::Union{LinearMap{Float64},AbstractMatrix{Float64}};
+    r=4, tol=1.0e-12, 
+    name="linear_analysis", 
+    use_data=true)
 
-    # create path and get discretization information
-    path = new_path(string(results_path, name, "/"))
-    (conservation_law, spatial_discretization, 
-        _, form, _, strategy) = load_project(results_path)
-    L = LinearResidual(Solver(
-        conservation_law,spatial_discretization,form,strategy))
-
+    analysis_path = new_path(string(results_path, name, "/"))
     N_p, N_eq, N_el = get_dof(spatial_discretization, conservation_law)
 
-    # create a mass matrix for the state space as a Hilbert space 
-    M = blockdiag((
-        kron(Diagonal(ones(N_eq)),sparse(spatial_discretization.M[k]))
-        for k in 1:N_el)...)
+    # define mass matrix for the state space as a Hilbert space 
+    M = blockdiag((kron(Diagonal(ones(N_eq)),
+        sparse(spatial_discretization.M[k])) for k in 1:N_el)...)
             
-    return LinearAnalysis(path, r, tol, N_p, N_eq, N_el, dt, M, 
-        Plotter(spatial_discretization, path), L, X)
+    return LinearAnalysis(results_path, analysis_path, 
+        r, tol, N_p, N_eq, N_el, M, Plotter(spatial_discretization, analysis_path), L, use_data)
 end
 
 function analyze(analysis::LinearAnalysis)
 
-    @unpack M, L, dt, r, tol, X = analysis
-    values, ϕ = eigs(L, nev=r, which=:LM)
+    @unpack M, L, r, tol, use_data, results_path = analysis
+    values, ϕ_unscaled = eigs(L, nev=r, which=:SI)
+    ϕ = similar(ϕ_unscaled)
 
-    if isnothing(X)
-        DynamicalAnalysisResults(exp.(dt*values), 
-        values, ϕ, nothing, nothing, 
-        find_conjugate_pairs(values), nothing)
-    else
-        # project onto eigenvectors
+    # normalize eigenvectors
+    for i in 1:r
+        ϕ[:,i] = ϕ_unscaled[:,i] / sqrt(ϕ_unscaled[:,i]'*M*ϕ_unscaled[:,i])
+    end
+
+    if use_data
+        #load snapshot data
+        X, t_s = load_snapshots(results_path, load_time_steps(results_path))
+
+        # project data onto eigenvectors to determine coeffients
         c = (ϕ'*M*ϕ) \ ϕ'*M*X
 
-        # calculate energy
+        # calculate energy in each mode
         E = real([dot(c[i,j]*ϕ[:,i], M * (c[i,j]*ϕ[:,i]))
             for i in 1:r, j in 1:size(c,2)])
         
@@ -86,51 +86,39 @@ function analyze(analysis::LinearAnalysis)
         conjugate_pairs = find_conjugate_pairs(λ)
 
         # discrete-time eigenvalues
-        σ = exp.(dt*λ)
+        σ = exp.(λ*t_s)
 
         return DynamicalAnalysisResults(σ, 
             λ, ϕ[:,inds],  conjugate_pairs, 
-            c[inds,:], ϕ*c, E[inds,:])
+            c[inds,:], ϕ*c, E[inds,:]) 
+    else 
+        return DynamicalAnalysisResults(exp.(dt*values), values, ϕ, nothing,
+            nothing, find_conjugate_pairs(values), nothing)
     end
 end
 
-function DMDAnalysis(results_path::String; 
-    num_snapshots=0, r=4, tol=1.0e-12, name="dmd")
+function DMDAnalysis(results_path::String, 
+    conservation_law::ConservationLaw,spatial_discretization::SpatialDiscretization; 
+    r=4, tol=1.0e-12, name="dmd_analysis")
     
-    full_time_steps = load_time_steps(results_path)
-
-    if num_snapshots > 1
-        time_steps = full_time_steps[1:num_snapshots]
-    else
-        time_steps=full_time_steps
-    end
-
-    N_t = length(time_steps)
-    first, t0 = load_solution(results_path, time_steps[1])
-    _ , tf = load_solution(results_path, last(time_steps))
-    dt = (tf - t0)/(N_t - 1)
-    N_p = size(first,1)
-    N_eq = size(first,2)
-    N_el = size(first,3)
-    X = load_snapshots(results_path, time_steps)
-
     # create path and get discretization information
-    path = new_path(string(results_path, name, "/"))
-    conservation_law, spatial_discretization = load_project(results_path);
+    analysis_path = new_path(string(results_path, name, "/"))
 
-    # create a mass matrix for the state space as a Hilbert space 
-    M = blockdiag((
-        kron(Diagonal(ones(N_eq)),sparse(spatial_discretization.M[k]))
-        for k in 1:N_el)...)
+    N_p, N_eq, N_el = get_dof(spatial_discretization, conservation_law)
 
-    return DMDAnalysis(path, r, tol, time_steps,
-         N_t, N_p, N_eq, N_el, dt, M,
-         Plotter(spatial_discretization, path), X)
+    # define mass matrix for the state space as a Hilbert space 
+    M = blockdiag((kron(Diagonal(ones(N_eq)),
+        sparse(spatial_discretization.M[k])) for k in 1:N_el)...)
+
+    return DMDAnalysis(results_path, analysis_path, r, tol,
+        N_p, N_eq, N_el, M, Plotter(spatial_discretization, analysis_path))
 end
 
 function analyze(analysis::DMDAnalysis)
 
-    @unpack r, tol, M, X, dt = analysis
+    @unpack r, tol, M, results_path = analysis
+
+    X, t_s = load_snapshots(results_path, load_time_steps(results_path))
     
     if r > 0
         # SVD (i.e. POD) of initial states
@@ -145,12 +133,15 @@ function analyze(analysis::DMDAnalysis)
         F = eigen((U') * X[:,2:end] * V * inv(Diagonal(S)))
 
         # map eigenvectors back up into full space
-        ϕ = X[:,2:end]*V*inv(Diagonal(S))*F.vectors
+        ϕ_unscaled = X[:,2:end]*V*inv(Diagonal(S))*F.vectors
     else
         # compute full eigendecomposition w/ Moore-Penrose pseudo-inverse
         F = eigen(X[2:end]*pinv(X[1:end-1]))
-        ϕ = F.vectors
+        ϕ_unscaled = F.vectors
     end
+
+    # normalize eigenvectors (although not orthogonal - this isn't POD)
+    ϕ =ϕ_unscaled/Diagonal([ϕ_unscaled[:,i]'*M*ϕ_unscaled[:,i] for i in 1:r])
     
     # project onto eigenvectors with respect to the inner product of the scheme
     c = (ϕ'*M*ϕ) \ ϕ'*M*X
@@ -168,7 +159,7 @@ function analyze(analysis::DMDAnalysis)
     conjugate_pairs = find_conjugate_pairs(σ)
 
     # continuous-time eigenvalues such that σ = exp(λdt)
-    λ = log.(σ)/dt
+    λ = log.(σ)/t_s
 
     return DynamicalAnalysisResults(σ, λ,
         ϕ[:,inds], conjugate_pairs, c[inds,:],
@@ -177,15 +168,21 @@ end
 
 function save_analysis(analysis::AbstractDynamicalAnalysis,
     results::DynamicalAnalysisResults)
-    save(string(analysis.path, "analysis.jld2"), 
+    save(string(analysis.analysis_path, "analysis.jld2"), 
         Dict("analysis" => analysis,
         "results" => results))
 end
 
 function plot_analysis(analysis::AbstractDynamicalAnalysis,
-    results::DynamicalAnalysisResults; e=1, i=1)
+    results::DynamicalAnalysisResults; e=1, i=1, scale=true, title="spectrum.pdf")
     l = @layout [a{0.5w} b; c]
-    return plot(plot_spectrum(analysis,results.λ, 
+    if scale
+        coeffs=results.c[:,i]
+    else
+        coeffs=nothing
+    end
+
+    p = plot(plot_spectrum(analysis,results.λ, 
         label="\\tilde{\\lambda}_j", unit_circle=false, 
         xlims=(minimum(real.(results.λ))-15,maximum(real.(results.λ))+15),
         ylims=(minimum(imag.(results.λ))-15,maximum(imag.(results.λ))+15),
@@ -195,11 +192,14 @@ function plot_analysis(analysis::AbstractDynamicalAnalysis,
         unit_circle=true, xlims=(-1.25,1.25), ylims=(-1.25,1.25),
         title="discrete_time.pdf"), 
         plot_modes(analysis,results.ϕ::Matrix{ComplexF64}; e=e, 
-        coeffs=results.c[:,i], conjugate_pairs=results.conjugate_pairs), layout=l, framestyle=:box)
+        coeffs=coeffs, conjugate_pairs=results.conjugate_pairs), layout=l, framestyle=:box)
+    
+    savefig(p, string(analysis.analysis_path, title))
+    return p
 end
 
 function plot_spectrum(analysis::AbstractDynamicalAnalysis, 
-    eigs::Vector{ComplexF64}; label="\\exp(\\tilde{\\lambda}_j t_{\\mathrm{s}})", unit_circle=true, exact=nothing, xlims=(-1.25,1.25), ylims=(-1.25,1.25),
+    eigs::Vector{ComplexF64}; label="\\exp(\\tilde{\\lambda}_j t_{\\mathrm{s}})", unit_circle=true, xlims=(-1.25,1.25), ylims=(-1.25,1.25),
     xscale=0.02, yscale=0.07, title="spectrum.pdf")
 
     if unit_circle
@@ -209,10 +209,12 @@ function plot_spectrum(analysis::AbstractDynamicalAnalysis,
         p = plot()
     end
 
+    #=
     if !isnothing(exact)
         plot!(p, [0.0, real(exp(im*exact*analysis.dt))],[0.0, imag(exp(im*exact*analysis.dt))], linecolor="black", linestyle=:dash)
         plot!(p, [0.0, real(exp(im*exact*analysis.dt))],[0.0, -imag(exp(im*exact*analysis.dt))], linecolor="black", linestyle=:dash)
     end
+    =#
 
     plot!(p, eigs, xlabel=latexstring(string("\\mathrm{Re}\\,(", label, ")")), 
         ylabel=latexstring(string("\\mathrm{Im}\\,(", label, ")")), 
@@ -222,7 +224,7 @@ function plot_spectrum(analysis::AbstractDynamicalAnalysis,
     annotate!(real(eigs) .+ xscale*(xlims[2]-xlims[1]), 
         imag(eigs) + sign.(imag(eigs) .+ 1.0e-15)*yscale*(ylims[2]-ylims[1]), text.(1:length(eigs), :right, 8))
 
-    savefig(p, string(analysis.path, title))
+    savefig(p, string(analysis.analysis_path, title))
 
     return p
 end
@@ -267,7 +269,7 @@ function plot_modes(analysis::AbstractDynamicalAnalysis,
 
         plot!(p,vec(vcat(x_plot[1],fill(NaN,1,N_el))), 
             vec(vcat(scale_factor*u,fill(NaN,1,N_el))), 
-            label=latexstring(linelabel),linewidth=2, ylabel=latexstring("\\tilde{\\varphi}_j(x)"))
+            label=latexstring(linelabel),linewidth=2, ylabel=latexstring("\\tilde{\\varphi}_j(x)"), legendfontsize=6)
     end
 
     if !isnothing(projection)
@@ -280,7 +282,7 @@ function plot_modes(analysis::AbstractDynamicalAnalysis,
             linewidth=2, linestyle=:dash, linecolor="black")
     end
 
-    savefig(p, string(analysis.path, "modes.pdf")) 
+    savefig(p, string(analysis.analysis_path, "modes.pdf")) 
     return p
 end
 

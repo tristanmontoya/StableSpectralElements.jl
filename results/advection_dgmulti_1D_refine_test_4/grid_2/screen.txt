@@ -1,0 +1,9 @@
+writing time step 800  t = 0.11111111111110925
+writing time step 1600  t = 0.22222222222221552
+writing time step 2400  t = 0.3333333333333384
+writing time step 3200  t = 0.4444444444444669
+writing time step 4000  t = 0.5555555555555953
+writing time step 4800  t = 0.6666666666667238
+writing time step 5600  t = 0.7777777777778523
+writing time step 6400  t = 0.8888888888889808
+writing time step 7200  t = 1.0

@@ -9,13 +9,14 @@ module Analysis
     using StartUpDG: MeshData
     using SparseArrays: sparse, blockdiag, kron
     using Arpack: eigs
+    using OrdinaryDiffEq: OrdinaryDiffEqAlgorithm, ODESolution, solve, RK4
 
     using ..ConservationLaws: ConservationLaw
     using ..Mesh: uniform_periodic_mesh
     using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation
     using ..InitialConditions: AbstractInitialData, evaluate
     using ..Solvers: AbstractResidualForm, AbstractStrategy, Solver, semidiscretize, LinearResidual, get_dof
-    using ..IO: new_path, load_project, load_solution, load_time_steps, load_snapshots, Plotter
+    using ..IO: new_path, load_project, load_solution, load_time_steps, load_snapshots, save_callback, save_solution, save_project, Plotter
 
     import PyPlot; const plt = PyPlot
 
@@ -31,4 +32,7 @@ module Analysis
 
     export ConservationAnalysis, PrimaryConservationAnalysis, EnergyConservationAnalysis
     include("conservation.jl")
+
+    export run_refinement
+    include("refinement.jl")
 end
