@@ -37,7 +37,6 @@ module Solvers
             make_operators(spatial_discretization, form),
             spatial_discretization.mesh.mapP, form, strategy)
     end
-
     struct PhysicalOperators{d} <: AbstractPhysicalOperators{d}
         VOL::NTuple{d,LinearMap}
         FAC::LinearMap
@@ -48,8 +47,28 @@ module Solvers
         scaled_normal::NTuple{d, Vector{Float64}}
     end
 
+    function Solver(conservation_law::ConservationLaw,     
+        spatial_discretization::SpatialDiscretization,
+        form::AbstractResidualForm,
+        strategy::Lazy)
+        return Solver(conservation_law, 
+            make_operators(spatial_discretization, form),
+            spatial_discretization.mesh.mapP, form, strategy)
+    end
+
+    function Solver(conservation_law::ConservationLaw,     
+        spatial_discretization::SpatialDiscretization,
+        form::AbstractResidualForm,
+        strategy::Eager)
+
+        operators = make_operators(spatial_discretization, form)
+        return Solver(conservation_law, 
+            [precompute(operators[k]) for k in 1:spatial_discretization.N_el],
+                spatial_discretization.mesh.mapP, form, strategy)
+    end
+
     function initialize(initial_data::AbstractInitialData,
-        conservation_law::ConservationLaw{d,N_eq},
+        ::ConservationLaw{d,N_eq},
         spatial_discretization::SpatialDiscretization{d}) where {d, N_eq}
 
         @unpack N_el, M, geometric_factors = spatial_discretization
@@ -78,32 +97,13 @@ module Solvers
             conservation_law,
             spatial_discretization)
 
-        return semidiscretize(conservation_law, spatial_discretization, 
-            u0, form, tspan, strategy)
+        return semidiscretize(Solver(conservation_law,spatial_discretization,
+            form,strategy),u0, tspan)
     end
 
-    function semidiscretize(conservation_law::ConservationLaw{d,N_eq},
-        spatial_discretization::SpatialDiscretization{d},
-        u0::Array{Float64,3},
-        form::AbstractResidualForm,
-        tspan::NTuple{2,Float64}, strategy::Lazy) where {d,N_eq}
-        
-        return ODEProblem(rhs!, u0, tspan, Solver(conservation_law,            
-            make_operators(spatial_discretization, form),
-            spatial_discretization.mesh.mapP, form, strategy))
-    end
-
-    function semidiscretize(conservation_law::ConservationLaw{d,N_eq},
-        spatial_discretization::SpatialDiscretization{d},
-        u0::Array{Float64,3}, 
-        form::AbstractResidualForm,
-        tspan::NTuple{2,Float64}, strategy::Eager) where{d, N_eq}
-        
-        operators = make_operators(spatial_discretization, form)
-
-        return ODEProblem(rhs!, u0, tspan, Solver(conservation_law, 
-        [precompute(operators[k]) for k in 1:spatial_discretization.N_el],
-            spatial_discretization.mesh.mapP, form, strategy))
+    function semidiscretize(solver::Solver, u0::Array{Float64,3},
+        tspan::NTuple{2,Float64})
+        return ODEProblem(rhs!, u0, tspan, solver)
     end
 
     function apply_operators!(residual::Matrix{Float64},
