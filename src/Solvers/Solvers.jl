@@ -7,9 +7,10 @@ module Solvers
     using TimerOutputs
     using LinearMaps: LinearMap
 
-    using ..ConservationLaws: ConservationLaw, physical_flux, numerical_flux
+    using ..ConservationLaws: ConservationLaw, physical_flux, numerical_flux, two_point_flux
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization
     using ..ParametrizedFunctions: AbstractParametrizedFunction, AbstractParametrizedFunction, evaluate
+    using ..Operators: flux_diff
     
     export AbstractResidualForm, AbstractPhysicalOperators, PhysicaOperators, AbstractStrategy, Eager, Lazy, Solver, initialize, semidiscretize, precompute, apply_operators!, combine, get_dof, rhs!
 
@@ -101,6 +102,26 @@ module Solvers
         return ODEProblem(rhs!, u0, tspan, solver)
     end
 
+    function precompute(operators::PhysicalOperators{d}) where {d}
+        @unpack VOL, FAC, SRC, M, V, R, NTR, scaled_normal = operators
+        inv_M = inv(M)
+        return PhysicalOperators(
+            Tuple(combine(inv_M*VOL[n]) for n in 1:d),
+            combine(inv_M*FAC), 
+            combine(inv_M*SRC),
+            M, V, R, NTR, scaled_normal)
+    end
+
+    function combine(operator::LinearMap)
+        return LinearMap(convert(Matrix,operator))
+    end
+
+    function get_dof(spatial_discretization::SpatialDiscretization{d}, 
+        ::ConservationLaw{d,N_eq}) where {d, N_eq}
+        return (spatial_discretization.reference_approximation.N_p, 
+            N_eq, spatial_discretization.N_el)
+    end
+
     function apply_operators!(residual::Matrix{Float64},
         operators::PhysicalOperators{d},  
         f::NTuple{d,Matrix{Float64}}, 
@@ -170,31 +191,82 @@ module Solvers
         return residual
     end
 
-    function precompute(operators::PhysicalOperators{d}) where {d}
-        @unpack VOL, FAC, SRC, M, V, R, NTR, scaled_normal = operators
-        inv_M = inv(M)
-        return PhysicalOperators(
-            Tuple(combine(inv_M*VOL[n]) for n in 1:d),
-            combine(inv_M*FAC), 
-            combine(inv_M*SRC),
-            M, V, R, NTR, scaled_normal)
+    function apply_operators!(residual::Matrix{Float64},
+        operators::PhysicalOperators{d},
+        F::NTuple{d,Array{Float64,3}}, 
+        f_fac::Matrix{Float64}, 
+        ::Lazy,
+        s::Union{Matrix{Float64},Nothing}=nothing) where {d}
+
+        @timeit "volume terms" begin
+            # compute volume terms
+            volume_terms = zero(residual)
+            for m in 1:d
+                volume_terms += flux_diff(operators.VOL[m], F[m])
+            end
+        end
+
+        @timeit "facet terms" begin
+            # compute facet terms
+            facet_terms = mul!(residual, operators.FAC, f_fac)
+        end
+
+        rhs = volume_terms + facet_terms
+ 
+        if !isnothing(s)
+            @timeit "source terms" begin
+                source_terms = mul!(residual, operators.SRC, s)
+            end
+            rhs = rhs + source_terms
+        end
+
+        @timeit "mass matrix solve" begin
+            # add together and solve
+            residual = operators.M \ rhs
+        end
+        
+        return residual
     end
 
-    function combine(operator::LinearMap)
-        return LinearMap(convert(Matrix,operator))
+    function apply_operators!(residual::Matrix{Float64},
+        operators::PhysicalOperators{d},
+        F::NTuple{d,Array{Float64,3}}, 
+        f_fac::Matrix{Float64}, 
+        ::Eager,
+        s::Union{Matrix{Float64},Nothing}=nothing) where {d}
+
+        @timeit "volume terms" begin
+            # compute volume terms
+            volume_terms = zero(residual)
+            for m in 1:d
+                volume_terms += flux_diff(operators.VOL[m], F[m])
+            end
+        end
+
+        @timeit "facet terms" begin
+            # compute facet terms
+            facet_terms = mul!(residual, operators.FAC, f_fac)
+        end
+
+        # add together
+        rhs = volume_terms + facet_terms
+
+        if !isnothing(s)
+            @timeit "source terms" begin
+                source_terms = mul!(residual, operators.SRC, s)
+            end
+            rhs = rhs + source_terms
+        end
+
+        return rhs
+        return residual
     end
 
-    function get_dof(spatial_discretization::SpatialDiscretization{d}, 
-        ::ConservationLaw{d,N_eq}) where {d, N_eq}
-        return (spatial_discretization.reference_approximation.N_p, 
-            N_eq, spatial_discretization.N_el)
-    end
+    export StrongConservationForm, WeakConservationForm
+    include("conservation_form.jl")
 
-    export StrongConservationForm
-    include("strong_conservation_form.jl")
-
-    export WeakConservationForm
-    include("weak_conservation_form.jl")
+    export StrongFluxDiffForm
+    include("flux_diff_form.jl")
 
     export LinearResidual
     include("linear.jl")

@@ -1,0 +1,15 @@
+writing time step 933  t = 0.6664285714285646
+writing time step 1866  t = 1.3328571428570923
+writing time step 2799  t = 1.99928571428562
+writing time step 3732  t = 2.6657142857143543
+writing time step 4665  t = 3.332142857143089
+writing time step 5598  t = 3.998571428571824
+writing time step 6531  t = 4.665000000000145
+writing time step 7464  t = 5.331428571428465
+writing time step 8397  t = 5.997857142856786
+writing time step 9330  t = 6.664285714285106
+writing time step 10263  t = 7.330714285713427
+writing time step 11196  t = 7.997142857141747
+writing time step 12129  t = 8.663571428570892
+writing time step 13062  t = 9.330000000000041
+writing time step 13995  t = 9.99642857142919

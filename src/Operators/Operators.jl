@@ -3,7 +3,7 @@ module Operators
     using LinearAlgebra, LinearMaps
     using UnPack
 
-    export TensorProductMap, SelectionMap
+    export TensorProductMap, SelectionMap, flux_diff
     
     const Operator1D{T} = Union{UniformScaling{Bool}, 
         Matrix{T}, Transpose{T,Matrix{T}}}
@@ -75,7 +75,7 @@ module Operators
         ``C[σₒ[α1,α2], σᵢ[β1,β2]] = A[α1,β1] δ_{α2,β2}``
 
         or C = A ⊗ I_{M2}. The action of this matrix on a vector ``x`` is 
-
+    
         ``(Cx)[σₒ[α1,α2]] = ∑_{β1,β2} A[α1,β1] δ_{α2,β2} x[σᵢ[β1,β2]] ``
         ``                = ∑_{β1} A[α1,β1] x[σᵢ[β1,α2]] ``
     """
@@ -158,4 +158,18 @@ module Operators
         end
         return y
     end
+
+    function flux_diff(D::LinearMaps.WrappedMap, F::AbstractArray{Float64,3})
+        
+        N_p = size(D,1)
+        N_eq = size(F,3)
+        y = Matrix{Float64}(undef,N_p,N_eq)
+        
+        for l in 1:N_eq, i in 1:N_p
+            y[i,l] = dot(D.lmap[i,:], F[i,:,l])
+        end
+
+        return 2.0*y
+    end
+
 end

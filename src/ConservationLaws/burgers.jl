@@ -4,7 +4,7 @@ function burgers_lax_friedrichs_flux(λ::Float64=1.0)
     return LaxFriedrichsNumericalFlux{BurgersFlux{1}}(λ)
 end
 
-function burgers_equation(source_term=nothing,  
+function burgers_equation(; source_term=nothing,  
     numerical_flux=burgers_lax_friedrichs_flux(1.0),
     two_point_flux=EntropyConservativeFlux{BurgersFlux{1}}())
     return ConservationLaw{1,1}(
@@ -26,7 +26,8 @@ function two_point_flux(::ConservativeFlux{BurgersFlux{d}},
     e = ones(size(u,1))
     u_L = u[:,1]*e'
     u_R = e*(u[:,1])'
-    return Tuple(0.25*((u_L .* u_L) + (u_R .* u_R)) for m in 1:d)
+    return Tuple(reshape(0.25*((u_L .* u_L) + (u_R .* u_R)),
+        (size(u,1), size(u,1), size(u,2))) for m in 1:d)
 end
 
 function two_point_flux(::EntropyConservativeFlux{BurgersFlux{d}}, 
@@ -34,7 +35,9 @@ function two_point_flux(::EntropyConservativeFlux{BurgersFlux{d}},
     e = ones(size(u,1))
     u_L = u[:,1]*e'
     u_R = e*(u[:,1])'
-    return Tuple((1.0/6.0)*((u_L .* u_L) + (u_L .* u_R) + (u_R .* u_R)) for m in 1:d)
+    return Tuple(reshape(
+        (1.0/6.0)*((u_L .* u_L) + (u_L .* u_R) + (u_R .* u_R)), 
+        (size(u,1), size(u,1), size(u,2))) for m in 1:d)
 end
 
 function numerical_flux(flux::LaxFriedrichsNumericalFlux{BurgersFlux{1}}, 

@@ -1,7 +1,10 @@
-struct StrongConservationForm <: AbstractResidualForm end
+struct StrongFluxDiffForm <: AbstractResidualForm end
 
+"""
+    Make operators for (diagonal-E) flux differencing form
+"""
 function make_operators(spatial_discretization::SpatialDiscretization{d}, 
-    ::StrongConservationForm) where {d}
+    ::StrongFluxDiffForm) where {d}
 
     @unpack N_el, M = spatial_discretization
     @unpack ADVs, V, R, P, W, B = spatial_discretization.reference_approximation
@@ -28,8 +31,11 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     return operators
 end
 
+"""
+    Evaluate semi-discrete residual for strong flux-differencing form
+"""
 function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
-    solver::Solver{StrongConservationForm, <:AbstractPhysicalOperators, d, N_eq}, t::Float64; print::Bool=false) where {d, N_eq}
+    solver::Solver{StrongFluxDiffForm, <:AbstractPhysicalOperators, d, N_eq}, t::Float64; print::Bool=false) where {d, N_eq}
 
     @timeit "rhs!" begin
 
@@ -56,16 +62,19 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                     :,e,:][connectivity[:,k]]
             end
             
-            # evaluate physical and numerical flux
             f = @timeit "eval flux" physical_flux(
                 conservation_law.first_order_flux, 
+                convert(Matrix, operators[k].V * u[:,:,k]))
+
+            F = @timeit "eval volume two-point flux" two_point_flux(
+                conservation_law.two_point_flux, 
                 convert(Matrix, operators[k].V * u[:,:,k]))
 
             f_star = @timeit "eval numerical flux" numerical_flux(
                 conservation_law.first_order_numerical_flux,
                 u_facet[:,:,k], u_out, operators[k].scaled_normal)
 
-            f_fac = @timeit "eval flux diff" f_star - 
+            f_fac = @timeit "eval facet flux diff" f_star - 
                 sum(convert(Matrix,operators[k].NTR[m] * f[m]) 
                     for m in 1:d)
 
@@ -84,7 +93,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             
             # apply operators
             dudt[:,:,k] = @timeit "eval residual" apply_operators!(
-                dudt[:,:,k], operators[k], f, f_fac, strategy, s)
+                dudt[:,:,k], operators[k], F, f_fac, strategy, s)
         end
     end
     return nothing
