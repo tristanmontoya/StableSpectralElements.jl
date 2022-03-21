@@ -5,6 +5,9 @@ module CLOUD
     end
 
     using Reexport
+    include("ParametrizedFunctions/ParametrizedFunctions.jl")
+    @reexport using .ParametrizedFunctions
+
     include("ConservationLaws/ConservationLaws.jl")
     @reexport using .ConservationLaws
 
@@ -17,9 +20,6 @@ module CLOUD
     include("SpatialDiscretizations/SpatialDiscretizations.jl")
     @reexport using .SpatialDiscretizations
 
-    include("InitialConditions/InitialConditions.jl")
-    @reexport using .InitialConditions
-    
     include("Solvers/Solvers.jl")
     @reexport using .Solvers
 

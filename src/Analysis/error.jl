@@ -30,7 +30,7 @@ function ErrorAnalysis(results_path::String, ::ConservationLaw{d,N_eq},
 end
 
 function analyze(analysis::ErrorAnalysis{QuadratureL2, d}, 
-    sol::Array{Float64,3}, exact_solution::AbstractInitialData{d}) where {d}
+    sol::Array{Float64,3}, exact_solution::AbstractParametrizedFunction{d}) where {d}
 
     @unpack norm, N_eq, N_el, V_err, x_err, results_path = analysis 
 

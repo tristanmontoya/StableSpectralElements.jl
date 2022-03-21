@@ -9,7 +9,7 @@ module Solvers
 
     using ..ConservationLaws: ConservationLaw, physical_flux, numerical_flux
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization
-    using ..InitialConditions: AbstractInitialData, evaluate
+    using ..ParametrizedFunctions: AbstractParametrizedFunction, AbstractParametrizedFunction, evaluate
     
     export AbstractResidualForm, AbstractPhysicalOperators, PhysicaOperators, AbstractStrategy, Eager, Lazy, Solver, initialize, semidiscretize, precompute, apply_operators!, combine, get_dof, rhs!
 
@@ -23,23 +23,16 @@ module Solvers
     struct Solver{ResidualForm,PhysicalOperators,d,N_eq}
         conservation_law::ConservationLaw{d,N_eq}
         operators::Vector{PhysicalOperators}
+        x_q::NTuple{d,Matrix{Float64}}
         connectivity::Matrix{Int}
         form::ResidualForm
         strategy::AbstractStrategy
     end
 
-    function Solver(
-        conservation_law::ConservationLaw,spatial_discretization::SpatialDiscretization, 
-        form::AbstractResidualForm,
-        strategy::AbstractStrategy)
-
-        return Solver(conservation_law,            
-            make_operators(spatial_discretization, form),
-            spatial_discretization.mesh.mapP, form, strategy)
-    end
     struct PhysicalOperators{d} <: AbstractPhysicalOperators{d}
         VOL::NTuple{d,LinearMap}
         FAC::LinearMap
+        SRC::LinearMap
         M::AbstractMatrix
         V::LinearMap
         R::LinearMap
@@ -53,6 +46,7 @@ module Solvers
         strategy::Lazy)
         return Solver(conservation_law, 
             make_operators(spatial_discretization, form),
+            spatial_discretization.mesh.xyzq,
             spatial_discretization.mesh.mapP, form, strategy)
     end
 
@@ -64,10 +58,11 @@ module Solvers
         operators = make_operators(spatial_discretization, form)
         return Solver(conservation_law, 
             [precompute(operators[k]) for k in 1:spatial_discretization.N_el],
+                spatial_discretization.mesh.xyzq,
                 spatial_discretization.mesh.mapP, form, strategy)
     end
 
-    function initialize(initial_data::AbstractInitialData,
+    function initialize(initial_data::AbstractParametrizedFunction,
         ::ConservationLaw{d,N_eq},
         spatial_discretization::SpatialDiscretization{d}) where {d, N_eq}
 
@@ -87,7 +82,7 @@ module Solvers
 
     function semidiscretize(
         conservation_law::ConservationLaw,spatial_discretization::SpatialDiscretization,
-        initial_data::AbstractInitialData, 
+        initial_data::AbstractParametrizedFunction, 
         form::AbstractResidualForm,
         tspan::NTuple{2,Float64}, 
         strategy::AbstractStrategy)
@@ -109,7 +104,8 @@ module Solvers
     function apply_operators!(residual::Matrix{Float64},
         operators::PhysicalOperators{d},  
         f::NTuple{d,Matrix{Float64}}, 
-        f_fac::Matrix{Float64}, ::Eager) where {d}
+        f_fac::Matrix{Float64}, ::Eager,
+        s::Union{Matrix{Float64},Nothing}=nothing) where {d}
         
         @timeit "volume terms" begin
             # compute volume terms
@@ -125,15 +121,24 @@ module Solvers
         end
 
         # add together
-        residual = volume_terms + facet_terms
+        rhs = volume_terms + facet_terms
 
-        return residual
+        if !isnothing(s)
+            @timeit "source terms" begin
+                source_terms = mul!(residual, operators.SRC, s)
+            end
+            rhs = rhs + source_terms
+        end
+
+        return rhs
     end
 
     function apply_operators!(residual::Matrix{Float64},
         operators::PhysicalOperators{d},
         f::NTuple{d,Matrix{Float64}}, 
-        f_fac::Matrix{Float64}, ::Lazy) where {d}
+        f_fac::Matrix{Float64}, 
+        ::Lazy,
+        s::Union{Matrix{Float64},Nothing}=nothing) where {d}
 
         @timeit "volume terms" begin
             # compute volume terms
@@ -149,6 +154,13 @@ module Solvers
         end
 
         rhs = volume_terms + facet_terms
+ 
+        if !isnothing(s)
+            @timeit "source terms" begin
+                source_terms = mul!(residual, operators.SRC, s)
+            end
+            rhs = rhs + source_terms
+        end
 
         @timeit "mass matrix solve" begin
             # add together and solve
@@ -159,11 +171,13 @@ module Solvers
     end
 
     function precompute(operators::PhysicalOperators{d}) where {d}
-        @unpack VOL, FAC, M, V, R, NTR, scaled_normal = operators
+        @unpack VOL, FAC, SRC, M, V, R, NTR, scaled_normal = operators
         inv_M = inv(M)
         return PhysicalOperators(
             Tuple(combine(inv_M*VOL[n]) for n in 1:d),
-            combine(inv_M*FAC), M, V, R, NTR, scaled_normal)
+            combine(inv_M*FAC), 
+            combine(inv_M*SRC),
+            M, V, R, NTR, scaled_normal)
     end
 
     function combine(operator::LinearMap)

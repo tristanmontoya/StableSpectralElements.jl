@@ -15,14 +15,14 @@ end
 
 function visualize(sol::Array{Float64,3}, 
     plotter::Plotter{1}, file_name::String; e::Int=1,
-    exact_solution::Union{AbstractInitialData{1},Nothing}=nothing,
-    label::String="U^h(x,t)", label_exact::String="U(x,t)")
+    exact_solution::Union{AbstractParametrizedFunction{1},Nothing}=nothing,
+    label::String="U^h(x,t)", label_exact::String="U(x,t)", t=0.0)
 
     @unpack x_plot, V_plot, N_el, directory_name = plotter
 
     u = convert(Matrix, V_plot * sol[:,e,:])
     if !isnothing(exact_solution)
-        p = plot(vec(x_plot[1]), vec(evaluate(exact_solution,x_plot)[:,e,:]), 
+        p = plot(vec(x_plot[1]), vec(evaluate(exact_solution,x_plot,t)[:,e,:]), 
             label=latexstring(label_exact))
         plot!(p, vec(vcat(x_plot[1],fill(NaN,1,N_el))), 
             vec(vcat(u,fill(NaN,1,N_el))), 
@@ -37,7 +37,7 @@ function visualize(sol::Array{Float64,3},
     return p
 end
 
-function visualize(sol::Union{Array{Float64,3},AbstractInitialData},
+function visualize(sol::Union{Array{Float64,3},AbstractParametrizedFunction{2}},
     plotter::Plotter{2}, file_name::String; 
     label::String="U(\\mathbf{x},t)", 
     contours::Int=10, u_range=nothing, e::Int=1)

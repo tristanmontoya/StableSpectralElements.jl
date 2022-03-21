@@ -4,10 +4,10 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     ::WeakConservationForm) where {d}
 
     @unpack N_el, M = spatial_discretization
-    @unpack ADVw, V, R, P, B = spatial_discretization.reference_approximation
+    @unpack ADVw, V, R, P, W, B = spatial_discretization.reference_approximation
     @unpack nrstJ = 
         spatial_discretization.reference_approximation.reference_element
-    @unpack Jdrdx_q, nJf = spatial_discretization.geometric_factors
+    @unpack J_q, Jdrdx_q, nJf = spatial_discretization.geometric_factors
 
     operators = Array{PhysicalOperators}(undef, N_el)
     for k in 1:N_el
@@ -21,7 +21,8 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
                 Diagonal(Jdrdx_q[:,m,n,k]) for m in 1:d) for n in 1:d)
         end
         FAC = -R' * B
-        operators[k] = PhysicalOperators(VOL, FAC, M[k], V, R, NTR,
+        SRC = V' * W * Diagonal(J_q[:,k])
+        operators[k] = PhysicalOperators(VOL, FAC, SRC, M[k], V, R, NTR,
             Tuple(nJf[m][:,k] for m in 1:d))
     end
     return operators
@@ -32,7 +33,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
 
     @timeit "rhs!" begin
 
-        @unpack conservation_law, operators, connectivity, form, strategy = solver
+        @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
 
         N_el = size(operators)[1]
         N_f = size(operators[1].R)[1]
@@ -65,9 +66,17 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                 conservation_law.first_order_numerical_flux,
                 u_facet[:,:,k], u_out, operators[k].scaled_normal)
             
+            if isnothing(conservation_law.source_term)
+                s = nothing
+            else
+                s = @timeit "eval source term" evaluate(
+                    conservation_law.source_term, 
+                    Tuple(x_q[m][:,k] for m in 1:d),t)
+            end
+
             # apply operators
             dudt[:,:,k] = @timeit "eval residual" apply_operators!(
-                dudt[:,:,k], operators[k], f, f_star, strategy)
+                dudt[:,:,k], operators[k], f, f_star, strategy, s)
         end
     end
     return nothing

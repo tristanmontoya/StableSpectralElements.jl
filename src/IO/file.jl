@@ -25,7 +25,7 @@ end
 
 function save_project(
     conservation_law::ConservationLaw,spatial_discretization::SpatialDiscretization,
-    initial_data::AbstractInitialData, 
+    initial_data::AbstractParametrizedFunction, 
     form::AbstractResidualForm,
     tspan::NTuple{2,Float64}, 
     strategy::AbstractStrategy, 

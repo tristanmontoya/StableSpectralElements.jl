@@ -1,0 +1,9 @@
+writing time step 8  t = 0.03200000000000001
+writing time step 16  t = 0.06400000000000003
+writing time step 24  t = 0.09600000000000006
+writing time step 32  t = 0.12800000000000009
+writing time step 40  t = 0.16000000000000011
+writing time step 48  t = 0.19200000000000014
+writing time step 56  t = 0.22400000000000017
+writing time step 64  t = 0.25600000000000017
+writing time step 72  t = 0.2880000000000002

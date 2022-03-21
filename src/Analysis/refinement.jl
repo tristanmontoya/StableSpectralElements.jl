@@ -1,6 +1,6 @@
 function run_refinement(conservation_law::ConservationLaw{d,N_eq},        
     reference_approximation::ReferenceApproximation{d},
-    initial_data::AbstractInitialData,
+    initial_data::AbstractParametrizedFunction,
     form::AbstractResidualForm,
     strategy::AbstractStrategy,
     tspan::NTuple{2,Float64},

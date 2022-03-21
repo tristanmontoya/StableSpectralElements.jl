@@ -1,0 +1,10 @@
+writing time step 30  t = 0.09999999999999995
+writing time step 60  t = 0.19999999999999976
+writing time step 90  t = 0.3
+writing time step 120  t = 0.40000000000000063
+writing time step 150  t = 0.5000000000000012
+writing time step 180  t = 0.6000000000000002
+writing time step 210  t = 0.6999999999999992
+writing time step 240  t = 0.7999999999999982
+writing time step 270  t = 0.8999999999999971
+writing time step 300  t = 1.0
