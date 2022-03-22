@@ -48,3 +48,12 @@ function numerical_flux(flux::LaxFriedrichsNumericalFlux{BurgersFlux{1}},
     return (0.25*(u_in.^2 + u_out.^2).*n[1] - 
     flux.λ*0.5*max.(abs.(u_out),abs.(u_in)).*(u_out - u_in))
 end
+
+function numerical_flux(::EntropyConservativeNumericalFlux{BurgersFlux{1}}, 
+    u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
+    n::NTuple{1, Vector{Float64}})
+
+    # returns vector of length N_zeta 
+    return (0.25*(u_in.^2 + u_out.^2) - 
+    (1.0/12.0)*(u_out - u_in).^2).*n[1]
+end

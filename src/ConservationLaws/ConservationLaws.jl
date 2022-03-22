@@ -2,7 +2,7 @@ module ConservationLaws
 
     import ..ParametrizedFunctions: AbstractParametrizedFunction
 
-    export AbstractFirstOrderFlux, AbstractSecondOrderFlux, AbstractFirstOrderNumericalFlux, AbstractSecondOrderNumericalFlux,AbstractTwoPointFlux, ConservationLaw, LaxFriedrichsNumericalFlux, ConservativeFlux, EntropyConservativeFlux, physical_flux, numerical_flux, two_point_flux
+    export AbstractFirstOrderFlux, AbstractSecondOrderFlux, AbstractFirstOrderNumericalFlux, AbstractSecondOrderNumericalFlux,AbstractTwoPointFlux, ConservationLaw, LaxFriedrichsNumericalFlux, EntropyConservativeNumericalFlux, ConservativeFlux, EntropyConservativeFlux, physical_flux, numerical_flux, two_point_flux
 
     abstract type AbstractFirstOrderFlux{d, N_eq} end
     abstract type AbstractSecondOrderFlux{d, N_eq} end
@@ -22,7 +22,9 @@ module ConservationLaws
     struct LaxFriedrichsNumericalFlux{FluxType} <: AbstractFirstOrderNumericalFlux{FluxType} 
         λ::Float64
     end
-    
+
+    struct EntropyConservativeNumericalFlux{FluxType} <: AbstractFirstOrderNumericalFlux{FluxType} end
+
     struct ConservativeFlux{FluxType} <: AbstractTwoPointFlux{FluxType} end
     struct EntropyConservativeFlux{FluxType} <: AbstractTwoPointFlux{FluxType} end
     
