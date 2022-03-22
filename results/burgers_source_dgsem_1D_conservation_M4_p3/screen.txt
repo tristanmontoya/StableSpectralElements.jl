@@ -1,1 +1,0 @@
-writing time step 933  t = 0.6664285714285646

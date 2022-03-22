@@ -37,17 +37,33 @@ function visualize(sol::Array{Float64,3},
     return p
 end
 
+function visualize(sol::Vector{Array{Float64,3}}, labels::Vector{String}, file_name::String, plotter::Plotter{1}; e::Int=1)
+    @unpack x_plot, V_plot, N_el, directory_name = plotter
+
+    p = plot()
+    for i in 1:length(sol)
+        u = convert(Matrix, V_plot * sol[i][:,e,:])
+        plot!(p, vec(vcat(x_plot[1],fill(NaN,1,N_el))), 
+            vec(vcat(u,fill(NaN,1,N_el))), 
+            label=latexstring(labels[i]), xlabel=latexstring("x"))
+    end
+
+    savefig(p, string(directory_name, file_name))   
+    return p
+end
+
+
 function visualize(sol::Union{Array{Float64,3},AbstractParametrizedFunction{2}},
     plotter::Plotter{2}, file_name::String; 
     label::String="U(\\mathbf{x},t)", 
-    contours::Int=10, u_range=nothing, e::Int=1)
+    contours::Int=10, u_range=nothing, e::Int=1, t=0.0)
 
     @unpack x_plot, V_plot, N_el, directory_name = plotter
 
     if sol isa Array{Float64}
         u = vec(convert(Matrix, V_plot * sol[:,e,:]))
     else
-        u = vec(evaluate(sol, x_plot)[:,e,:])
+        u = vec(evaluate(sol, x_plot, t)[:,e,:])
     end
     if isnothing(u_range)
         u_range = (minimum(u), maximum(u))
