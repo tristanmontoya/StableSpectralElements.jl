@@ -10,7 +10,7 @@ function Plotter(spatial_discretization::SpatialDiscretization{d},directory_name
 
     return Plotter{d}(spatial_discretization.x_plot, 
         spatial_discretization.reference_approximation.V_plot,
-        spatial_discretization.N_el, path)
+        spatial_discretization.N_el, path)    
 end
 
 function visualize(sol::Array{Float64,3}, 
@@ -37,7 +37,7 @@ function visualize(sol::Array{Float64,3},
     return p
 end
 
-function visualize(sol::Vector{Array{Float64,3}}, labels::Vector{String}, file_name::String, plotter::Plotter{1}; e::Int=1)
+function visualize(sol::Vector{Array{Float64,3}}, labels::Vector{String}, file_name::String, plotter::Plotter{1}, ylabel="U^h(x,t)"; e::Int=1)
     @unpack x_plot, V_plot, N_el, directory_name = plotter
 
     p = plot()
@@ -45,13 +45,13 @@ function visualize(sol::Vector{Array{Float64,3}}, labels::Vector{String}, file_n
         u = convert(Matrix, V_plot * sol[i][:,e,:])
         plot!(p, vec(vcat(x_plot[1],fill(NaN,1,N_el))), 
             vec(vcat(u,fill(NaN,1,N_el))), 
-            label=latexstring(labels[i]), xlabel=latexstring("x"))
+            label=latexstring(labels[i]), xlabel=latexstring("x"),
+            ylabel=latexstring(ylabel))
     end
 
     savefig(p, string(directory_name, file_name))   
     return p
 end
-
 
 function visualize(sol::Union{Array{Float64,3},AbstractParametrizedFunction{2}},
     plotter::Plotter{2}, file_name::String; 

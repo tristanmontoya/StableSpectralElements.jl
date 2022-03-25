@@ -1,0 +1,12 @@
+writing time step 454  t = 0.0504444444444442
+writing time step 908  t = 0.10088888888889073
+writing time step 1362  t = 0.151333333333338
+writing time step 1816  t = 0.2017777777777853
+writing time step 2270  t = 0.25222222222223256
+writing time step 2724  t = 0.30266666666667985
+writing time step 3178  t = 0.35311111111112714
+writing time step 3632  t = 0.40355555555557443
+writing time step 4086  t = 0.4540000000000217
+writing time step 4540  t = 0.5044444444444668
+writing time step 4994  t = 0.5548888888888889
+writing time step 5448  t = 0.605333333333311

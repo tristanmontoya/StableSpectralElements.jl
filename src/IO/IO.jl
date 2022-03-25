@@ -2,7 +2,9 @@ module IO
 
     using LinearMaps: LinearMap
     using Combinatorics: combinations
-    using Plots: plot, plot!, scatter, savefig
+    using Plots: plot, plot!, scatter, savefig, gr;
+    gr()
+    using PyCall
     import PyPlot; const plt = PyPlot
     using LaTeXStrings: latexstring
     using StartUpDG: MeshPlotter, map_face_nodes, vandermonde, find_face_nodes, Tri, Quad

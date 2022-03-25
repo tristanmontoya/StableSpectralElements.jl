@@ -3,7 +3,7 @@ module Analysis
     using LinearMaps: LinearMap
     using LinearAlgebra: Diagonal, dot, eigen, inv, svd, pinv, eigsortby
     using JLD2: save, load, save_object, load_object
-    using Plots: plot, savefig, plot!, scatter, text, annotate!, grid, @layout,PyPlotBackend; PyPlotBackend()
+    using Plots: plot, savefig, plot!, scatter, text, annotate!, grid, @layout
     using LaTeXStrings: LaTeXString, latexstring
     using UnPack
     using StartUpDG: MeshData
@@ -27,7 +27,7 @@ module Analysis
     export ErrorAnalysis, AbstractNorm, QuadratureL2, error_analysis
     include("error.jl")
 
-    export LinearAnalysis, DMDAnalysis, plot_spectrum, plot_modes 
+    export LinearAnalysis, DynamicalAnalysisResults, DMDAnalysis, plot_spectrum, plot_modes
     include("dynamics.jl")
 
     export ConservationAnalysis, PrimaryConservationAnalysis, EnergyConservationAnalysis

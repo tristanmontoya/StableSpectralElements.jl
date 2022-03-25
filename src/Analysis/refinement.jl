@@ -53,4 +53,6 @@ function run_refinement(conservation_law::ConservationLaw{d,N_eq},
 
         save_solution(last(sol[i].u), last(sol[i].t), results_path, "final")
     end
+
+    return sequence_path
 end

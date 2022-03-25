@@ -4,7 +4,7 @@ struct DynamicalAnalysisResults
     σ::Vector{ComplexF64}
     λ::Vector{ComplexF64}
     ϕ::Matrix{ComplexF64}
-    conjugate_pairs::Vector{Int}
+    conjugate_pairs::Union{Vector{Int},Nothing}
     c::Union{Matrix{ComplexF64},Nothing}
     projection::Union{Matrix{ComplexF64},Nothing}
     E::Union{Matrix{Float64},Nothing}
@@ -28,6 +28,7 @@ struct DMDAnalysis{d} <: AbstractDynamicalAnalysis{d}
     results_path::String
     analysis_path::String
     r::Int
+    n_s::Int
     tol::Float64
     N_p::Int
     N_eq::Int
@@ -99,7 +100,7 @@ end
 
 function DMDAnalysis(results_path::String, 
     conservation_law::ConservationLaw,spatial_discretization::SpatialDiscretization; 
-    r=4, tol=1.0e-12, name="dmd_analysis")
+    r=4, n_s=10, tol=1.0e-12, name="dmd_analysis")
     
     # create path and get discretization information
     analysis_path = new_path(string(results_path, name, "/"))
@@ -110,15 +111,21 @@ function DMDAnalysis(results_path::String,
     M = blockdiag((kron(Diagonal(ones(N_eq)),
         sparse(spatial_discretization.M[k])) for k in 1:N_el)...)
 
-    return DMDAnalysis(results_path, analysis_path, r, tol,
+    return DMDAnalysis(results_path, analysis_path, r, n_s, tol,
         N_p, N_eq, N_el, M, Plotter(spatial_discretization, analysis_path))
 end
 
 function analyze(analysis::DMDAnalysis)
 
-    @unpack r, tol, M, results_path = analysis
+    @unpack r, n_s, tol, M, results_path = analysis
 
-    X, t_s = load_snapshots(results_path, load_time_steps(results_path))
+    time_steps = load_time_steps(results_path)
+
+    if n_s < length(time_steps)
+        time_steps = time_steps[1:n_s]
+    end
+
+    X, t_s = load_snapshots(results_path, time_steps)
     
     if r > 0
         # SVD (i.e. POD) of initial states
@@ -136,8 +143,10 @@ function analyze(analysis::DMDAnalysis)
         ϕ_unscaled = X[:,2:end]*V*inv(Diagonal(S))*F.vectors
     else
         # compute full eigendecomposition w/ Moore-Penrose pseudo-inverse
-        F = eigen(X[2:end]*pinv(X[1:end-1]))
+        A = X[:,2:end]*pinv(X[:,1:end-1])
+        F = eigen(A)
         ϕ_unscaled = F.vectors
+        r = size(F.vectors,2)
     end
 
     # normalize eigenvectors (although not orthogonal - this isn't POD)
@@ -159,7 +168,7 @@ function analyze(analysis::DMDAnalysis)
     conjugate_pairs = find_conjugate_pairs(σ)
 
     # continuous-time eigenvalues such that σ = exp(λdt)
-    λ = log.(σ)/t_s
+    λ = log.(σ)/t_s 
 
     return DynamicalAnalysisResults(σ, λ,
         ϕ[:,inds], conjugate_pairs, c[inds,:],
@@ -174,7 +183,8 @@ function save_analysis(analysis::AbstractDynamicalAnalysis,
 end
 
 function plot_analysis(analysis::AbstractDynamicalAnalysis,
-    results::DynamicalAnalysisResults; e=1, i=1, scale=true, title="spectrum.pdf")
+    results::DynamicalAnalysisResults; e=1, i=1, n = 0,
+    scale=true, title="spectrum.pdf", xlims=nothing, ylims=nothing)
     l = @layout [a{0.5w} b; c]
     if scale
         coeffs=results.c[:,i]
@@ -182,47 +192,53 @@ function plot_analysis(analysis::AbstractDynamicalAnalysis,
         coeffs=nothing
     end
 
-    p = plot(plot_spectrum(analysis,results.λ, 
-        label="\\tilde{\\lambda}_j", unit_circle=false, 
-        xlims=(minimum(real.(results.λ))-2.5,maximum(real.(results.λ))+2.5),
-        ylims=(minimum(imag.(results.λ))-2.5,maximum(imag.(results.λ))+2.5),
+    if n == 0
+        n = length(results.λ)
+        println(n)
+    end
+
+    if isnothing(xlims)
+        xlims=(minimum(real.(results.λ[1:n]))*1.05,maximum(real.(results.λ[1:n]))*1.05)
+    end
+    if isnothing(ylims)
+        ylims=(minimum(imag.(results.λ[1:n]))*1.05,maximum(imag.(results.λ[1:n]))*1.1)
+    end
+    p = plot(plot_spectrum(analysis,results.λ[1:n], 
+        label="\\tilde{\\lambda}", unit_circle=false, 
+        xlims=xlims,
+        ylims=ylims,
         title="continuous_time.pdf", xscale=-0.03, yscale=0.03), 
-        plot_spectrum(analysis,results.σ, 
-        label="\\exp(\\tilde{\\lambda}_j t_  {\\mathrm{s}})",
-        unit_circle=true, xlims=(-1.25,1.25), ylims=(-1.25,1.25),
-        title="discrete_time.pdf"), 
-        plot_modes(analysis,results.ϕ::Matrix{ComplexF64}; e=e, 
-        coeffs=coeffs, conjugate_pairs=results.conjugate_pairs), layout=l, framestyle=:box)
+        plot_spectrum(analysis,results.σ[1:n], 
+        label="\\exp(\\tilde{\\lambda} t_s)",
+        unit_circle=true, xlims=(-1.5,1.5), ylims=(-1.5,1.5),
+        title="discrete_time.pdf"),
+        plot_modes(analysis,results.ϕ[:,1:n]::Matrix{ComplexF64}; e=e, 
+        coeffs=coeffs[1:n], conjugate_pairs=results.conjugate_pairs[1:n]), layout=l, framestyle=:box)
     
     savefig(p, string(analysis.analysis_path, title))
     return p
 end
 
 function plot_spectrum(analysis::AbstractDynamicalAnalysis, 
-    eigs::Vector{ComplexF64}; label="\\exp(\\tilde{\\lambda}_j t_{\\mathrm{s}})", unit_circle=true, xlims=(-1.25,1.25), ylims=(-1.25,1.25),
+    eigs::Vector{ComplexF64}; label="\\exp(\\tilde{\\lambda} t_s)", unit_circle=true, xlims=(-1.25,1.25), ylims=(-1.25,1.25),
     xscale=0.02, yscale=0.07, title="spectrum.pdf")
 
     if unit_circle
         t=collect(LinRange(0.0, 2.0*π,100))
-        p = plot(cos.(t), sin.(t), aspect_ratio=:equal, linecolor="black")
+        p = plot(cos.(t), sin.(t), aspect_ratio=:equal, linecolor="black",xticks=-1.0:1.0:1.0, yticks=-1.0:1.0:1.0)
     else
         p = plot()
     end
-
-    #=
-    if !isnothing(exact)
-        plot!(p, [0.0, real(exp(im*exact*analysis.dt))],[0.0, imag(exp(im*exact*analysis.dt))], linecolor="black", linestyle=:dash)
-        plot!(p, [0.0, real(exp(im*exact*analysis.dt))],[0.0, -imag(exp(im*exact*analysis.dt))], linecolor="black", linestyle=:dash)
-    end
-    =#
 
     plot!(p, eigs, xlabel=latexstring(string("\\mathrm{Re}\\,(", label, ")")), 
         ylabel=latexstring(string("\\mathrm{Im}\\,(", label, ")")), 
         xlims=xlims, ylims=ylims,legend=false,
         seriestype=:scatter)
 
-    annotate!(real(eigs) .+ xscale*(xlims[2]-xlims[1]), 
-        imag(eigs) + sign.(imag(eigs) .+ 1.0e-15)*yscale*(ylims[2]-ylims[1]), text.(1:length(eigs), :right, 8))
+    if !unit_circle
+        annotate!(real(eigs) .+ xscale*(xlims[2]-xlims[1]), 
+            imag(eigs) + sign.(imag(eigs) .+ 1.0e-15)*yscale*(ylims[2]-ylims[1]), text.(1:length(eigs), :right, 8))
+    end
 
     savefig(p, string(analysis.analysis_path, title))
 
@@ -269,7 +285,7 @@ function plot_modes(analysis::AbstractDynamicalAnalysis,
 
         plot!(p,vec(vcat(x_plot[1],fill(NaN,1,N_el))), 
             vec(vcat(scale_factor*u,fill(NaN,1,N_el))), 
-            label=latexstring(linelabel),linewidth=2, ylabel=latexstring("\\tilde{\\varphi}_j(x)"), legendfontsize=6)
+            label=latexstring(linelabel), ylabel=latexstring("\\mathrm{Re}\\,(\\tilde{\\varphi}(x))"), legendfontsize=6)
     end
 
     if !isnothing(projection)
@@ -279,7 +295,7 @@ function plot_modes(analysis::AbstractDynamicalAnalysis,
         plot!(p,vec(vcat(x_plot[1],fill(NaN,1,N_el))), 
             vec(vcat(u,fill(NaN,1,N_el))), 
             label=latexstring(linelabel), xlabel=latexstring("x"), 
-            linewidth=2, linestyle=:dash, linecolor="black")
+            linestyle=:dash, linecolor="black")
     end
 
     savefig(p, string(analysis.analysis_path, "modes.pdf")) 
