@@ -1,6 +1,6 @@
 abstract type AbstractDynamicalAnalysis{d} <: AbstractAnalysis end
 
-struct DynamicalAnalysisResults 
+struct DynamicalAnalysisResults <: AbstractAnalysisResults
     σ::Vector{ComplexF64}
     λ::Vector{ComplexF64}
     ϕ::Matrix{ComplexF64}
@@ -118,7 +118,6 @@ end
 function analyze(analysis::DMDAnalysis)
 
     @unpack r, n_s, tol, M, results_path = analysis
-
     time_steps = load_time_steps(results_path)
 
     if n_s < length(time_steps)
@@ -136,7 +135,7 @@ function analyze(analysis::DMDAnalysis)
         V = V_full[:,1:r]
 
         # eigendecomposition of reduced DMD matrix 
-        # (projected onto singular vectors)
+        # (projected onto singular vecto2rs)
         F = eigen((U') * X[:,2:end] * V * inv(Diagonal(S)))
 
         # map eigenvectors back up into full space
@@ -175,13 +174,6 @@ function analyze(analysis::DMDAnalysis)
         ϕ*c, E[inds,:])
 end
 
-function save_analysis(analysis::AbstractDynamicalAnalysis,
-    results::DynamicalAnalysisResults)
-    save(string(analysis.analysis_path, "analysis.jld2"), 
-        Dict("analysis" => analysis,
-        "results" => results))
-end
-
 function plot_analysis(analysis::AbstractDynamicalAnalysis,
     results::DynamicalAnalysisResults; e=1, i=1, n = 0,
     scale=true, title="spectrum.pdf", xlims=nothing, ylims=nothing)
@@ -198,22 +190,27 @@ function plot_analysis(analysis::AbstractDynamicalAnalysis,
     end
 
     if isnothing(xlims)
-        xlims=(minimum(real.(results.λ[1:n]))*1.05,maximum(real.(results.λ[1:n]))*1.05)
+        xlims=(minimum(real.(results.λ[1:n]))*1.05,
+            maximum(real.(results.λ[1:n]))*1.05)
     end
+
     if isnothing(ylims)
-        ylims=(minimum(imag.(results.λ[1:n]))*1.05,maximum(imag.(results.λ[1:n]))*1.1)
+        ylims=(minimum(imag.(results.λ[1:n]))*1.05,
+            maximum(imag.(results.λ[1:n]))*1.1)
     end
+
     p = plot(plot_spectrum(analysis,results.λ[1:n], 
-        label="\\tilde{\\lambda}", unit_circle=false, 
-        xlims=xlims,
-        ylims=ylims,
-        title="continuous_time.pdf", xscale=-0.03, yscale=0.03), 
+            label="\\tilde{\\lambda}", unit_circle=false, 
+            xlims=xlims,
+            ylims=ylims,
+            title="continuous_time.pdf", xscale=-0.03, yscale=0.03), 
         plot_spectrum(analysis,results.σ[1:n], 
-        label="\\exp(\\tilde{\\lambda} t_s)",
-        unit_circle=true, xlims=(-1.5,1.5), ylims=(-1.5,1.5),
-        title="discrete_time.pdf"),
+            label="\\exp(\\tilde{\\lambda} t_s)",
+            unit_circle=true, xlims=(-1.5,1.5), ylims=(-1.5,1.5),
+            title="discrete_time.pdf"),
         plot_modes(analysis,results.ϕ[:,1:n]::Matrix{ComplexF64}; e=e, 
-        coeffs=coeffs[1:n], conjugate_pairs=results.conjugate_pairs[1:n]), layout=l, framestyle=:box)
+            coeffs=coeffs[1:n], conjugate_pairs=results.conjugate_pairs[1:n]),
+            layout=l, framestyle=:box)
     
     savefig(p, string(analysis.analysis_path, title))
     return p
@@ -225,7 +222,8 @@ function plot_spectrum(analysis::AbstractDynamicalAnalysis,
 
     if unit_circle
         t=collect(LinRange(0.0, 2.0*π,100))
-        p = plot(cos.(t), sin.(t), aspect_ratio=:equal, linecolor="black",xticks=-1.0:1.0:1.0, yticks=-1.0:1.0:1.0)
+        p = plot(cos.(t), sin.(t), aspect_ratio=:equal, 
+            linecolor="black",xticks=-1.0:1.0:1.0, yticks=-1.0:1.0:1.0)
     else
         p = plot()
     end
@@ -237,7 +235,8 @@ function plot_spectrum(analysis::AbstractDynamicalAnalysis,
 
     if !unit_circle
         annotate!(real(eigs) .+ xscale*(xlims[2]-xlims[1]), 
-            imag(eigs) + sign.(imag(eigs) .+ 1.0e-15)*yscale*(ylims[2]-ylims[1]), text.(1:length(eigs), :right, 8))
+            imag(eigs)+sign.(imag(eigs) .+ 1.0e-15)*yscale*(ylims[2]-ylims[1]),
+            text.(1:length(eigs), :right, 8))
     end
 
     savefig(p, string(analysis.analysis_path, title))
@@ -285,7 +284,9 @@ function plot_modes(analysis::AbstractDynamicalAnalysis,
 
         plot!(p,vec(vcat(x_plot[1],fill(NaN,1,N_el))), 
             vec(vcat(scale_factor*u,fill(NaN,1,N_el))), 
-            label=latexstring(linelabel), ylabel=latexstring("\\mathrm{Re}\\,(\\tilde{\\varphi}(x))"), legendfontsize=6)
+            label=latexstring(linelabel),
+            ylabel=latexstring("\\mathrm{Re}\\,(\\tilde{\\varphi}(x))"),
+            legendfontsize=6)
     end
 
     if !isnothing(projection)

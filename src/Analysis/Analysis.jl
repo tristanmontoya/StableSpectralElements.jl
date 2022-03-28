@@ -20,19 +20,27 @@ module Analysis
 
     import PyPlot; const plt = PyPlot
 
-    export AbstractAnalysis, analyze, save_analysis, plot_analysis
+    export AbstractAnalysis, AbstractAnalysisResults, analyze, save_analysis, plot_analysis
 
     abstract type AbstractAnalysis end
+    abstract type AbstractAnalysisResults end
+
+    function save_analysis(analysis::AbstractAnalysis,
+        results::AbstractAnalysisResults)
+        save(string(analysis.analysis_path, "analysis.jld2"), 
+            Dict("analysis" => analysis,
+            "results" => results))
+    end
     
-    export ErrorAnalysis, AbstractNorm, QuadratureL2, error_analysis
+    export ErrorAnalysis, AbstractNorm, QuadratureL2
     include("error.jl")
 
-    export LinearAnalysis, DynamicalAnalysisResults, DMDAnalysis, plot_spectrum, plot_modes
+    export LinearAnalysis, DynamicalAnalysisResults, DMDAnalysis
     include("dynamics.jl")
 
     export ConservationAnalysis, PrimaryConservationAnalysis, EnergyConservationAnalysis
     include("conservation.jl")
 
-    export run_refinement
+    export RefinementAnalysis, RefinementAnalysisResults, run_refinement
     include("refinement.jl")
 end

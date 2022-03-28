@@ -1,0 +1,9 @@
+writing time step 6400  t = 0.1111111111111226
+writing time step 12800  t = 0.22222222222225108
+writing time step 19200  t = 0.33333333333337956
+writing time step 25600  t = 0.44444444444450804
+writing time step 32000  t = 0.5555555555554589
+writing time step 38400  t = 0.6666666666662321
+writing time step 44800  t = 0.7777777777770053
+writing time step 51200  t = 0.8888888888877785
+writing time step 57600  t = 0.9999999999985517

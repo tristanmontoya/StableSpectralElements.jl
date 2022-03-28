@@ -46,7 +46,6 @@ function save_project(
     save_object(string(results_path, "time_steps.jld2"), Int64[])
 
     return results_path
-
 end
 
 function save_solution(integrator::ODEIntegrator, results_path::String)

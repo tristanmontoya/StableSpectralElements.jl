@@ -1,3 +1,4 @@
+""" Semi-discrete residual operator as a LinearMap"""
 struct LinearResidual{T} <: LinearMap{T}
     solver::Solver
     N_p::Int

@@ -1,3 +1,15 @@
+struct RefinementAnalysis{d} <: AbstractAnalysis
+    exact_solution::AbstractParametrizedFunction{d}
+    sequence_path::String
+    analysis_path::String
+end
+
+struct RefinementAnalysisResults <: AbstractAnalysisResults
+    error::Matrix{Float64} # columns are solution variables
+    eoc::Matrix{Float64}
+    dof::Matrix{Int} # columns are N_p N_eq N_el
+end
+
 function run_refinement(conservation_law::ConservationLaw{d,N_eq},        
     reference_approximation::ReferenceApproximation{d},
     initial_data::AbstractParametrizedFunction,
@@ -55,4 +67,62 @@ function run_refinement(conservation_law::ConservationLaw{d,N_eq},
     end
 
     return sequence_path
+end
+
+function analyze(analysis::RefinementAnalysis{d}) where {d}
+
+    @unpack sequence_path, exact_solution = analysis
+
+    results_path = string(sequence_path, "grid_1/")
+    conservation_law, spatial_discretization = load_project(results_path) 
+    (N_p, N_eq, N_el) = get_dof(spatial_discretization, conservation_law)
+    dof = [N_p N_el]
+    u, _ = load_solution(results_path, "final")
+    error = transpose(analyze(ErrorAnalysis(results_path, conservation_law,  
+    spatial_discretization), u, exact_solution))
+    eoc = fill!(Array{Float64}(undef,1,N_eq), NaN)
+
+    i = 2
+    grid_exists = true
+    while grid_exists
+        results_path = string(sequence_path, "grid_", i, "/")
+        conservation_law, spatial_discretization = load_project(results_path) 
+        (N_p, N_eq, N_el) = get_dof(spatial_discretization, conservation_law)
+        dof = [dof; [N_p N_el]]
+        u, _ = load_solution(results_path, "final")
+        error = [error; transpose(analyze(ErrorAnalysis(results_path,       
+            conservation_law, spatial_discretization), u, exact_solution))]
+        eoc = [eoc; transpose([ 
+            (log(error[i,e]) - log(error[i-1,e])) /
+                (log((dof[i,1]*dof[i,2])^(-1.0/d) ) - 
+                log((dof[i-1,1]*dof[i-1,2])^(-1.0/d)))
+            for e in 1:N_eq])]
+    
+        if !isdir(string(sequence_path, "grid_", i+1, "/"))
+            grid_exists = false
+        end
+        i = i+1
+    end
+    return RefinementAnalysisResults(error, eoc, dof)
+end
+
+function plot_analysis(analysis::RefinementAnalysis{d},
+    results::RefinementAnalysisResults; e=1) where {d}
+
+    @unpack analysis_path = analysis
+    @unpack error, dof = results
+
+    if d == 1
+        xlabel = latexstring("\\mathrm{DOF}")
+    elseif d == 2
+        xlabel = latexstring("\\sqrt{\\mathrm{DOF}}")
+    else
+        xlabel = latexstring(string("\\sqrt"),"[", d, "]{\\mathrm{DOF}}")
+    end
+
+    p = plot((dof[:,1].*dof[:,2]).^(1.0/d), error[:,e], 
+        xlabel=xlabel, ylabel=latexstring("L^2 \\ \\mathrm{Error}"), 
+        xaxis=:log, yaxis=:log, legend=false)
+    savefig(p, string(analysis_path, "error.pdf"))
+    return p
 end
