@@ -76,7 +76,7 @@ function analyze(analysis::ConservationAnalysis,
     initial_time_step::Union{Int,String}=0, 
     final_time_step::Union{Int,String}="final")
     
-    @unpack analysis_path, dict_name = analysis
+    @unpack results_path, analysis_path, dict_name = analysis
 
     u_0, t_0 = load_solution(results_path, initial_time_step)
     u_f, t_f = load_solution(results_path, final_time_step)

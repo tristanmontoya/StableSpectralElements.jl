@@ -4,7 +4,8 @@ end
 
 function ReferenceApproximation(approx_type::DGSEM, 
     elem_type::Union{Line,Quad,Hex};
-    quadrature_rule::AbstractQuadratureRule=LGLQuadrature(),
+    volume_quadrature_rule::AbstractQuadratureRule=LGLQuadrature(),
+    facet_quadrature_rule::AbstractQuadratureRule=LGLQuadrature(),
     mapping_degree::Int=1, N_plot::Int=10)
 
     # get spatial dimension
@@ -27,12 +28,12 @@ function ReferenceApproximation(approx_type::DGSEM,
 
         reference_element = RefElemData(elem_type, mapping_degree,
             quad_rule_vol=quadrature(elem_type, 
-            quadrature_rule, p+1), Nplot=N_plot)
+            volume_quadrature_rule, p+1), Nplot=N_plot)
         @unpack rstp, rstq, rstf, wq, wf = reference_element
         VDM, ∇VDM = basis(elem_type, p, rstq[1])
         D = (LinearMap(∇VDM / VDM),)
 
-        if quadrature_rule isa LGLQuadrature
+        if volume_quadrature_rule isa LGLQuadrature
             R = SelectionMap(facet_node_ids(Line(),p+1),p+1)
         else
             R = LinearMap(vandermonde(elem_type,p,rstf[1]) / VDM) 
@@ -47,16 +48,17 @@ function ReferenceApproximation(approx_type::DGSEM,
     elseif elem_type isa Quad
 
         reference_element = RefElemData(elem_type, mapping_degree,
-            quad_rule_vol=quadrature(elem_type, quadrature_rule, p+1),
+            quad_rule_vol=quadrature(elem_type, volume_quadrature_rule, p+1),
             quad_rule_face=quadrature(face_type(elem_type), 
-                quadrature_rule, p+1), Nplot=N_plot)
+                facet_quadrature_rule, p+1), 
+            Nplot=N_plot)
 
         @unpack rstp, rstq, rstf, wq, wf = reference_element
 
         # one-dimensional operators
         ref_elem_1D = RefElemData(Line(), mapping_degree,
             quad_rule_vol=quadrature(Line(), 
-            quadrature_rule, p+1), Nplot=N_plot)
+            volume_quadrature_rule, p+1), Nplot=N_plot)
         VDM_1D, ∇VDM_1D = basis(Line(), p, ref_elem_1D.rstq[1])
         D_1D = ∇VDM_1D / VDM_1D
         R_1D = vandermonde(Line(),p, ref_elem_1D.rstf[1]) / VDM_1D
@@ -66,21 +68,20 @@ function ReferenceApproximation(approx_type::DGSEM,
         # scalar ordering of multi-indices
         sigma = [(p+1)*(i-1) + j for i in 1:p+1, j in 1:p+1]
 
-        # sum-factorized lazy evaluation of (D₁, D₂) = (I ⊗ D, D ⊗ I) 
-        D = (TensorProductMap(I, D_1D, sigma, sigma),
-            TensorProductMap(D_1D, I, sigma, sigma))
-
-        # select facet nodes if LGL
-        if quadrature_rule isa LGLQuadrature
+        # extrapolation operators
+        if (volume_quadrature_rule isa LGLQuadrature && 
+                facet_quadrature_rule isa LGLQuadrature)
             R = SelectionMap(facet_node_ids(Quad(),(p+1,p+1)),N_p)
-
-        # otherwise extrapolate in each direction
-        else
+        elseif typeof(volume_quadrature_rule) == typeof(facet_quadrature_rule)
             R = [
                 TensorProductMap(I, R_L, sigma, [i for i in 1:p+1, j in 1:1]) ; 
                 TensorProductMap(I, R_R, sigma, [i for i in 1:p+1, j in 1:1]) ; 
                 TensorProductMap(R_L, I, sigma, [j for i in 1:1, j in 1:p+1]) ; 
                 TensorProductMap(R_R, I ,sigma, [j for i in 1:1, j in 1:p+1])] 
+        else
+  
+            R = LinearMap(vandermonde(elem_type,p,rstf...) / 
+                vandermonde(elem_type,p,rstq...))
         end
 
         V_plot = LinearMap(vandermonde(elem_type, p, rstp...) / 
@@ -89,12 +90,18 @@ function ReferenceApproximation(approx_type::DGSEM,
         P = LinearMap(I, N_q)
         W = LinearMap(Diagonal(wq))
         B = LinearMap(Diagonal(wf))
-                
+        
+        # sum-factorized lazy evaluation of (D₁, D₂) = (I ⊗ D, D ⊗ I) 
+        D = (TensorProductMap(I, D_1D, sigma, sigma),
+            TensorProductMap(D_1D, I, sigma, sigma))
+
     else   
 
         reference_element = RefElemData(elem_type, mapping_degree,
-            quad_rule_vol=quadrature(elem_type, quadrature_rule, p+1),
-            quad_rule_face=quadrature(face_type(elem_type), quadrature_rule, p+1), Nplot=N_plot)
+            quad_rule_vol=quadrature(elem_type, volume_quadrature_rule, p+1),
+            quad_rule_face=quadrature(face_type(elem_type),
+                facet_quadrature_rule, p+1), 
+            Nplot=N_plot)
         @unpack rstp, rstq, rstf, wq, wf = reference_element
         VDM, ∇VDM... = basis(elem_type, p, rstq...)
         D = Tuple(LinearMap(∇VDM[m] / VDM) for m in 1:d)

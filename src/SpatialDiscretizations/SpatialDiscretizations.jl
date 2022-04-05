@@ -106,7 +106,6 @@ module SpatialDiscretizations
                 for m in 1:d)
     end
 
-
     """
     Check if the SBP property is satisfied on the reference element
     """
@@ -148,7 +147,7 @@ module SpatialDiscretizations
     export DGMulti
     include("dgmulti.jl")
 
-    export AbstractTransformType, SBPTransform, NaiveTransform, OneToOneTri, CollapsedTri
+    export AbstractTransformType, SBPTransform, NaiveTransform, CollapsedTri
     include("collapsed.jl")
 
 end

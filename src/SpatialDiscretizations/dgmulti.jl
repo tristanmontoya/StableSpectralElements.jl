@@ -19,7 +19,7 @@ function ReferenceApproximation(approx_type::DGMulti,
 
     if elem_type isa Line
         reference_element = RefElemData(elem_type, 
-            mapping_degree, quad_rule_vol=quad_nodes(elem_type, p),Nplot=N_plot)
+            mapping_degree, quad_rule_vol=quad_nodes(elem_type, p), Nplot=N_plot)
 
         @unpack rstp, rstq, rstf, wq, wf = reference_element    
 
