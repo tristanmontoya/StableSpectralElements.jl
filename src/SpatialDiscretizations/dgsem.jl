@@ -58,7 +58,8 @@ function ReferenceApproximation(approx_type::DGSEM,
         # one-dimensional operators
         ref_elem_1D = RefElemData(Line(), mapping_degree,
             quad_rule_vol=quadrature(Line(), 
-            volume_quadrature_rule, p+1), Nplot=N_plot)
+                volume_quadrature_rule, p+1), 
+            Nplot=N_plot)
         VDM_1D, ∇VDM_1D = basis(Line(), p, ref_elem_1D.rstq[1])
         D_1D = ∇VDM_1D / VDM_1D
         R_1D = vandermonde(Line(),p, ref_elem_1D.rstf[1]) / VDM_1D
@@ -79,7 +80,6 @@ function ReferenceApproximation(approx_type::DGSEM,
                 TensorProductMap(R_L, I, sigma, [j for i in 1:1, j in 1:p+1]) ; 
                 TensorProductMap(R_R, I ,sigma, [j for i in 1:1, j in 1:p+1])] 
         else
-  
             R = LinearMap(vandermonde(elem_type,p,rstf...) / 
                 vandermonde(elem_type,p,rstq...))
         end

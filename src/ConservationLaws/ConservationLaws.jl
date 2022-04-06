@@ -34,5 +34,4 @@ module ConservationLaws
     export BurgersFlux, burgers_equation, burgers_central_flux, burgers_lax_friedrichs_flux
     include("burgers.jl")
 
-    
 end

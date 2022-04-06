@@ -125,7 +125,8 @@ module SpatialDiscretizations
     end
 
     """
-    Average of vertex positions (not necessarily actual centroid). Use only for plotting.
+    Average of vertex positions (not necessarily actual centroid). 
+    Use only for plotting.
     """
     function centroids(
         spatial_discretization::SpatialDiscretization{d}) where {d}

@@ -85,7 +85,8 @@ end
 
 function visualize(spatial_discretization::SpatialDiscretization{2},
     directory_name::String, file_name::String; geometry_resolution=5, 
-    markersize=4, plot_volume_nodes=true, plot_facet_nodes=true,label_elements=false, grid_lines=false, stride=nothing)
+    markersize=4, plot_volume_nodes=true, plot_facet_nodes=true,
+    label_elements=false, grid_lines=false, stride=nothing)
 
     path = new_path(directory_name, true, false)
 
@@ -116,7 +117,6 @@ function visualize(spatial_discretization::SpatialDiscretization{2},
     end
 
     for k in 1:N_el
-
         if grid_lines
             N1 = stride
             N2 = reference_approximation.N_q ÷ stride
@@ -151,6 +151,7 @@ function visualize(spatial_discretization::SpatialDiscretization{2},
             ax.plot(mesh.xq[:,k], mesh.yq[:,k], "o",
                   markersize=markersize)
         end
+
         if plot_facet_nodes
             ax.plot(mesh.xf[:,k], mesh.yf[:,k], "s", 
                 markersize=markersize, 
@@ -167,7 +168,10 @@ function visualize(spatial_discretization::SpatialDiscretization{2},
 end
 
 function visualize(reference_approximation::ReferenceApproximation{2},
-    directory_name::String, file_name::String;  markersize=4, plot_volume_nodes=true, plot_facet_nodes=true,grid_lines=false, full_connect=false, labels::NTuple{2,String}=("ξ₁","ξ₂"), stride=nothing, axes=false)
+    directory_name::String, file_name::String;  markersize=4,
+    plot_volume_nodes=true, plot_facet_nodes=true,grid_lines=false,
+    full_connect=false, labels::NTuple{2,String}=("ξ₁","ξ₂"), 
+    stride=nothing, axes=false)
 
     path = new_path(directory_name, true, false)
     
@@ -202,33 +206,43 @@ function visualize(reference_approximation::ReferenceApproximation{2},
         if elementType isa Tri
             
             for i in 1:N1
-                ax.plot(vcat([rf[stride*0+i]], rq[i:N2:(N2*(N1-1) + i)], [-1.0]),
-                vcat([sf[stride*0+i]], sq[i:N2:(N2*(N1-1) + i)],[1.0]),
+                ax.plot(vcat([rf[stride*0+i]], rq[i:N2:(N2*(N1-1) + i)],[-1.0]),
+                    vcat([sf[stride*0+i]], sq[i:N2:(N2*(N1-1) + i)],[1.0]),
                         "-",
                         linewidth=markersize*0.2,
                         color="grey")
             end
+
             for i in 1:N2
-                ax.plot(vcat([rf[3*stride-i+1]], rq[(i-1)*N1+1:i*N1],[rf[1*stride+i]]), vcat([sf[3*stride-i+1]], sq[(i-1)*N1+1:i*N1],[sf[1*stride+i]]),
-                        "-",
-                        linewidth=markersize*0.2,
-                        color="grey")
+                ax.plot(vcat([rf[3*stride-i+1]], rq[(i-1)*N1+1:i*N1],
+                        [rf[1*stride+i]]), 
+                    vcat([sf[3*stride-i+1]], sq[(i-1)*N1+1:i*N1],
+                        [sf[1*stride+i]]),
+                    "-",
+                    linewidth=markersize*0.2,
+                    color="grey")
             end
 
         elseif elementType isa Quad
 
             for i in 1:N1
-                ax.plot(vcat([rf[stride*2+i]], rq[i:N2:(N2*(N1-1) + i)], [rf[stride*3+i]]),
-                vcat([sf[stride*2+i]], sq[i:N2:(N2*(N1-1) + i)], [sf[stride*3+i]]),
-                        "-",
-                        linewidth=markersize*0.2,
-                        color="grey")
+                ax.plot(vcat([rf[stride*2+i]], rq[i:N2:(N2*(N1-1) + i)], 
+                        [rf[stride*3+i]]),
+                    vcat([sf[stride*2+i]], sq[i:N2:(N2*(N1-1) + i)],
+                        [sf[stride*3+i]]),
+                    "-",
+                    linewidth=markersize*0.2,
+                    color="grey")
             end
+
             for i in 1:N2
-                ax.plot(vcat([rf[0*stride+i]], rq[(i-1)*N1+1:i*N1],[rf[1*stride+i]]), vcat([sf[0*stride+i]], sq[(i-1)*N1+1:i*N1],[sf[1*stride+i]]),
-                        "-",
-                        linewidth=markersize*0.2,
-                        color="grey")
+                ax.plot(vcat([rf[0*stride+i]], rq[(i-1)*N1+1:i*N1],
+                        [rf[1*stride+i]]), 
+                    vcat([sf[0*stride+i]], sq[(i-1)*N1+1:i*N1],[
+                        sf[1*stride+i]]),
+                    "-",
+                    linewidth=markersize*0.2,
+                    color="grey")
             end
         end
 
