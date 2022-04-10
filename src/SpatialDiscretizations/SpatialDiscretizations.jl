@@ -1,11 +1,12 @@
 module SpatialDiscretizations
 
     using UnPack
-    using LinearAlgebra: I, inv, Diagonal
+    using LinearAlgebra: I, inv, Diagonal, diagm
     using LinearMaps: LinearMap
-    using StartUpDG: MeshData, RefElemData, AbstractElemShape, basis, vandermonde, quad_nodes, gauss_quad, gauss_lobatto_quad
-    using Jacobi: zgrjm, wgrjm
-    import StartUpDG: face_type
+    using StartUpDG: MeshData, RefElemData, AbstractElemShape, basis, vandermonde, quad_nodes, gauss_quad, gauss_lobatto_quad, face_vertices, nodes, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial
+
+    using Jacobi: zgrjm, wgrjm, zgj, wgj
+    import StartUpDG: face_type, init_face_data
 
     using ..Mesh: GeometricFactors
     using ..Operators: TensorProductMap, SelectionMap
@@ -13,15 +14,18 @@ module SpatialDiscretizations
     using Reexport
     @reexport using StartUpDG: Line, Quad, Tri, Tet, Hex, Pyr
 
-    export AbstractApproximationType, AbstractCollocatedApproximation, NonsymmetricElemShape, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, make_sbp_operator, χ
+    export AbstractApproximationType, AbstractCollocatedApproximation, NonsymmetricElemShape, AbstractReferenceMapping, NoMapping, ChainRuleMapping, DirectMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, CollapsedTri, check_normals, check_facet_nodes, check_sbp_property, centroids, make_sbp_operator, χ
     
     abstract type AbstractApproximationType end
     abstract type AbstractCollocatedApproximation <: AbstractApproximationType end
     abstract type NonsymmetricElemShape <: AbstractElemShape end
+    abstract type AbstractReferenceMapping end
+    struct NoMapping <: AbstractReferenceMapping end
+    struct ChainRuleMapping <: AbstractReferenceMapping end
+    struct DirectMapping <: AbstractReferenceMapping end
 
     struct CollapsedTri <: NonsymmetricElemShape end
-    struct OneToOneTri <: NonsymmetricElemShape end
-    @inline face_type(::Union{CollapsedTri,OneToOneTri}) = Line()
+    @inline face_type(::CollapsedTri) = Line()
 
     struct ReferenceApproximation{d}
         approx_type::AbstractApproximationType
@@ -37,7 +41,8 @@ module SpatialDiscretizations
         B::LinearMap
         ADVs::NTuple{d, LinearMap}
         ADVw::NTuple{d, LinearMap}
-        V_plot::LinearMap 
+        V_plot::LinearMap
+        reference_mapping::AbstractReferenceMapping
     end
     
     struct SpatialDiscretization{d}
@@ -125,7 +130,7 @@ module SpatialDiscretizations
     end
 
     """
-    Average of vertex positions (not necessarily actual centroid). 
+    Average of vertex positions (not necessarily actual centroid).
     Use only for plotting.
     """
     function centroids(
@@ -139,7 +144,7 @@ module SpatialDiscretizations
             for k in 1:spatial_discretization.N_el]
     end
 
-    export AbstractQuadratureRule, LGLQuadrature, LGQuadrature, JGRQuadrature, quadrature, facet_node_ids
+    export AbstractQuadratureRule, LGLQuadrature, LGQuadrature, LGRQuadrature, JGLQuadrature, JGRQuadrature, JGQuadrature, JacobiQuadrature, LegendreQuadrature, quadrature, facet_node_ids
     include("quadrature.jl")
 
     export DGSEM
@@ -148,7 +153,6 @@ module SpatialDiscretizations
     export DGMulti
     include("dgmulti.jl")
 
-    export AbstractTransformType, SBPTransform, NaiveTransform, CollapsedTri
     include("collapsed.jl")
 
 end

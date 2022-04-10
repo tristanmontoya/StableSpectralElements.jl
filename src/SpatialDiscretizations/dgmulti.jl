@@ -59,5 +59,5 @@ function ReferenceApproximation(approx_type::DGMulti,
 
 
     return ReferenceApproximation{d}(approx_type, N_p, N_q, N_f, 
-        reference_element, D, V, R, P, W, B, ADVs, ADVw, V_plot)
+        reference_element, D, V, R, P, W, B, ADVs, ADVw, V_plot, NoMapping())
 end

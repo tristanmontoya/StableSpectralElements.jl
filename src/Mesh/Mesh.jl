@@ -1,11 +1,12 @@
 module Mesh
 
     using UnPack
-    using StartUpDG: RefElemData, MeshData, uniform_mesh, connect_mesh, build_node_maps, diff, make_periodic, geometric_factors, compute_normals, Line, Tri
+    using StartUpDG: RefElemData, MeshData, uniform_mesh, connect_mesh, build_node_maps, diff, make_periodic, geometric_factors, compute_normals, Line, Quad, Tri, Tet, Hex, Pyr
+    using Random: rand, shuffle
     using StaticArrays: SMatrix
     using LinearAlgebra: inv, det, transpose, diagm
 
-    export GeometricFactors, uniform_periodic_mesh, nonsymmetric_mesh
+    export GeometricFactors, uniform_periodic_mesh
 
     struct GeometricFactors{d}
 
@@ -20,50 +21,7 @@ module Mesh
         nJf::NTuple{d, Matrix{Float64}}
 
     end
-    
-    function nonsymmetric_mesh(VX, VY, EToV, rd::RefElemData{2})
-
-        @unpack fv = rd
-        FToF = connect_mesh(EToV, fv)
-        Nfaces, K = size(FToF)
-    
-        vx = VX[transpose(EToV)]
-        vy = VY[transpose(EToV)]
-
-        # in progress - define reordering for one-to-one scheme
-
-        @unpack V1 = rd
-        x = V1 * vx[[2,3,1], :]
-        y = V1 * vy[[2,3,1], :]
-    
-        @unpack Vf = rd
-        xf = Vf * x
-        yf = Vf * y
-        mapM, mapP, mapB = build_node_maps(FToF, xf, yf)
-        Nfp = size(Vf, 1) ÷ Nfaces
-        mapM = reshape(mapM, Nfp * Nfaces, K)
-        mapP = reshape(mapP, Nfp * Nfaces, K)
-    
-        @unpack Dr, Ds = rd
-        rxJ, sxJ, ryJ, syJ, J = geometric_factors(x, y, Dr, Ds)
-        rstxyzJ = SMatrix{2, 2}(rxJ, ryJ, sxJ, syJ)
-    
-        @unpack Vq, wq = rd
-        xq,yq = (x -> Vq * x).((x, y))
-        wJq = diagm(wq) * (Vq * J)
-    
-        nxJ, nyJ, sJ = compute_normals(rstxyzJ, rd.Vf, rd.nrstJ...)
-    
-        is_periodic = (false, false)
-        return MeshData(tuple(VX, VY), EToV, FToF,
-                        tuple(x, y), tuple(xf, yf), tuple(xq, yq), wJq,
-                        mapM, mapP, mapB,
-                        SMatrix{2, 2}(tuple(rxJ, ryJ, sxJ, syJ)), J,
-                        tuple(nxJ, nyJ), sJ,
-                        is_periodic)
-    
-    end
-
+  
     function uniform_periodic_mesh(reference_element::RefElemData{1}, 
         limits::NTuple{2,Float64}, M::Int)
 
@@ -74,9 +32,51 @@ module Mesh
     end
 
     function uniform_periodic_mesh(reference_element::RefElemData{2}, 
-        limits::NTuple{2,NTuple{2,Float64}}, M::NTuple{2,Int})
+        limits::NTuple{2,NTuple{2,Float64}}, M::NTuple{2,Int};
+        random_rotate::Bool=false, collapsed::Bool=false)
 
-        (VX, VY), EtoV = uniform_mesh(reference_element.elementType, M[1], M[2])
+        if reference_element.elementType isa Tri && collapsed
+
+            Nquad =  (M[1]+1)*(M[2]+1)
+            Nmid =  M[1]*M[2]
+            Nv = Nquad + Nmid
+            VX = Vector{Float64}(undef, Nv)
+            VY = Vector{Float64}(undef, Nv)
+            EtoV = Matrix{Int64}(undef, 4*M[1]*M[2], 3)
+
+            (VX[1:Nquad], VY[1:Nquad]), _ = uniform_mesh(Quad(), M[1], M[2])
+            
+            for i in 1:M[1]
+                for j in 1:M[2]
+                    m = (j-1)*M[2] + i
+                    bot_left = (j-1)*(M[2]+1) + i  # bottom left
+                    bot_right = j*(M[2]+1) + i  # top left
+                    mid = Nquad+m
+                    top_left = bot_left + 1
+                    top_right = bot_right + 1
+
+                    VX[mid] = 0.5*(VX[bot_left] + VX[bot_right])
+                    VY[mid]= 0.5*(VY[bot_left] + VY[top_left])
+                    EtoV[(m-1)*4+1:m*4,:] = [
+                        top_left mid bot_left;
+                        bot_left mid bot_right;
+                        bot_right mid top_right;
+                        top_right mid top_left]
+                end
+            end
+        else
+            (VX, VY), EtoV = uniform_mesh(reference_element.elementType, 
+                M[1], M[2])
+        
+            if random_rotate
+                for k in 1:size(EtoV,1)
+                    len = size(EtoV,2)
+                    step = rand(0:len-1)
+                    row = EtoV[k,:]
+                    EtoV[k,:] = vcat(row[end-step+1:end], row[1:end-step])
+                end
+            end
+        end
 
         return make_periodic(MeshData(limits[1][1] .+ 
                 0.5*(limits[1][2]-limits[1][1])*(VX .+ 1.0),
@@ -121,7 +121,7 @@ module Mesh
             end
         
             # get scaled normal vectors - this includes scaling for ref. quadrature weights on long side of right-angled triangle.
-            # don't need actual facet Jacobian for now, probably will.
+            # don't need actual facet Jacobian for now, probably will at some point.
             for i in 1:N_f
                 Jdrdx_f = det(dxdr_f[i,:,:,k]) *
                     inv(dxdr_f[i,:,:,k])
