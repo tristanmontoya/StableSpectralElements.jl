@@ -14,15 +14,18 @@ module SpatialDiscretizations
     using Reexport
     @reexport using StartUpDG: Line, Quad, Tri, Tet, Hex, Pyr
 
-    export AbstractApproximationType, AbstractCollocatedApproximation, NonsymmetricElemShape, AbstractReferenceMapping, NoMapping, ChainRuleMapping, DirectMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, CollapsedTri, check_normals, check_facet_nodes, check_sbp_property, centroids, make_sbp_operator, χ
+    export AbstractApproximationType, AbstractCollocatedApproximation, NonsymmetricElemShape, AbstractReferenceMapping, NoMapping, ReferenceMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, CollapsedTri, check_normals, check_facet_nodes, check_sbp_property, centroids, make_sbp_operator, χ
     
     abstract type AbstractApproximationType end
     abstract type AbstractCollocatedApproximation <: AbstractApproximationType end
     abstract type NonsymmetricElemShape <: AbstractElemShape end
     abstract type AbstractReferenceMapping end
     struct NoMapping <: AbstractReferenceMapping end
-    struct ChainRuleMapping <: AbstractReferenceMapping end
-    struct DirectMapping <: AbstractReferenceMapping end
+
+    struct ReferenceMapping <: AbstractReferenceMapping 
+        J_ref::Vector{Float64}
+        Λ_ref::Array{Float64, 3}
+    end
 
     struct CollapsedTri <: NonsymmetricElemShape end
     @inline face_type(::CollapsedTri) = Line()
@@ -60,8 +63,9 @@ module SpatialDiscretizations
         @unpack reference_element = reference_approximation
 
         N_el = size(mesh.xyz[1])[2]
-        geometric_factors = GeometricFactors(mesh,
-            reference_approximation.reference_element)
+        geometric_factors = apply_reference_mapping(GeometricFactors(mesh,
+            reference_approximation.reference_element), 
+            reference_approximation.reference_mapping)
 
         if reference_approximation.approx_type isa AbstractCollocatedApproximation
             
@@ -87,6 +91,26 @@ module SpatialDiscretizations
                     reference_approximation.V) for k in 1:N_el],
                 Tuple(reference_element.Vp * mesh.xyz[m] for m in 1:d))
         end
+    end
+
+    @inline apply_reference_mapping(geometric_factors::GeometricFactors, ::NoMapping) = geometric_factors
+    
+    function apply_reference_mapping(geometric_factors::GeometricFactors,
+        reference_mapping::ReferenceMapping)
+        @unpack J_q, Λ_q, nJf = geometric_factors
+        @unpack J_ref, Λ_ref = reference_mapping
+        (N_q,N_el) = size(J_q)
+        d = size(Λ_q, 3)
+        J_qJ_ref = Matrix{Float64}(undef, N_q, N_el)
+        Λ_qΛ_ref = zeros(N_q, d, d, N_el)
+        for k in 1:N_el
+            J_qJ_ref[:,k] = J_q[:,k] .* J_ref
+            for i in 1:N_q
+                Λ_qΛ_ref[i,:,:,k] = Λ_q[i,:,:,k] * Λ_ref[i,:,:]
+            end
+
+        end
+        return GeometricFactors{d}(J_qJ_ref, Λ_qΛ_ref, nJf)
     end
 
     """
@@ -153,6 +177,7 @@ module SpatialDiscretizations
     export DGMulti
     include("dgmulti.jl")
 
+    export reference_geometric_factors
     include("collapsed.jl")
 
 end

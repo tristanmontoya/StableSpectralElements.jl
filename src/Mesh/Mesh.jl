@@ -6,7 +6,7 @@ module Mesh
     using StaticArrays: SMatrix
     using LinearAlgebra: inv, det, transpose, diagm
 
-    export GeometricFactors, uniform_periodic_mesh
+    export GeometricFactors, uniform_periodic_mesh, warp_mesh
 
     struct GeometricFactors{d}
 
@@ -15,11 +15,19 @@ module Mesh
 
         # first dimension is node index, second and third are matrix indices mn,
         # fourth is element
-        Jdrdx_q ::Array{Float64,4}
+        Λ_q ::Array{Float64,4}
 
         # d-tuple of matrices, where first is element index,
         nJf::NTuple{d, Matrix{Float64}}
 
+    end
+
+    function warp_mesh(mesh::MeshData{2}, 
+        reference_element::RefElemData{2}, factor::Float64=0.2)
+        @unpack x, y = mesh
+        x = x .+ factor*sin.(π*x).*sin.(π*y)
+        y = y .+ factor*exp.(1.0.-y).*sin.(π*x).*sin.(π*y)
+        return MeshData(reference_element, mesh, x, y)
     end
   
     function uniform_periodic_mesh(reference_element::RefElemData{1}, 
@@ -99,7 +107,7 @@ module Mesh
         # second and third are matrix indices mn,
         # fourth is element index.
         dxdr_q = Array{Float64, 4}(undef, N_q, d, d, N_el)
-        Jdrdx_q = Array{Float64, 4}(undef, N_q, d, d, N_el)
+        Λ_q = Array{Float64, 4}(undef, N_q, d, d, N_el)
         dxdr_f = Array{Float64, 4}(undef, N_f, d, d, N_el)        
 
         for k in 1:N_el
@@ -117,7 +125,7 @@ module Mesh
             # loops over slower indices
             for i in 1:N_q
                 J_q[i,k] = det(dxdr_q[i,:,:,k])
-                Jdrdx_q[i,:,:,k] = J_q[i,k]*inv(dxdr_q[i,:,:,k])
+                Λ_q[i,:,:,k] = J_q[i,k]*inv(dxdr_q[i,:,:,k])
             end
         
             # get scaled normal vectors - this includes scaling for ref. quadrature weights on long side of right-angled triangle.
@@ -132,6 +140,6 @@ module Mesh
                 end
             end
         end
-        return GeometricFactors{d}(J_q, Jdrdx_q, nJf)
+        return GeometricFactors{d}(J_q, Λ_q, nJf)
     end
 end

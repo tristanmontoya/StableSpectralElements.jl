@@ -4,6 +4,21 @@ function χ(::CollapsedTri,
     return (0.5.*(1.0 .+ η[1]).*(1.0 .- η[2]) .- 1.0, η[2])
 end
 
+"""Geometric factors of the Duffy transform"""
+function reference_geometric_factors(::CollapsedTri, 
+    η::Union{NTuple{2,Float64},NTuple{2,Vector{Float64}}})
+    
+    N = size(η[1],1)
+    J_ref = (x->2.0/(1.0-x)).(η[2])
+    Λ_ref = Array{Float64, 3}(undef, N, 2, 2)
+    Λ_ref[:,1,1] = ones(N)
+    Λ_ref[:,1,2] = zeros(N)
+    Λ_ref[:,2,1] = (x->0.5*(1.0+x)).(η[1])
+    Λ_ref[:,2,2] = (x->0.5*(1.0-x)).(η[2])
+
+    return J_ref, Λ_ref
+end
+
 function init_face_data(::CollapsedTri, p, 
     facet_quadrature_rule::Tuple{LegendreQuadrature,JacobiQuadrature})
     r_1d_1, w_1d_1 = quadrature(face_type(Tri()), 
@@ -39,7 +54,7 @@ function ReferenceApproximation(approx_type::DGSEM,
         LGQuadrature(),LGQuadrature()),
     facet_quadrature_rule::NTuple{2,AbstractQuadratureRule}=(
         LGQuadrature(),LGQuadrature()),
-    reference_mapping=ChainRuleMapping(),
+    chain_rule_diff=true,
     mapping_degree::Int=1, N_plot::Int=10)
 
     @unpack p = approx_type
@@ -57,7 +72,7 @@ function ReferenceApproximation(approx_type::DGSEM,
     Ds = Vs / VDM
     r1, s1 = nodes(Tri(), 1)
     V1 = vandermonde(Tri(), 1, r, s) / vandermonde(Tri(), 1, r1, s1)
-    rq, sq, wq = quadrature(CollapsedTri(), volume_quadrature_rule, (p+1, p+1))
+    rq, sq, wq = quadrature(Tri(), volume_quadrature_rule, (p+1, p+1))
     Vq = vandermonde(Tri(), mapping_degree, rq, sq) / VDM
     M = Vq' * diagm(wq) * Vq
     Pq = M \ (Vq' * diagm(wq))
@@ -118,20 +133,24 @@ function ReferenceApproximation(approx_type::DGSEM,
             TensorProductMap(I, R_L, sigma,
                 [i for i in p+1:-1:1, j in 1:1])]
     end
-            
-    W = LinearMap(Diagonal(wq))
-    B = LinearMap(Diagonal(wf))
 
     # differentiation on the square
     D_η = (TensorProductMap(I, D_1, sigma, sigma), 
         TensorProductMap(D_2, I, sigma, sigma))
-    
-    if reference_mapping isa ChainRuleMapping
-        η1, η2, _ = quadrature(Quad(), volume_quadrature_rule, (p+1, p+1))
+
+    # construct mapping to triangle
+    η1, η2, w_η = quadrature(Quad(), volume_quadrature_rule, (p+1, p+1))
+    B = LinearMap(Diagonal(wf))
+    if chain_rule_diff
+        W = LinearMap(Diagonal(wq))
         D = (Diagonal((x-> 2.0/(1.0-x)).(η2))*D_η[1], 
         Diagonal((x -> (1.0+x)).(η1) ./ (x -> (1.0-x)).(η2))*D_η[1] + D_η[2])
+        reference_mapping = NoMapping()
     else
+        W = LinearMap(Diagonal(w_η))
         D = D_η
+        reference_mapping = ReferenceMapping(
+            reference_geometric_factors(elem_type, (η1, η2))...)
     end
 
     V_plot = LinearMap(vandermonde(Tri(), p, rstp...) / 

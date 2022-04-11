@@ -57,7 +57,7 @@ function ReferenceApproximation(approx_type::DGMulti,
     # weak-form reference advection operator (no mass matrix)
     ADVw = Tuple(∇V[m]' * W for m in 1:d)
 
-
     return ReferenceApproximation{d}(approx_type, N_p, N_q, N_f, 
-        reference_element, D, V, R, P, W, B, ADVs, ADVw, V_plot, NoMapping())
+        reference_element, D, V, R, P, W, B, ADVs, ADVw, V_plot, 
+        NoMapping())
 end

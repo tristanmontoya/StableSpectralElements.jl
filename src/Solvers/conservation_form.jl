@@ -11,7 +11,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     @unpack ADVs, V, R, P, W, B = spatial_discretization.reference_approximation
     @unpack nrstJ = 
         spatial_discretization.reference_approximation.reference_element
-    @unpack J_q, Jdrdx_q, nJf = spatial_discretization.geometric_factors
+    @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
 
     operators = Array{PhysicalOperators}(undef, N_el)
     for k in 1:N_el
@@ -19,10 +19,10 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
             VOL = (ADVs[1],)
             NTR = (Diagonal(nrstJ[1]) * R * P,)
         else
-            VOL = Tuple(sum(ADVs[m] * Diagonal(Jdrdx_q[:,m,n,k])
+            VOL = Tuple(sum(ADVs[m] * Diagonal(Λ_q[:,m,n,k])
                 for m in 1:d) for n in 1:d) 
             NTR = Tuple(sum(Diagonal(nrstJ[m]) * R * P * 
-                Diagonal(Jdrdx_q[:,m,n,k]) for m in 1:d) for n in 1:d)
+                Diagonal(Λ_q[:,m,n,k]) for m in 1:d) for n in 1:d)
         end
         FAC = -R' * B
         SRC = V' * W * Diagonal(J_q[:,k])
@@ -42,7 +42,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     @unpack ADVw, V, R, P, W, B = spatial_discretization.reference_approximation
     @unpack nrstJ = 
         spatial_discretization.reference_approximation.reference_element
-    @unpack J_q, Jdrdx_q, nJf = spatial_discretization.geometric_factors
+    @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
 
     operators = Array{PhysicalOperators}(undef, N_el)
     for k in 1:N_el
@@ -50,10 +50,10 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
             VOL = (ADVw[1],)
             NTR = (Diagonal(nrstJ[1]) * R * P,)
         else
-            VOL = Tuple(sum(ADVw[m] * Diagonal(Jdrdx_q[:,m,n,k])
-                for m in 1:d) for n in 1:d) 
+            VOL = Tuple(sum(0.5*ADVw[m] * Diagonal(Λ_q[:,m,n,k]) +
+            0.5*transpose(P * Diagonal(Λ_q[:,m,n,k]) * V) * ADVw[m]  for m in 1:d) for n in 1:d) 
             NTR = Tuple(sum(Diagonal(nrstJ[m]) * R * P * 
-                Diagonal(Jdrdx_q[:,m,n,k]) for m in 1:d) for n in 1:d)
+                Diagonal(Λ_q[:,m,n,k]) for m in 1:d) for n in 1:d)
         end
         FAC = -R' * B
         SRC = V' * W * Diagonal(J_q[:,k])

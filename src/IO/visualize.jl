@@ -104,12 +104,14 @@ function visualize(spatial_discretization::SpatialDiscretization{2},
     plt.ylabel(latexstring("x_2"))
     
     ref_edge_nodes = map_face_nodes(elementType,
-        collect(LinRange(-1.0,1.0, geometry_resolution)))
+        collect(LinRange(-0.99999,0.99999, geometry_resolution)))
 
+    
     edges = find_face_nodes(elementType, ref_edge_nodes...)
 
     edge_maps = Tuple(vandermonde(elementType, N, 
-        ref_edge_nodes[1][edge], ref_edge_nodes[2][edge]) / VDM 
+        ref_edge_nodes[1][edge], 
+        ref_edge_nodes[2][edge]) / VDM 
         for edge ∈ edges)
 
     if label_elements
@@ -149,7 +151,7 @@ function visualize(spatial_discretization::SpatialDiscretization{2},
 
         if plot_volume_nodes
             ax.plot(mesh.xq[:,k], mesh.yq[:,k], "o",
-                  markersize=markersize)
+                  markersize=markersize, color="grey")
         end
 
         if plot_facet_nodes

@@ -52,7 +52,7 @@ function quadrature(::Quad,
     return mgr[1][:], mgr[2][:], w2d[:]
 end
 
-function quadrature(::CollapsedTri,
+function quadrature(::Tri,
     quadrature_rule::NTuple{2,LegendreQuadrature}, N::NTuple{2,Int})
     r1d_1, w1d_1 = quadrature(Line(), 
         quadrature_rule[1], N[1])
@@ -65,7 +65,7 @@ function quadrature(::CollapsedTri,
         (η -> 0.5*(1-η)).(mgr[2][:]) .* w2d[:]
 end
 
-function quadrature(::CollapsedTri,
+function quadrature(::Tri,
     quadrature_rule::Tuple{LegendreQuadrature,JacobiQuadrature},
     N::NTuple{2,Int})
     r1d_1, w1d_1 = quadrature(Line(), 
