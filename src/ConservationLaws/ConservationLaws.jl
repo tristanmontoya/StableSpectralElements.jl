@@ -1,5 +1,8 @@
 module ConservationLaws
 
+    using LinearMaps: LinearMap
+    using LinearAlgebra: mul!
+
     import ..ParametrizedFunctions: AbstractParametrizedFunction
 
     export AbstractFirstOrderFlux, AbstractSecondOrderFlux, AbstractFirstOrderNumericalFlux, AbstractSecondOrderNumericalFlux,AbstractTwoPointFlux, ConservationLaw, LaxFriedrichsNumericalFlux, EntropyConservativeNumericalFlux, ConservativeFlux, EntropyConservativeFlux, physical_flux, numerical_flux, two_point_flux

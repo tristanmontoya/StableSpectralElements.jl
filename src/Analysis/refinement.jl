@@ -6,8 +6,10 @@ end
 
 struct RefinementAnalysisResults <: AbstractAnalysisResults
     error::Matrix{Float64} # columns are solution variables
-    eoc::Matrix{Float64}
+    eoc::Matrix{Union{Float64,Missing}}
     dof::Matrix{Int} # columns are N_p N_eq N_el
+    conservation::Matrix{Float64}
+    energy::Matrix{Float64}
 end
 
 function run_refinement(conservation_law::ConservationLaw{d,N_eq},        
@@ -69,7 +71,7 @@ function run_refinement(conservation_law::ConservationLaw{d,N_eq},
     return sequence_path
 end
 
-function analyze(analysis::RefinementAnalysis{d}) where {d}
+function analyze(analysis::RefinementAnalysis{d}, n_grids=100) where {d}
 
     @unpack sequence_path, exact_solution = analysis
 
@@ -79,12 +81,17 @@ function analyze(analysis::RefinementAnalysis{d}) where {d}
     dof = [N_p N_el]
     u, _ = load_solution(results_path, "final")
     error = transpose(analyze(ErrorAnalysis(results_path, conservation_law,  
-    spatial_discretization), u, exact_solution))
-    eoc = fill!(Array{Float64}(undef,1,N_eq), NaN)
+        spatial_discretization), u, exact_solution))
+    conservation = transpose(analyze(PrimaryConservationAnalysis(results_path, 
+        conservation_law, spatial_discretization))[3])
+    energy = transpose(analyze(EnergyConservationAnalysis(results_path, 
+        conservation_law, spatial_discretization))[3])
+
+    eoc = fill!(Array{Union{Float64, Missing}}(undef,1,N_eq), missing)
 
     i = 2
     grid_exists = true
-    while grid_exists
+    while grid_exists && i <= n_grids
         results_path = string(sequence_path, "grid_", i, "/")
         conservation_law, spatial_discretization = load_project(results_path) 
         (N_p, N_eq, N_el) = get_dof(spatial_discretization, conservation_law)
@@ -97,13 +104,19 @@ function analyze(analysis::RefinementAnalysis{d}) where {d}
                 (log((dof[i,1]*dof[i,2])^(-1.0/d) ) - 
                 log((dof[i-1,1]*dof[i-1,2])^(-1.0/d)))
             for e in 1:N_eq])]
-    
+        conservation = [conservation; 
+            transpose(analyze(PrimaryConservationAnalysis(results_path, 
+                conservation_law, spatial_discretization))[3])]
+        energy = [energy;
+            transpose(analyze(EnergyConservationAnalysis(results_path, 
+            conservation_law, spatial_discretization))[3])]
+
         if !isdir(string(sequence_path, "grid_", i+1, "/"))
             grid_exists = false
         end
         i = i+1
     end
-    return RefinementAnalysisResults(error, eoc, dof)
+    return RefinementAnalysisResults(error, eoc, dof, conservation, energy)
 end
 
 function plot_analysis(analysis::RefinementAnalysis{d},
@@ -121,8 +134,31 @@ function plot_analysis(analysis::RefinementAnalysis{d},
     end
 
     p = plot((dof[:,1].*dof[:,2]).^(1.0/d), error[:,e], 
-        xlabel=xlabel, ylabel=latexstring("L^2 \\ \\mathrm{Error}"), 
-        xaxis=:log, yaxis=:log, legend=false)
+        xlabel=xlabel, ylabel=(LaTeXString("\$L^2\$ Error")), 
+        xaxis=:log, yaxis=:log, legend=false, linecolor="black", markershape=:circle, markercolor="black")
     savefig(p, string(analysis_path, "error.pdf"))
     return p
 end
+
+function tabulate_analysis(results::RefinementAnalysisResults; e=1, 
+    print_latex=true)
+    tab = hcat(results.dof[:,2], results.conservation[:,e], 
+        results.energy[:,e], results.error[:,e], results.eoc[:,e])
+
+    if print_latex
+        latex_header = ["\$M\$", "Conservation Metric", "Energy Metric",
+            "\$L^2\$ Error", "Order"]
+        pretty_table(tab, header=latex_header, backend = Val(:latex),
+            formatters = (ft_nomissing, ft_printf("%d", [1,]), ft_printf("%.5e", [2,]), ft_printf("%1.5f", [3,])), tf = tf_latex_booktabs)
+    end
+
+    return pretty_table(String, tab, header=["M", "Conservation Metric",
+        "Energy Metric", "L² Error", "Order"],
+        formatters = (ft_nomissing, ft_printf("%d", [1,]), 
+            ft_printf("%.5e", [2,3,4,]),
+        ft_printf("%1.5f", [5,])),
+        
+        tf = tf_markdown)
+end
+    
+    

@@ -1,5 +1,13 @@
 struct StrongConservationForm <: AbstractResidualForm end
-struct WeakConservationForm <: AbstractResidualForm end
+
+struct WeakConservationForm <: AbstractResidualForm 
+    mapping_form::AbstractMappingForm
+    coupling_form::AbstractCouplingForm
+end
+
+function WeakConservationForm()
+    return WeakConservationForm(StandardMapping(), StandardCoupling())
+end
 
 """
     Make operators for strong conservation form
@@ -36,7 +44,7 @@ end
     Make operators for weak conservation form
 """
 function make_operators(spatial_discretization::SpatialDiscretization{d}, 
-    ::WeakConservationForm) where {d}
+    form::WeakConservationForm) where {d}
 
     @unpack N_el, M = spatial_discretization
     @unpack ADVw, V, R, P, W, B = spatial_discretization.reference_approximation
@@ -50,8 +58,14 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
             VOL = (ADVw[1],)
             NTR = (Diagonal(nrstJ[1]) * R * P,)
         else
-            VOL = Tuple(sum(0.5*ADVw[m] * Diagonal(Λ_q[:,m,n,k]) +
-            0.5*transpose(P * Diagonal(Λ_q[:,m,n,k]) * V) * ADVw[m]  for m in 1:d) for n in 1:d) 
+            if form.mapping_form isa SkewSymmetricMapping
+                VOL = Tuple(sum(0.5*ADVw[m] * Diagonal(Λ_q[:,m,n,k]) +
+                    0.5*transpose(P * Diagonal(Λ_q[:,m,n,k]) * V) * ADVw[m] 
+                    for m in 1:d) for n in 1:d)
+            else
+                VOL = Tuple(sum(ADVw[m] * Diagonal(Λ_q[:,m,n,k]) for m in 1:d)  
+                    for n in 1:d)
+            end
             NTR = Tuple(sum(Diagonal(nrstJ[m]) * R * P * 
                 Diagonal(Λ_q[:,m,n,k]) for m in 1:d) for n in 1:d)
         end
@@ -161,9 +175,16 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                 conservation_law.first_order_flux, 
                 convert(Matrix,operators[k].V * u[:,:,k]))
 
-            f_star = @timeit "eval numerical flux" numerical_flux(
-                conservation_law.first_order_numerical_flux,
-                u_facet[:,:,k], u_out, operators[k].scaled_normal)
+            if form.coupling_form isa SkewSymmetricCoupling
+                f_star = @timeit "eval numerical flux" numerical_flux(
+                    conservation_law.first_order_numerical_flux,
+                    u_facet[:,:,k], u_out, operators[k].scaled_normal,
+                    f, operators[k].NTR)
+            else
+                f_star = @timeit "eval numerical flux" numerical_flux(
+                    conservation_law.first_order_numerical_flux,
+                    u_facet[:,:,k], u_out, operators[k].scaled_normal)
+            end
             
             if isnothing(conservation_law.source_term)
                 s = nothing

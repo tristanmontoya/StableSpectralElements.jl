@@ -27,6 +27,9 @@ function physical_flux(flux::ConstantLinearAdvectionFlux{d},
     return Tuple(flux.a[m] * u for m in 1:d)
 end
 
+"""
+Numerical flux for standard coupling
+"""
 function numerical_flux(flux::ConstantLinearAdvectionNumericalFlux{d}, 
     u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
     n::NTuple{d, Vector{Float64}}) where {d}
@@ -36,4 +39,19 @@ function numerical_flux(flux::ConstantLinearAdvectionNumericalFlux{d},
     
     # returns vector of length N_zeta 
     return 0.5*a_n.*(u_in + u_out) - 0.5*flux.λ*abs.(a_n).*(u_out - u_in)
+end
+
+"""
+Numerical flux for skew-symmetric coupling
+"""
+function numerical_flux(flux::ConstantLinearAdvectionNumericalFlux{d}, 
+    u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
+    n::NTuple{d, Vector{Float64}}, f_vol_in::NTuple{d,Matrix{Float64}},
+    NTR::NTuple{d,Union{LinearMap,AbstractMatrix}}) where {d}
+
+    a_n = sum(flux.a[m].*n[m] for m in 1:d)
+
+    f_in = sum(NTR[m] * f_vol_in[m][:,1] for m in 1:d)
+    
+    return 0.5*(f_in + a_n.*u_out) + 0.5*flux.λ*abs.(a_n).*(u_out - u_in)
 end

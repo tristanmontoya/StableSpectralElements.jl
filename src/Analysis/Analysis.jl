@@ -10,6 +10,8 @@ module Analysis
     using SparseArrays: sparse, blockdiag, kron
     using Arpack: eigs
     using OrdinaryDiffEq: OrdinaryDiffEqAlgorithm, ODESolution, solve, RK4
+    using PrettyTables
+    using Markdown
 
     using ..ConservationLaws: ConservationLaw
     using ..Mesh: uniform_periodic_mesh
@@ -20,7 +22,7 @@ module Analysis
 
     import PyPlot; const plt = PyPlot
 
-    export AbstractAnalysis, AbstractAnalysisResults, analyze, save_analysis, plot_analysis
+    export AbstractAnalysis, AbstractAnalysisResults, analyze, save_analysis, plot_analysis, tabulate_analysis
 
     abstract type AbstractAnalysis end
     abstract type AbstractAnalysisResults end

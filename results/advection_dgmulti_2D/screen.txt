@@ -1,9 +1,2 @@
-writing time step 32  t = 0.10285189544531595
-writing time step 64  t = 0.20570379089063223
-writing time step 96  t = 0.3085556863359481
-writing time step 128  t = 0.4114075817812636
-writing time step 160  t = 0.514259477226579
-writing time step 192  t = 0.6171113726718945
-writing time step 224  t = 0.71996326811721
-writing time step 256  t = 0.8228151635625255
-writing time step 288  t = 0.925667059007841
+writing time step 2546  t = 0.5000816291391413
+writing time step 5092  t = 0.9999999999999998
