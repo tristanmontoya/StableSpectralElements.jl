@@ -1,12 +1,17 @@
-struct StrongConservationForm <: AbstractResidualForm end
+struct StrongConservationForm <: AbstractResidualForm 
+    mapping_form::AbstractMappingForm
+end
 
 struct WeakConservationForm <: AbstractResidualForm 
     mapping_form::AbstractMappingForm
-    coupling_form::AbstractCouplingForm
+end
+
+function StrongConservationForm()
+    return StrongConservationForm(StandardMapping())
 end
 
 function WeakConservationForm()
-    return WeakConservationForm(StandardMapping(), StandardCoupling())
+    return WeakConservationForm(StandardMapping())
 end
 
 """
@@ -47,7 +52,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     form::WeakConservationForm) where {d}
 
     @unpack N_el, M = spatial_discretization
-    @unpack ADVw, V, R, P, W, B = spatial_discretization.reference_approximation
+    @unpack ADVw, V, R, P, W, B, D = spatial_discretization.reference_approximation
     @unpack nrstJ = 
         spatial_discretization.reference_approximation.reference_element
     @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
@@ -62,10 +67,19 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
                 VOL = Tuple(sum(0.5*ADVw[m] * Diagonal(Λ_q[:,m,n,k]) +
                     0.5*transpose(P * Diagonal(Λ_q[:,m,n,k]) * V) * ADVw[m] 
                     for m in 1:d) for n in 1:d)
+
+            elseif form.mapping_form isa CreanMapping
+                VOL = Tuple((
+                    sum(0.5 * ADVw[m] * Diagonal(Λ_q[:,m,n,k]) * V -
+                        0.5 * V' * Diagonal(Λ_q[:,m,n,k]) * (ADVw[m])' 
+                        for m in 1:d) + 
+                        0.5 * R' * B * Diagonal(nJf[n][:,k]) * R) * 
+                        P for n in 1:d)
             else
                 VOL = Tuple(sum(ADVw[m] * Diagonal(Λ_q[:,m,n,k]) for m in 1:d)  
                     for n in 1:d)
             end
+    
             NTR = Tuple(sum(Diagonal(nrstJ[m]) * R * P * 
                 Diagonal(Λ_q[:,m,n,k]) for m in 1:d) for n in 1:d)
         end
@@ -175,16 +189,9 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                 conservation_law.first_order_flux, 
                 convert(Matrix,operators[k].V * u[:,:,k]))
 
-            if form.coupling_form isa SkewSymmetricCoupling
-                f_star = @timeit "eval numerical flux" numerical_flux(
-                    conservation_law.first_order_numerical_flux,
-                    u_facet[:,:,k], u_out, operators[k].scaled_normal,
-                    f, operators[k].NTR)
-            else
-                f_star = @timeit "eval numerical flux" numerical_flux(
-                    conservation_law.first_order_numerical_flux,
-                    u_facet[:,:,k], u_out, operators[k].scaled_normal)
-            end
+            f_star = @timeit "eval numerical flux" numerical_flux(
+                conservation_law.first_order_numerical_flux,
+                u_facet[:,:,k], u_out, operators[k].scaled_normal)
             
             if isnothing(conservation_law.source_term)
                 s = nothing

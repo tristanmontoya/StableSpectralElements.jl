@@ -21,8 +21,7 @@ module Operators
         size(C.σᵢ,1)*size(C.σᵢ,2))
 
     function LinearAlgebra.mul!(y::AbstractVector, 
-        C::TensorProductMap,
-        x::AbstractVector)
+        C::TensorProductMap, x::AbstractVector)
         
         LinearMaps.check_dim_mul(y, C, x)
         @unpack A, B, σᵢ, σₒ = C
@@ -134,8 +133,7 @@ module Operators
     Base.size(R::SelectionMap) = (length(R.facet_ids),R.N_vol)
 
     function LinearAlgebra.mul!(y::AbstractVector, 
-        R::SelectionMap,
-        x::AbstractVector)
+        R::SelectionMap, x::AbstractVector)
         
         LinearMaps.check_dim_mul(y, R, x)
         @unpack facet_ids = R
@@ -159,6 +157,9 @@ module Operators
         return y
     end
 
+    """
+    Compute the flux-differencing term (D ⊙ F)1 
+    """
     function flux_diff(D::LinearMaps.WrappedMap, F::AbstractArray{Float64,3})
         
         N_p = size(D,1)
@@ -168,8 +169,6 @@ module Operators
         for l in 1:N_eq, i in 1:N_p
             y[i,l] = dot(D.lmap[i,:], F[i,:,l])
         end
-
         return 2.0*y
     end
-
 end

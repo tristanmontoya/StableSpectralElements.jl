@@ -1,15 +1,19 @@
 module Mesh
 
     using UnPack
-    using StartUpDG: RefElemData, MeshData, uniform_mesh, connect_mesh, build_node_maps, diff, make_periodic, geometric_factors, compute_normals, Line, Quad, Tri, Tet, Hex, Pyr
+    using StartUpDG: RefElemData, MeshData, uniform_mesh, connect_mesh, build_node_maps, diff, make_periodic, geometric_factors, compute_normals, AbstractElemShape, Line, Quad, Tri, Tet, Hex, Pyr
     using Random: rand, shuffle
     using StaticArrays: SMatrix
     using LinearAlgebra: inv, det, transpose, diagm
 
-    export GeometricFactors, uniform_periodic_mesh, warp_mesh
+    export GeometricFactors, uniform_periodic_mesh, warp_mesh, cartesian_mesh, Uniform, ZigZag, Collapsed
+
+    abstract type MeshGenStrategy end
+    struct Uniform <: MeshGenStrategy end
+    struct ZigZag <: MeshGenStrategy end
+    struct Collapsed <: MeshGenStrategy end
 
     struct GeometricFactors{d}
-
         # first dimension is node index, second is element
         J_q::Matrix{Float64}
 
@@ -19,7 +23,6 @@ module Mesh
 
         # d-tuple of matrices, where first is element index,
         nJf::NTuple{d, Matrix{Float64}}
-
     end
 
     function warp_mesh(mesh::MeshData{2}, 
@@ -41,48 +44,17 @@ module Mesh
 
     function uniform_periodic_mesh(reference_element::RefElemData{2}, 
         limits::NTuple{2,NTuple{2,Float64}}, M::NTuple{2,Int};
-        random_rotate::Bool=false, collapsed::Bool=false)
+        random_rotate::Bool=false, strategy::MeshGenStrategy=Uniform())
 
-        if reference_element.elementType isa Tri && collapsed
-
-            Nquad =  (M[1]+1)*(M[2]+1)
-            Nmid =  M[1]*M[2]
-            Nv = Nquad + Nmid
-            VX = Vector{Float64}(undef, Nv)
-            VY = Vector{Float64}(undef, Nv)
-            EtoV = Matrix{Int64}(undef, 4*M[1]*M[2], 3)
-
-            (VX[1:Nquad], VY[1:Nquad]), _ = uniform_mesh(Quad(), M[1], M[2])
-            
-            for i in 1:M[1]
-                for j in 1:M[2]
-                    m = (j-1)*M[2] + i
-                    bot_left = (j-1)*(M[2]+1) + i  # bottom left
-                    bot_right = j*(M[2]+1) + i  # top left
-                    mid = Nquad+m
-                    top_left = bot_left + 1
-                    top_right = bot_right + 1
-
-                    VX[mid] = 0.5*(VX[bot_left] + VX[bot_right])
-                    VY[mid]= 0.5*(VY[bot_left] + VY[top_left])
-                    EtoV[(m-1)*4+1:m*4,:] = [
-                        top_left mid bot_left;
-                        bot_left mid bot_right;
-                        bot_right mid top_right;
-                        top_right mid top_left]
-                end
-            end
-        else
-            (VX, VY), EtoV = uniform_mesh(reference_element.elementType, 
-                M[1], M[2])
+        (VX, VY), EtoV = cartesian_mesh(reference_element.elementType, 
+            M, strategy)
         
-            if random_rotate
-                for k in 1:size(EtoV,1)
-                    len = size(EtoV,2)
-                    step = rand(0:len-1)
-                    row = EtoV[k,:]
-                    EtoV[k,:] = vcat(row[end-step+1:end], row[1:end-step])
-                end
+        if random_rotate
+            for k in 1:size(EtoV,1)
+                len = size(EtoV,2)
+                step = rand(0:len-1)
+                row = EtoV[k,:]
+                EtoV[k,:] = vcat(row[end-step+1:end], row[1:end-step])
             end
         end
 
@@ -92,6 +64,71 @@ module Mesh
                 EtoV, reference_element))
     end
 
+    function cartesian_mesh(::AbstractElemShape, 
+        M::NTuple{2,Int}, ::Uniform)
+        return uniform_mesh(reference_element.elementType, 
+            M[1], M[2])
+    end
+
+    function cartesian_mesh(::Tri,  M::NTuple{2,Int}, ::Collapsed)
+
+        Nquad = (M[1]+1)*(M[2]+1)
+        Nmid = M[1]*M[2]
+        Nv = Nquad + Nmid
+        VX = Vector{Float64}(undef, Nv)
+        VY = Vector{Float64}(undef, Nv)
+        EtoV = Matrix{Int64}(undef, 4*M[1]*M[2], 3)
+
+        (VX[1:Nquad], VY[1:Nquad]), _ = uniform_mesh(Quad(), M[1], M[2])
+        
+        for i in 1:M[1]
+            for j in 1:M[2]
+                m = (j-1)*M[2] + i
+                bot_left = (j-1)*(M[2]+1) + i  # bottom left
+                bot_right = j*(M[2]+1) + i  
+                mid = Nquad+m
+                top_left = bot_left + 1
+                top_right = bot_right + 1
+
+                VX[mid] = 0.5*(VX[bot_left] + VX[bot_right])
+                VY[mid]= 0.5*(VY[bot_left] + VY[top_left])
+                EtoV[(m-1)*4+1:m*4,:] = [
+                    top_left mid bot_left;
+                    bot_left mid bot_right;
+                    bot_right mid top_right;
+                    top_right mid top_left]
+            end
+        end
+        return (VX, VY), EtoV
+    end
+
+    function cartesian_mesh(::Tri,  M::NTuple{2,Int}, ::ZigZag)
+        if !(iseven(M[1]) && iseven(M[2]))
+            return nothing
+        end
+
+        (VX,VY), _ = uniform_mesh(Quad(), M[1], M[2])
+        EtoV = Matrix{Int64}(undef, 0, 3)
+        for i in 1:2:(M[1]-1)
+            for j in 1:2:(M[2]-1)
+                bot_left = (j-1)*(M[2]+1) + i
+                bot_mid = j*(M[2]+1) + i
+                bot_right = (j+1)*(M[2]+1) + i
+                EtoV =vcat(EtoV,[
+                    bot_left+1 bot_left bot_mid ;
+                    bot_mid bot_mid+1 bot_left+1 ;
+                     bot_mid bot_right bot_right+1;
+                    bot_right+1 bot_mid+1 bot_mid ;
+                    bot_left+1 bot_mid+1 bot_mid+2 ;
+                    bot_mid+2 bot_left+2 bot_left+1 ;
+                    bot_mid+2 bot_mid+1 bot_right+1;
+                    bot_right+1 bot_right+2 bot_mid+2][:,end:-1:1])
+            end
+        end
+        return (VX, VY), EtoV
+    end
+    
+    
     function GeometricFactors(mesh::MeshData{d}, 
         reference_element::RefElemData{d}) where {d}
 

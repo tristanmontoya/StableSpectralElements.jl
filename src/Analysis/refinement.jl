@@ -146,18 +146,17 @@ function tabulate_analysis(results::RefinementAnalysisResults; e=1,
         results.energy[:,e], results.error[:,e], results.eoc[:,e])
 
     if print_latex
-        latex_header = ["\$M\$", "Conservation Metric", "Energy Metric",
+        latex_header = ["Elements", "Conservation Metric", "Energy Metric",
             "\$L^2\$ Error", "Order"]
         pretty_table(tab, header=latex_header, backend = Val(:latex),
-            formatters = (ft_nomissing, ft_printf("%d", [1,]), ft_printf("%.5e", [2,]), ft_printf("%1.5f", [3,])), tf = tf_latex_booktabs)
+            formatters = (ft_nomissing, ft_printf("%d", [1,]), ft_printf("%.5e", [2,3,4]), ft_printf("%1.5f", [5,])), tf = tf_latex_booktabs)
     end
 
-    return pretty_table(String, tab, header=["M", "Conservation Metric",
+    return pretty_table(String, tab, header=["Elements", "Conservation Metric",
         "Energy Metric", "L² Error", "Order"],
         formatters = (ft_nomissing, ft_printf("%d", [1,]), 
             ft_printf("%.5e", [2,3,4,]),
         ft_printf("%1.5f", [5,])),
-        
         tf = tf_markdown)
 end
     

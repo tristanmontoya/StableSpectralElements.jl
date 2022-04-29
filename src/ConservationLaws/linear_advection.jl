@@ -35,9 +35,9 @@ function numerical_flux(flux::ConstantLinearAdvectionNumericalFlux{d},
     n::NTuple{d, Vector{Float64}}) where {d}
     # Note that if you give it scaled normal nJf, 
     # the flux will be appropriately scaled by Jacobian too 
-    a_n = sum(flux.a[m].*n[m] for m in 1:d) 
+    a_n = sum(flux.a[m].*n[m] for m in 1:d)
     
-    # returns vector of length N_zeta 
+    # returns vector of length N_zeta
     return 0.5*a_n.*(u_in + u_out) - 0.5*flux.λ*abs.(a_n).*(u_out - u_in)
 end
 
@@ -52,6 +52,6 @@ function numerical_flux(flux::ConstantLinearAdvectionNumericalFlux{d},
     a_n = sum(flux.a[m].*n[m] for m in 1:d)
 
     f_in = sum(NTR[m] * f_vol_in[m][:,1] for m in 1:d)
-    
+
     return 0.5*(f_in + a_n.*u_out) + 0.5*flux.λ*abs.(a_n).*(u_out - u_in)
 end

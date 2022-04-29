@@ -1,0 +1,9 @@
+writing time step 31  t = 0.1096015510839149
+writing time step 62  t = 0.21920310216782943
+writing time step 93  t = 0.3288046532517445
+writing time step 124  t = 0.43840620433565985
+writing time step 155  t = 0.5480077554195751
+writing time step 186  t = 0.6576093065034905
+writing time step 217  t = 0.7672108575874058
+writing time step 248  t = 0.8768124086713212
+writing time step 279  t = 0.9864139597552365

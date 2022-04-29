@@ -12,7 +12,7 @@ module Solvers
     using ..ParametrizedFunctions: AbstractParametrizedFunction, AbstractParametrizedFunction, evaluate
     using ..Operators: flux_diff
 
-    export AbstractResidualForm, AbstractPhysicalOperators, AbstractMappingForm, AbstractCouplingForm, AbstractStrategy, PhysicaOperators, Eager, Lazy, Solver, StandardMapping, SkewSymmetricMapping, StandardCoupling, SkewSymmetricCoupling, initialize, semidiscretize, precompute, apply_operators!, combine, get_dof, rhs!
+    export AbstractResidualForm, AbstractPhysicalOperators, AbstractMappingForm, AbstractCouplingForm, AbstractStrategy, PhysicaOperators, Eager, Lazy, Solver, StandardMapping, SkewSymmetricMapping, CreanMapping, StandardCoupling, SkewSymmetricCoupling, initialize, semidiscretize, precompute, apply_operators!, combine, get_dof, rhs!
 
     abstract type AbstractResidualForm end
     abstract type AbstractMappingForm end
@@ -24,8 +24,7 @@ module Solvers
     struct Lazy <: AbstractStrategy end
     struct StandardMapping <: AbstractMappingForm end
     struct SkewSymmetricMapping <: AbstractMappingForm end
-    struct StandardCoupling <: AbstractCouplingForm end
-    struct SkewSymmetricCoupling <: AbstractCouplingForm end
+    struct CreanMapping <: AbstractMappingForm end
 
     struct Solver{ResidualForm,PhysicalOperators,d,N_eq}
         conservation_law::ConservationLaw{d,N_eq}

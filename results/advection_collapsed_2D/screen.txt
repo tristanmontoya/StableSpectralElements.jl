@@ -1,1 +1,4 @@
-writing time step 1415  t = 0.5002780476894954
+writing time step 3960  t = 0.5000255095533124
+writing time step 3960  t = 0.5000255095533124
+writing time step 7920  t = 0.9999999999999998
+writing time step 7920  t = 0.9999999999999998

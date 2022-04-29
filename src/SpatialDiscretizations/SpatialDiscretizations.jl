@@ -103,6 +103,7 @@ module SpatialDiscretizations
         d = size(Λ_q, 3)
         J_qJ_ref = Matrix{Float64}(undef, N_q, N_el)
         Λ_qΛ_ref = zeros(N_q, d, d, N_el)
+
         for k in 1:N_el
             J_qJ_ref[:,k] = J_q[:,k] .* J_ref
             for i in 1:N_q
@@ -159,11 +160,10 @@ module SpatialDiscretizations
     """
     function centroids(
         spatial_discretization::SpatialDiscretization{d}) where {d}
-        
-        vertices = Tuple(spatial_discretization.mesh.VXYZ[m][
-            spatial_discretization.mesh.EToV] for m in 1:d)
 
-        return [Tuple(sum(vertices[m][k,:])/length(vertices[m][k,:]) 
+        @unpack xyz = spatial_discretization.mesh
+
+        return [Tuple(sum(xyz[m][:,k])/length(xyz[m][:,k]) 
             for m in 1:d)
             for k in 1:spatial_discretization.N_el]
     end

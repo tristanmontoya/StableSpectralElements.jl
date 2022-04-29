@@ -9,7 +9,7 @@ function reference_geometric_factors(::CollapsedTri,
     η::Union{NTuple{2,Float64},NTuple{2,Vector{Float64}}})
     
     N = size(η[1],1)
-    J_ref = (x->2.0/(1.0-x)).(η[2])
+    J_ref = (x->0.5*(1.0-x)).(η[2])
     Λ_ref = Array{Float64, 3}(undef, N, 2, 2)
     Λ_ref[:,1,1] = ones(N)
     Λ_ref[:,1,2] = zeros(N)
