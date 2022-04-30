@@ -64,10 +64,9 @@ module Mesh
                 EtoV, reference_element))
     end
 
-    function cartesian_mesh(::AbstractElemShape, 
+    function cartesian_mesh(elem_type::AbstractElemShape, 
         M::NTuple{2,Int}, ::Uniform)
-        return uniform_mesh(reference_element.elementType, 
-            M[1], M[2])
+        return uniform_mesh(elem_type, M[1], M[2])
     end
 
     function cartesian_mesh(::Tri,  M::NTuple{2,Int}, ::Collapsed)
