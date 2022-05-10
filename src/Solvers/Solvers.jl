@@ -41,7 +41,7 @@ module Solvers
         SRC::LinearMap
         M::AbstractMatrix
         V::LinearMap
-        R::LinearMap
+        Vf::LinearMap
         NTR::NTuple{d,Union{LinearMap,AbstractMatrix}} 
         scaled_normal::NTuple{d, Vector{Float64}}
     end
@@ -108,13 +108,13 @@ module Solvers
     end
 
     function precompute(operators::PhysicalOperators{d}) where {d}
-        @unpack VOL, FAC, SRC, M, V, R, NTR, scaled_normal = operators
+        @unpack VOL, FAC, SRC, M, V, Vf, NTR, scaled_normal = operators
         inv_M = inv(M)
         return PhysicalOperators(
             Tuple(combine(inv_M*VOL[n]) for n in 1:d),
             combine(inv_M*FAC), 
             combine(inv_M*SRC),
-            M, V, R, NTR, scaled_normal)
+            M, V, Vf, NTR, scaled_normal)
     end
 
     function combine(operator::LinearMap)
@@ -267,7 +267,7 @@ module Solvers
         return residual
     end
 
-    export StrongConservationForm, WeakConservationForm
+    export StrongConservationForm, WeakConservationForm, MixedConservationForm
     include("conservation_form.jl")
 
     export StrongFluxDiffForm

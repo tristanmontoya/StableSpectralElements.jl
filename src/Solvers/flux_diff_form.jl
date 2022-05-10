@@ -1,34 +1,18 @@
-struct StrongFluxDiffForm <: AbstractResidualForm end
+struct StrongFluxDiffForm <: AbstractResidualForm 
+    mapping_form::AbstractMappingForm
+end
+
+function StrongFluxDiffForm()
+    return StrongFluxDiffForm(StandardMapping())
+end
 
 """
-    Make operators for (diagonal-E) flux differencing form
+    Make operators for strong (diagonal-E) flux differencing form
 """
 function make_operators(spatial_discretization::SpatialDiscretization{d}, 
-    ::StrongFluxDiffForm) where {d}
-
-    @unpack N_el, M = spatial_discretization
-    @unpack ADVs, V, R, P, W, B = spatial_discretization.reference_approximation
-    @unpack nrstJ = 
-        spatial_discretization.reference_approximation.reference_element
-    @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
-
-    operators = Array{PhysicalOperators}(undef, N_el)
-    for k in 1:N_el
-        if d == 1
-            VOL = (ADVs[1],)
-            NTR = (Diagonal(nrstJ[1]) * R * P,)
-        else
-            VOL = Tuple(sum(ADVs[m] * Diagonal(Λ_q[:,m,n,k])
-                for m in 1:d) for n in 1:d) 
-            NTR = Tuple(sum(Diagonal(nrstJ[m]) * R * P * 
-                Diagonal(Λ_q[:,m,n,k]) for m in 1:d) for n in 1:d)
-        end
-        FAC = -R' * B
-        SRC = V' * W * Diagonal(J_q[:,k])
-        operators[k] = PhysicalOperators(VOL, FAC, SRC, M[k], V, R, NTR,
-            Tuple(nJf[m][:,k] for m in 1:d))
-    end
-    return operators
+    form::StrongFluxDiffForm) where {d}
+    return make_operators(spatial_discretization,
+        StrongConservationForm(form.mapping_form))
 end
 
 """
@@ -42,14 +26,14 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
         @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
 
         N_el = size(operators)[1]
-        N_f = size(operators[1].R)[1]
+        N_f = size(operators[1].Vf)[1]
         u_facet = Array{Float64}(undef, N_f, N_eq, N_el)
 
         # get all facet state values
         for k in 1:N_el
             u_facet[:,:,k] = 
                 @timeit "extrapolate solution" convert(
-                    Matrix, operators[k].R * u[:,:,k])
+                    Matrix, operators[k].Vf * u[:,:,k])
         end
 
         # evaluate all local residuals

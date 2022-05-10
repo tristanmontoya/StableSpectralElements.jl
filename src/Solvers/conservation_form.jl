@@ -6,12 +6,20 @@ struct WeakConservationForm <: AbstractResidualForm
     mapping_form::AbstractMappingForm
 end
 
+struct MixedConservationForm <: AbstractResidualForm 
+    mapping_form::AbstractMappingForm
+end
+
 function StrongConservationForm()
     return StrongConservationForm(StandardMapping())
 end
 
 function WeakConservationForm()
     return WeakConservationForm(StandardMapping())
+end
+
+function MixedConservationForm()
+    return MixedConservationForm(CreanMapping())
 end
 
 """
@@ -21,7 +29,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     ::StrongConservationForm) where {d}
 
     @unpack N_el, M = spatial_discretization
-    @unpack ADVs, V, R, P, W, B = spatial_discretization.reference_approximation
+    @unpack ADVs, V, Vf, R, P, W, B = spatial_discretization.reference_approximation
     @unpack nrstJ = 
         spatial_discretization.reference_approximation.reference_element
     @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
@@ -30,16 +38,16 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     for k in 1:N_el
         if d == 1
             VOL = (ADVs[1],)
-            NTR = (Diagonal(nrstJ[1]) * R * P,)
+            NTR = (Diagonal(nrstJ[1]) * R,)
         else
             VOL = Tuple(sum(ADVs[m] * Diagonal(Λ_q[:,m,n,k])
                 for m in 1:d) for n in 1:d) 
-            NTR = Tuple(sum(Diagonal(nrstJ[m]) * R * P * 
+            NTR = Tuple(sum(Diagonal(nrstJ[m]) * R * 
                 Diagonal(Λ_q[:,m,n,k]) for m in 1:d) for n in 1:d)
         end
-        FAC = -R' * B
+        FAC = -Vf' * B
         SRC = V' * W * Diagonal(J_q[:,k])
-        operators[k] = PhysicalOperators(VOL, FAC, SRC, M[k], V, R, NTR,
+        operators[k] = PhysicalOperators(VOL, FAC, SRC, M[k], V, Vf, NTR,
             Tuple(nJf[m][:,k] for m in 1:d))
     end
     return operators
@@ -52,7 +60,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     form::WeakConservationForm) where {d}
 
     @unpack N_el, M = spatial_discretization
-    @unpack ADVw, V, R, P, W, B, D = spatial_discretization.reference_approximation
+    @unpack ADVw, V, Vf, R, P, W, B, D = spatial_discretization.reference_approximation
     @unpack nrstJ = 
         spatial_discretization.reference_approximation.reference_element
     @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
@@ -61,55 +69,90 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     for k in 1:N_el
         if d == 1
             VOL = (ADVw[1],)
-            NTR = (Diagonal(nrstJ[1]) * R * P,)
+            NTR = (Diagonal(nrstJ[1]) * R,)
         else
             if form.mapping_form isa SkewSymmetricMapping
-                VOL = Tuple(sum(0.5*ADVw[m] * Diagonal(Λ_q[:,m,n,k]) +
-                    0.5*transpose(P * Diagonal(Λ_q[:,m,n,k]) * V) * ADVw[m] 
-                    for m in 1:d) for n in 1:d)
+                VOL = Tuple(
+                    0.5*sum(ADVw[m] * Diagonal(Λ_q[:,m,n,k]) +
+                        (P * Diagonal(Λ_q[:,m,n,k]) * V)' * ADVw[m] 
+                        for m in 1:d)
+                    for n in 1:d)
 
             elseif form.mapping_form isa CreanMapping
-                VOL = Tuple((
-                    sum(0.5 * ADVw[m] * Diagonal(Λ_q[:,m,n,k]) * V -
-                        0.5 * V' * Diagonal(Λ_q[:,m,n,k]) * (ADVw[m])' 
-                        for m in 1:d) + 
-                        0.5 * R' * B * Diagonal(nJf[n][:,k]) * R) * 
-                        P for n in 1:d)
+                VOL = Tuple(
+                        0.5*(sum(ADVw[m] * Diagonal(Λ_q[:,m,n,k]) -
+                            V' * Diagonal(Λ_q[:,m,n,k]) * W * D[m] 
+                            for m in 1:d) +
+                            Vf' * B * Diagonal(nJf[n][:,k]) * R)
+                        for n in 1:d)
             else
                 VOL = Tuple(sum(ADVw[m] * Diagonal(Λ_q[:,m,n,k]) for m in 1:d)  
                     for n in 1:d)
             end
-    
-            NTR = Tuple(sum(Diagonal(nrstJ[m]) * R * P * 
+            
+            # not used
+            NTR = Tuple(sum(Diagonal(nrstJ[m]) * R * 
                 Diagonal(Λ_q[:,m,n,k]) for m in 1:d) for n in 1:d)
         end
-        FAC = -R' * B
+        FAC = -Vf' * B
         SRC = V' * W * Diagonal(J_q[:,k])
-        operators[k] = PhysicalOperators(VOL, FAC, SRC, M[k], V, R, NTR,
+        operators[k] = PhysicalOperators(VOL, FAC, SRC, M[k], V, Vf, NTR,
             Tuple(nJf[m][:,k] for m in 1:d))
     end
     return operators
 end
 
 """
-    Evaluate semi-discrete residual for strong conservation form
+    Make operators for mixed conservation form
+"""
+function make_operators(spatial_discretization::SpatialDiscretization{d}, 
+    ::MixedConservationForm) where {d}
+    @unpack N_el, M = spatial_discretization
+    @unpack ADVw, V, Vf, R, P, W, B, D = spatial_discretization.reference_approximation
+    @unpack nrstJ = 
+        spatial_discretization.reference_approximation.reference_element
+    @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
+
+    operators = Array{PhysicalOperators}(undef, N_el)
+    for k in 1:N_el
+        if d == 1
+            VOL = (ADVw[1],)
+            NTR = (Diagonal(nrstJ[1]) * Vf,)
+        else
+            VOL = Tuple(
+                0.5*sum(V' * Diagonal(Λ_q[:,m,n,k]) * W * D[m] -
+                    ADVw[m] * Diagonal(Λ_q[:,m,n,k])
+                    for m in 1:d)
+                for n in 1:d)
+            NTR = Tuple(0.5 * Vf' * B * Diagonal(nJf[n][:,k]) * R
+                for n in 1:d)
+        end
+        FAC = -Vf' * B
+        SRC = V' * W * Diagonal(J_q[:,k])
+        operators[k] = PhysicalOperators(VOL, FAC, SRC, M[k], V, Vf, NTR,
+            Tuple(nJf[m][:,k] for m in 1:d))
+    end
+    return operators
+end
+"""
+    Evaluate semi-discrete residual for strong/mixed conservation form
 """
 function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
-    solver::Solver{StrongConservationForm, <:AbstractPhysicalOperators, d, N_eq}, t::Float64; print::Bool=false) where {d, N_eq}
+    solver::Solver{Union{StrongConservationForm,MixedConservationForm}, <:AbstractPhysicalOperators, d, N_eq}, t::Float64; print::Bool=false) where {d, N_eq}
 
     @timeit "rhs!" begin
 
         @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
 
         N_el = size(operators)[1]
-        N_f = size(operators[1].R)[1]
+        N_f = size(operators[1].Vf)[1]
         u_facet = Array{Float64}(undef, N_f, N_eq, N_el)
 
         # get all facet state values
         for k in 1:N_el
             u_facet[:,:,k] = 
                 @timeit "extrapolate solution" convert(
-                    Matrix, operators[k].R * u[:,:,k])
+                    Matrix, operators[k].Vf * u[:,:,k])
         end
 
         # evaluate all local residuals
@@ -163,14 +206,14 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
         @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
 
         N_el = size(operators)[1]
-        N_f = size(operators[1].R)[1]
+        N_f = size(operators[1].Vf)[1]
         u_facet = Array{Float64}(undef, N_f, N_eq, N_el)
 
         # get all facet state values
         for k in 1:N_el
             u_facet[:,:,k] = 
                 @timeit "extrapolate solution" convert(
-                    Matrix, operators[k].R * u[:,:,k])
+                    Matrix, operators[k].Vf * u[:,:,k])
         end
 
         # evaluate all local residuals

@@ -34,16 +34,12 @@ function ReferenceApproximation(approx_type::DGSEM,
         D = (LinearMap(∇VDM / VDM),)
 
         if volume_quadrature_rule isa LGLQuadrature
-            R = SelectionMap(facet_node_ids(Line(),p+1),p+1)
+            Vf = SelectionMap(facet_node_ids(Line(),p+1),p+1)
         else
-            R = LinearMap(vandermonde(elem_type,p,rstf[1]) / VDM) 
+            Vf = LinearMap(vandermonde(elem_type,p,rstf[1]) / VDM) 
         end
 
         V_plot = LinearMap(vandermonde(elem_type, p, rstp[1]) / VDM)
-        V = LinearMap(I, N_q)
-        P = LinearMap(I, N_q)
-        W = LinearMap(Diagonal(wq))
-        B = LinearMap(Diagonal(wf))
 
     elseif elem_type isa Quad
 
@@ -72,24 +68,20 @@ function ReferenceApproximation(approx_type::DGSEM,
         # extrapolation operators
         if (volume_quadrature_rule isa LGLQuadrature && 
                 facet_quadrature_rule isa LGLQuadrature)
-            R = SelectionMap(facet_node_ids(Quad(),(p+1,p+1)),N_p)
+            Vf = SelectionMap(facet_node_ids(Quad(),(p+1,p+1)),N_p)
         elseif typeof(volume_quadrature_rule) == typeof(facet_quadrature_rule)
-            R = [
+            Vf = [
                 TensorProductMap(I, R_L, sigma, [i for i in 1:p+1, j in 1:1]) ; 
                 TensorProductMap(I, R_R, sigma, [i for i in 1:p+1, j in 1:1]) ; 
                 TensorProductMap(R_L, I, sigma, [j for i in 1:1, j in 1:p+1]) ; 
                 TensorProductMap(R_R, I ,sigma, [j for i in 1:1, j in 1:p+1])] 
         else
-            R = LinearMap(vandermonde(elem_type,p,rstf...) / 
+            Vf = LinearMap(vandermonde(elem_type,p,rstf...) / 
                 vandermonde(elem_type,p,rstq...))
         end
 
         V_plot = LinearMap(vandermonde(elem_type, p, rstp...) / 
             vandermonde(elem_type, p, rstq...))
-        V = LinearMap(I, N_q)
-        P = LinearMap(I, N_q)
-        W = LinearMap(Diagonal(wq))
-        B = LinearMap(Diagonal(wf))
         
         # sum-factorized lazy evaluation of (D₁, D₂) = (I ⊗ D, D ⊗ I) 
         D = (TensorProductMap(I, D_1D, sigma, sigma),
@@ -105,17 +97,14 @@ function ReferenceApproximation(approx_type::DGSEM,
         @unpack rstp, rstq, rstf, wq, wf = reference_element
         VDM, ∇VDM... = basis(elem_type, p, rstq...)
         D = Tuple(LinearMap(∇VDM[m] / VDM) for m in 1:d)
-        R = LinearMap(vandermonde(elem_type,p,rstf...) / VDM) 
+        Vf = LinearMap(vandermonde(elem_type,p,rstf...) / VDM) 
         V_plot = LinearMap(vandermonde(elem_type, p, rstp...) / VDM)
-        V = LinearMap(I, N_q)
-        P = LinearMap(I, N_q)
-        W = LinearMap(Diagonal(wq))
-        B = LinearMap(Diagonal(wf))
-        
+
     end
 
     V = LinearMap(I, N_q)
     P = LinearMap(I, N_q)
+    R = Vf * P
     W = LinearMap(Diagonal(wq))
     B = LinearMap(Diagonal(wf))
 
@@ -126,6 +115,6 @@ function ReferenceApproximation(approx_type::DGSEM,
     ADVw = Tuple(D[m]' * W for m in 1:d)
 
     return ReferenceApproximation{d}(approx_type, N_p, N_q, N_f, 
-        reference_element, D, V, R, P, W, B, ADVs, ADVw, V_plot,
+        reference_element, D, V, Vf, R, P, W, B, ADVs, ADVw, V_plot,
         NoMapping())
 end

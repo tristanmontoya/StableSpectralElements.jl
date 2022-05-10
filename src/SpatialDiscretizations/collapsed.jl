@@ -48,7 +48,7 @@ function init_face_data(::CollapsedTri, p,
     return rf,sf,wf,nrJ,nsJ
 end
 
-function ReferenceApproximation(approx_type::DGSEM, 
+function ReferenceApproximation(approx_type::Union{DGSEM,DGMulti}, 
     elem_type::CollapsedTri;
     volume_quadrature_rule::NTuple{2,AbstractQuadratureRule}=(
         LGQuadrature(),LGQuadrature()),
@@ -59,8 +59,7 @@ function ReferenceApproximation(approx_type::DGSEM,
 
     @unpack p = approx_type
     d = 2
-    N_p = (p+1)*(p+1)
-    N_q = N_p
+    N_q = (p+1)*(p+1)
     N_f = 3*(p+1)
 
     # reference element data structure
@@ -79,15 +78,15 @@ function ReferenceApproximation(approx_type::DGSEM,
     rp, sp = equi_nodes(Tri(), N_plot)
     Vp = vandermonde(Tri(), mapping_degree, rp, sp) / VDM
     rf, sf, wf, nrJ, nsJ = init_face_data(elem_type, p, facet_quadrature_rule)
-    Vf = vandermonde(Tri(), mapping_degree, rf, sf) / VDM
+    R = vandermonde(Tri(), mapping_degree, rf, sf) / VDM
     reference_element = RefElemData(Tri(), Polynomial(), mapping_degree, fv, V1,
                        tuple(r, s), VDM, vec(Fmask),
                        N_plot, tuple(rp, sp), Vp,
                        tuple(rq, sq), wq, Vq,
                        tuple(rf, sf), wf, 
-                       Vf, tuple(nrJ, nsJ),
+                       R, tuple(nrJ, nsJ),
                        M, Pq, (Dr, Ds),
-                       M \  (Vf' * diagm(wf)))
+                       M \  (R' * diagm(wf)))
     @unpack rstp, rstq = reference_element
 
     # one-dimensional operators
@@ -125,6 +124,10 @@ function ReferenceApproximation(approx_type::DGSEM,
             TensorProductMap(I, R_L,  
                 sigma, [i for i in p+1:-1:1, j in 1:1])] # left, downwards
     else 
+        r_1d_1, _ = quadrature(face_type(Tri()), 
+        facet_quadrature_rule[1], p+1)
+        r_1d_2, _ = quadrature(face_type(Tri()), 
+            facet_quadrature_rule[2], p+1)
         R = [LinearMap(vandermonde(Line(), p, r_1d_1) / VDM_1) *
             TensorProductMap( R_B, I, sigma, [j for i in 1:1, j in 1:p+1]);
         LinearMap(vandermonde(Line(), p, r_1d_2) / VDM_2) * 
@@ -153,15 +156,32 @@ function ReferenceApproximation(approx_type::DGSEM,
             reference_geometric_factors(elem_type, (η1, η2))...)
     end
 
-    V_plot = LinearMap(vandermonde(Tri(), p, rstp...) / 
-        vandermonde(Tri(), p, rstq...))
-    V = LinearMap(I, N_q)
-    P = LinearMap(I, N_q)
-    ADVs = Tuple(-1.0*Diagonal(wq)*D[m] for m in 1:d)
-    ADVw = Tuple(D[m]' * W for m in 1:d)
+    # add tensor products to this later...
+    if approx_type isa DGMulti
+        N_p = binomial(p+d, d)
+        V_modal = vandermonde(Tri(), p, rstq...)
+        V_plot = LinearMap(vandermonde(Tri(), p, rstp...))
+        V = LinearMap(V_modal)
+        inv_M = LinearMap(inv(V_modal' * Diagonal(wq) * V_modal))
+        P = inv_M * V' * W
+        Vf = R * V
+        ADVs = Tuple(-1.0*W*D[m] for m in 1:d)
+        ADVw = Tuple(V' * D[m]' * W for m in 1:d)
+    
+    else
+        N_p = N_q
+        V_plot = LinearMap(vandermonde(Tri(), p, rstp...) / 
+            vandermonde(Tri(), p, rstq...))
+        V = LinearMap(I, N_q)
+        P = LinearMap(I, N_q)
+        Vf = R
+        ADVs = Tuple(-1.0*W*D[m] for m in 1:d)
+        ADVw = Tuple(D[m]' * W for m in 1:d)
+
+    end
 
     return ReferenceApproximation{d}(approx_type, N_p, N_q, N_f, 
-        reference_element, D, V, R, P, W, B, ADVs, ADVw, V_plot,
+        reference_element, D, V, Vf, R, P, W, B, ADVs, ADVw, V_plot,
         reference_mapping)
 end
 

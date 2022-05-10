@@ -217,8 +217,8 @@ function plot_analysis(analysis::AbstractDynamicalAnalysis,
 end
 
 function plot_spectrum(analysis::AbstractDynamicalAnalysis, 
-    eigs::Vector{ComplexF64}; label="\\exp(\\tilde{\\lambda} t_s)", unit_circle=true, xlims=(-1.25,1.25), ylims=(-1.25,1.25),
-    xscale=0.02, yscale=0.07, title="spectrum.pdf")
+    eigs::Vector{ComplexF64}; label="\\exp(\\tilde{\\lambda} t_s)", unit_circle=true, xlims=nothing, ylims=nothing,
+    xscale=0.02, yscale=0.07, title="spectrum.pdf", numbering=true)
 
     if unit_circle
         t=collect(LinRange(0.0, 2.0*π,100))
@@ -233,7 +233,7 @@ function plot_spectrum(analysis::AbstractDynamicalAnalysis,
         xlims=xlims, ylims=ylims,legend=false,
         seriestype=:scatter)
 
-    if !unit_circle
+    if !unit_circle && numbering
         annotate!(real(eigs) .+ xscale*(xlims[2]-xlims[1]), 
             imag(eigs)+sign.(imag(eigs) .+ 1.0e-15)*yscale*(ylims[2]-ylims[1]),
             text.(1:length(eigs), :right, 8))

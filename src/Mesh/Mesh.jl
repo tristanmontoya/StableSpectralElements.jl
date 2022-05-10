@@ -103,6 +103,7 @@ module Mesh
 
     function cartesian_mesh(::Tri,  M::NTuple{2,Int}, ::ZigZag)
         if !(iseven(M[1]) && iseven(M[2]))
+            println("ERROR: ZigZag mesh must have even number of elements in each direction")
             return nothing
         end
 

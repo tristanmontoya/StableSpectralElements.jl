@@ -36,7 +36,7 @@ function ReferenceApproximation(approx_type::DGMulti,
 
         VDM, ∇VDM... = basis(elem_type, p, rstq...) 
         ∇V = Tuple(LinearMap(∇VDM[m]) for m in 1:d)
-        R = LinearMap(vandermonde(elem_type,p,rstf...))
+        Vf = LinearMap(vandermonde(elem_type,p,rstf...))
         V_plot = LinearMap(vandermonde(elem_type, p, rstp...))
     end
 
@@ -49,7 +49,10 @@ function ReferenceApproximation(approx_type::DGMulti,
     W = LinearMap(Diagonal(wq))
     B = LinearMap(Diagonal(wf))
     P = inv_M * V' * W
-    D = Tuple(inv_M * V' * W * ∇V[m] for m in 1:d)
+    R = Vf * P
+    
+    # D here is the nodal derivative operator
+    D = Tuple(∇V[m] * P for m in 1:d)
 
     # strong-form reference advection operator (no mass matrix)
     ADVs = Tuple(-V' * W * ∇V[m] * P for m in 1:d)
@@ -58,6 +61,6 @@ function ReferenceApproximation(approx_type::DGMulti,
     ADVw = Tuple(∇V[m]' * W for m in 1:d)
 
     return ReferenceApproximation{d}(approx_type, N_p, N_q, N_f, 
-        reference_element, D, V, R, P, W, B, ADVs, ADVw, V_plot, 
+        reference_element, D, V, Vf, R, P, W, B, ADVs, ADVw, V_plot, 
         NoMapping())
 end

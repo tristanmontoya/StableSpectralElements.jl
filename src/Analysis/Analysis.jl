@@ -22,7 +22,7 @@ module Analysis
 
     import PyPlot; const plt = PyPlot
 
-    export AbstractAnalysis, AbstractAnalysisResults, analyze, save_analysis, plot_analysis, tabulate_analysis
+    export AbstractAnalysis, AbstractAnalysisResults, analyze, save_analysis, plot_analysis, plot_spectrum, plot_modes, tabulate_analysis
 
     abstract type AbstractAnalysis end
     abstract type AbstractAnalysisResults end

@@ -38,6 +38,7 @@ module SpatialDiscretizations
         reference_element::RefElemData{d}
         D::NTuple{d, LinearMap}
         V::LinearMap
+        Vf::LinearMap
         R::LinearMap
         P::LinearMap
         W::LinearMap
@@ -60,7 +61,7 @@ module SpatialDiscretizations
     function SpatialDiscretization(mesh::MeshData{d},
         reference_approximation::ReferenceApproximation{d}) where {d}
 
-        @unpack reference_element = reference_approximation
+        @unpack reference_element, W = reference_approximation
 
         N_el = size(mesh.xyz[1])[2]
         geometric_factors = apply_reference_mapping(GeometricFactors(mesh,
@@ -68,25 +69,21 @@ module SpatialDiscretizations
             reference_approximation.reference_mapping)
 
         if reference_approximation.approx_type isa AbstractCollocatedApproximation
-            
             return SpatialDiscretization{d}(
                 mesh,
                 N_el,
                 reference_approximation,
                 geometric_factors,
-                [Diagonal(reference_element.wq) *
-                    Diagonal(geometric_factors.J_q[:,k]) for k in 1:N_el],
+                [W * Diagonal(geometric_factors.J_q[:,k]) for k in 1:N_el],
                 Tuple(reference_element.Vp * mesh.xyz[m] for m in 1:d))
 
         else 
-
             return SpatialDiscretization{d}(
                 mesh,
                 N_el,
                 reference_approximation,
                 geometric_factors,
-                [convert(Matrix, reference_approximation.V' * 
-                    Diagonal(reference_element.wq) *
+                [convert(Matrix, reference_approximation.V' * W *
                     Diagonal(geometric_factors.J_q[:,k]) * 
                     reference_approximation.V) for k in 1:N_el],
                 Tuple(reference_element.Vp * mesh.xyz[m] for m in 1:d))
@@ -109,7 +106,6 @@ module SpatialDiscretizations
             for i in 1:N_q
                 Λ_qΛ_ref[i,:,:,k] = Λ_q[i,:,:,k] * Λ_ref[i,:,:]
             end
-
         end
         return GeometricFactors{d}(J_qJ_ref, Λ_qΛ_ref, nJf)
     end
@@ -141,12 +137,29 @@ module SpatialDiscretizations
     """
     function check_sbp_property(
         reference_approximation::ReferenceApproximation{d}) where {d}       
-        @unpack W, V, D, R, B = reference_approximation
+        @unpack W, V, D, Vf, B = reference_approximation
         @unpack nrstJ = reference_approximation.reference_element
         
         return Tuple(maximum(abs.(convert(Matrix,
-            V'*W*V*D[m] + D[m]'*V'*W*V - R'*B*Diagonal(nrstJ[m])*R  
+            V'*W*D[m]*V + V' * D[m]'*W*V - Vf'*B*Diagonal(nrstJ[m])*Vf  
             ))) for m in 1:d)
+    end
+
+    function check_sbp_property(
+        spatial_discretization::SpatialDiscretization{d}, k::Int=1) where {d}
+
+        @unpack ADVw, V, Vf, D, P, B = spatial_discretization.reference_approximation
+        @unpack Λ_q, nJf = spatial_discretization.geometric_factors
+
+        S = Tuple((sum(0.5 * D[m]' * W * Diagonal(Λ_q[:,m,n,k]) * V -
+                0.5 * V' * Diagonal(Λ_q[:,m,n,k]) * W * D[m] * V
+                for m in 1:d) + 
+                0.5 * Vf' * B * Diagonal(nJf[n][:,k]) * Vf) for n in 1:d)
+
+        E = Tuple(Vf' * B * Diagonal(nJf[n][:,k]) * Vf for n in 1:d)
+            
+        return Tuple(maximum(abs.(convert(Matrix,
+            S[n] + S[n]' - E[n]))) for n in 1:d)
     end
 
     function meshgrid(x::Vector{Float64}, y::Vector{Float64})
@@ -176,6 +189,8 @@ module SpatialDiscretizations
 
     export DGMulti
     include("dgmulti.jl")
+
+    const DG = Union{DGSEM, DGMulti}
 
     export reference_geometric_factors
     include("collapsed.jl")

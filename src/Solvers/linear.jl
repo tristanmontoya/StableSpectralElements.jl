@@ -17,7 +17,6 @@ end
 function LinearAlgebra.mul!(y::AbstractVector, 
         L::LinearResidual,
         x::AbstractVector)
-    #println(x)
     u = reshape(x,(L.N_p,L.N_eq,L.N_el))
     dudt = Array{Float64}(undef,L.N_p,L.N_eq,L.N_el)
     rhs!(dudt,u,L.solver,0.0,print=false)
