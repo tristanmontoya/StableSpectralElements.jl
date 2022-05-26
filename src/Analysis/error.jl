@@ -19,12 +19,12 @@ end
 function ErrorAnalysis(results_path::String, ::ConservationLaw{d,N_eq},
     spatial_discretization::SpatialDiscretization{d}) where {d, N_eq}
 
-    @unpack reference_element, V = 
+    @unpack W, V = 
         spatial_discretization.reference_approximation
     @unpack geometric_factors, mesh, N_el = spatial_discretization
     
-    norm = QuadratureL2([Diagonal(reference_element.wq) *
-        Diagonal(geometric_factors.J_q[:,k]) for k in 1:N_el])
+    norm = QuadratureL2([Matrix(W) * Diagonal(geometric_factors.J_q[:,k]) 
+        for k in 1:N_el])
 
     return ErrorAnalysis(norm, N_eq, N_el, V, mesh.xyzq, results_path)
 end

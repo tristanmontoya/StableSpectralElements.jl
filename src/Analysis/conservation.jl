@@ -26,12 +26,10 @@ function PrimaryConservationAnalysis(results_path::String,
 
     analysis_path = new_path(string(results_path, name, "/"))
   
-    @unpack reference_element, V = 
-        spatial_discretization.reference_approximation
+    @unpack W, V =  spatial_discretization.reference_approximation
     @unpack geometric_factors, mesh, N_el = spatial_discretization
     
-    WJ = [Diagonal(reference_element.wq) *
-        Diagonal(geometric_factors.J_q[:,k]) for k in 1:N_el]
+    WJ = [Matrix(W) * Diagonal(geometric_factors.J_q[:,k]) for k in 1:N_el]
 
     return PrimaryConservationAnalysis{d}(
         WJ, N_eq, N_el, V, results_path, analysis_path, "conservation.jld2")
@@ -43,12 +41,10 @@ function EnergyConservationAnalysis(results_path::String,
 
     analysis_path = new_path(string(results_path, name, "/"))
 
-    @unpack reference_element, V = 
-        spatial_discretization.reference_approximation
+    @unpack W, V =  spatial_discretization.reference_approximation
     @unpack geometric_factors, mesh, N_el = spatial_discretization
     
-    WJ = [Diagonal(reference_element.wq) *
-        Diagonal(geometric_factors.J_q[:,k]) for k in 1:N_el]
+    WJ = [Matrix(W) * Diagonal(geometric_factors.J_q[:,k]) for k in 1:N_el]
 
     return EnergyConservationAnalysis{d}(
         WJ, N_eq, N_el, V ,results_path, analysis_path, "energy.jld2")

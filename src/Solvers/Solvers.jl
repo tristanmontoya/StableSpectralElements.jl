@@ -78,7 +78,6 @@ module Solvers
 
         u0 = Array{Float64}(undef, N_p, N_eq, N_el)
         for k in 1:N_el
-            # project to solution DOF
             u0[:,:,k] = M[k] \ convert(Matrix, V' * W * 
                 Diagonal(geometric_factors.J_q[:,k]) * 
                 evaluate(initial_data, Tuple(xyzq[m][:,k] for m in 1:d)))
@@ -146,7 +145,6 @@ module Solvers
             facet_terms = mul!(residual, operators.FAC, f_fac)
         end
 
-        # add together
         rhs = volume_terms + facet_terms
 
         if !isnothing(s)
@@ -167,7 +165,6 @@ module Solvers
         s::Union{Matrix{Float64},Nothing}=nothing) where {d}
 
         @timeit "volume terms" begin
-            # compute volume terms
             volume_terms = zero(residual)
             for m in 1:d
                 volume_terms += mul!(residual, operators.VOL[m], f[m])
@@ -175,7 +172,6 @@ module Solvers
         end
 
         @timeit "facet terms" begin
-            # compute facet terms
             facet_terms = mul!(residual, operators.FAC, f_fac)
         end
 
@@ -189,7 +185,6 @@ module Solvers
         end
 
         @timeit "mass matrix solve" begin
-            # add together and solve
             residual = operators.M \ rhs
         end
         
@@ -204,7 +199,6 @@ module Solvers
         s::Union{Matrix{Float64},Nothing}=nothing) where {d}
 
         @timeit "volume terms" begin
-            # compute volume terms
             volume_terms = zero(residual)
             for m in 1:d
                 volume_terms += flux_diff(operators.VOL[m], F[m])
@@ -212,7 +206,6 @@ module Solvers
         end
 
         @timeit "facet terms" begin
-            # compute facet terms
             facet_terms = mul!(residual, operators.FAC, f_fac)
         end
 
@@ -226,7 +219,6 @@ module Solvers
         end
 
         @timeit "mass matrix solve" begin
-            # add together and solve
             residual = operators.M \ rhs
         end
         
@@ -253,7 +245,6 @@ module Solvers
             facet_terms = mul!(residual, operators.FAC, f_fac)
         end
 
-        # add together
         rhs = volume_terms + facet_terms
 
         if !isnothing(s)
@@ -267,7 +258,7 @@ module Solvers
         return residual
     end
 
-    export StrongConservationForm, WeakConservationForm, MixedConservationForm
+    export StrongConservationForm, WeakConservationForm, SplitConservationForm
     include("conservation_form.jl")
 
     export StrongFluxDiffForm

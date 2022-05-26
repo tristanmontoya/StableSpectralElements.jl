@@ -1,25 +1,35 @@
+"""Nodal spectral element method in collapsed coordinates"""
+struct CollapsedSEM <:AbstractCollocatedApproximation
+    p::Int  # polynomial degree
+end
+
+"""Nodal spectral element method projected onto modal basis"""
+struct CollapsedModal <:AbstractApproximationType
+    p::Int  # polynomial degree
+end
+
 """Duffy transform from the square to triangle"""
-function χ(::CollapsedTri, 
+function χ(::Tri, 
     η::Union{NTuple{2,Float64},NTuple{2,Vector{Float64}}})
     return (0.5.*(1.0 .+ η[1]).*(1.0 .- η[2]) .- 1.0, η[2])
 end
 
 """Geometric factors of the Duffy transform"""
-function reference_geometric_factors(::CollapsedTri, 
-    η::Union{NTuple{2,Float64},NTuple{2,Vector{Float64}}})
-    
+function reference_geometric_factors(::Tri, 
+    η::NTuple{2,Vector{Float64}})
+
     N = size(η[1],1)
     J_ref = (x->0.5*(1.0-x)).(η[2])
     Λ_ref = Array{Float64, 3}(undef, N, 2, 2)
-    Λ_ref[:,1,1] = ones(N)
-    Λ_ref[:,1,2] = zeros(N)
-    Λ_ref[:,2,1] = (x->0.5*(1.0+x)).(η[1])
-    Λ_ref[:,2,2] = (x->0.5*(1.0-x)).(η[2])
+    Λ_ref[:,1,1] = ones(N) # Jdη1/dξ1
+    Λ_ref[:,1,2] = (x->0.5*(1.0+x)).(η[1]) # Jdη1/dξ2
+    Λ_ref[:,2,1] = zeros(N) # Jdη2/dξ1
+    Λ_ref[:,2,2] = (x->0.5*(1.0-x)).(η[2]) # Jdη2/dξ2
 
     return J_ref, Λ_ref
 end
 
-function init_face_data(::CollapsedTri, p, 
+function init_face_data(::Tri, p, 
     facet_quadrature_rule::Tuple{LegendreQuadrature,JacobiQuadrature})
     r_1d_1, w_1d_1 = quadrature(face_type(Tri()), 
     facet_quadrature_rule[1], p+1)
@@ -34,7 +44,7 @@ function init_face_data(::CollapsedTri, p,
     return rf,sf,wf,nrJ,nsJ
 end
 
-function init_face_data(::CollapsedTri, p, 
+function init_face_data(::Tri, p, 
     facet_quadrature_rule::NTuple{2,LegendreQuadrature})
     r_1d_1, w_1d_1 = quadrature(face_type(Tri()), 
     facet_quadrature_rule[1], p+1)
@@ -48,8 +58,9 @@ function init_face_data(::CollapsedTri, p,
     return rf,sf,wf,nrJ,nsJ
 end
 
-function ReferenceApproximation(approx_type::Union{DGSEM,DGMulti}, 
-    elem_type::CollapsedTri;
+function ReferenceApproximation(
+    approx_type::Union{CollapsedSEM,CollapsedModal}, 
+    elem_type::Tri;
     volume_quadrature_rule::NTuple{2,AbstractQuadratureRule}=(
         LGQuadrature(),LGQuadrature()),
     facet_quadrature_rule::NTuple{2,AbstractQuadratureRule}=(
@@ -62,32 +73,30 @@ function ReferenceApproximation(approx_type::Union{DGSEM,DGMulti},
     N_q = (p+1)*(p+1)
     N_f = 3*(p+1)
 
-    # reference element data structure
-    fv = face_vertices(Tri())
-    r,s = nodes(Tri(), mapping_degree)
-    Fmask = hcat(find_face_nodes(Tri(), r, s)...)
-    VDM, Vr, Vs = basis(Tri(), mapping_degree, r, s)
-    Dr = Vr / VDM
-    Ds = Vs / VDM
-    r1, s1 = nodes(Tri(), 1)
-    V1 = vandermonde(Tri(), 1, r, s) / vandermonde(Tri(), 1, r1, s1)
+    # set up mapping nodes and interpolation matrices
+    r,s = nodes(Tri(), mapping_degree)  
+    VDM, Vr, Vs = basis(Tri(), mapping_degree, r, s) 
+    Vq = 
+
+    # set up quadrature rules
     rq, sq, wq = quadrature(Tri(), volume_quadrature_rule, (p+1, p+1))
+    rf, sf, wf, nrJ, nsJ = init_face_data(elem_type, p, facet_quadrature_rule)
     Vq = vandermonde(Tri(), mapping_degree, rq, sq) / VDM
     M = Vq' * diagm(wq) * Vq
-    Pq = M \ (Vq' * diagm(wq))
-    rp, sp = equi_nodes(Tri(), N_plot)
-    Vp = vandermonde(Tri(), mapping_degree, rp, sp) / VDM
-    rf, sf, wf, nrJ, nsJ = init_face_data(elem_type, p, facet_quadrature_rule)
-    R = vandermonde(Tri(), mapping_degree, rf, sf) / VDM
-    reference_element = RefElemData(Tri(), Polynomial(), mapping_degree, fv, V1,
-                       tuple(r, s), VDM, vec(Fmask),
-                       N_plot, tuple(rp, sp), Vp,
-                       tuple(rq, sq), wq, Vq,
-                       tuple(rf, sf), wf, 
-                       R, tuple(nrJ, nsJ),
-                       M, Pq, (Dr, Ds),
-                       M \  (R' * diagm(wf)))
-    @unpack rstp, rstq = reference_element
+    Vf = vandermonde(Tri(), mapping_degree, rf, sf) / VDM
+    # reference element data structure from StartUpDG
+    reference_element = RefElemData(Tri(), Polynomial(), mapping_degree,
+                    face_vertices(Tri()), 
+                    vandermonde(Tri(), 1, r, s)/
+                        vandermonde(Tri(), 1, nodes(Tri(), 1)...),
+                    tuple(r, s), VDM, 
+                    vec(hcat(find_face_nodes(Tri(), r, s)...)),
+                    N_plot, equi_nodes(Tri(), N_plot),
+                    vandermonde(Tri(), mapping_degree, 
+                        equi_nodes(Tri(), N_plot)...) / VDM,
+                    tuple(rq, sq), wq, Vq, tuple(rf, sf), wf,  Vf, 
+                    tuple(nrJ, nsJ), M,  M \ (Vq' * diagm(wq)), 
+                    (Vr / VDM, Vs / VDM), M \  (Vf' * diagm(wf)))
 
     # one-dimensional operators
     rd_1 = RefElemData(Line(), mapping_degree,
@@ -117,12 +126,12 @@ function ReferenceApproximation(approx_type::Union{DGSEM,DGMulti},
             typeof(facet_quadrature_rule[1])) &&
         (typeof(volume_quadrature_rule[2])==
             typeof(facet_quadrature_rule[2]))    
-        R = [TensorProductMap(
-                R_B, I, sigma, [j for i in 1:1, j in 1:p+1]); # bottom
-            TensorProductMap(I, R_R, 
-                sigma, [i for i in 1:p+1, j in 1:1]); # right 
-            TensorProductMap(I, R_L,  
-                sigma, [i for i in p+1:-1:1, j in 1:1])] # left, downwards
+        R = [TensorProductMap( # bottom, left to right
+                R_B, I, sigma, [j for i in 1:1, j in 1:p+1]); 
+            TensorProductMap( # right, upwards
+                I, R_R, sigma, [i for i in 1:p+1, j in 1:1]); 
+            TensorProductMap( # left, downwards
+                I, R_L,  sigma, [i for i in p+1:-1:1, j in 1:1])]
     else 
         r_1d_1, _ = quadrature(face_type(Tri()), 
         facet_quadrature_rule[1], p+1)
@@ -144,20 +153,22 @@ function ReferenceApproximation(approx_type::Union{DGSEM,DGMulti},
     # construct mapping to triangle
     η1, η2, w_η = quadrature(Quad(), volume_quadrature_rule, (p+1, p+1))
     B = LinearMap(Diagonal(wf))
+
     if chain_rule_diff
         W = LinearMap(Diagonal(wq))
-        D = (Diagonal((x-> 2.0/(1.0-x)).(η2))*D_η[1], 
-        Diagonal((x -> (1.0+x)).(η1) ./ (x -> (1.0-x)).(η2))*D_η[1] + D_η[2])
+        D = (Diagonal((x-> 2.0/(1.0-x)).(η2))*D_η[1],
+            Diagonal((x -> (1.0+x)).(η1) ./ (x -> (1.0-x)).(η2))*D_η[1] 
+            + D_η[2])
         reference_mapping = NoMapping()
     else
         W = LinearMap(Diagonal(w_η))
         D = D_η
         reference_mapping = ReferenceMapping(
-            reference_geometric_factors(elem_type, (η1, η2))...)
+            reference_geometric_factors(Tri(),(η1,η2))...)
     end
 
-    # add tensor products to this later...
-    if approx_type isa DGMulti
+    @unpack rstp, rstq = reference_element
+    if approx_type isa CollapsedModal
         N_p = binomial(p+d, d)
         V_modal = vandermonde(Tri(), p, rstq...)
         V_plot = LinearMap(vandermonde(Tri(), p, rstp...))
@@ -167,7 +178,6 @@ function ReferenceApproximation(approx_type::Union{DGSEM,DGMulti},
         Vf = R * V
         ADVs = Tuple(-1.0*W*D[m] for m in 1:d)
         ADVw = Tuple(V' * D[m]' * W for m in 1:d)
-    
     else
         N_p = N_q
         V_plot = LinearMap(vandermonde(Tri(), p, rstp...) / 
@@ -183,19 +193,4 @@ function ReferenceApproximation(approx_type::Union{DGSEM,DGMulti},
     return ReferenceApproximation{d}(approx_type, N_p, N_q, N_f, 
         reference_element, D, V, Vf, R, P, W, B, ADVs, ADVw, V_plot,
         reference_mapping)
-end
-
-"""Apply the transformation of Crean et al. (2018) to χ"""
-function make_sbp_operator(::CollapsedTri, η::NTuple{2,Vector{Float64}}, 
-    w_η::Vector{Float64}, wf::Vector{Float64}, 
-    D_η::NTuple{2,<:LinearMap{Float64}}, R::LinearMap{Float64},
-    nrstJ::NTuple{2,Vector{Float64}})
-
-    S = (0.5*(Diagonal(w_η)*D_η[1] - D_η[1]'*Diagonal(w_η)),
-        0.5*((Diagonal(w_η .* (x -> 0.5*(1+x)).(η[1]))*D_η[1] -
-            D_η[1]'*Diagonal(w_η .* (x -> 0.5*(1+x)).(η[1]))) +
-            (Diagonal(w_η .* (x -> 0.5*(1-x)).(η[2]))*D_η[2] - 
-            D_η[2]'*(Diagonal(w_η .* (x -> 0.5*(1-x)).(η[2])))))
-        )
-    return Tuple(S[m] + 0.5*R'*Diagonal(wf .* nrstJ[m])*R for m in 1:2)
 end

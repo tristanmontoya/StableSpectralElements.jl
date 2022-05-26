@@ -6,7 +6,7 @@ struct WeakConservationForm <: AbstractResidualForm
     mapping_form::AbstractMappingForm
 end
 
-struct MixedConservationForm <: AbstractResidualForm 
+struct SplitConservationForm <: AbstractResidualForm 
     mapping_form::AbstractMappingForm
 end
 
@@ -18,8 +18,8 @@ function WeakConservationForm()
     return WeakConservationForm(StandardMapping())
 end
 
-function MixedConservationForm()
-    return MixedConservationForm(CreanMapping())
+function SplitConservationForm()
+    return SplitConservationForm(CreanMapping())
 end
 
 """
@@ -103,10 +103,10 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
 end
 
 """
-    Make operators for mixed conservation form
+    Make operators for split conservation form
 """
 function make_operators(spatial_discretization::SpatialDiscretization{d}, 
-    ::MixedConservationForm) where {d}
+    ::SplitConservationForm) where {d}
     @unpack N_el, M = spatial_discretization
     @unpack ADVw, V, Vf, R, P, W, B, D = spatial_discretization.reference_approximation
     @unpack nrstJ = 
@@ -120,11 +120,10 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
             NTR = (Diagonal(nrstJ[1]) * Vf,)
         else
             VOL = Tuple(
-                0.5*sum(V' * Diagonal(Λ_q[:,m,n,k]) * W * D[m] -
-                    ADVw[m] * Diagonal(Λ_q[:,m,n,k])
+                0.5*sum(ADVw[m] * Diagonal(Λ_q[:,m,n,k]) - V' * Diagonal(Λ_q[:,m,n,k]) * W * D[m]
                     for m in 1:d)
                 for n in 1:d)
-            NTR = Tuple(0.5 * Vf' * B * Diagonal(nJf[n][:,k]) * R
+            NTR = Tuple(0.5 * Diagonal(nJf[n][:,k]) * R
                 for n in 1:d)
         end
         FAC = -Vf' * B
@@ -134,11 +133,12 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     end
     return operators
 end
+
 """
-    Evaluate semi-discrete residual for strong/mixed conservation form
+    Evaluate semi-discrete residual for strong/split conservation form
 """
 function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
-    solver::Solver{Union{StrongConservationForm,MixedConservationForm}, <:AbstractPhysicalOperators, d, N_eq}, t::Float64; print::Bool=false) where {d, N_eq}
+    solver::Solver{<:Union{StrongConservationForm,SplitConservationForm}, <:AbstractPhysicalOperators, d, N_eq}, t::Float64; print::Bool=false) where {d, N_eq}
 
     @timeit "rhs!" begin
 
@@ -169,15 +169,14 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             f = @timeit "eval flux" physical_flux(
                 conservation_law.first_order_flux, 
                 convert(Matrix, operators[k].V * u[:,:,k]))
-
             f_star = @timeit "eval numerical flux" numerical_flux(
                 conservation_law.first_order_numerical_flux,
                 u_facet[:,:,k], u_out, operators[k].scaled_normal)
-
             f_fac = @timeit "eval flux diff" f_star - 
                 sum(convert(Matrix,operators[k].NTR[m] * f[m]) 
                     for m in 1:d)
 
+            # evaluate source term, if there is one
             if isnothing(conservation_law.source_term)
                 s = nothing
             else
@@ -211,9 +210,8 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
 
         # get all facet state values
         for k in 1:N_el
-            u_facet[:,:,k] = 
-                @timeit "extrapolate solution" convert(
-                    Matrix, operators[k].Vf * u[:,:,k])
+            u_facet[:,:,k] = @timeit "extrapolate solution" convert(
+                Matrix, operators[k].Vf * u[:,:,k])
         end
 
         # evaluate all local residuals
@@ -231,11 +229,11 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             f = @timeit "eval flux" physical_flux(
                 conservation_law.first_order_flux, 
                 convert(Matrix,operators[k].V * u[:,:,k]))
-
             f_star = @timeit "eval numerical flux" numerical_flux(
                 conservation_law.first_order_numerical_flux,
                 u_facet[:,:,k], u_out, operators[k].scaled_normal)
             
+            # evaluate source term, if there is one
             if isnothing(conservation_law.source_term)
                 s = nothing
             else
@@ -249,5 +247,5 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                 dudt[:,:,k], operators[k], f, f_star, strategy, s)
         end
     end
-    return nothing
+    return dudt
 end

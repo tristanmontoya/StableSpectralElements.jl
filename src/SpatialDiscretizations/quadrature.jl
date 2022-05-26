@@ -61,7 +61,7 @@ function quadrature(::Tri,
     mgw = meshgrid(w1d_1, w1d_2)
     mgr = meshgrid(r1d_1,r1d_2)
     w2d = @. mgw[1] * mgw[2] 
-    return χ(CollapsedTri(), (mgr[1][:], mgr[2][:]))..., 
+    return χ(Tri(), (mgr[1][:], mgr[2][:]))..., 
         (η -> 0.5*(1-η)).(mgr[2][:]) .* w2d[:]
 end
 
@@ -75,7 +75,7 @@ function quadrature(::Tri,
     mgw = meshgrid(w1d_1, w1d_2)
     mgr = meshgrid(r1d_1,r1d_2)
     w2d = @. mgw[1] * mgw[2] 
-    return χ(CollapsedTri(), (mgr[1][:], mgr[2][:]))..., w2d[:]
+    return χ(Tri(), (mgr[1][:], mgr[2][:]))..., w2d[:]
 end
 
 function facet_node_ids(::Line, N::Int)

@@ -14,21 +14,16 @@ module SpatialDiscretizations
     using Reexport
     @reexport using StartUpDG: Line, Quad, Tri, Tet, Hex, Pyr
 
-    export AbstractApproximationType, AbstractCollocatedApproximation, NonsymmetricElemShape, AbstractReferenceMapping, NoMapping, ReferenceMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, CollapsedTri, check_normals, check_facet_nodes, check_sbp_property, centroids, make_sbp_operator, χ
+    export AbstractApproximationType, AbstractCollocatedApproximation, AbstractReferenceMapping, NoMapping, CollapsedMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, make_sbp_operator, χ
     
     abstract type AbstractApproximationType end
     abstract type AbstractCollocatedApproximation <: AbstractApproximationType end
-    abstract type NonsymmetricElemShape <: AbstractElemShape end
     abstract type AbstractReferenceMapping end
     struct NoMapping <: AbstractReferenceMapping end
-
     struct ReferenceMapping <: AbstractReferenceMapping 
         J_ref::Vector{Float64}
         Λ_ref::Array{Float64, 3}
     end
-
-    struct CollapsedTri <: NonsymmetricElemShape end
-    @inline face_type(::CollapsedTri) = Line()
 
     struct ReferenceApproximation{d}
         approx_type::AbstractApproximationType
@@ -61,12 +56,11 @@ module SpatialDiscretizations
     function SpatialDiscretization(mesh::MeshData{d},
         reference_approximation::ReferenceApproximation{d}) where {d}
 
-        @unpack reference_element, W = reference_approximation
+        @unpack reference_element, reference_mapping, W = reference_approximation
 
         N_el = size(mesh.xyz[1])[2]
         geometric_factors = apply_reference_mapping(GeometricFactors(mesh,
-            reference_approximation.reference_element), 
-            reference_approximation.reference_mapping)
+            reference_element), reference_mapping)
 
         if reference_approximation.approx_type isa AbstractCollocatedApproximation
             return SpatialDiscretization{d}(
@@ -96,18 +90,19 @@ module SpatialDiscretizations
         reference_mapping::ReferenceMapping)
         @unpack J_q, Λ_q, nJf = geometric_factors
         @unpack J_ref, Λ_ref = reference_mapping
-        (N_q,N_el) = size(J_q)
-        d = size(Λ_q, 3)
-        J_qJ_ref = Matrix{Float64}(undef, N_q, N_el)
-        Λ_qΛ_ref = zeros(N_q, d, d, N_el)
-
+        (N_q, N_el) = size(J_q)
+        d = size(Λ_q, 2)
+        Λ_η = similar(Λ_q)
+        J_η = similar(J_q)
         for k in 1:N_el
-            J_qJ_ref[:,k] = J_q[:,k] .* J_ref
             for i in 1:N_q
-                Λ_qΛ_ref[i,:,:,k] = Λ_q[i,:,:,k] * Λ_ref[i,:,:]
+                for m in 1:d, n in 1:d
+                Λ_η[i,m,n,k] = sum( Λ_ref[i,m,l] * Λ_q[i,l,n,k] for l in 1:d)
+                end
+                J_η[i,k] = J_ref[i] * J_q[i,k]
             end
         end
-        return GeometricFactors{d}(J_qJ_ref, Λ_qΛ_ref, nJf)
+        return GeometricFactors{d}(J_η, Λ_η, nJf)
     end
 
     """
@@ -190,9 +185,7 @@ module SpatialDiscretizations
     export DGMulti
     include("dgmulti.jl")
 
-    const DG = Union{DGSEM, DGMulti}
-
-    export reference_geometric_factors
+    export CollapsedSEM, CollapsedModal, reference_geometric_factors
     include("collapsed.jl")
 
 end

@@ -19,7 +19,7 @@ module Mesh
 
         # first dimension is node index, second and third are matrix indices mn,
         # fourth is element
-        Λ_q ::Array{Float64,4}
+        Λ_q::Array{Float64,4}
 
         # d-tuple of matrices, where first is element index,
         nJf::NTuple{d, Matrix{Float64}}
