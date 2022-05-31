@@ -62,10 +62,10 @@ function ReferenceApproximation(
     approx_type::Union{CollapsedSEM,CollapsedModal}, 
     elem_type::Tri;
     volume_quadrature_rule::NTuple{2,AbstractQuadratureRule}=(
-        LGQuadrature(),LGQuadrature()),
+        LGQuadrature(),LGRQuadrature()),
     facet_quadrature_rule::NTuple{2,AbstractQuadratureRule}=(
-        LGQuadrature(),LGQuadrature()),
-    chain_rule_diff=true,
+        LGQuadrature(),LGRQuadrature()),
+    chain_rule_diff=false,
     mapping_degree::Int=1, N_plot::Int=10)
 
     @unpack p = approx_type
@@ -126,8 +126,15 @@ function ReferenceApproximation(
             typeof(facet_quadrature_rule[1])) &&
         (typeof(volume_quadrature_rule[2])==
             typeof(facet_quadrature_rule[2]))    
-        R = [TensorProductMap( # bottom, left to right
-                R_B, I, sigma, [j for i in 1:1, j in 1:p+1]); 
+
+        if volume_quadrature_rule[2] isa LGRQuadrature
+            bottom_map = SelectionMap([i for i in 1:p+1], N_q)
+        else
+            bottom_map =TensorProductMap(
+                R_B, I, sigma, [j for i in 1:1, j in 1:p+1])
+        end
+
+        R = [bottom_map; # bottom, left to right
             TensorProductMap( # right, upwards
                 I, R_R, sigma, [i for i in 1:p+1, j in 1:1]); 
             TensorProductMap( # left, downwards

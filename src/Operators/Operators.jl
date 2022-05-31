@@ -56,13 +56,18 @@ module Operators
         (M1,M2) = size(σₒ)
         (N1,N2) = size(σᵢ)
 
-        Z = Matrix{T}(undef,M2,N1)
-        for α2 in 1:M2, β1 in 1:N1
-            Z[α2,β1] = sum(B[α2,β2]*x[σᵢ[β1,β2]] for β2 in 1:N2)
+        Z = Matrix{T}(zeros,M2,N1)
+        @inbounds for α2 in 1:M2, β1 in 1:N1
+            @inbounds @simd for β2 in 1:N2
+                Z[α2,β1] += B[α2,β2]*x[σᵢ[β1,β2]]
+            end
         end
 
-        for α1 in 1:M1, α2 in 1:M2
-            y[σₒ[α1,α2]] = sum(A[α1,β1]*Z[α2,β1] for β1 in 1:N1)
+        @inbounds for α1 in 1:M1, α2 in 1:M2
+            y[σₒ[α1,α2]] = 0.0
+            @inbounds @simd for β1 in 1:N1
+                y[σₒ[α1,α2]] += A[α1,β1]*Z[α2,β1]
+            end
         end
 
         return y
@@ -86,8 +91,11 @@ module Operators
         (M1,M2) = size(σₒ)
         (N1,N2) = size(σᵢ)
 
-        for α1 in 1:M1, α2 in 1:M2
-            y[σₒ[α1,α2]] = sum(A[α1,β1]*x[σᵢ[β1,α2]] for β1 in 1:N1)
+        @inbounds for α1 in 1:M1, α2 in 1:M2
+            y[σₒ[α1,α2]] = 0.0
+            @inbounds @simd for β1 in 1:N1
+                y[σₒ[α1,α2]] += A[α1,β1]*x[σᵢ[β1,α2]]
+            end
         end
         return y
     end
@@ -109,8 +117,11 @@ module Operators
         (M1,M2) = size(σₒ)
         (N1,N2) = size(σᵢ)
 
-        for α1 in 1:M1, α2 in 1:M2
-            y[σₒ[α1,α2]] = sum(B[α2,β2]*x[σᵢ[α1,β2]] for β2 in 1:N2)
+        @inbounds for α1 in 1:M1, α2 in 1:M2
+            y[σₒ[α1,α2]] = 0.0
+            @inbounds @simd for β2 in 1:N2
+                y[σₒ[α1,α2]] += B[α2,β2]*x[σᵢ[α1,β2]]
+            end
         end
         return y
     end
@@ -147,7 +158,7 @@ module Operators
         
         LinearMaps.check_dim_mul(y, transR, x)
         @unpack volume_ids, facet_ids, N_vol = transR.lmap
-        for i in 1:N_vol
+        @inbounds for i in 1:N_vol
             if isempty(volume_ids[i])
                 y[i] = 0.0
             else
@@ -166,7 +177,7 @@ module Operators
         N_eq = size(F,3)
         y = Matrix{Float64}(undef,N_p,N_eq)
         
-        for l in 1:N_eq, i in 1:N_p
+        @inbounds for l in 1:N_eq, i in 1:N_p
             y[i,l] = dot(D.lmap[i,:], F[i,:,l])
         end
         return 2.0*y

@@ -97,4 +97,8 @@ module ParametrizedFunctions
         end
         return u0
     end
+
+    function evaluate(::Nothing, x::Any, t::Float64=0.0)
+        return nothing
+    end
 end

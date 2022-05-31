@@ -151,24 +151,24 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
         # get all facet state values
         for k in 1:N_el
             u_facet[:,:,k] = 
-                @timeit "extrapolate solution" convert(
-                    Matrix, operators[k].Vf * u[:,:,k])
+                @timeit "extrapolate solution" Matrix(
+                    operators[k].Vf * u[:,:,k])
         end
 
         # evaluate all local residuals
         for k in 1:N_el
             # gather external state to element
-            u_out = Matrix{Float64}(undef, N_f, N_eq)
-
-            for e in 1:N_eq
-                u_out[:,e] = @timeit "gather external state" u_facet[
-                    :,e,:][connectivity[:,k]]
+            @timeit "gather external state" begin
+                u_out = Matrix{Float64}(undef, N_f, N_eq)
+                @inbounds for e in 1:N_eq
+                    u_out[:,e] = u_facet[:,e,:][connectivity[:,k]]
+                end
             end
             
             # evaluate physical and numerical flux
             f = @timeit "eval flux" physical_flux(
                 conservation_law.first_order_flux, 
-                convert(Matrix, operators[k].V * u[:,:,k]))
+                Matrix(operators[k].V * u[:,:,k]))
             f_star = @timeit "eval numerical flux" numerical_flux(
                 conservation_law.first_order_numerical_flux,
                 u_facet[:,:,k], u_out, operators[k].scaled_normal)
@@ -177,14 +177,10 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                     for m in 1:d)
 
             # evaluate source term, if there is one
-            if isnothing(conservation_law.source_term)
-                s = nothing
-            else
-                s = @timeit "eval source term" evaluate(
-                    conservation_law.source_term, 
-                    Tuple(x_q[m][:,k] for m in 1:d), t)
-            end
-
+            s = @timeit "eval source term" evaluate(
+                conservation_law.source_term, 
+                Tuple(x_q[m][:,k] for m in 1:d), t)
+                
             # apply operators
             dudt[:,:,k] = @timeit "eval residual" apply_operators!(
                 dudt[:,:,k], operators[k], f, f_fac, strategy, s)
@@ -219,9 +215,8 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             @timeit "gather external state" begin
                 # gather external state to element
                 u_out = Matrix{Float64}(undef, N_f, N_eq)
-                for e in 1:N_eq
-                    u_out[:,e] = u_facet[
-                        :,e,:][connectivity[:,k]]
+                @inbounds for e in 1:N_eq
+                    u_out[:,e] = u_facet[:,e,:][connectivity[:,k]]
                 end
             end
             
