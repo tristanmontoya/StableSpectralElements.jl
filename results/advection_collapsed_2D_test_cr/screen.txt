@@ -1,1 +1,0 @@
-writing time step 1415  t = 0.5002780476894954

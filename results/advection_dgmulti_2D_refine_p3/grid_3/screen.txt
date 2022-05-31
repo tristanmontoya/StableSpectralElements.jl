@@ -1,9 +1,0 @@
-writing time step 175  t = 0.11048543456039817
-writing time step 350  t = 0.22097086912079422
-writing time step 525  t = 0.33145630368119355
-writing time step 700  t = 0.44194173824159416
-writing time step 875  t = 0.5524271728019947
-writing time step 1050  t = 0.6629126073623953
-writing time step 1225  t = 0.7733980419227959
-writing time step 1400  t = 0.8838834764831965
-writing time step 1575  t = 0.9943689110435971

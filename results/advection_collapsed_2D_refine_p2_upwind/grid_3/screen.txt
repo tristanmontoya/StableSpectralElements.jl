@@ -1,9 +1,0 @@
-writing time step 125  t = 0.11048543456039815
-writing time step 250  t = 0.22097086912079666
-writing time step 375  t = 0.3314563036811926
-writing time step 500  t = 0.44194173824158767
-writing time step 625  t = 0.5524271728019827
-writing time step 750  t = 0.6629126073623778
-writing time step 875  t = 0.7733980419227728
-writing time step 1000  t = 0.8838834764831679
-writing time step 1125  t = 0.994368911043563

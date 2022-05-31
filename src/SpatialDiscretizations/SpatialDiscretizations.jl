@@ -12,7 +12,7 @@ module SpatialDiscretizations
     using ..Operators: TensorProductMap, SelectionMap
 
     using Reexport
-    @reexport using StartUpDG: Line, Quad, Tri, Tet, Hex, Pyr
+    @reexport using StartUpDG: AbstractElemShape, Line, Quad, Tri, Tet, Hex, Pyr
 
     export AbstractApproximationType, AbstractCollocatedApproximation, AbstractReferenceMapping, NoMapping, CollapsedMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, make_sbp_operator, χ
     
@@ -97,7 +97,7 @@ module SpatialDiscretizations
         for k in 1:N_el
             for i in 1:N_q
                 for m in 1:d, n in 1:d
-                Λ_η[i,m,n,k] = sum( Λ_ref[i,m,l] * Λ_q[i,l,n,k] for l in 1:d)
+                Λ_η[i,m,n,k] = sum( Λ_ref[ix,m,l] * Λ_q[i,l,n,k] for l in 1:d)
                 end
                 J_η[i,k] = J_ref[i] * J_q[i,k]
             end

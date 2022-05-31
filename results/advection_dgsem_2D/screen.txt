@@ -1,1 +1,0 @@
-writing time step 7920  t = 0.5000255095532902

@@ -1,11 +1,11 @@
 module Solvers
 
-    using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
     using UnPack
     import LinearAlgebra
     using LinearAlgebra: Diagonal, inv, mul!
     using TimerOutputs
     using LinearMaps: LinearMap
+    using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
 
     using ..ConservationLaws: ConservationLaw, physical_flux, numerical_flux, two_point_flux
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization
@@ -135,7 +135,7 @@ module Solvers
         @timeit "volume terms" begin
             # compute volume terms
             volume_terms = zero(residual)
-            for m in 1:d
+            @inbounds for m in 1:d
                 volume_terms += mul!(residual, operators.VOL[m], f[m])
             end
         end
@@ -166,7 +166,7 @@ module Solvers
 
         @timeit "volume terms" begin
             volume_terms = zero(residual)
-            for m in 1:d
+            @inbounds for m in 1:d
                 volume_terms += mul!(residual, operators.VOL[m], f[m])
             end
         end
@@ -197,7 +197,7 @@ module Solvers
 
         @timeit "volume terms" begin
             volume_terms = zero(residual)
-            for m in 1:d
+            @inbounds for m in 1:d
                 volume_terms += mul!(residual, operators.VOL[m], f[m])
             end
         end
@@ -224,7 +224,7 @@ module Solvers
 
         @timeit "volume terms" begin
             volume_terms = zero(residual)
-            for m in 1:d
+            @inbounds for m in 1:d
                 volume_terms += flux_diff(operators.VOL[m], F[m])
             end
         end

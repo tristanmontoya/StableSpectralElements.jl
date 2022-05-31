@@ -1,1 +1,0 @@
-writing time step 3819  t = 0.5000816291391185

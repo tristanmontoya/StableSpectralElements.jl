@@ -1,2 +1,0 @@
-writing time step 2546  t = 0.5000816291391413
-writing time step 5092  t = 0.9999999999999998

@@ -1,9 +1,0 @@
-writing time step 87  t = 0.10985408922005302
-writing time step 174  t = 0.21970817844010607
-writing time step 261  t = 0.32956226766015734
-writing time step 348  t = 0.43941635688020797
-writing time step 435  t = 0.5492704461002608
-writing time step 522  t = 0.6591245353203162
-writing time step 609  t = 0.7689786245403717
-writing time step 696  t = 0.8788327137604272
-writing time step 783  t = 0.9886868029804826

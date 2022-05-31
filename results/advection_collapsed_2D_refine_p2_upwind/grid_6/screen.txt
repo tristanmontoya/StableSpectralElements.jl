@@ -1,9 +1,0 @@
-writing time step 1005  t = 0.11103786173319796
-writing time step 2010  t = 0.2220757234664072
-writing time step 3015  t = 0.3331135851995973
-writing time step 4020  t = 0.44415144693278036
-writing time step 5025  t = 0.5551893086659635
-writing time step 6030  t = 0.6662271703991466
-writing time step 7035  t = 0.7772650321323297
-writing time step 8040  t = 0.8883028938655128
-writing time step 9045  t = 0.9993407555986958

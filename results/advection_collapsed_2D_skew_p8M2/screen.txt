@@ -1,1 +1,0 @@
-writing time step 4809  t = 0.5000700751067424

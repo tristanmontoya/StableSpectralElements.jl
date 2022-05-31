@@ -1,9 +1,0 @@
-writing time step 251  t = 0.11092737629863993
-writing time step 502  t = 0.221854752597277
-writing time step 753  t = 0.33278212889591363
-writing time step 1004  t = 0.44370950519455027
-writing time step 1255  t = 0.5546368814931938
-writing time step 1506  t = 0.6655642577918444
-writing time step 1757  t = 0.7764916340904949
-writing time step 2008  t = 0.8874190103891455
-writing time step 2259  t = 0.9983463866877961

@@ -1,1 +1,0 @@
-writing time step 5092  t = 0.5000816291391403
