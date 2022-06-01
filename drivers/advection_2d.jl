@@ -198,14 +198,6 @@ function main(args)
         println(io,"Conservation (initial/final/diff):\n", analyze(conservation_analysis)...)
         println(io,"Energy (initial/final/diff):\n",analyze(energy_analysis)...)
     end
-
-    plotter = Plotter(spatial_discretization, plots_path)
-    visualize(spatial_discretization, plots_path, "mesh.pdf", 
-        grid_lines=true, plot_volume_nodes=false, geometry_resolution=20)
-    visualize(initial_data, plotter, "exact.pdf", u_range=[-1.0,1.0],   
-        contours=25, label="U(\\mathbf{x},t)")
-    visualize(last(sol.u),plotter, "approx.pdf", contours=25, 
-        u_range=[-1.0,1.0], label="U^h(\\mathbf{x},t)")
 end
 
 main(ARGS)
