@@ -20,6 +20,6 @@ module IO
     export new_path, save_callback, save_project, save_solution, load_solution, load_project, load_time_steps, load_snapshots
     include("file.jl")
 
-    export Plotter, visualize
+    #export Plotter, visualize
     include("visualize.jl")
 end

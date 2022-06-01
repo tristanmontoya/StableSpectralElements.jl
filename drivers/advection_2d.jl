@@ -1,6 +1,8 @@
 push!(LOAD_PATH,"../");
 using Pkg
 Pkg.instantiate()
+ENV["PYTHON"] = ""
+Pkg.build("PyCall")
 using OrdinaryDiffEq
 using LinearAlgebra
 using TimerOutputs
@@ -25,7 +27,7 @@ function parse_commandline()
         "--beta", "-b"
             help = "scaling factor for time step"
             arg_type = Float64
-            default = 0.005
+            default = 0.01
         "-n"
             help = "number of writes to file"
             arg_type = Int

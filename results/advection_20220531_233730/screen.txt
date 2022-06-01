@@ -1,0 +1,12 @@
+Results Path: "../results/advection_20220531_233730/"
+
+Plots Path: "../plots/advection_20220531_233730/"
+
+Parameters:Dict{String, Any}("r" => 1, "L" => 1.0, "a" => 1.4142135623730951, "theta" => 0.7853981633974483, "M" => 4, "lambda" => 1.0, "results_path" => "../results/", "scheme" => "DGMulti", "form" => "WeakConservationForm", "beta" => 0.005, "mesh_perturb" => 0.15, "plots_path" => "../plots/", "p" => 4, "n" => 11)
+
+writing time step 926  t = 0.09094178880260177
+writing time step 1852  t = 0.18188357760520252
+writing time step 2778  t = 0.27282536640780325
+writing time step 3704  t = 0.363767155210404
+writing time step 4630  t = 0.4547089440130047
+writing time step 5556  t = 0.5456507328156055

@@ -23,7 +23,7 @@ module CLOUD
     @reexport using .Solvers
 
     include("IO/IO.jl")
-    #@reexport using .IO
+    @reexport using .IO
 
     include("Analysis/Analysis.jl")
     @reexport using .Analysis
