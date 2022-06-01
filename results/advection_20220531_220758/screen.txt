@@ -1,0 +1,42 @@
+Results Path: "../results/advection_20220531_220758/"
+
+Plots Path: "../plots/advection_20220531_220758/"
+
+Parameters:Dict{String, Any}("r" => 1, "L" => 1.0, "a" => 1.4142135623730951, "theta" => 0.7853981633974483, "M" => 4, "lambda" => 1.0, "results_path" => "../results/", "scheme" => "DGMulti", "form" => "WeakConservationForm", "beta" => 0.005, "mesh_perturb" => 0.15, "plots_path" => "../plots/", "p" => 4, "n" => 11)
+
+writing time step 926  t = 0.09094178880260177
+writing time step 1852  t = 0.18188357760520252
+writing time step 2778  t = 0.27282536640780325
+writing time step 3704  t = 0.363767155210404
+writing time step 4630  t = 0.4547089440130047
+writing time step 5556  t = 0.5456507328156055
+writing time step 6482  t = 0.6365925216182062
+writing time step 7408  t = 0.727534310420807
+writing time step 8334  t = 0.8184760992234077
+writing time step 9260  t = 0.9094178880260084
+Solver finished!
+
+ ────────────────────────────────────────────────────────────────────────────────
+                                        Time                    Allocations      
+                               ───────────────────────   ────────────────────────
+       Tot / % measured:            29.9s /  90.8%           25.5GiB /  98.6%    
+
+ Section               ncalls     time    %tot     avg     alloc    %tot      avg
+ ────────────────────────────────────────────────────────────────────────────────
+ rhs!                   61.1k    27.2s  100.0%   445μs   25.1GiB  100.0%   431KiB
+   eval residual        1.96M    13.3s   48.8%  6.78μs   10.3GiB   40.9%  5.51KiB
+     mass matrix solve  1.96M    5.49s   20.2%  2.81μs   4.34GiB   17.3%  2.33KiB
+     volume terms       1.96M    5.08s   18.7%  2.60μs   4.87GiB   19.4%  2.61KiB
+     facet terms        1.96M    990ms    3.6%   506ns    420MiB    1.6%     225B
+   eval flux            1.96M    3.43s   12.6%  1.76μs   1.63GiB    6.5%     896B
+   gather external ...  1.96M    3.34s   12.3%  1.71μs   8.19GiB   32.6%  4.39KiB
+   eval numerical flux  1.96M    3.20s   11.8%  1.64μs   3.92GiB   15.6%  2.10KiB
+   extrapolate solu...  1.96M    2.25s    8.3%  1.15μs    750MiB    2.9%     402B
+ ────────────────────────────────────────────────────────────────────────────────
+
+L2 error:
+[0.004199207440083138]
+Conservation (initial/final/diff):
+[4.401749925577597e-8][4.401749899643481e-8][-2.5934115965853266e-16]
+Energy (initial/final/diff):
+[0.24999026021207624][0.249424336099671][-0.0005659241124052472]

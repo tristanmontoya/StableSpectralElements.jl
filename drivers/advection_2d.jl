@@ -1,5 +1,6 @@
-
 push!(LOAD_PATH,"../");
+using Pkg
+Pkg.instantiate()
 using OrdinaryDiffEq
 using LinearAlgebra
 using TimerOutputs
@@ -24,7 +25,7 @@ function parse_commandline()
         "--beta", "-b"
             help = "scaling factor for time step"
             arg_type = Float64
-            default = 0.01
+            default = 0.005
         "-n"
             help = "number of writes to file"
             arg_type = Int
@@ -153,7 +154,7 @@ function main(args)
 
     reference_approximation =ReferenceApproximation(
         scheme, elem_type, mapping_degree=r, N_plot=ceil(Int,20/M));
-        
+
     mesh = warp_mesh(uniform_periodic_mesh(
         reference_approximation.reference_element, ((0.0,L),(0.0,L)), (M,M)),
         reference_approximation.reference_element, mesh_perturb)
