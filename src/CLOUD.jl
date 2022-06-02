@@ -27,4 +27,9 @@ module CLOUD
 
     include("Analysis/Analysis.jl")
     @reexport using .Analysis
+
+    using TimerOutputs: get_timer
+    for i in 1:Threads.nthreads()
+        to = get_timer(string("thread_timer_",i))
+    end
 end

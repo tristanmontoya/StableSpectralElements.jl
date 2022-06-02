@@ -1,0 +1,40 @@
+Results Path: "../results/advection_20220601_020310/grid_1/"
+
+Parameters: Dict{String, Any}("r" => 1, "L" => 1.0, "a" => 1.4142135623730951, "path" => "../results/", "theta" => 0.7853981633974483, "M" => 2, "lambda" => 1.0, "scheme" => "DGMulti", "n_grids" => 1, "form" => "WeakConservationForm", "beta" => 0.01, "mesh_perturb" => 0.15, "p" => 4, "n" => 11)
+
+writing time step 232  t = 0.09113820735293326
+writing time step 464  t = 0.18227641470586478
+writing time step 696  t = 0.27341462205879513
+writing time step 928  t = 0.36455282941172545
+writing time step 1160  t = 0.4556910367646558
+writing time step 1392  t = 0.5468292441175862
+writing time step 1624  t = 0.6379674514705165
+writing time step 1856  t = 0.7291056588234468
+writing time step 2088  t = 0.8202438661763771
+writing time step 2320  t = 0.9113820735293074
+Solver finished!
+
+ ────────────────────────────────────────────────────────────────────────────────
+                                        Time                    Allocations      
+                               ───────────────────────   ────────────────────────
+       Tot / % measured:            4.77s /  44.7%           1.78GiB /  79.6%    
+
+ Section               ncalls     time    %tot     avg     alloc    %tot      avg
+ ────────────────────────────────────────────────────────────────────────────────
+ rhs!                   15.3k    2.13s  100.0%   139μs   1.41GiB  100.0%  97.0KiB
+   eval residual         122k    1.28s   59.8%  10.4μs    814MiB   56.2%  6.81KiB
+     volume terms        122k    514ms   24.1%  4.21μs    370MiB   25.6%  3.10KiB
+     facet terms         122k    316ms   14.8%  2.58μs    112MiB    7.8%     963B
+     mass matrix solve   122k    280ms   13.1%  2.29μs    278MiB   19.2%  2.33KiB
+   eval numerical flux   122k    284ms   13.3%  2.32μs    267MiB   18.4%  2.23KiB
+   extrapolate solu...   122k    189ms    8.9%  1.55μs   50.4MiB    3.5%     432B
+   eval flux             122k    187ms    8.8%  1.53μs    105MiB    7.2%     896B
+   gather external ...   122k   81.6ms    3.8%   667ns    188MiB   13.0%  1.58KiB
+ ────────────────────────────────────────────────────────────────────────────────
+
+L2 error:
+[0.06391122917400845]
+Conservation (initial/final/diff):
+[2.86069215439666e-5][2.8606921544518243e-5][5.516420653606247e-16]
+Energy (initial/final/diff):
+[0.24973902778093507][0.23058454906316017][-0.019154478717774898]

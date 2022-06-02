@@ -44,7 +44,7 @@ module Mesh
 
     function uniform_periodic_mesh(reference_element::RefElemData{2}, 
         limits::NTuple{2,NTuple{2,Float64}}, M::NTuple{2,Int};
-        random_rotate::Bool=false, strategy::MeshGenStrategy=Uniform())
+        random_rotate::Bool=false, strategy::MeshGenStrategy=ZigZag())
 
         (VX, VY), EtoV = cartesian_mesh(reference_element.elementType, 
             M, strategy)

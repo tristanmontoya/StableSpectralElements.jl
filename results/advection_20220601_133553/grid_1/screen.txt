@@ -1,0 +1,49 @@
+Results Path: "../results/advection_20220601_133553/grid_1/"
+
+Parameters: Dict{String, Any}("n_periods" => 1.0, "r" => 4, "L" => 1.0, "a" => 1.4142135623730951, "path" => "../results/", "theta" => 0.7853981633974483, "M" => 4, "lambda" => 1.0, "scheme" => "CollapsedSEM", "n_grids" => 1, "form" => "SplitConservationForm", "beta" => 0.01, "mesh_perturb" => 0.15, "p" => 8, "n" => 10)
+
+writing time step 962  t = 0.10003481227962513
+writing time step 1924  t = 0.20006962455925636
+writing time step 2886  t = 0.30010443683887755
+writing time step 3848  t = 0.4001392491184854
+writing time step 4810  t = 0.5001740613980934
+writing time step 5772  t = 0.6002088736777547
+writing time step 6734  t = 0.7002436859574159
+writing time step 7696  t = 0.8002784982370772
+writing time step 8658  t = 0.9003133105167385
+Solver finished!
+
+ ────────────────────────────────────────────────────────────────────
+                            Time                    Allocations      
+                   ───────────────────────   ────────────────────────
+ Tot / % measured:      44.2s /  94.6%           87.2GiB /  99.7%    
+
+ Section   ncalls     time    %tot     avg     alloc    %tot      avg
+ ────────────────────────────────────────────────────────────────────
+ rhs!       57.7k    41.8s  100.0%   724μs   86.9GiB  100.0%  1.54MiB
+ ────────────────────────────────────────────────────────────────────
+
+ ────────────────────────────────────────────────────────────────────────────────
+                                        Time                    Allocations      
+                               ───────────────────────   ────────────────────────
+       Tot / % measured:           178ms / 69810.0%        16.4MiB / 1911495.4%  
+
+ Section               ncalls     time    %tot     avg     alloc    %tot      avg
+ ────────────────────────────────────────────────────────────────────────────────
+ eval residual          1.85M    77.8s   62.7%  42.2μs    182GiB   59.3%   103KiB
+   volume terms         1.85M    62.8s   50.6%  34.0μs    148GiB   48.4%  84.3KiB
+   facet terms          1.85M    6.26s    5.0%  3.39μs   16.1GiB    5.2%  9.12KiB
+   mass matrix solve    1.85M    1.17s    0.9%   634ns   3.22GiB    1.0%  1.83KiB
+ eval flux diff         1.85M    23.2s   18.7%  12.5μs   62.6GiB   20.4%  35.5KiB
+ extrapolate solution   1.85M    8.90s    7.2%  4.82μs   11.5GiB    3.7%  6.52KiB
+ gather external state  1.85M    6.67s    5.4%  3.61μs   24.1GiB    7.9%  13.7KiB
+ eval numerical flux    1.85M    4.35s    3.5%  2.35μs   13.9GiB    4.5%  7.87KiB
+ eval flux              1.85M    3.25s    2.6%  1.76μs   12.7GiB    4.1%  7.20KiB
+ ────────────────────────────────────────────────────────────────────────────────
+
+L2 error:
+[2.3305775787118683e-5]
+Conservation (initial/final/diff):
+[-8.299114867549306e-12][-8.299914141390863e-12][-7.992738415563139e-16]
+Energy (initial/final/diff):
+[0.24999999839985834][0.24999995876234773][-3.963751060709342e-8]

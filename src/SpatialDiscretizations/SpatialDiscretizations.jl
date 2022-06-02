@@ -3,7 +3,7 @@ module SpatialDiscretizations
     using UnPack
     using LinearAlgebra: I, inv, Diagonal, diagm
     using LinearMaps: LinearMap
-    using StartUpDG: MeshData, RefElemData, AbstractElemShape, basis, vandermonde, quad_nodes, gauss_quad, gauss_lobatto_quad, face_vertices, nodes, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial
+    using StartUpDG: MeshData, RefElemData, basis, vandermonde, quad_nodes, gauss_quad, gauss_lobatto_quad, face_vertices, nodes, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial
 
     using Jacobi: zgrjm, wgrjm, zgj, wgj
     import StartUpDG: face_type, init_face_data
@@ -97,7 +97,7 @@ module SpatialDiscretizations
         for k in 1:N_el
             for i in 1:N_q
                 for m in 1:d, n in 1:d
-                Λ_η[i,m,n,k] = sum( Λ_ref[ix,m,l] * Λ_q[i,l,n,k] for l in 1:d)
+                    Λ_η[i,m,n,k] = sum( Λ_ref[i,m,l] * Λ_q[i,l,n,k] for l in 1:d)
                 end
                 J_η[i,k] = J_ref[i] * J_q[i,k]
             end

@@ -131,8 +131,9 @@ module Solvers
         f::NTuple{d,Matrix{Float64}}, 
         f_fac::Matrix{Float64}, ::Eager,
         s::Union{Matrix{Float64},Nothing}=nothing) where {d}
+        to = get_timer(string("thread_timer_", Threads.threadid()))
         
-        @timeit "volume terms" begin
+        @timeit to "volume terms" begin
             # compute volume terms
             volume_terms = zero(residual)
             @inbounds for m in 1:d
@@ -140,7 +141,7 @@ module Solvers
             end
         end
 
-        @timeit "facet terms" begin
+        @timeit to "facet terms" begin
             # compute facet terms
             facet_terms = mul!(residual, operators.FAC, f_fac)
         end
@@ -148,7 +149,7 @@ module Solvers
         rhs = volume_terms + facet_terms
 
         if !isnothing(s)
-            @timeit "source terms" begin
+            @timeit to "source terms" begin
                 source_terms = mul!(residual, operators.SRC, s)
             end
             rhs = rhs + source_terms
@@ -163,25 +164,26 @@ module Solvers
         f_fac::Matrix{Float64}, 
         ::Lazy,
         s::Matrix{Float64}) where {d}
+        to = get_timer(string("thread_timer_", Threads.threadid()))
 
-        @timeit "volume terms" begin
+        @timeit to "volume terms" begin
             volume_terms = zero(residual)
             @inbounds for m in 1:d
                 volume_terms += mul!(residual, operators.VOL[m], f[m])
             end
         end
 
-        @timeit "facet terms" begin
+        @timeit to "facet terms" begin
             facet_terms = mul!(residual, operators.FAC, f_fac)
         end
  
-        @timeit "source terms" begin
+        @timeit to "source terms" begin
             source_terms = mul!(residual, operators.SRC, s)
         end
         
         rhs = volume_terms + facet_terms + rhs + source_terms
 
-        @timeit "mass matrix solve" begin
+        @timeit to "mass matrix solve" begin
             residual = operators.M \ rhs
         end
         
@@ -194,21 +196,22 @@ module Solvers
         f_fac::Matrix{Float64}, 
         ::Lazy,
         s::Nothing=nothing) where {d}
+        to = get_timer(string("thread_timer_", Threads.threadid()))
 
-        @timeit "volume terms" begin
+        @timeit to "volume terms" begin
             volume_terms = zero(residual)
             @inbounds for m in 1:d
                 volume_terms += mul!(residual, operators.VOL[m], f[m])
             end
         end
 
-        @timeit "facet terms" begin
+        @timeit to "facet terms" begin
             facet_terms = mul!(residual, operators.FAC, f_fac)
         end
 
         rhs = volume_terms + facet_terms
 
-        @timeit "mass matrix solve" begin
+        @timeit to "mass matrix solve" begin
             residual = operators.M \ rhs
         end
         
@@ -221,28 +224,29 @@ module Solvers
         f_fac::Matrix{Float64}, 
         ::Lazy,
         s::Union{Matrix{Float64},Nothing}=nothing) where {d}
+        to = get_timer(string("thread_timer_", Threads.threadid()))
 
-        @timeit "volume terms" begin
+        @timeit to "volume terms" begin
             volume_terms = zero(residual)
             @inbounds for m in 1:d
                 volume_terms += flux_diff(operators.VOL[m], F[m])
             end
         end
 
-        @timeit "facet terms" begin
+        @timeit to "facet terms" begin
             facet_terms = mul!(residual, operators.FAC, f_fac)
         end
 
         rhs = volume_terms + facet_terms
  
         if !isnothing(s)
-            @timeit "source terms" begin
+            @timeit to "source terms" begin
                 source_terms = mul!(residual, operators.SRC, s)
             end
             rhs = rhs + source_terms
         end
 
-        @timeit "mass matrix solve" begin
+        @timeit to "mass matrix solve" begin
             residual = operators.M \ rhs
         end
         
@@ -255,8 +259,9 @@ module Solvers
         f_fac::Matrix{Float64}, 
         ::Eager,
         s::Union{Matrix{Float64},Nothing}=nothing) where {d}
+        to = get_timer(string("thread_timer_", Threads.threadid()))
 
-        @timeit "volume terms" begin
+        @timeit to "volume terms" begin
             # compute volume terms
             volume_terms = zero(residual)
             for m in 1:d
@@ -264,7 +269,7 @@ module Solvers
             end
         end
 
-        @timeit "facet terms" begin
+        @timeit to "facet terms" begin
             # compute facet terms
             facet_terms = mul!(residual, operators.FAC, f_fac)
         end
@@ -272,7 +277,7 @@ module Solvers
         rhs = volume_terms + facet_terms
 
         if !isnothing(s)
-            @timeit "source terms" begin
+            @timeit to "source terms" begin
                 source_terms = mul!(residual, operators.SRC, s)
             end
             rhs = rhs + source_terms

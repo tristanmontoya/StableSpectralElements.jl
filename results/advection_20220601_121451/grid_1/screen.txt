@@ -1,0 +1,40 @@
+Results Path: "../results/advection_20220601_121451/grid_1/"
+
+Parameters: Dict{String, Any}("r" => 1, "L" => 1.0, "a" => 1.4142135623730951, "path" => "../results/", "theta" => 0.7853981633974483, "M" => 4, "lambda" => 1.0, "scheme" => "DGMulti", "n_grids" => 1, "form" => "WeakConservationForm", "beta" => 0.01, "mesh_perturb" => 0.15, "p" => 4, "n" => 11)
+
+writing time step 463  t = 0.0909417888026028
+writing time step 926  t = 0.18188357760520354
+writing time step 1389  t = 0.2728253664078043
+writing time step 1852  t = 0.36376715521040504
+writing time step 2315  t = 0.45470894401300577
+writing time step 2778  t = 0.5456507328156065
+writing time step 3241  t = 0.6365925216182072
+writing time step 3704  t = 0.727534310420808
+writing time step 4167  t = 0.8184760992234087
+writing time step 4630  t = 0.9094178880260094
+Solver finished!
+
+ ────────────────────────────────────────────────────────────────────────────────
+                                        Time                    Allocations      
+                               ───────────────────────   ────────────────────────
+       Tot / % measured:           434ms / 6792.5%          46.5MiB / 95533.5%   
+
+ Section               ncalls     time    %tot     avg     alloc    %tot      avg
+ ────────────────────────────────────────────────────────────────────────────────
+ eval residual           978k    14.4s   48.8%  14.7μs   22.6GiB   52.1%  24.2KiB
+ rhs!                   30.6k    12.1s   41.0%   395μs   14.9GiB   34.3%   510KiB
+ volume terms            978k    3.63s   12.3%  3.72μs   6.49GiB   15.0%  6.96KiB
+ mass matrix solve       978k    3.22s   10.9%  3.29μs   5.99GiB   13.8%  6.42KiB
+ eval numerical flux     978k    3.12s   10.6%  3.19μs   4.07GiB    9.4%  4.36KiB
+ eval flux               978k    2.53s    8.6%  2.59μs   3.91GiB    9.0%  4.19KiB
+ gather external state   978k    2.04s    6.9%  2.09μs   6.44GiB   14.9%  6.90KiB
+ facet terms             978k    1.84s    6.2%  1.88μs   1.03GiB    2.4%  1.11KiB
+ extrapolate solution    978k    1.51s    5.1%  1.54μs    817MiB    1.8%     876B
+ ────────────────────────────────────────────────────────────────────────────────
+
+L2 error:
+[0.004199207440082811]
+Conservation (initial/final/diff):
+[4.401749925577597e-8][4.401749934858368e-8][9.280770596475918e-17]
+Energy (initial/final/diff):
+[0.24999026021207624][0.2494243360996707][-0.0005659241124055248]

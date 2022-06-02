@@ -149,40 +149,46 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
         u_facet = Array{Float64}(undef, N_f, N_eq, N_el)
 
         # get all facet state values
-        for k in 1:N_el
+        Threads.@threads for k in 1:N_el
             u_facet[:,:,k] = 
-                @timeit "extrapolate solution" Matrix(
+                @timeit get_timer(string("thread_timer_", Threads.threadid())) "extrapolate solution" Matrix(
                     operators[k].Vf * u[:,:,k])
         end
 
         # evaluate all local residuals
-        for k in 1:N_el
+        Threads.@threads for k in 1:N_el
+            to = get_timer(string("thread_timer_", Threads.threadid()))
+
             # gather external state to element
-            @timeit "gather external state" begin
+            @timeit to "gather external state" begin
                 u_out = Matrix{Float64}(undef, N_f, N_eq)
                 @inbounds for e in 1:N_eq
                     u_out[:,e] = u_facet[:,e,:][connectivity[:,k]]
                 end
             end
-            
+
             # evaluate physical and numerical flux
-            f = @timeit "eval flux" physical_flux(
+            f = @timeit to "eval flux" physical_flux(
                 conservation_law.first_order_flux, 
                 Matrix(operators[k].V * u[:,:,k]))
-            f_star = @timeit "eval numerical flux" numerical_flux(
+            f_star = @timeit to "eval numerical flux" numerical_flux(
                 conservation_law.first_order_numerical_flux,
                 u_facet[:,:,k], u_out, operators[k].scaled_normal)
-            f_fac = @timeit "eval flux diff" f_star - 
+            f_fac = @timeit to "eval flux diff" f_star - 
                 sum(convert(Matrix,operators[k].NTR[m] * f[m]) 
                     for m in 1:d)
 
             # evaluate source term, if there is one
-            s = @timeit "eval source term" evaluate(
-                conservation_law.source_term, 
-                Tuple(x_q[m][:,k] for m in 1:d), t)
+            if isnothing(conservation_law.source_term)
+                s = nothing
+            else
+                s = @timeit to "eval source term" evaluate(
+                    conservation_law.source_term, 
+                    Tuple(x_q[m][:,k] for m in 1:d),t)
+            end
                 
             # apply operators
-            dudt[:,:,k] = @timeit "eval residual" apply_operators!(
+            dudt[:,:,k] = @timeit to "eval residual" apply_operators!(
                 dudt[:,:,k], operators[k], f, f_fac, strategy, s)
         end
     end
@@ -197,7 +203,6 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
     t::Float64; print::Bool=false) where {d, N_eq}
 
     @timeit "rhs!" begin
-
         @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
 
         N_el = size(operators)[1]
@@ -205,14 +210,16 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
         u_facet = Array{Float64}(undef, N_f, N_eq, N_el)
 
         # get all facet state values
-        for k in 1:N_el
-            u_facet[:,:,k] = @timeit "extrapolate solution" convert(
+        Threads.@threads for k in 1:N_el
+            u_facet[:,:,k] = @timeit get_timer(string("thread_timer_", Threads.threadid())) "extrapolate solution" convert(
                 Matrix, operators[k].Vf * u[:,:,k])
         end
 
         # evaluate all local residuals
-        for k in 1:N_el
-            @timeit "gather external state" begin
+        Threads.@threads for k in 1:N_el
+            to = get_timer(string("thread_timer_", Threads.threadid()))
+
+            @timeit to "gather external state" begin
                 # gather external state to element
                 u_out = Matrix{Float64}(undef, N_f, N_eq)
                 @inbounds for e in 1:N_eq
@@ -221,10 +228,10 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             end
             
             # evaluate physical and numerical flux
-            f = @timeit "eval flux" physical_flux(
+            f = @timeit to "eval flux" physical_flux(
                 conservation_law.first_order_flux, 
                 convert(Matrix,operators[k].V * u[:,:,k]))
-            f_star = @timeit "eval numerical flux" numerical_flux(
+            f_star = @timeit to "eval numerical flux" numerical_flux(
                 conservation_law.first_order_numerical_flux,
                 u_facet[:,:,k], u_out, operators[k].scaled_normal)
             
@@ -232,13 +239,13 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             if isnothing(conservation_law.source_term)
                 s = nothing
             else
-                s = @timeit "eval source term" evaluate(
+                s = @timeit to "eval source term" evaluate(
                     conservation_law.source_term, 
                     Tuple(x_q[m][:,k] for m in 1:d),t)
             end
 
             # apply operators
-            dudt[:,:,k] = @timeit "eval residual" apply_operators!(
+            dudt[:,:,k] = @timeit to "eval residual" apply_operators!(
                 dudt[:,:,k], operators[k], f, f_star, strategy, s)
         end
     end
