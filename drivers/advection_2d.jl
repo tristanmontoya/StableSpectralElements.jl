@@ -8,7 +8,7 @@ ENV["PYTHON"] = ""
 ENV["MPLBACKEND"]="agg"
 Pkg.build("PyCall")
 =#
-using OrdinaryDiffEq: solve, Tsit5
+using OrdinaryDiffEq: solve, CarpenterKennedy2N54
 using LinearAlgebra
 using TimerOutputs
 using UnPack
@@ -200,7 +200,7 @@ function main(args)
             reset_timer!(get_timer(string("thread_timer_",t)))
         end
         reset_timer!()
-        sol = solve(ode_problem, Tsit5(), adaptive=false,
+        sol = solve(ode_problem, CarpenterKennedy2N54(), adaptive=false,
             dt=dt, save_everystep=false, callback=save_callback(
                 results_path, ceil(Int, T/(dt*n_s))))
         save_solution(last(sol.u), last(sol.t), results_path, "final")

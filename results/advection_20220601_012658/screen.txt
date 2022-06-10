@@ -1,6 +1,0 @@
-Results Path: "../results/advection_20220601_012658/"
-
-Plots Path: "../plots/advection_20220601_012658/"
-
-Parameters:Dict{String, Any}("r" => 1, "L" => 1.0, "a" => 1.4142135623730951, "theta" => 0.7853981633974483, "M" => 4, "lambda" => 1.0, "results_path" => "../results/", "scheme" => "DGMulti", "form" => "WeakConservationForm", "beta" => 0.01, "mesh_perturb" => 0.15, "plots_path" => "../plots/", "p" => 4, "n" => 11)
-

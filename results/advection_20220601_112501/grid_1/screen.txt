@@ -1,4 +1,0 @@
-Results Path: "../results/advection_20220601_112501/grid_1/"
-
-Parameters: Dict{String, Any}("r" => 1, "L" => 1.0, "a" => 1.4142135623730951, "path" => "../results/", "theta" => 0.7853981633974483, "M" => 2, "lambda" => 1.0, "scheme" => "DGMulti", "n_grids" => 1, "form" => "WeakConservationForm", "beta" => 0.01, "mesh_perturb" => 0.15, "p" => 4, "n" => 11)
-
