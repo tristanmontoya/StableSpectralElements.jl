@@ -1,0 +1,2 @@
+Number of Julia threads: 16
+Number of OpenBLAS threads: 8
