@@ -1,0 +1,39 @@
+Matplotlib created a temporary config/cache directory at /tmp/matplotlib-ub4rvg91 because the default path (/home/z/zingg/tmontoya/.config/matplotlib) is not a writable directory; it is highly recommended to set the MPLCONFIGDIR environment variable to a writable directory, in particular to speed up the import of Matplotlib and to better support multiprocessing.
+slurmstepd: error: *** JOB 7559466 ON nia1724 CANCELLED AT 2022-06-11T18:10:14 ***
+
+scontrol show jobid 7559466
+JobId=7559466 JobName=collapsed_nodal_hrefine_p4_upwind
+   UserId=tmontoya(3046870) GroupId=zingg(6000086) MCS_label=N/A
+   Priority=1525607 Nice=0 Account=rrg-zingg-ad QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:15
+   RunTime=00:01:20 TimeLimit=1-00:00:00 TimeMin=N/A
+   SubmitTime=2022-06-11T18:08:52 EligibleTime=2022-06-11T18:08:52
+   AccrueTime=2022-06-11T18:08:52
+   StartTime=2022-06-11T18:08:54 EndTime=2022-06-11T18:10:14 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2022-06-11T18:08:54 Scheduler=Main
+   Partition=compute AllocNode:Sid=nia-login05:22283
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=nia1724
+   BatchHost=nia1724
+   NumNodes=1 NumCPUs=80 NumTasks=40 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   TRES=cpu=80,mem=175000M,node=1,billing=40
+   Socks/Node=* NtasksPerN:B:S:C=40:0:*:* CoreSpec=*
+   MinCPUsNode=40 MinMemoryNode=175000M MinTmpDiskNode=0
+   Features=[skylake|cascade] DelayBoot=00:00:00
+   OverSubscribe=NO Contiguous=0 Licenses=(null) Network=(null)
+   Command=/gpfs/fs0/scratch/z/zingg/tmontoya/CLOUD.jl/scripts/submit_collapsed_nodal_hrefine.sh
+   WorkDir=/gpfs/fs0/scratch/z/zingg/tmontoya/CLOUD.jl/scripts
+   Comment=/opt/slurm/bin/sbatch --export=NONE submit_collapsed_nodal_hrefine.sh 
+   StdErr=/gpfs/fs0/scratch/z/zingg/tmontoya/CLOUD.jl/scripts/slurm-7559466.out
+   StdIn=/dev/null
+   StdOut=/gpfs/fs0/scratch/z/zingg/tmontoya/CLOUD.jl/scripts/slurm-7559466.out
+   Power=
+   
+
+sacct -j 7559466
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+7559466      collapsed+ rrg-zingg+   00:01:20                         00:00:00   00:00:00      0:0 
+7559466.bat+      batch rrg-zingg+   00:01:20                         00:00:00   00:00:00      0:0 
+7559466.ext+     extern rrg-zingg+   00:01:20                         00:00:00   00:00:00      0:0 

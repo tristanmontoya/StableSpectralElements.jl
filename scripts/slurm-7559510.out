@@ -1,0 +1,66 @@
+Matplotlib created a temporary config/cache directory at /tmp/matplotlib-2k3xhqkd because the default path (/home/z/zingg/tmontoya/.config/matplotlib) is not a writable directory; it is highly recommended to set the MPLCONFIGDIR environment variable to a writable directory, in particular to speed up the import of Matplotlib and to better support multiprocessing.
+┌ Warning: Instability detected. Aborting
+└ @ SciMLBase ~/.julia/packages/SciMLBase/LAwSR/src/integrator_interface.jl:372
+ERROR: LoadError: DomainError with -5.208341017047939e96:
+sqrt will only return a complex result if called with a complex argument. Try sqrt(Complex(x)).
+Stacktrace:
+  [1] throw_complex_domainerror(f::Symbol, x::Float64)
+    @ Base.Math ./math.jl:33
+  [2] sqrt(x::Float64)
+    @ Base.Math ./math.jl:567
+  [3] (::CLOUD.Analysis.var"#4#7"{Tuple{Matrix{Float64}}, Int64, QuadratureL2})(e::Int64)
+    @ CLOUD.Analysis ./reduce.jl:0
+  [4] iterate
+    @ ./generator.jl:47 [inlined]
+  [5] collect(itr::Base.Generator{UnitRange{Int64}, CLOUD.Analysis.var"#4#7"{Tuple{Matrix{Float64}}, Int64, QuadratureL2}})
+    @ Base ./array.jl:724
+  [6] analyze(analysis::ErrorAnalysis{QuadratureL2, 2}, sol::Array{Float64, 3}, exact_solution::InitialDataSine{2})
+    @ CLOUD.Analysis /gpfs/fs0/scratch/z/zingg/tmontoya/CLOUD.jl/src/Analysis/error.jl:41
+  [7] (::var"#2#7"{ConservationLaw{2, 1}, InitialDataSine{2}, SciMLBase.ODESolution{Float64, 4, Vector{Array{Float64, 3}}, Nothing, Nothing, Vector{Float64}, Vector{Vector{Array{Float64, 3}}}, SciMLBase.ODEProblem{Array{Float64, 3}, Tuple{Float64, Float64}, true, Solver{SplitConservationForm, CLOUD.Solvers.PhysicalOperators, 2, 1}, SciMLBase.ODEFunction{true, typeof(rhs!), UniformScaling{Bool}, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, typeof(SciMLBase.DEFAULT_OBSERVED), Nothing}, Base.Pairs{Symbol, Union{}, Tuple{}, NamedTuple{(), Tuple{}}}, SciMLBase.StandardODEProblem}, CarpenterKennedy2N54{typeof(OrdinaryDiffEq.trivial_limiter!), typeof(OrdinaryDiffEq.trivial_limiter!), Static.False}, OrdinaryDiffEq.InterpolationData{SciMLBase.ODEFunction{true, typeof(rhs!), UniformScaling{Bool}, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, typeof(SciMLBase.DEFAULT_OBSERVED), Nothing}, Vector{Array{Float64, 3}}, Vector{Float64}, Vector{Vector{Array{Float64, 3}}}, OrdinaryDiffEq.LowStorageRK2NCache{Array{Float64, 3}, Array{Float64, 3}, OrdinaryDiffEq.LowStorageRK2NConstantCache{4, Float64, Float64}, typeof(OrdinaryDiffEq.trivial_limiter!), typeof(OrdinaryDiffEq.trivial_limiter!), Static.False}}, DiffEqBase.DEStats}, SpatialDiscretization{2}, String})(io::IOStream)
+    @ Main /gpfs/fs0/scratch/z/zingg/tmontoya/CLOUD.jl/drivers/advection_2d.jl:223
+  [8] open(::var"#2#7"{ConservationLaw{2, 1}, InitialDataSine{2}, SciMLBase.ODESolution{Float64, 4, Vector{Array{Float64, 3}}, Nothing, Nothing, Vector{Float64}, Vector{Vector{Array{Float64, 3}}}, SciMLBase.ODEProblem{Array{Float64, 3}, Tuple{Float64, Float64}, true, Solver{SplitConservationForm, CLOUD.Solvers.PhysicalOperators, 2, 1}, SciMLBase.ODEFunction{true, typeof(rhs!), UniformScaling{Bool}, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, typeof(SciMLBase.DEFAULT_OBSERVED), Nothing}, Base.Pairs{Symbol, Union{}, Tuple{}, NamedTuple{(), Tuple{}}}, SciMLBase.StandardODEProblem}, CarpenterKennedy2N54{typeof(OrdinaryDiffEq.trivial_limiter!), typeof(OrdinaryDiffEq.trivial_limiter!), Static.False}, OrdinaryDiffEq.InterpolationData{SciMLBase.ODEFunction{true, typeof(rhs!), UniformScaling{Bool}, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, typeof(SciMLBase.DEFAULT_OBSERVED), Nothing}, Vector{Array{Float64, 3}}, Vector{Float64}, Vector{Vector{Array{Float64, 3}}}, OrdinaryDiffEq.LowStorageRK2NCache{Array{Float64, 3}, Array{Float64, 3}, OrdinaryDiffEq.LowStorageRK2NConstantCache{4, Float64, Float64}, typeof(OrdinaryDiffEq.trivial_limiter!), typeof(OrdinaryDiffEq.trivial_limiter!), Static.False}}, DiffEqBase.DEStats}, SpatialDiscretization{2}, String}, ::String, ::Vararg{String}; kwargs::Base.Pairs{Symbol, Union{}, Tuple{}, NamedTuple{(), Tuple{}}})
+    @ Base ./io.jl:330
+  [9] open(::Function, ::String, ::String)
+    @ Base ./io.jl:328
+ [10] main(args::Vector{String})
+    @ Main /gpfs/fs0/scratch/z/zingg/tmontoya/CLOUD.jl/drivers/advection_2d.jl:208
+ [11] top-level scope
+    @ /gpfs/fs0/scratch/z/zingg/tmontoya/CLOUD.jl/drivers/advection_2d.jl:230
+in expression starting at /gpfs/fs0/scratch/z/zingg/tmontoya/CLOUD.jl/drivers/advection_2d.jl:230
+
+scontrol show jobid 7559510
+JobId=7559510 JobName=collapsed_nodal_hrefine_p2_upwind
+   UserId=tmontoya(3046870) GroupId=zingg(6000086) MCS_label=N/A
+   Priority=1527713 Nice=0 Account=rrg-zingg-ad QOS=normal
+   JobState=COMPLETING Reason=NonZeroExitCode Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=1:0
+   RunTime=00:01:50 TimeLimit=1-00:00:00 TimeMin=N/A
+   SubmitTime=2022-06-11T18:13:58 EligibleTime=2022-06-11T18:13:58
+   AccrueTime=2022-06-11T18:13:58
+   StartTime=2022-06-11T18:14:04 EndTime=2022-06-11T18:15:54 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2022-06-11T18:14:04 Scheduler=Main
+   Partition=compute AllocNode:Sid=nia-login05:22283
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=nia0890
+   BatchHost=nia0890
+   NumNodes=1 NumCPUs=80 NumTasks=40 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   TRES=cpu=80,mem=175000M,node=1,billing=40
+   Socks/Node=* NtasksPerN:B:S:C=40:0:*:* CoreSpec=*
+   MinCPUsNode=40 MinMemoryNode=175000M MinTmpDiskNode=0
+   Features=[skylake|cascade] DelayBoot=00:00:00
+   OverSubscribe=NO Contiguous=0 Licenses=(null) Network=(null)
+   Command=/gpfs/fs0/scratch/z/zingg/tmontoya/CLOUD.jl/scripts/submit_collapsed_nodal_hrefine.sh
+   WorkDir=/gpfs/fs0/scratch/z/zingg/tmontoya/CLOUD.jl/scripts
+   Comment=/opt/slurm/bin/sbatch --export=NONE submit_collapsed_nodal_hrefine.sh 
+   StdErr=/gpfs/fs0/scratch/z/zingg/tmontoya/CLOUD.jl/scripts/slurm-7559510.out
+   StdIn=/dev/null
+   StdOut=/gpfs/fs0/scratch/z/zingg/tmontoya/CLOUD.jl/scripts/slurm-7559510.out
+   Power=
+   
+
+sacct -j 7559510
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+7559510      collapsed+ rrg-zingg+   00:01:51                        00:07.254  02:32.572      0:0 
+7559510.bat+      batch rrg-zingg+   00:01:50   5417744K   1025164K  00:07.254  02:32.572      1:0 
+7559510.ext+     extern rrg-zingg+   00:01:51                         00:00:00   00:00:00      0:0 

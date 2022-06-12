@@ -28,3 +28,7 @@ Manifest.toml
 
 # Mac meta info stuff
 .DS_Store
+
+# Results and plots files
+results/
+plots/
