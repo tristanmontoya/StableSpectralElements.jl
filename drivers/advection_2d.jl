@@ -106,6 +106,7 @@ struct AdvectionDriver{d}
 end
 
 function advection_driver_2d(parsed_args::Dict)
+
     p = parsed_args["p"]
     r = parsed_args["r"]
     β = parsed_args["beta"]
@@ -138,7 +139,6 @@ function advection_driver_2d(parsed_args::Dict)
     end
 
     path = parsed_args["path"]
-
     M0 = parsed_args["M"]
     λ = parsed_args["lambda"]
     L = parsed_args["L"]
@@ -158,14 +158,14 @@ function main(args)
     @unpack p,r,β,n_s,scheme,elem_type,form,path,M0,λ,L,a,T,mesh_perturb, n_grids =  advection_driver_2d(parsed_args)
 
     date_time = Dates.format(now(), "yyyymmdd_HHMMSS")
-    path = new_path(string(path, "advection_", date_time, "/"))
+    path = new_path(string(path, "advection_", parsed_args["scheme"], "_p", string(p), "M", string(Int(M0)), "l", string(Int(λ)), "_", date_time, "/"))
 
     initial_data = InitialDataSine(1.0,(2*π/L, 2*π/L))
     conservation_law = linear_advection_equation(a,λ=λ)
 
     
     println("Number of Julia threads: ", Threads.nthreads())
-    println("Number of OpenBLAS threads: ", BLAS.get_num_threads())
+    println("Number of BLAS threads: ", BLAS.get_num_threads())
     for n in 1:n_grids
 
         M = M0^n
@@ -208,21 +208,23 @@ function main(args)
         open(string(results_path,"screen.txt"), "a") do io
             println(io, "Solver finished!\n")
 
-            println(io, @capture_out print_timer(), "\n")
             to = merge(Tuple(get_timer(string("thread_timer_",t)) 
                 for t in 1:Threads.nthreads())...)
 
             println(io, @capture_out print_timer(to), "\n")
 
             error_analysis = ErrorAnalysis(results_path, conservation_law, 
-            spatial_discretization)
+                spatial_discretization)
             conservation_analysis = PrimaryConservationAnalysis(results_path, 
                 conservation_law, spatial_discretization)
             energy_analysis = EnergyConservationAnalysis(results_path, 
                 conservation_law, spatial_discretization)
-            println(io,"L2 error:\n", analyze(error_analysis, last(sol.u), initial_data))
-            println(io,"Conservation (initial/final/diff):\n", analyze(conservation_analysis)...)
-            println(io,"Energy (initial/final/diff):\n",analyze(energy_analysis)...)
+            println(io,"L2 error:\n", 
+                analyze(error_analysis, last(sol.u), initial_data))
+            println(io,"Conservation (initial/final/diff):\n", 
+                analyze(conservation_analysis)...)
+            println(io,"Energy (initial/final/diff):\n",
+                analyze(energy_analysis)...)
         end
     end
 end
