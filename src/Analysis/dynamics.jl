@@ -230,6 +230,7 @@ function plot_spectrum(analysis::AbstractDynamicalAnalysis,
             ylabel=latexstring(string("\\mathrm{Im}\\,(", ylabel, ")")), 
             xlims=xlims, ylims=ylims,legend=:topleft,label=labels[i],
             markershape=markershapes[i], seriestype=:scatter,
+            markersize=3,
             markerstrokewidth=0, markercolor=:black, size=(400,400))
     end
     savefig(p, string(analysis.analysis_path, title))

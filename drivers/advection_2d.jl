@@ -81,6 +81,10 @@ function parse_commandline()
             help = "number of periods"
             arg_type = Float64
             default = 1.0
+        "--timer"
+            help = "whether to run timer"
+            arg_type = Bool
+            default = false
     end
 
     return parse_args(s)
@@ -103,6 +107,7 @@ struct AdvectionDriver{d}
     T::Float64
     mesh_perturb::Float64
     n_grids::Int
+    timer::Bool
 end
 
 function advection_driver_2d(parsed_args::Dict)
@@ -147,15 +152,16 @@ function advection_driver_2d(parsed_args::Dict)
     T = parsed_args["n_periods"]/(a*max(abs(cos(θ)),abs(cos(θ))))
     mesh_perturb = parsed_args["mesh_perturb"]
     n_grids = parsed_args["n_grids"]
+    timer = parsed_args["timer"]
 
     return AdvectionDriver(p,r,β,n_s,scheme,elem_type,
         form,path,M0,λ,L,(a*cos(θ), a*sin(θ)), T,
-        mesh_perturb, n_grids)
+        mesh_perturb, n_grids, timer)
 end
 
 function main(args)
     parsed_args = parse_commandline()
-    @unpack p,r,β,n_s,scheme,elem_type,form,path,M0,λ,L,a,T,mesh_perturb, n_grids =  advection_driver_2d(parsed_args)
+    @unpack p,r,β,n_s,scheme,elem_type,form,path,M0,λ,L,a,T,mesh_perturb, n_grids, timer =  advection_driver_2d(parsed_args)
 
     date_time = Dates.format(now(), "yyyymmdd_HHMMSS")
     path = new_path(string(path, "advection_", parsed_args["scheme"], "_p", string(p), "M", string(Int(M0)), "l", string(Int(λ)), "_", date_time, "/"))
@@ -163,9 +169,6 @@ function main(args)
     initial_data = InitialDataSine(1.0,(2*π/L, 2*π/L))
     conservation_law = linear_advection_equation(a,λ=λ)
 
-    
-    println("Number of Julia threads: ", Threads.nthreads())
-    println("Number of BLAS threads: ", BLAS.get_num_threads())
     for n in 1:n_grids
 
         M = M0^n
@@ -187,6 +190,8 @@ function main(args)
             (0.0, T), Lazy(), results_path, overwrite=true, clear=true)
 
         open(string(results_path,"screen.txt"), "a") do io
+            println(io, "Number of Julia threads: ", Threads.nthreads())
+            println(io, "Number of BLAS threads: ", BLAS.get_num_threads(),"\n")
             println(io, "Results Path: ", "\"", results_path, "\"\n")
             println(io, "Parameters: ", parsed_args, "\n")
         end
@@ -207,24 +212,25 @@ function main(args)
 
         open(string(results_path,"screen.txt"), "a") do io
             println(io, "Solver finished!\n")
-
+            
+        if timer
             to = merge(Tuple(get_timer(string("thread_timer_",t)) 
                 for t in 1:Threads.nthreads())...)
-
             println(io, @capture_out print_timer(to), "\n")
+        end
 
-            error_analysis = ErrorAnalysis(results_path, conservation_law, 
-                spatial_discretization)
-            conservation_analysis = PrimaryConservationAnalysis(results_path, 
-                conservation_law, spatial_discretization)
-            energy_analysis = EnergyConservationAnalysis(results_path, 
-                conservation_law, spatial_discretization)
-            println(io,"L2 error:\n", 
-                analyze(error_analysis, last(sol.u), initial_data))
-            println(io,"Conservation (initial/final/diff):\n", 
-                analyze(conservation_analysis)...)
-            println(io,"Energy (initial/final/diff):\n",
-                analyze(energy_analysis)...)
+        error_analysis = ErrorAnalysis(results_path, conservation_law, 
+            spatial_discretization)
+        conservation_analysis = PrimaryConservationAnalysis(results_path, 
+            conservation_law, spatial_discretization)
+        energy_analysis = EnergyConservationAnalysis(results_path, 
+            conservation_law, spatial_discretization)
+        println(io,"L2 error:\n", 
+            analyze(error_analysis, last(sol.u), initial_data))
+        println(io,"Conservation (initial/final/diff):\n", 
+            analyze(conservation_analysis)...)
+        println(io,"Energy (initial/final/diff):\n",
+            analyze(energy_analysis)...)
         end
     end
 end
