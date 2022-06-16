@@ -1,7 +1,7 @@
 module SpatialDiscretizations
 
     using UnPack
-    using LinearAlgebra: I, inv, Diagonal, diagm
+    using LinearAlgebra: I, inv, Diagonal, diagm, kron
     using LinearMaps: LinearMap
     using StartUpDG: MeshData, RefElemData, basis, vandermonde, quad_nodes, gauss_quad, gauss_lobatto_quad, face_vertices, nodes, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial
 
@@ -14,10 +14,9 @@ module SpatialDiscretizations
     using Reexport
     @reexport using StartUpDG: AbstractElemShape, Line, Quad, Tri, Tet, Hex, Pyr
 
-    export AbstractApproximationType, AbstractCollocatedApproximation, AbstractReferenceMapping, NoMapping, CollapsedMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, make_sbp_operator, χ
+    export AbstractApproximationType, AbstractReferenceMapping, NoMapping, CollapsedMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, make_sbp_operator, χ
     
     abstract type AbstractApproximationType end
-    abstract type AbstractCollocatedApproximation <: AbstractApproximationType end
     abstract type AbstractReferenceMapping end
     struct NoMapping <: AbstractReferenceMapping end
     struct ReferenceMapping <: AbstractReferenceMapping 
@@ -38,7 +37,6 @@ module SpatialDiscretizations
         P::LinearMap
         W::LinearMap
         B::LinearMap
-        ADVs::NTuple{d, LinearMap}
         ADVw::NTuple{d, LinearMap}
         V_plot::LinearMap
         reference_mapping::AbstractReferenceMapping
@@ -62,30 +60,21 @@ module SpatialDiscretizations
         geometric_factors = apply_reference_mapping(GeometricFactors(mesh,
             reference_element), reference_mapping)
 
-        if reference_approximation.approx_type isa AbstractCollocatedApproximation
-            return SpatialDiscretization{d}(
-                mesh,
-                N_el,
-                reference_approximation,
-                geometric_factors,
-                [W * Diagonal(geometric_factors.J_q[:,k]) for k in 1:N_el],
-                Tuple(reference_element.Vp * mesh.xyz[m] for m in 1:d))
-
-        else 
-            return SpatialDiscretization{d}(
-                mesh,
-                N_el,
-                reference_approximation,
-                geometric_factors,
-                [convert(Matrix, reference_approximation.V' * W *
-                    Diagonal(geometric_factors.J_q[:,k]) * 
-                    reference_approximation.V) for k in 1:N_el],
-                Tuple(reference_element.Vp * mesh.xyz[m] for m in 1:d))
-        end
+        return SpatialDiscretization{d}(
+            mesh,
+            N_el,
+            reference_approximation,
+            geometric_factors,
+            [convert(Matrix, reference_approximation.V' * W *
+                Diagonal(geometric_factors.J_q[:,k]) * 
+                reference_approximation.V) for k in 1:N_el],
+            Tuple(reference_element.Vp * mesh.xyz[m] for m in 1:d))
     end
 
+    """Use this when there are no collapsed coordinates"""
     @inline apply_reference_mapping(geometric_factors::GeometricFactors, ::NoMapping) = geometric_factors
     
+    """Express all metric terms in terms of collapsed coordinates"""
     function apply_reference_mapping(geometric_factors::GeometricFactors,
         reference_mapping::ReferenceMapping)
         @unpack J_q, Λ_q, nJf = geometric_factors
@@ -97,7 +86,8 @@ module SpatialDiscretizations
         for k in 1:N_el
             for i in 1:N_q
                 for m in 1:d, n in 1:d
-                    Λ_η[i,m,n,k] = sum( Λ_ref[i,m,l] * Λ_q[i,l,n,k] for l in 1:d)
+                    Λ_η[i,m,n,k] = sum( Λ_ref[i,m,l] * Λ_q[i,l,n,k] 
+                        for l in 1:d)
                 end
                 J_η[i,k] = J_ref[i] * J_q[i,k]
             end
@@ -170,10 +160,8 @@ module SpatialDiscretizations
         spatial_discretization::SpatialDiscretization{d}) where {d}
 
         @unpack xyz = spatial_discretization.mesh
-
         return [Tuple(sum(xyz[m][:,k])/length(xyz[m][:,k]) 
-            for m in 1:d)
-            for k in 1:spatial_discretization.N_el]
+            for m in 1:d) for k in 1:spatial_discretization.N_el]
     end
 
     export AbstractQuadratureRule, LGLQuadrature, LGQuadrature, LGRQuadrature, JGLQuadrature, JGRQuadrature, JGQuadrature, JacobiQuadrature, LegendreQuadrature, quadrature, facet_node_ids

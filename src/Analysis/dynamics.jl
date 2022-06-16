@@ -93,8 +93,9 @@ function analyze(analysis::LinearAnalysis)
             λ, ϕ[:,inds],  conjugate_pairs, 
             c[inds,:], ϕ*c, E[inds,:]) 
     else 
-        return DynamicalAnalysisResults(exp.(dt*values), values, ϕ, nothing,
-            nothing, find_conjugate_pairs(values), nothing)
+        dt = 1.0
+        return DynamicalAnalysisResults(exp.(dt.*values), values, ϕ,    
+            find_conjugate_pairs(values), nothing, nothing, nothing)
     end
 end
 
@@ -217,7 +218,26 @@ function plot_analysis(analysis::AbstractDynamicalAnalysis,
 end
 
 function plot_spectrum(analysis::AbstractDynamicalAnalysis, 
-    eigs::Vector{ComplexF64}; label="\\exp(\\tilde{\\lambda} t_s)", unit_circle=true, xlims=nothing, ylims=nothing,
+    eigs::Vector{Vector{ComplexF64}}; ylabel="\\lambda", 
+    xlims=nothing, ylims=nothing, title="spectra.pdf", 
+    labels=["Upwind", "Central"])
+
+    p = plot()
+    markershapes = vcat([:circle,], fill(:xcross, length(eigs)-1))
+    for i in 1:length(eigs)
+        plot!(p, eigs[i], 
+            xlabel=latexstring(string("\\mathrm{Re}\\,(", ylabel, ")")), 
+            ylabel=latexstring(string("\\mathrm{Im}\\,(", ylabel, ")")), 
+            xlims=xlims, ylims=ylims,legend=:topleft,label=labels[i],
+            markershape=markershapes[i], seriestype=:scatter,
+            markerstrokewidth=0, markercolor=:black, size=(400,400))
+    end
+    savefig(p, string(analysis.analysis_path, title))
+    return p
+end
+
+function plot_spectrum(analysis::AbstractDynamicalAnalysis, 
+    eigs::Vector{ComplexF64}; label="\\exp(\\tilde{\\lambda} t_s)",unit_circle=true, xlims=nothing, ylims=nothing,
     xscale=0.02, yscale=0.07, title="spectrum.pdf", numbering=true)
 
     if unit_circle

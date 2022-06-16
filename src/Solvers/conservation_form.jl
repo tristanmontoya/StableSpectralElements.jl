@@ -29,7 +29,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     ::StrongConservationForm) where {d}
 
     @unpack N_el, M = spatial_discretization
-    @unpack ADVs, V, Vf, R, P, W, B = spatial_discretization.reference_approximation
+    @unpack V, Vf, R, P, W, B = spatial_discretization.reference_approximation
     @unpack nrstJ = 
         spatial_discretization.reference_approximation.reference_element
     @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
@@ -37,10 +37,10 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     operators = Array{PhysicalOperators}(undef, N_el)
     for k in 1:N_el
         if d == 1
-            VOL = (ADVs[1],)
+            VOL = (-V' * W * D[1],)
             NTR = (Diagonal(nrstJ[1]) * R,)
         else
-            VOL = Tuple(sum(ADVs[m] * Diagonal(Λ_q[:,m,n,k])
+            VOL = Tuple(sum(-V' * W * D[m] * Diagonal(Λ_q[:,m,n,k])
                 for m in 1:d) for n in 1:d) 
             NTR = Tuple(sum(Diagonal(nrstJ[m]) * R * 
                 Diagonal(Λ_q[:,m,n,k]) for m in 1:d) for n in 1:d)
@@ -59,10 +59,9 @@ end
 function make_operators(spatial_discretization::SpatialDiscretization{d}, 
     form::WeakConservationForm) where {d}
 
-    @unpack N_el, M = spatial_discretization
-    @unpack ADVw, V, Vf, R, P, W, B, D = spatial_discretization.reference_approximation
-    @unpack nrstJ = 
-        spatial_discretization.reference_approximation.reference_element
+    @unpack N_el, M, reference_approximation = spatial_discretization
+    @unpack ADVw, V, Vf, R, P, W, B, D = reference_approximation
+    @unpack nrstJ = reference_approximation.reference_element
     @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
 
     operators = Array{PhysicalOperators}(undef, N_el)

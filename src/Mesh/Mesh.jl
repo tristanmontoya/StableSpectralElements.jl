@@ -149,18 +149,16 @@ module Mesh
 
         for k in 1:N_el
             for m in 1:d, n in 1:d
-                for n in 1:d
-                    # evaluate metric at mapping nodes
-                    dxdr = reference_element.Drst[n]*mesh.xyz[m][:,k]
+                # evaluate metric at mapping nodes
+                dxdr = reference_element.Drst[n]*mesh.xyz[m][:,k]
 
-                    # use mapping basis to interpolate to quadrature nodes
-                    dxdr_q[:,m,n,k] = reference_element.Vq*dxdr
-                    dxdr_f[:,m,n,k] = reference_element.Vf*dxdr
-                end
+                # use mapping basis to interpolate to quadrature nodes
+                dxdr_q[:,m,n,k] = reference_element.Vq*dxdr
+                dxdr_f[:,m,n,k] = reference_element.Vf*dxdr
             end
 
             # loops over slower indices
-            for i in 1:N_q
+            @inbounds @simd for i in 1:N_q
                 J_q[i,k] = det(dxdr_q[i,:,:,k])
                 Λ_q[i,:,:,k] = J_q[i,k]*inv(dxdr_q[i,:,:,k])
             end

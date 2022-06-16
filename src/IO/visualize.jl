@@ -10,7 +10,7 @@ function Plotter(spatial_discretization::SpatialDiscretization{d},directory_name
 
     return Plotter{d}(spatial_discretization.x_plot, 
         spatial_discretization.reference_approximation.V_plot,
-        spatial_discretization.N_el, path)    
+        spatial_discretization.N_el, path)
 end
 
 function visualize(sol::Array{Float64,3}, 

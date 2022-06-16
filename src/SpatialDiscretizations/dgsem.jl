@@ -1,4 +1,4 @@
-struct DGSEM <:AbstractCollocatedApproximation
+struct DGSEM <:AbstractApproximationType
     p::Int  # polynomial degree
 end
 
@@ -108,13 +108,10 @@ function ReferenceApproximation(approx_type::DGSEM,
     W = LinearMap(Diagonal(wq))
     B = LinearMap(Diagonal(wf))
 
-    # strong-form reference advection operator (no mass matrix)
-    ADVs = Tuple(-W * D[m] for m in 1:d)
-
     # weak-form reference advection operator (no mass matrix)
     ADVw = Tuple(D[m]' * W for m in 1:d)
 
     return ReferenceApproximation{d}(approx_type, N_p, N_q, N_f, 
-        reference_element, D, V, Vf, R, P, W, B, ADVs, ADVw, V_plot,
+        reference_element, D, V, Vf, R, P, W, B, ADVw, V_plot,
         NoMapping())
 end

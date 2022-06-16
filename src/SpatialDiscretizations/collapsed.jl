@@ -1,5 +1,5 @@
 """Nodal spectral element method in collapsed coordinates"""
-struct CollapsedSEM <:AbstractCollocatedApproximation
+struct CollapsedSEM <:AbstractApproximationType
     p::Int  # polynomial degree
 end
 
@@ -65,7 +65,6 @@ function ReferenceApproximation(
         LGQuadrature(),LGRQuadrature()),
     facet_quadrature_rule::NTuple{2,AbstractQuadratureRule}=(
         LGQuadrature(),LGRQuadrature()),
-    chain_rule_diff=false,
     mapping_degree::Int=1, N_plot::Int=10)
 
     @unpack p = approx_type
@@ -73,17 +72,17 @@ function ReferenceApproximation(
     N_q = (p+1)*(p+1)
     N_f = 3*(p+1)
 
+    ######### this should be a function ######### 
     # set up mapping nodes and interpolation matrices
     r,s = nodes(Tri(), mapping_degree)  
-    VDM, Vr, Vs = basis(Tri(), mapping_degree, r, s) 
-    Vq = 
-
+    VDM, Vr, Vs = basis(Tri(), mapping_degree, r, s)
     # set up quadrature rules
     rq, sq, wq = quadrature(Tri(), volume_quadrature_rule, (p+1, p+1))
     rf, sf, wf, nrJ, nsJ = init_face_data(elem_type, p, facet_quadrature_rule)
-    Vq = vandermonde(Tri(), mapping_degree, rq, sq) / VDM
-    M = Vq' * diagm(wq) * Vq
-    Vf = vandermonde(Tri(), mapping_degree, rf, sf) / VDM
+    rp, sp = χ(Tri(),equi_nodes(Quad(),N_plot))
+    # from mapping interpolation nodes to quadrature nodes
+    Vq_map = vandermonde(Tri(), mapping_degree, rq, sq) / VDM
+    Vf_map = vandermonde(Tri(), mapping_degree, rf, sf) / VDM
     # reference element data structure from StartUpDG
     reference_element = RefElemData(Tri(), Polynomial(), mapping_degree,
                     face_vertices(Tri()), 
@@ -91,35 +90,25 @@ function ReferenceApproximation(
                         vandermonde(Tri(), 1, nodes(Tri(), 1)...),
                     tuple(r, s), VDM, 
                     vec(hcat(find_face_nodes(Tri(), r, s)...)),
-                    N_plot, equi_nodes(Tri(), N_plot),
-                    vandermonde(Tri(), mapping_degree, 
-                        equi_nodes(Tri(), N_plot)...) / VDM,
-                    tuple(rq, sq), wq, Vq, tuple(rf, sf), wf,  Vf, 
-                    tuple(nrJ, nsJ), M,  M \ (Vq' * diagm(wq)), 
-                    (Vr / VDM, Vs / VDM), M \  (Vf' * diagm(wf)))
+                    N_plot, (rp, sp),
+                    vandermonde(Tri(), mapping_degree, rp, sp) / VDM,
+                    tuple(rq, sq), wq, Vq_map, tuple(rf, sf), wf, Vf_map,
+                    tuple(nrJ, nsJ),  Vq_map' * diagm(wq) * Vq_map, 
+                    ( Vq_map' * diagm(wq) * Vq_map) \ (Vq_map' * diagm(wq)), 
+                    (Vr / VDM, Vs / VDM), 
+                    (Vq_map' * diagm(wq) * Vq_map) \  (Vf_map' * diagm(wf)))
+    ######### end here ######### 
 
     # one-dimensional operators
-    rd_1 = RefElemData(Line(), mapping_degree,
+    rd_1 = RefElemData(Line(), p,
         quad_rule_vol=quadrature(Line(), 
-        volume_quadrature_rule[1], p+1), Nplot=1) # horizontal
-    rd_2 = RefElemData(Line(), mapping_degree,
+        volume_quadrature_rule[1], p+1), Nplot=N_plot) # horizontal
+    rd_2 = RefElemData(Line(), p,
         quad_rule_vol=quadrature(Line(), 
-        volume_quadrature_rule[2], p+1), Nplot=1) # vertical
-
-    VDM_1, ∇VDM_1 = basis(Line(), p, rd_1.rstq[1])
-    D_1 = ∇VDM_1 / VDM_1
-    VDM_2, ∇VDM_2 = basis(Line(), p, rd_2.rstq[1])
-    D_2 = ∇VDM_2 / VDM_2
+        volume_quadrature_rule[2], p+1), Nplot=N_plot) # vertical
 
     # ordering
     sigma = [(p+1)*(i-1) + j for i in 1:p+1, j in 1:p+1]
-
-    # extrapolation operators (not most efficient for e.g. LGL) 
-    R_1 = vandermonde(Line(),p, rd_1.rstf[1]) / VDM_1 # horizontal
-    R_2 = vandermonde(Line(),p, rd_2.rstf[1]) / VDM_2 # vertical
-    R_B = R_2[1:1,:]
-    R_R = R_1[2:2,:]
-    R_L = R_1[1:1,:]
 
     # if a 1D extrapolation can be used along each line of nodes
     if (typeof(volume_quadrature_rule[1])==
@@ -131,49 +120,43 @@ function ReferenceApproximation(
             bottom_map = SelectionMap([i for i in 1:p+1], N_q)
         else
             bottom_map =TensorProductMap(
-                R_B, I, sigma, [j for i in 1:1, j in 1:p+1])
+                rd_2.Vf[1:1,:], I, sigma, [j for i in 1:1, j in 1:p+1])
         end
 
         R = [bottom_map; # bottom, left to right
             TensorProductMap( # right, upwards
-                I, R_R, sigma, [i for i in 1:p+1, j in 1:1]); 
+                I, rd_1.Vf[2:2,:], sigma, [i for i in 1:p+1, j in 1:1]); 
             TensorProductMap( # left, downwards
-                I, R_L,  sigma, [i for i in p+1:-1:1, j in 1:1])]
+                I, rd_1.Vf[1:1,:],  sigma, [i for i in p+1:-1:1, j in 1:1])]
+                
+    # otherwise use successive 1D extrapolations
     else 
         r_1d_1, _ = quadrature(face_type(Tri()), 
-        facet_quadrature_rule[1], p+1)
+            facet_quadrature_rule[1], p+1)
         r_1d_2, _ = quadrature(face_type(Tri()), 
             facet_quadrature_rule[2], p+1)
-        R = [LinearMap(vandermonde(Line(), p, r_1d_1) / VDM_1) *
-            TensorProductMap( R_B, I, sigma, [j for i in 1:1, j in 1:p+1]);
-        LinearMap(vandermonde(Line(), p, r_1d_2) / VDM_2) * 
-            TensorProductMap(I, R_R, sigma, [i for i in 1:p+1, j in 1:1]); 
-        LinearMap((vandermonde(Line(), p, r_1d_2) / VDM_2)[end:-1:1,:]) *   
-            TensorProductMap(I, R_L, sigma,
+            
+        R = [LinearMap(vandermonde(Line(), p, r_1d_1) / rd_1.VDM) *
+            TensorProductMap( rd_2.Vf[1:1,:], I, sigma, [j for i in 1:1, j in 1:p+1]);
+        LinearMap(vandermonde(Line(), p, r_1d_2) / rd_2.VDM) * 
+            TensorProductMap(I, rd_1.Vf[2:2,:], sigma, [i for i in 1:p+1, j in 1:1]); 
+        LinearMap((vandermonde(Line(), p, r_1d_2) / rd_1.VDM)[end:-1:1,:]) *   
+            TensorProductMap(I, rd_1.Vf[1:1,:], sigma,
                 [i for i in p+1:-1:1, j in 1:1])]
     end
 
     # differentiation on the square
-    D_η = (TensorProductMap(I, D_1, sigma, sigma), 
-        TensorProductMap(D_2, I, sigma, sigma))
+    D = (TensorProductMap(I, rd_1.Dr, sigma, sigma), 
+        TensorProductMap(rd_2.Dr, I, sigma, sigma))
 
     # construct mapping to triangle
     η1, η2, w_η = quadrature(Quad(), volume_quadrature_rule, (p+1, p+1))
     B = LinearMap(Diagonal(wf))
+    W = LinearMap(Diagonal(w_η))
+    reference_mapping = ReferenceMapping(
+        reference_geometric_factors(Tri(),(η1,η2))...)
 
-    if chain_rule_diff
-        W = LinearMap(Diagonal(wq))
-        D = (Diagonal((x-> 2.0/(1.0-x)).(η2))*D_η[1],
-            Diagonal((x -> (1.0+x)).(η1) ./ (x -> (1.0-x)).(η2))*D_η[1] 
-            + D_η[2])
-        reference_mapping = NoMapping()
-    else
-        W = LinearMap(Diagonal(w_η))
-        D = D_η
-        reference_mapping = ReferenceMapping(
-            reference_geometric_factors(Tri(),(η1,η2))...)
-    end
-
+    # construct modal or nodal scheme
     @unpack rstp, rstq = reference_element
     if approx_type isa CollapsedModal
         N_p = binomial(p+d, d)
@@ -183,21 +166,18 @@ function ReferenceApproximation(
         inv_M = LinearMap(inv(V_modal' * Diagonal(wq) * V_modal))
         P = inv_M * V' * W
         Vf = R * V
-        ADVs = Tuple(-1.0*W*D[m] for m in 1:d)
         ADVw = Tuple(V' * D[m]' * W for m in 1:d)
     else
         N_p = N_q
-        V_plot = LinearMap(vandermonde(Tri(), p, rstp...) / 
-            vandermonde(Tri(), p, rstq...))
+        V_plot = LinearMap(vandermonde(Quad(), p, rstp...) / 
+            kron(rd_1.VDM, rd_2.VDM))
         V = LinearMap(I, N_q)
         P = LinearMap(I, N_q)
         Vf = R
-        ADVs = Tuple(-1.0*W*D[m] for m in 1:d)
         ADVw = Tuple(D[m]' * W for m in 1:d)
-
     end
 
     return ReferenceApproximation{d}(approx_type, N_p, N_q, N_f, 
-        reference_element, D, V, Vf, R, P, W, B, ADVs, ADVw, V_plot,
+        reference_element, D, V, Vf, R, P, W, B, ADVw, V_plot,
         reference_mapping)
 end
