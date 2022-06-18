@@ -166,12 +166,11 @@ function tabulate_analysis_for_paper(results::NTuple{2,RefinementAnalysisResults
     err =Tuple(results[i].error[:,e] for i in 1:2)
     eoc =Tuple(results[i].eoc[:,e] for i in 1:2)
 
-    println(results[1].dof[:,2], cons..., ener..., err..., eoc...)
     tab = hcat(results[1].dof[:,2], cons..., ener..., err..., eoc...)
 
     latex_header = vcat(["\$N_e\$", "Conservation Metric", "", "Energy Metric", "", "\$L^2\$ Error","", "Order",""])
     pretty_table(tab, header=latex_header, backend = Val(:latex),
-        formatters = (ft_nomissing, ft_printf("%d", [1,]), ft_printf("%.3e", [2,3,4,5,6,7]), ft_printf("%1.5f", [8,])), tf = tf_latex_booktabs)
+        formatters = (ft_nomissing, ft_printf("& %d", [1,]), ft_printf("%.3e", [2,3,4,5,6,7]), ft_printf("%1.2f", [8,9])), tf = tf_latex_booktabs)
 end
     
     

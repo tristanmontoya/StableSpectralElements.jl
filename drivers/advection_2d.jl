@@ -1,13 +1,6 @@
 push!(LOAD_PATH,"../")
 ENV["MPLBACKEND"]="agg"
-#=
-using Pkg
-Pkg.instantiate()
-ENV["OPENBLAS_NUM_THREADS"] = 1
-ENV["PYTHON"] = ""
-ENV["MPLBACKEND"]="agg"
-Pkg.build("PyCall")
-=#
+
 using OrdinaryDiffEq: solve, CarpenterKennedy2N54
 using LinearAlgebra
 using TimerOutputs
@@ -29,10 +22,10 @@ function parse_commandline()
             help = "degree of mapping"
             arg_type = Int
             default = 1
-        "--beta", "-b"
-            help = "scaling factor for time step"
+        "-C",
+            help = "Courant number"
             arg_type = Float64
-            default = 0.01
+            default = 2.0e-4
         "-n"
             help = "number of writes to file"
             arg_type = Int
@@ -93,7 +86,7 @@ end
 struct AdvectionDriver{d}
     p::Int
     r::Int
-    β::Float64
+    C::Float64
     n_s::Int
     scheme::AbstractApproximationType
     elem_type::AbstractElemShape
@@ -114,7 +107,7 @@ function advection_driver_2d(parsed_args::Dict)
 
     p = parsed_args["p"]
     r = parsed_args["r"]
-    β = parsed_args["beta"]
+    C = parsed_args["C"]
     n_s = parsed_args["n"]
     
     if parsed_args["scheme"] == "DGMulti"
@@ -154,14 +147,14 @@ function advection_driver_2d(parsed_args::Dict)
     n_grids = parsed_args["n_grids"]
     timer = parsed_args["timer"]
 
-    return AdvectionDriver(p,r,β,n_s,scheme,elem_type,
+    return AdvectionDriver(p,r,C,n_s,scheme,elem_type,
         form,path,M0,λ,L,(a*cos(θ), a*sin(θ)), T,
         mesh_perturb, n_grids, timer)
 end
 
 function main(args)
     parsed_args = parse_commandline()
-    @unpack p,r,β,n_s,scheme,elem_type,form,path,M0,λ,L,a,T,mesh_perturb, n_grids, timer =  advection_driver_2d(parsed_args)
+    @unpack p,r,C,n_s,scheme,elem_type,form,path,M0,λ,L,a,T,mesh_perturb, n_grids, timer =  advection_driver_2d(parsed_args)
 
     date_time = Dates.format(now(), "yyyymmdd_HHMMSS")
     path = new_path(string(path, "advection_", parsed_args["scheme"], "_p", string(p), "M", string(Int(M0)), "l", string(Int(λ)), "_", date_time, "/"))
@@ -196,14 +189,15 @@ function main(args)
             println(io, "Parameters: ", parsed_args, "\n")
         end
 
-        dt = β*(L/M)/(norm(a)*(2*p+1))
+        dt = C*(L/M)/norm(a)
         ode_problem = semidiscretize(solver, initialize(initial_data, 
             conservation_law, spatial_discretization), (0.0, T))
-            
+
         save_solution(ode_problem.u0, 0.0, results_path, 0)
         for t in 1:Threads.nthreads()
             reset_timer!(get_timer(string("thread_timer_",t)))
         end
+
         reset_timer!()
         sol = solve(ode_problem, CarpenterKennedy2N54(), adaptive=false,
             dt=dt, save_everystep=false, callback=save_callback(

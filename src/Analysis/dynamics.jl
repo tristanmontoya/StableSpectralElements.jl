@@ -231,7 +231,9 @@ function plot_spectrum(analysis::AbstractDynamicalAnalysis,
             xlims=xlims, ylims=ylims,legend=:topleft,label=labels[i],
             markershape=markershapes[i], seriestype=:scatter,
             markersize=3,
-            markerstrokewidth=0, markercolor=:black, size=(400,400))
+            markerstrokewidth=0, 
+            markercolors=:black, 
+            size=(400,400))
     end
     savefig(p, string(analysis.analysis_path, title))
     return p
