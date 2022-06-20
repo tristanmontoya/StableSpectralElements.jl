@@ -233,7 +233,8 @@ function plot_spectrum(analysis::AbstractDynamicalAnalysis,
             markersize=3,
             markerstrokewidth=0, 
             markercolors=:black, 
-            size=(400,400))
+            #size=(400,400)
+            )
     end
     savefig(p, string(analysis.analysis_path, title))
     return p

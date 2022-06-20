@@ -1,7 +1,7 @@
 push!(LOAD_PATH,"../")
 ENV["MPLBACKEND"]="agg"
 
-using OrdinaryDiffEq: solve, CarpenterKennedy2N54
+using OrdinaryDiffEq: solve, DP8, RK4, CarpenterKennedy2N54, OrdinaryDiffEqAlgorithm
 using LinearAlgebra
 using TimerOutputs
 using UnPack
@@ -22,10 +22,10 @@ function parse_commandline()
             help = "degree of mapping"
             arg_type = Int
             default = 1
-        "-C",
+        "-C"
             help = "Courant number"
             arg_type = Float64
-            default = 2.0e-4
+            default = 5.0e-4
         "-n"
             help = "number of writes to file"
             arg_type = Int
@@ -38,6 +38,10 @@ function parse_commandline()
             help = "residual form"
             arg_type = String
             default = "WeakConservationForm"
+        "--integrator", "-i"
+            help = "time integrator"
+            arg_type = String
+            default = "RK4"
         "--path"
             help = "results path"
             arg_type = String
@@ -91,6 +95,7 @@ struct AdvectionDriver{d}
     scheme::AbstractApproximationType
     elem_type::AbstractElemShape
     form::AbstractResidualForm
+    integrator::OrdinaryDiffEqAlgorithm
     path::String
 
     M0::Int
@@ -136,6 +141,16 @@ function advection_driver_2d(parsed_args::Dict)
         error("Invalid discretization form")
     end
 
+    if parsed_args["integrator"] == "RK4"
+        integrator = RK4()
+    elseif parsed_args["integrator"] == "CarpenterKennedy2N54"
+        integrator = CarpenterKennedy2N54()
+    elseif parsed_args["integrator"] == "DP8"
+        integrator = DP8()
+    else
+        error("Unsupported time integrator")
+    end
+
     path = parsed_args["path"]
     M0 = parsed_args["M"]
     λ = parsed_args["lambda"]
@@ -148,13 +163,13 @@ function advection_driver_2d(parsed_args::Dict)
     timer = parsed_args["timer"]
 
     return AdvectionDriver(p,r,C,n_s,scheme,elem_type,
-        form,path,M0,λ,L,(a*cos(θ), a*sin(θ)), T,
+        form, integrator, path,M0,λ,L,(a*cos(θ), a*sin(θ)), T,
         mesh_perturb, n_grids, timer)
 end
 
 function main(args)
     parsed_args = parse_commandline()
-    @unpack p,r,C,n_s,scheme,elem_type,form,path,M0,λ,L,a,T,mesh_perturb, n_grids, timer =  advection_driver_2d(parsed_args)
+    @unpack p,r,C,n_s,scheme,elem_type,form,integrator,path,M0,λ,L,a,T,mesh_perturb, n_grids, timer =  advection_driver_2d(parsed_args)
 
     date_time = Dates.format(now(), "yyyymmdd_HHMMSS")
     path = new_path(string(path, "advection_", parsed_args["scheme"], "_p", string(p), "M", string(Int(M0)), "l", string(Int(λ)), "_", date_time, "/"))
@@ -199,7 +214,7 @@ function main(args)
         end
 
         reset_timer!()
-        sol = solve(ode_problem, CarpenterKennedy2N54(), adaptive=false,
+        sol = solve(ode_problem, integrator, adaptive=false,
             dt=dt, save_everystep=false, callback=save_callback(
                 results_path, ceil(Int, T/(dt*n_s))))
         save_solution(last(sol.u), last(sol.t), results_path, "final")

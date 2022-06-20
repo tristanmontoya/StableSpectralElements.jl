@@ -64,7 +64,7 @@ function evaluate_conservation(
     sol::Array{Float64,3})
     @unpack WJ, N_eq, N_el, V = analysis 
 
-    return [sum(sol[:,e,k]'*V'*WJ[k]*V*sol[:,e,k] 
+    return [0.5*sum(sol[:,e,k]'*V'*WJ[k]*V*sol[:,e,k] 
         for k in 1:N_el) for e in 1:N_eq]
 end
 
