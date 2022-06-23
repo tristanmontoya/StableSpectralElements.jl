@@ -22,10 +22,10 @@ function parse_commandline()
             help = "degree of mapping"
             arg_type = Int
             default = 1
-        "-C"
-            help = "Courant number"
+        "--beta", "-b"
+            help = "Time step factor"
             arg_type = Float64
-            default = 5.0e-4
+            default = 2.5e-3
         "-n"
             help = "number of writes to file"
             arg_type = Int
@@ -90,7 +90,7 @@ end
 struct AdvectionDriver{d}
     p::Int
     r::Int
-    C::Float64
+    β::Float64
     n_s::Int
     scheme::AbstractApproximationType
     elem_type::AbstractElemShape
@@ -112,7 +112,7 @@ function advection_driver_2d(parsed_args::Dict)
 
     p = parsed_args["p"]
     r = parsed_args["r"]
-    C = parsed_args["C"]
+    β = parsed_args["beta"]
     n_s = parsed_args["n"]
     
     if parsed_args["scheme"] == "DGMulti"
@@ -162,14 +162,14 @@ function advection_driver_2d(parsed_args::Dict)
     n_grids = parsed_args["n_grids"]
     timer = parsed_args["timer"]
 
-    return AdvectionDriver(p,r,C,n_s,scheme,elem_type,
-        form, integrator, path,M0,λ,L,(a*cos(θ), a*sin(θ)), T,
+    return AdvectionDriver(p,r,β,n_s,scheme,elem_type,
+        form,integrator,path,M0,λ,L,(a*cos(θ), a*sin(θ)), T,
         mesh_perturb, n_grids, timer)
 end
 
 function main(args)
     parsed_args = parse_commandline()
-    @unpack p,r,C,n_s,scheme,elem_type,form,integrator,path,M0,λ,L,a,T,mesh_perturb, n_grids, timer =  advection_driver_2d(parsed_args)
+    @unpack p,r,β,n_s,scheme,elem_type,form,integrator,path,M0,λ,L,a,T,mesh_perturb, n_grids, timer =  advection_driver_2d(parsed_args)
 
     date_time = Dates.format(now(), "yyyymmdd_HHMMSS")
     path = new_path(string(path, "advection_", parsed_args["scheme"], "_p", string(p), "M", string(Int(M0)), "l", string(Int(λ)), "_", date_time, "/"))
@@ -204,7 +204,7 @@ function main(args)
             println(io, "Parameters: ", parsed_args, "\n")
         end
 
-        dt = C*(L/M)/norm(a)
+        dt = β*(L/M)/(norm(a)*(2*p+1))
         ode_problem = semidiscretize(solver, initialize(initial_data, 
             conservation_law, spatial_discretization), (0.0, T))
 

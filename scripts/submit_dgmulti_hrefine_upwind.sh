@@ -16,5 +16,5 @@ form=WeakConservationForm
 
 cd /home/z/zingg/tmontoya/scratch/CLOUD.jl/drivers
 
-julia --project=.. --threads 4 advection_2d.jl -C 0.0004 -m 0.2 -p 4 -r 4 -l 1.0 -M 2 -g 6 -s $scheme -f $form -i DP8 -n 50 &
-julia --project=.. --threads 32 advection_2d.jl -C 0.0004 -m 0.2 -p 9 -r 9 -l 1.0 -M 2 -g 6 -s $scheme -f $form -i DP8 -n 50
+julia --project=.. --threads 4 advection_2d.jl -b 0.0025 -m 0.2 -p 4 -r 4 -l 1.0 -M 2 -g 6 -s $scheme -f $form -i CarpenterKennedy2N54 -n 50 &
+julia --project=.. --threads 32 advection_2d.jl -b 0.0025 -m 0.2 -p 9 -r 9 -l 1.0 -M 2 -g 6 -s $scheme -f $form -i CarpenterKennedy2N54 -n 50
