@@ -41,8 +41,7 @@ function LinearAnalysis(results_path::String,
     conservation_law::ConservationLaw, 
     spatial_discretization::SpatialDiscretization, 
     L::Union{LinearMap{Float64},AbstractMatrix{Float64}};
-    r=4, tol=1.0e-12, 
-    name="linear_analysis", 
+    r=4, tol=1.0e-12, name="linear_analysis", 
     use_data=true)
 
     analysis_path = new_path(string(results_path, name, "/"))
@@ -217,26 +216,40 @@ function plot_analysis(analysis::AbstractDynamicalAnalysis,
     return p
 end
 
-function plot_spectrum(analysis::AbstractDynamicalAnalysis, 
-    eigs::Vector{Vector{ComplexF64}}; ylabel="\\lambda", 
-    xlims=nothing, ylims=nothing, title="spectra.pdf", 
+function plot_spectrum(eigs::Vector{Vector{ComplexF64}}, plots_path::String; 
+    ylabel="\\lambda", xlims=nothing, ylims=nothing, title="spectra.pdf", 
     labels=["Upwind", "Central"])
-
     p = plot()
-    markershapes = vcat([:circle,], fill(:xcross, length(eigs)-1))
-    for i in 1:length(eigs)
-        plot!(p, eigs[i], 
-            xlabel=latexstring(string("\\mathrm{Re}\\,(", ylabel, ")")), 
-            ylabel=latexstring(string("\\mathrm{Im}\\,(", ylabel, ")")), 
-            xlims=xlims, ylims=ylims,legend=:topleft,label=labels[i],
-            markershape=markershapes[i], seriestype=:scatter,
+    max_real = @sprintf "%.2e" maximum(real.(eigs[1]))
+    plot!(p, eigs[1], 
+        xlabel= latexstring(string("\\mathrm{Re}\\,(", ylabel, ")")), 
+        ylabel= latexstring(string("\\mathrm{Im}\\,(", ylabel, ")")), 
+        xlims=xlims, ylims=ylims,legend=:topleft,
+        label=string(labels[1]," (max Re(λ): ", max_real, ")"),  
+        markershape=:circle, seriestype=:scatter,
+        markersize=3,
+        markerstrokewidth=0, 
+        markercolors=:grey, 
+        size=(400,400)
+    )
+    if length(eigs) > 1
+        for i in 2:length(eigs)
+            max_real = @sprintf "%.2e" maximum(real.(eigs[i]))
+            sr = @sprintf "%.2f" maximum(abs.(eigs[i]))
+            plot!(p, eigs[i], 
+            xlabel= latexstring(string("\\mathrm{Re}\\,(", ylabel, ")")), 
+            ylabel= latexstring(string("\\mathrm{Im}\\,(", ylabel, ")")), 
+            legend=:topleft,
+            label=string(labels[i]," (max Re(λ): ", max_real,")"),  
+            markershape=:star5, seriestype=:scatter,
             markersize=3,
             markerstrokewidth=0, 
             markercolors=:black, 
-            #size=(400,400)
+            size=(400,400)
             )
+        end
     end
-    savefig(p, string(analysis.analysis_path, title))
+    savefig(p, string(plots_path, title))
     return p
 end
 

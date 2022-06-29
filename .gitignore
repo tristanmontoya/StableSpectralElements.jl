@@ -35,3 +35,4 @@ Manifest.toml
 # Results and plots files
 results/
 plots/
+notebooks/

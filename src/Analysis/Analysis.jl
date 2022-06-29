@@ -11,6 +11,7 @@ module Analysis
     using Arpack: eigs
     using OrdinaryDiffEq: OrdinaryDiffEqAlgorithm, ODESolution, solve, RK4
     using PrettyTables
+    using Printf
     using Markdown
 
     using ..ConservationLaws: ConservationLaw
