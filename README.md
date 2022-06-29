@@ -3,7 +3,7 @@
 CLOUD.jl is a Julia framework for high-order discretizations of conservation laws with a focus on dynamically dispatched strategies for operator evaluation. Documentation is currently in progress.
 
 ## Usage
-A Jupyter notebook containing example solutions of the 2D linear advection equation on curvilinear triangular and quadrilateral meshes using modal DG and nodal DGSEM schemes, respectively, are included in `examples/advection_2D.ipynb`.
+A Jupyter notebook containing example solutions of the 2D linear advection equation on curvilinear triangular and quadrilateral meshes using modal DG and nodal DGSEM schemes, respectively, is provided in `examples/advection_2D.ipynb`.
 
 ## License
 
