@@ -1,4 +1,2 @@
-notebooks/* linguist-vendored
-results/* linguist-vendored
-mesh/* linguist-vendored
-plots/* linguist-vendored
+ICCFD11/* linguist-vendored
+scripts/* linguist-vendored
