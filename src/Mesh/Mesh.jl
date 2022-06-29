@@ -8,10 +8,10 @@ module Mesh
 
     export GeometricFactors, uniform_periodic_mesh, warp_mesh, cartesian_mesh, Uniform, ZigZag, Collapsed
 
-    abstract type MeshGenStrategy end
-    struct Uniform <: MeshGenStrategy end
-    struct ZigZag <: MeshGenStrategy end
-    struct Collapsed <: MeshGenStrategy end
+    abstract type AbstractMeshGenStrategy end
+    struct Uniform <: AbstractMeshGenStrategy end
+    struct ZigZag <: AbstractMeshGenStrategy end
+    struct Collapsed <: AbstractMeshGenStrategy end
 
     struct GeometricFactors{d}
         # first dimension is node index, second is element
@@ -44,7 +44,7 @@ module Mesh
 
     function uniform_periodic_mesh(reference_element::RefElemData{2}, 
         limits::NTuple{2,NTuple{2,Float64}}, M::NTuple{2,Int};
-        random_rotate::Bool=false, strategy::MeshGenStrategy=ZigZag())
+        random_rotate::Bool=false, strategy::AbstractMeshGenStrategy=ZigZag())
 
         (VX, VY), EtoV = cartesian_mesh(reference_element.elementType, 
             M, strategy)
@@ -66,6 +66,11 @@ module Mesh
 
     function cartesian_mesh(elem_type::AbstractElemShape, 
         M::NTuple{2,Int}, ::Uniform)
+        return uniform_mesh(elem_type, M[1], M[2])
+    end
+
+    function cartesian_mesh(elem_type::Union{Quad,Hex},
+        M::NTuple{2,Int}, ::AbstractMeshGenStrategy)
         return uniform_mesh(elem_type, M[1], M[2])
     end
 

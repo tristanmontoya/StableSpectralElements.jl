@@ -17,6 +17,8 @@ module SpatialDiscretizations
     export AbstractApproximationType, AbstractReferenceMapping, NoMapping, CollapsedMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, make_sbp_operator, χ
     
     abstract type AbstractApproximationType end
+
+    """Collapsed coordinate mapping χ: [-1,1]ᵈ → Ωᵣ"""
     abstract type AbstractReferenceMapping end
     struct NoMapping <: AbstractReferenceMapping end
     struct ReferenceMapping <: AbstractReferenceMapping 
@@ -24,6 +26,7 @@ module SpatialDiscretizations
         Λ_ref::Array{Float64, 3}
     end
 
+    """Operators for local approximation on reference element"""
     struct ReferenceApproximation{d}
         approx_type::AbstractApproximationType
         N_p::Int
@@ -42,6 +45,7 @@ module SpatialDiscretizations
         reference_mapping::AbstractReferenceMapping
     end
     
+    """Data for constructing the global spatial discretization"""
     struct SpatialDiscretization{d}
         mesh::MeshData{d}
         N_el::Int

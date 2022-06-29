@@ -68,18 +68,17 @@ function ReferenceApproximation(
     mapping_degree::Int=1, N_plot::Int=10)
 
     @unpack p = approx_type
-    d = 2
     N_q = (p+1)*(p+1)
     N_f = 3*(p+1)
 
-    ######### this should be a function ######### 
+    # set up quadrature rules and nodes
+    rq, sq, wq = quadrature(Tri(), volume_quadrature_rule, (p+1, p+1))
+    rf, sf, wf, nrJ, nsJ = init_face_data(elem_type, p, facet_quadrature_rule)
+    rp, sp = χ(Tri(),equi_nodes(Quad(),N_plot)) 
+
     # set up mapping nodes and interpolation matrices
     r,s = nodes(Tri(), mapping_degree)  
     VDM, Vr, Vs = basis(Tri(), mapping_degree, r, s)
-    # set up quadrature rules
-    rq, sq, wq = quadrature(Tri(), volume_quadrature_rule, (p+1, p+1))
-    rf, sf, wf, nrJ, nsJ = init_face_data(elem_type, p, facet_quadrature_rule)
-    rp, sp = χ(Tri(),equi_nodes(Quad(),N_plot))
     # from mapping interpolation nodes to quadrature nodes
     Vq_map = vandermonde(Tri(), mapping_degree, rq, sq) / VDM
     Vf_map = vandermonde(Tri(), mapping_degree, rf, sf) / VDM
@@ -97,7 +96,6 @@ function ReferenceApproximation(
                     ( Vq_map' * diagm(wq) * Vq_map) \ (Vq_map' * diagm(wq)), 
                     (Vr / VDM, Vs / VDM), 
                     (Vq_map' * diagm(wq) * Vq_map) \  (Vf_map' * diagm(wf)))
-    ######### end here ######### 
 
     # one-dimensional operators
     rd_1 = RefElemData(Line(), p,
@@ -118,9 +116,9 @@ function ReferenceApproximation(
     sigma = [(p+1)*(i-1) + j for i in 1:p+1, j in 1:p+1]
 
     # if a 1D extrapolation can be used along each line of nodes
-    if (typeof(volume_quadrature_rule[1])==
+    if (typeof(volume_quadrature_rule[1]) ==
             typeof(facet_quadrature_rule[1])) &&
-        (typeof(volume_quadrature_rule[2])==
+        (typeof(volume_quadrature_rule[2]) ==
             typeof(facet_quadrature_rule[2]))
 
         if volume_quadrature_rule[2] isa LGRQuadrature
@@ -144,9 +142,11 @@ function ReferenceApproximation(
             facet_quadrature_rule[2], p+1)
             
         R = [LinearMap(vandermonde(Line(), p, r_1d_1) / rd_1.VDM) *
-            TensorProductMap( R_2[1:1,:], I, sigma, [j for i in 1:1, j in 1:p+1]);
+            TensorProductMap(R_2[1:1,:], I, sigma, 
+                [j for i in 1:1, j in 1:p+1]);
         LinearMap(vandermonde(Line(), p, r_1d_2) / rd_2.VDM) * 
-            TensorProductMap(I, R_1[2:2,:], sigma, [i for i in 1:p+1, j in 1:1]); 
+            TensorProductMap(I, R_1[2:2,:], sigma, 
+                [i for i in 1:p+1, j in 1:1]); 
         LinearMap((vandermonde(Line(), p, r_1d_2) / rd_1.VDM)[end:-1:1,:]) *   
             TensorProductMap(I, R_1[1:1,:], sigma,
                 [i for i in p+1:-1:1, j in 1:1])]
@@ -166,14 +166,14 @@ function ReferenceApproximation(
     # construct modal or nodal scheme
     @unpack rstp, rstq = reference_element
     if approx_type isa CollapsedModal
-        N_p = binomial(p+d, d)
+        N_p = binomial(p+2, 2)
         V_modal = vandermonde(Tri(), p, rstq...)
         V_plot = LinearMap(vandermonde(Tri(), p, rstp...))
         V = LinearMap(V_modal)
         inv_M = LinearMap(inv(V_modal' * Diagonal(wq) * V_modal))
         P = inv_M * V' * W
         Vf = R * V
-        ADVw = Tuple(V' * D[m]' * W for m in 1:d)
+        ADVw = Tuple(V' * D[m]' * W for m in 1:2)
     else
         N_p = N_q
         V_plot = LinearMap(vandermonde(Quad(), p, rstp...) / 
@@ -181,10 +181,10 @@ function ReferenceApproximation(
         V = LinearMap(I, N_q)
         P = LinearMap(I, N_q)
         Vf = R
-        ADVw = Tuple(D[m]' * W for m in 1:d)
+        ADVw = Tuple(D[m]' * W for m in 1:2)
     end
 
-    return ReferenceApproximation{d}(approx_type, N_p, N_q, N_f, 
+    return ReferenceApproximation{2}(approx_type, N_p, N_q, N_f, 
         reference_element, D, V, Vf, R, P, W, B, ADVw, V_plot,
         reference_mapping)
 end

@@ -1,3 +1,5 @@
+# Driver script - grid refinement studies for the linear advection equation
+
 push!(LOAD_PATH,"../")
 ENV["MPLBACKEND"]="agg"
 

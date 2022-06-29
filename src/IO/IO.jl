@@ -2,8 +2,7 @@ module IO
 
     using LinearMaps: LinearMap
     using Combinatorics: combinations
-    using Plots: plot, plot!, scatter, savefig, gr;
-    gr()
+    using Plots: plot, plot!, scatter, savefig
     using PyCall
     import PyPlot; const plt = PyPlot
     using LaTeXStrings: latexstring

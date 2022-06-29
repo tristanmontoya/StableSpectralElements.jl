@@ -1,46 +1,60 @@
 struct DGMulti <: AbstractApproximationType
     p::Int  # polynomial degree
+    q::Int # quadrature parameter
+    q_f::Int # quadrature parameter
 end
 
-function ReferenceApproximation(approx_type::DGMulti, 
-    elem_type::Union{Line,Tri,Tet};
+function DGMulti(p::Int)
+    return DGMulti(p,p,p)
+end
+
+function ReferenceApproximation(
+    approx_type::DGMulti, ::Line; 
     mapping_degree::Int=1, N_plot::Int=10)
 
-    # get spatial dimension
-    if elem_type isa Line
-        d = 1
-    elseif elem_type isa Tri
-        d = 2
-    elseif elem_type isa Tet
-        d = 3
-    end
-   
-    @unpack p = approx_type
+    @unpack p, q = approx_type
+    N_p = p+1
+    N_q = q+1
+    N_f = 2
 
-    if elem_type isa Line
-        reference_element = RefElemData(elem_type, 
-            mapping_degree, quad_rule_vol=quad_nodes(elem_type, p), Nplot=N_plot)
+    reference_element = RefElemData(Line(), 
+        mapping_degree, quad_rule_vol=quad_nodes(Line(), q), 
+        Nplot=N_plot)
+    @unpack rstp, rstq, rstf, wq, wf = reference_element    
 
-        @unpack rstp, rstq, rstf, wq, wf = reference_element    
+    VDM, ∇VDM = basis(Line(), p, rstq[1])     
+    ∇V = (LinearMap(∇VDM),)
+    R = LinearMap(vandermonde(Line(),p,rstf[1]))
+    V_plot = LinearMap(vandermonde(Line(), p, rstp[1]))
+    V = LinearMap(VDM)
+    inv_M = LinearMap(inv(VDM' * Diagonal(wq) * VDM))
+    W = LinearMap(Diagonal(wq))
+    B = LinearMap(Diagonal(wf))
+    P = inv_M * V' * W
+    R = Vf * P
+    D = (∇V[m] * P,)
+    ADVw = (∇V[m]' * W,)
 
-        VDM, ∇VDM = basis(elem_type, p, rstq[1])     
-        ∇V = (LinearMap(∇VDM),)
-        R = LinearMap(vandermonde(elem_type,p,rstf[1]))
-        V_plot = LinearMap(vandermonde(elem_type, p, rstp[1]))
-    else
-        reference_element = RefElemData(elem_type, 
-            mapping_degree, quad_rule_vol=quad_nodes(elem_type, p),
-            quad_rule_face=quad_nodes(face_type(elem_type), p), Nplot=N_plot)
+    return ReferenceApproximation{1}(approx_type, N_p, N_q, N_f, 
+        reference_element, D, V, Vf, R, P, W, B, ADVw, V_plot, 
+        NoMapping())
+end
 
-        @unpack rstp, rstq, rstf, wq, wf = reference_element
+function ReferenceApproximation(
+    approx_type::DGMulti, ::Tri;
+    mapping_degree::Int=1, N_plot::Int=10)
 
-        VDM, ∇VDM... = basis(elem_type, p, rstq...) 
-        ∇V = Tuple(LinearMap(∇VDM[m]) for m in 1:d)
-        Vf = LinearMap(vandermonde(elem_type,p,rstf...))
-        V_plot = LinearMap(vandermonde(elem_type, p, rstp...))
-    end
+    @unpack p, q, q_f = approx_type
+    N_p = binomial(p+2, 2)
+    reference_element = RefElemData(Tri(), 
+        mapping_degree, quad_rule_vol=quad_nodes(Tri(), q),
+        quad_rule_face=quad_nodes(face_type(Tri()), q_f), Nplot=N_plot)
+    @unpack rstp, rstq, rstf, wq, wf = reference_element
 
-    N_p = binomial(p+d, d)
+    VDM, ∇VDM... = basis(Tri(), p, rstq...) 
+    ∇V = Tuple(LinearMap(∇VDM[m]) for m in 1:2)
+    Vf = LinearMap(vandermonde(Tri(),p,rstf...))
+    V_plot = LinearMap(vandermonde(Tri(), p, rstp...))
     N_q = length(wq)
     N_f = length(wf)
     V = LinearMap(VDM)
@@ -49,14 +63,10 @@ function ReferenceApproximation(approx_type::DGMulti,
     B = LinearMap(Diagonal(wf))
     P = inv_M * V' * W
     R = Vf * P
-    
-    # D here is the nodal derivative operator
-    D = Tuple(∇V[m] * P for m in 1:d)
+    D = Tuple(∇V[m] * P for m in 1:2)
+    ADVw = Tuple(∇V[m]' * W for m in 1:2)
 
-    # weak-form reference advection operator (no mass matrix)
-    ADVw = Tuple(∇V[m]' * W for m in 1:d)
-
-    return ReferenceApproximation{d}(approx_type, N_p, N_q, N_f, 
+    return ReferenceApproximation{2}(approx_type, N_p, N_q, N_f, 
         reference_element, D, V, Vf, R, P, W, B, ADVw, V_plot, 
         NoMapping())
 end
