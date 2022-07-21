@@ -70,7 +70,7 @@ module Mesh
     end
 
     function cartesian_mesh(elem_type::Union{Quad,Hex},
-        M::NTuple{2,Int}, ::AbstractMeshGenStrategy)
+        M::NTuple{2,Int}, ::ZigZag)
         return uniform_mesh(elem_type, M[1], M[2])
     end
 

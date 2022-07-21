@@ -1,18 +1,15 @@
 struct DGMulti <: AbstractApproximationType
     p::Int  # polynomial degree
-    q::Int # quadrature parameter
-    q_f::Int # quadrature parameter
-end
-
-function DGMulti(p::Int)
-    return DGMulti(p,p,p)
+#    q::Int # quadrature parameter (left out for backwards compatibility)
+#    q_f::Int # quadrature parameter (left out for backwards compatibility)
 end
 
 function ReferenceApproximation(
     approx_type::DGMulti, ::Line; 
     mapping_degree::Int=1, N_plot::Int=10)
 
-    @unpack p, q = approx_type
+    @unpack p = approx_type
+    q = p
     N_p = p+1
     N_q = q+1
     N_f = 2
@@ -44,7 +41,11 @@ function ReferenceApproximation(
     approx_type::DGMulti, ::Tri;
     mapping_degree::Int=1, N_plot::Int=10)
 
-    @unpack p, q, q_f = approx_type
+    #@unpack p, q, q_f = approx_type
+    @unpack p = approx_type
+    q = p
+    q_f = p
+
     N_p = binomial(p+2, 2)
     reference_element = RefElemData(Tri(), 
         mapping_degree, quad_rule_vol=quad_nodes(Tri(), q),

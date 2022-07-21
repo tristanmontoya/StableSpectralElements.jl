@@ -219,7 +219,7 @@ end
 function plot_spectrum(eigs::Vector{Vector{ComplexF64}}, plots_path::String; 
     ylabel="\\lambda", xlims=nothing, ylims=nothing, title="spectra.pdf", 
     labels=["Upwind", "Central"])
-    p = plot()
+    p = plot(legendfontsize=10, xlabelfontsize=13, ylabelfontsize=13, xtickfontsize=10, ytickfontsize=10)
     max_real = @sprintf "%.2e" maximum(real.(eigs[1]))
     plot!(p, eigs[1], 
         xlabel= latexstring(string("\\mathrm{Re}\\,(", ylabel, ")")), 
@@ -229,7 +229,7 @@ function plot_spectrum(eigs::Vector{Vector{ComplexF64}}, plots_path::String;
         markershape=:circle, seriestype=:scatter,
         markersize=3,
         markerstrokewidth=0, 
-        markercolors=:grey, 
+        #markercolors=:grey, 
         size=(400,400)
     )
     if length(eigs) > 1
@@ -241,10 +241,10 @@ function plot_spectrum(eigs::Vector{Vector{ComplexF64}}, plots_path::String;
             ylabel= latexstring(string("\\mathrm{Im}\\,(", ylabel, ")")), 
             legend=:topleft,
             label=string(labels[i]," (max Re(λ): ", max_real,")"),  
-            markershape=:star5, seriestype=:scatter,
-            markersize=3,
+            markershape=:star, seriestype=:scatter,
+            markersize=5,
             markerstrokewidth=0, 
-            markercolors=:black, 
+            #markercolors=:black, 
             size=(400,400)
             )
         end

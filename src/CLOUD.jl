@@ -31,10 +31,6 @@ module CLOUD
 
     using TimerOutputs
 
-    for i in 1:Threads.nthreads()
-        to = get_timer(string("thread_timer_",i))
-    end
-
     function CLOUD_reset_timer()
         for t in 1:Threads.nthreads()
             reset_timer!(get_timer(string("thread_timer_",t)))

@@ -1,74 +1,17 @@
+"""Analyze results from grid refinement studies"""
 struct RefinementAnalysis{d} <: AbstractAnalysis
     exact_solution::AbstractParametrizedFunction{d}
     sequence_path::String
     analysis_path::String
+    label::String
 end
 
 struct RefinementAnalysisResults <: AbstractAnalysisResults
     error::Matrix{Float64} # columns are solution variables
     eoc::Matrix{Union{Float64,Missing}}
-    dof::Matrix{Int} # columns are N_p N_eq N_el
+    dof::Matrix{Int} # columns are N_p, N_el
     conservation::Matrix{Float64}
     energy::Matrix{Float64}
-end
-
-function run_refinement(conservation_law::ConservationLaw{d,N_eq},        
-    reference_approximation::ReferenceApproximation{d},
-    initial_data::AbstractParametrizedFunction,
-    form::AbstractResidualForm,
-    strategy::AbstractStrategy,
-    tspan::NTuple{2,Float64},
-    sequence::Vector{Int},
-    mesh_gen_func::Function,
-    dt_func::Function,
-    sequence_path::String;
-    time_integrator::OrdinaryDiffEqAlgorithm=RK4(),
-    n_s::Int=2) where {d,N_eq}
-
-    number_of_grids = length(sequence)
-    sol = Vector{ODESolution}(undef, number_of_grids)
-
-    if isdir(sequence_path)
-        dir_exists = true
-        suffix = 1
-        while dir_exists
-            new_sequence_path = string(rstrip(sequence_path, '/'), 
-                "_", suffix, "/")
-            if !isdir(new_sequence_path)
-                sequence_path=new_sequence_path
-                dir_exists = false
-            end
-            suffix = suffix + 1
-        end
-    end
-    mkpath(sequence_path)
-
-    for i in 1:length(sequence)
-        M = sequence[i]
-        results_path = string(sequence_path, "grid_", i, "/")
-        mesh = mesh_gen_func(M)
-
-        spatial_discretization = SpatialDiscretization(mesh, reference_approximation)
-
-        save_project(conservation_law,
-            spatial_discretization, initial_data, form, 
-            tspan, strategy, results_path, overwrite=true)
-
-        ode_problem = semidiscretize(conservation_law, 
-            spatial_discretization,
-            initial_data, form,
-            tspan, strategy)
-
-        save_solution(ode_problem.u0, tspan[1], results_path, 0)
-        sol[i] = solve(ode_problem, time_integrator, adaptive=false, 
-            dt=dt_func(M), save_everystep=false,
-            callback=save_callback(results_path, 
-                floor(Int, (tspan[2]-tspan[1])/(dt_func(M)*(n_s-1)))))
-
-        save_solution(last(sol[i].u), last(sol[i].t), results_path, "final")
-    end
-
-    return sequence_path
 end
 
 function analyze(analysis::RefinementAnalysis{d}, n_grids=100) where {d}
@@ -136,9 +79,65 @@ function plot_analysis(analysis::RefinementAnalysis{d},
     p = plot((dof[:,1].*dof[:,2]).^(1.0/d), error[:,e], 
         xlabel=xlabel, ylabel=(LaTeXString("\$L^2\$ Error")), 
         xaxis=:log, yaxis=:log, legend=false, linecolor="black", markershape=:circle, markercolor="black")
-    savefig(p, string(analysis_path, "error.pdf"))
+    savefig(p, string(analysis_path, "refinement.pdf"))
     return p
 end
+
+function plot_analysis(analysis::Vector{RefinementAnalysis{d}},
+    results::Vector{RefinementAnalysisResults}; ylabel=LaTeXString("\$L^2\$ Error"), ylims=nothing, xlims=nothing, pairs=true, 
+    filename="refinement.pdf",
+    reference_line=nothing, e=1, plots_path=nothing) where {d}
+
+    if isnothing(plots_path)
+        plots_path = analysis[1].analysis_path
+    end
+
+    if d == 1
+        xlabel = latexstring("\\mathrm{DOF}")
+    elseif d == 2
+        xlabel = latexstring("\\sqrt{\\mathrm{DOF}}")
+    else
+        xlabel = latexstring(string("\\sqrt"),"[", d, "]{\\mathrm{DOF}}")
+    end
+
+    n = length(analysis)
+    colors = [(i-1) ÷ 2 + 1 for i in 1:n]
+    p = plot()
+    for i in 1:n
+        if pairs && iseven(i)
+            style = :dash
+            shape = :circle
+        else
+            style = :solid
+            shape = :square
+        end
+        plot!((results[i].dof[:,1].*results[i].dof[:,2]).^(1.0/d), 
+            results[i].error[:,e], label=analysis[i].label,
+            xaxis=:log10, yaxis=:log10, linestyle=style,
+            markerstrokewidth=0.0, markershape=shape,
+            linecolor=colors[i], markercolor=colors[i],  markersize=5)
+    end
+    if !isnothing(reference_line)
+        for i in 1:length(reference_line)
+            plot!(p, 
+                (results[1].dof[end-1:end,1].*results[1].dof[end-1:end,2]).^(1.0/d),
+                reference_line[i][2]./((results[1].dof[end-1:end,1].*results[1].dof[end-1:end,2]).^(1.0/d)).^reference_line[i][1], linecolor=:black, linestyle=:solid, label="")
+        end
+    end
+
+    plot!(p, windowsize=(400,400), legend=:bottomleft, legendfontsize=10,
+    xlabel=xlabel, ylabel=ylabel)
+    if !isnothing(xlims)
+        plot!(p, xlims=xlims, xticks=get_tickslogscale(xlims))
+    end
+    if !isnothing(ylims)
+        plot!(p, ylims=ylims)
+    end
+
+    savefig(p, string(plots_path, filename))
+    return p
+end
+
 
 function tabulate_analysis(results::RefinementAnalysisResults; e=1, 
     print_latex=true)

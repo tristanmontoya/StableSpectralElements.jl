@@ -45,7 +45,8 @@ function visualize(sol::Vector{Array{Float64,3}}, labels::Vector{String}, file_n
         u = convert(Matrix, V_plot * sol[i][:,e,:])
         plot!(p, vec(vcat(x_plot[1],fill(NaN,1,N_el))), 
             vec(vcat(u,fill(NaN,1,N_el))), 
-            label=latexstring(labels[i]), xlabel=latexstring("x"),
+            label=latexstring(labels[i]), 
+            xlabel=latexstring("x"),
             ylabel=latexstring(ylabel))
     end
 
@@ -86,26 +87,31 @@ end
 function visualize(spatial_discretization::SpatialDiscretization{2},
     directory_name::String, file_name::String; geometry_resolution=5, 
     markersize=4, plot_volume_nodes=true, plot_facet_nodes=true,
-    label_elements=false, grid_lines=false, stride=nothing)
+    plot_mapping_nodes=false, plot_centroids=false, label_elements=false,
+    grid_lines=false, stride=nothing, axes=true)
 
     path = new_path(directory_name, true, false)
 
     @unpack N_el, mesh, reference_approximation = spatial_discretization
     @unpack elementType, N, VDM = reference_approximation.reference_element
     
-    if grid_lines == true && stride isa Nothing
+    if grid_lines && stride isa Nothing
         stride = convert(Int,sqrt(reference_approximation.N_q))
     end
 
     p = plt.figure()
     ax = plt.axes()
     ax.set_aspect("equal")
-    plt.xlabel(latexstring("x_1"))
-    plt.ylabel(latexstring("x_2"))
+
+    if axes
+        plt.xlabel(latexstring("x_1"))
+        plt.ylabel(latexstring("x_2"))
+    else
+        ax.set_axis_off()
+    end
     
     ref_edge_nodes = map_face_nodes(elementType,
         collect(LinRange(-0.99999,0.99999, geometry_resolution)))
-
     
     edges = find_face_nodes(elementType, ref_edge_nodes...)
 
@@ -114,10 +120,8 @@ function visualize(spatial_discretization::SpatialDiscretization{2},
         ref_edge_nodes[2][edge]) / VDM 
         for edge ∈ edges)
 
-    if label_elements
-        x_c = centroids(spatial_discretization)
-    end
-
+    x_c = centroids(spatial_discretization)
+    
     for k in 1:N_el
         if grid_lines
             N1 = stride
@@ -161,6 +165,20 @@ function visualize(spatial_discretization::SpatialDiscretization{2},
                 color="black",
                 fillstyle="none")
         end
+
+        if plot_mapping_nodes
+            ax.plot(mesh.x[:,k], mesh.y[:,k], "o", 
+                markersize=markersize, 
+                color="grey",
+                fillstyle="full")
+        end
+
+        if plot_centroids
+            ax.plot(x_c[k][1], x_c[k][2], "o", 
+                markersize=markersize, 
+                color="black",
+                fillstyle="full")
+        end 
 
         if label_elements
             ax.text(x_c[k][1], x_c[k][2], string(k))
@@ -272,7 +290,7 @@ function visualize(reference_approximation::ReferenceApproximation{2},
 
     if plot_facet_nodes
         ax.plot(rf, sf, "s", 
-            markersize=markersize, 
+            markersize=markersize*2, 
             markeredgewidth=markersize*0.25,
             color="black",
             fillstyle="none")

@@ -32,7 +32,7 @@ Manifest.toml
 # Mac meta info stuff
 .DS_Store
 
-# Results and plots files
+# Results and plots files, scratch notebooks, etc.
 results/
 plots/
 notebooks/

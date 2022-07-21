@@ -3,7 +3,7 @@ module Operators
     using LinearAlgebra, LinearMaps
     using UnPack
 
-    export TensorProductMap, SelectionMap, flux_diff
+    export TensorProductMap, SelectionMap, flux_diff, PartialTensorProductMap
     
     const Operator1D{T} = Union{UniformScaling{Bool}, 
         Matrix{T}, Transpose{T,Matrix{T}}}
@@ -182,4 +182,15 @@ module Operators
         end
         return 2.0*y
     end
+
+    struct PartialTensorProductMap{T} <: LinearMaps.LinearMap{T}
+        A::Operator1D{T}
+        B::Vector{Operator1D{T}}
+        σᵢ::Matrix{Int}
+        σₒ::Matrix{Int}
+    end
+
+    Base.size(C::PartialTensorProductMap) = (count(a->a!=0,C.σₒ), 
+        count(a->a!=0,C.σᵢ))
+
 end

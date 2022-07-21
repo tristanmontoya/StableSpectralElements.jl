@@ -181,7 +181,7 @@ function main(args)
 
     for n in 1:n_grids
 
-        M = M0^n
+        M = M0*2^(n-1)
 
         reference_approximation =ReferenceApproximation(
             scheme, elem_type, mapping_degree=r, N_plot=ceil(Int,20/M));
@@ -210,12 +210,13 @@ function main(args)
         ode_problem = semidiscretize(solver, initialize(initial_data, 
             conservation_law, spatial_discretization), (0.0, T))
 
-        save_solution(ode_problem.u0, 0.0, results_path, 0)
-        for t in 1:Threads.nthreads()
-            reset_timer!(get_timer(string("thread_timer_",t)))
+        if timer
+            save_solution(ode_problem.u0, 0.0, results_path, 0)
+            for t in 1:Threads.nthreads()
+                reset_timer!(get_timer(string("thread_timer_",t)))
+            end
         end
 
-        reset_timer!()
         sol = solve(ode_problem, integrator, adaptive=false,
             dt=dt, save_everystep=false, callback=save_callback(
                 results_path, ceil(Int, T/(dt*n_s))))
