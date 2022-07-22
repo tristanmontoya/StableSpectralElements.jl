@@ -174,7 +174,7 @@ module SpatialDiscretizations
     export DGSEM
     include("dgsem.jl")
 
-    export DGMulti
+    export DGMulti, QuadratureDG
     include("dgmulti.jl")
 
     export CollapsedSEM, CollapsedModal, reference_geometric_factors
