@@ -7,35 +7,28 @@ module Solvers
     using LinearMaps: LinearMap
     using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
 
-    using ..ConservationLaws: ConservationLaw, physical_flux, numerical_flux, two_point_flux
+    using ..ConservationLaws: AbstractConservationLaw, AbstractPDEType, Hyperbolic, Parabolic, Mixed, AbstractFirstOrderNumericalFlux, AbstractSecondOrderNumericalFlux, NoFirstOrderFlux, NoSecondOrderFlux, physical_flux, numerical_flux#, two_point_flux
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization
     using ..ParametrizedFunctions: AbstractParametrizedFunction, AbstractParametrizedFunction, evaluate
     using ..Operators: flux_diff
 
-    export AbstractResidualForm, AbstractPhysicalOperators, AbstractMappingForm, AbstractCouplingForm, AbstractStrategy, PhysicaOperators, Eager, Lazy, Solver, StandardMapping, SkewSymmetricMapping, CreanMapping, StandardCoupling, SkewSymmetricCoupling, initialize, semidiscretize, precompute, apply_operators!, combine, get_dof, rhs!
+    export AbstractResidualForm, AbstractMappingForm, AbstractStrategy, PhysicaOperators, Eager, Lazy, Solver, StandardMapping, SkewSymmetricMapping, CreanMapping, initialize, semidiscretize, precompute, apply_operators!, combine, get_dof, rhs!
 
     abstract type AbstractResidualForm end
     abstract type AbstractMappingForm end
-    abstract type AbstractCouplingForm end
-    abstract type AbstractPhysicalOperators{d} end
     abstract type AbstractStrategy end
 
     struct Eager <: AbstractStrategy end
     struct Lazy <: AbstractStrategy end
+
     struct StandardMapping <: AbstractMappingForm end
     struct SkewSymmetricMapping <: AbstractMappingForm end
+    
+    # TODO: Just make this the "skew-symmetric mapping"
+    # get rid of the other one which isn't energy stable
     struct CreanMapping <: AbstractMappingForm end
 
-    struct Solver{ResidualForm,PhysicalOperators,d,N_eq}
-        conservation_law::ConservationLaw{d,N_eq}
-        operators::Vector{PhysicalOperators}
-        x_q::NTuple{d,Matrix{Float64}}
-        connectivity::Matrix{Int}
-        form::ResidualForm
-        strategy::AbstractStrategy
-    end
-
-    struct PhysicalOperators{d} <: AbstractPhysicalOperators{d}
+    struct PhysicalOperators{d}
         VOL::NTuple{d,LinearMap}
         FAC::LinearMap
         SRC::LinearMap
@@ -46,7 +39,16 @@ module Solvers
         scaled_normal::NTuple{d, Vector{Float64}}
     end
 
-    function Solver(conservation_law::ConservationLaw,     
+    struct Solver{d,N_eq,ResidualForm,PDEType}
+        conservation_law::AbstractConservationLaw{d,N_eq,PDEType}
+        operators::Vector{PhysicalOperators}
+        x_q::NTuple{d,Matrix{Float64}}
+        connectivity::Matrix{Int}
+        form::ResidualForm
+        strategy::AbstractStrategy
+    end
+
+    function Solver(conservation_law::AbstractConservationLaw,     
         spatial_discretization::SpatialDiscretization,
         form::AbstractResidualForm,
         strategy::Lazy)
@@ -56,7 +58,7 @@ module Solvers
             spatial_discretization.mesh.mapP, form, strategy)
     end
 
-    function Solver(conservation_law::ConservationLaw,     
+    function Solver(conservation_law::AbstractConservationLaw,     
         spatial_discretization::SpatialDiscretization,
         form::AbstractResidualForm,
         strategy::Eager)
@@ -69,13 +71,14 @@ module Solvers
     end
 
     function initialize(initial_data::AbstractParametrizedFunction,
-        ::ConservationLaw{d,N_eq},
-        spatial_discretization::SpatialDiscretization{d}) where {d, N_eq}
+        conservation_law::AbstractConservationLaw,
+        spatial_discretization::SpatialDiscretization{d}) where {d}
 
         @unpack N_el, M, geometric_factors = spatial_discretization
         @unpack N_p, N_q, V, W = spatial_discretization.reference_approximation
         @unpack xyzq = spatial_discretization.mesh
-
+        _, N_eq, N_el = get_dof(spatial_discretization, conservation_law)
+        
         u0 = Array{Float64}(undef, N_p, N_eq, N_el)
         for k in 1:N_el
             u0[:,:,k] = M[k] \ convert(Matrix, V' * W * 
@@ -86,7 +89,7 @@ module Solvers
     end
 
     function semidiscretize(
-        conservation_law::ConservationLaw,spatial_discretization::SpatialDiscretization,
+        conservation_law::AbstractConservationLaw,spatial_discretization::SpatialDiscretization,
         initial_data::AbstractParametrizedFunction, 
         form::AbstractResidualForm,
         tspan::NTuple{2,Float64}, 
@@ -121,7 +124,7 @@ module Solvers
     end
 
     function get_dof(spatial_discretization::SpatialDiscretization{d}, 
-        ::ConservationLaw{d,N_eq}) where {d, N_eq}
+        ::AbstractConservationLaw{d,N_eq}) where {d,N_eq}
         return (spatial_discretization.reference_approximation.N_p, 
             N_eq, spatial_discretization.N_el)
     end
@@ -290,8 +293,9 @@ module Solvers
     export StrongConservationForm, WeakConservationForm, SplitConservationForm
     include("conservation_form.jl")
 
-    export StrongFluxDiffForm
-    include("flux_diff_form.jl")
+    #TODO add flux diff back
+    #export StrongFluxDiffForm
+    #include("flux_diff_form.jl")
 
     export LinearResidual
     include("linear.jl")

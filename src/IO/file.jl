@@ -24,7 +24,7 @@ function new_path(results_path::String,
 end
 
 function save_project(
-    conservation_law::ConservationLaw,spatial_discretization::SpatialDiscretization,
+    conservation_law::AbstractConservationLaw,spatial_discretization::SpatialDiscretization,
     initial_data::AbstractParametrizedFunction, 
     form::AbstractResidualForm,
     tspan::NTuple{2,Float64}, 

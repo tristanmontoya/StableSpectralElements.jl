@@ -5,42 +5,55 @@ module ConservationLaws
 
     import ..ParametrizedFunctions: AbstractParametrizedFunction
 
-    export AbstractFirstOrderFlux, AbstractSecondOrderFlux, AbstractFirstOrderNumericalFlux, AbstractSecondOrderNumericalFlux,AbstractTwoPointFlux, ConservationLaw, LaxFriedrichsNumericalFlux, EntropyConservativeNumericalFlux, ConservativeFlux, EntropyConservativeFlux, physical_flux, numerical_flux, two_point_flux
+    export AbstractConservationLaw, AbstractPDEType, Parabolic, Hyperbolic, Mixed, AbstractFirstOrderNumericalFlux, AbstractSecondOrderNumericalFlux, NoFirstOrderFlux, NoSecondOrderFlux, LaxFriedrichsNumericalFlux, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, EntropyConservativeFlux
 
-    abstract type AbstractFirstOrderFlux{d, N_eq} end
-    abstract type AbstractSecondOrderFlux{d, N_eq} end
-    abstract type AbstractFirstOrderNumericalFlux{FluxType} end
-    abstract type AbstractSecondOrderNumericalFlux{FluxType} end
-    abstract type AbstractTwoPointFlux{FluxType} end
-    
+    abstract type AbstractConservationLaw{d, N_eq, PDEType} end
+    abstract type AbstractPDEType end
+
     """
-    Second-order conservation law
+    Hyperbolic conservation law:
 
-    ∂U/∂t + ∇⋅F¹(U) + ∇⋅F²(U,Q)
+    ∂U/∂t + ∇⋅F(U) = 0
+    """
+    struct Hyperbolic <: AbstractPDEType end
+        
+    """
+    Parabolic conservation law:
+
+    ∂U/∂t + ∇⋅F(U,Q) = 0
     Q = ∇U 
     """
-    struct ConservationLaw{d, N_eq}
-        first_order_flux::Union{AbstractFirstOrderFlux{d,N_eq},Nothing}
-        second_order_flux::Union{AbstractSecondOrderFlux{d,N_eq},Nothing}
-        first_order_numerical_flux::Union{AbstractFirstOrderNumericalFlux, Nothing}
-        second_order_numerical_flux::Union{AbstractSecondOrderNumericalFlux,Nothing}
-        source_term::Union{AbstractParametrizedFunction{d}, Nothing}
-        two_point_flux::Union{AbstractTwoPointFlux, Nothing}
-    end
+    struct Parabolic <: AbstractPDEType end
 
-    struct LaxFriedrichsNumericalFlux{FluxType} <: AbstractFirstOrderNumericalFlux{FluxType} 
+    """
+    Mixed hyperbolic-parabolic conservation law:
+
+    ∂U/∂t + ∇⋅F¹(U) + ∇⋅F²(U,Q) = 0
+    Q = ∇U 
+    """
+    struct Mixed <: AbstractPDEType end
+
+    """Numerical interface fluxes"""
+    abstract type AbstractFirstOrderNumericalFlux end
+    abstract type AbstractSecondOrderNumericalFlux end
+    struct NoFirstOrderFlux <: AbstractFirstOrderNumericalFlux end
+    struct NoSecondOrderFlux <: AbstractSecondOrderNumericalFlux end
+    struct LaxFriedrichsNumericalFlux <: AbstractFirstOrderNumericalFlux 
         λ::Float64
     end
 
-    struct EntropyConservativeNumericalFlux{FluxType} <: AbstractFirstOrderNumericalFlux{FluxType} end
+    struct EntropyConservativeNumericalFlux <: AbstractFirstOrderNumericalFlux end
 
-    struct ConservativeFlux{FluxType} <: AbstractTwoPointFlux{FluxType} end
-    struct EntropyConservativeFlux{FluxType} <: AbstractTwoPointFlux{FluxType} end
+    """Two-point fluxes"""
+    abstract type AbstractTwoPointFlux{d} end
+    struct ConservativeFlux{d} <: AbstractTwoPointFlux{d} end
+    struct EntropyConservativeFlux{d} <: AbstractTwoPointFlux{d} end
     
-    export ConstantLinearAdvectionFlux, ConstantLinearAdvectionNumericalFlux, linear_advection_equation
-    include("linear_advection.jl")
+    export LinearAdvectionEquation, LinearAdvectionDiffusionEquation,LinearAdvectionNumericalFlux, BR1
+    include("linear_advection_diffusion.jl")
 
-    export BurgersFlux, burgers_equation, burgers_central_flux, burgers_lax_friedrichs_flux
-    include("burgers.jl")
+    #TODO add back burgers
+    #export BurgersFlux, burgers_equation, burgers_central_flux, burgers_lax_friedrichs_flux
+    #include("burgers.jl")
 
 end

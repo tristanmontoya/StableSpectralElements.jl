@@ -38,7 +38,7 @@ struct DMDAnalysis{d} <: AbstractDynamicalAnalysis{d}
 end
 
 function LinearAnalysis(results_path::String,
-    conservation_law::ConservationLaw, 
+    conservation_law::AbstractConservationLaw, 
     spatial_discretization::SpatialDiscretization, 
     L::Union{LinearMap{Float64},AbstractMatrix{Float64}};
     r=4, tol=1.0e-12, name="linear_analysis", 
@@ -99,7 +99,7 @@ function analyze(analysis::LinearAnalysis)
 end
 
 function DMDAnalysis(results_path::String, 
-    conservation_law::ConservationLaw,spatial_discretization::SpatialDiscretization; 
+    conservation_law::AbstractConservationLaw,spatial_discretization::SpatialDiscretization; 
     r=4, n_s=10, tol=1.0e-12, name="dmd_analysis")
     
     # create path and get discretization information

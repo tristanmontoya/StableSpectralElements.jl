@@ -11,7 +11,7 @@ module IO
     using OrdinaryDiffEq: ODEIntegrator, ODEProblem, ODESolution, DiscreteCallback
     using UnPack
 
-    using ..ConservationLaws: ConservationLaw
+    using ..ConservationLaws: AbstractConservationLaw
     using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation, centroids
     using ..ParametrizedFunctions: AbstractParametrizedFunction, evaluate
     using ..Solvers: AbstractResidualForm, AbstractStrategy, initialize, get_dof

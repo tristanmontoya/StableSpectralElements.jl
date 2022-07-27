@@ -14,7 +14,7 @@ module Analysis
     using Printf
     using Markdown
 
-    using ..ConservationLaws: ConservationLaw
+    using ..ConservationLaws: AbstractConservationLaw
     using ..Mesh: uniform_periodic_mesh
     using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation
     using ..ParametrizedFunctions: AbstractParametrizedFunction, evaluate

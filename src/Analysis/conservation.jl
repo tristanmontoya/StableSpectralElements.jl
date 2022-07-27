@@ -21,10 +21,11 @@ struct EnergyConservationAnalysis{d} <: ConservationAnalysis
 end
 
 function PrimaryConservationAnalysis(results_path::String,
-    ::ConservationLaw{d,N_eq}, 
-    spatial_discretization::SpatialDiscretization{d}, name="primary_conservation_analysis") where {d, N_eq}
+    conservation_law::AbstractConservationLaw, 
+    spatial_discretization::SpatialDiscretization{d}, name="primary_conservation_analysis") where {d}
 
     analysis_path = new_path(string(results_path, name, "/"))
+    _, N_eq, N_el = get_dof(spatial_discretization, conservation_law)
   
     @unpack W, V =  spatial_discretization.reference_approximation
     @unpack geometric_factors, mesh, N_el = spatial_discretization
@@ -36,10 +37,12 @@ function PrimaryConservationAnalysis(results_path::String,
 end
 
 function EnergyConservationAnalysis(results_path::String,
-    ::ConservationLaw{d,N_eq}, spatial_discretization::SpatialDiscretization{d},
-    name="energy_conservation_analysis") where {d, N_eq}
+    conservation_law::AbstractConservationLaw,
+    spatial_discretization::SpatialDiscretization{d},
+    name="energy_conservation_analysis") where {d}
 
     analysis_path = new_path(string(results_path, name, "/"))
+    _, N_eq, N_el = get_dof(spatial_discretization, conservation_law)
 
     @unpack W, V =  spatial_discretization.reference_approximation
     @unpack geometric_factors, mesh, N_el = spatial_discretization

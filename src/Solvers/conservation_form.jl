@@ -1,25 +1,37 @@
 struct StrongConservationForm <: AbstractResidualForm 
     mapping_form::AbstractMappingForm
+    first_order_numerical_flux::AbstractFirstOrderNumericalFlux
+    second_order_numerical_flux::AbstractSecondOrderNumericalFlux
 end
 
 struct WeakConservationForm <: AbstractResidualForm 
     mapping_form::AbstractMappingForm
+    first_order_numerical_flux::AbstractFirstOrderNumericalFlux
+    second_order_numerical_flux::AbstractSecondOrderNumericalFlux
 end
 
 struct SplitConservationForm <: AbstractResidualForm 
     mapping_form::AbstractMappingForm
+    first_order_numerical_flux::AbstractFirstOrderNumericalFlux
+    second_order_numerical_flux::AbstractSecondOrderNumericalFlux
 end
 
-function StrongConservationForm()
-    return StrongConservationForm(StandardMapping())
+function StrongConservationForm(
+    first_order_numerical_flux::AbstractFirstOrderNumericalFlux)
+    return StrongConservationForm(StandardMapping(), 
+        first_order_numerical_flux, NoSecondOrderFlux())
 end
 
-function WeakConservationForm()
-    return WeakConservationForm(StandardMapping())
+function WeakConservationForm(
+    first_order_numerical_flux::AbstractFirstOrderNumericalFlux)
+    return WeakConservationForm(StandardMapping(), 
+    first_order_numerical_flux, NoSecondOrderFlux())
 end
 
-function SplitConservationForm()
-    return SplitConservationForm(CreanMapping())
+function SplitConservationForm(
+    first_order_numerical_flux::AbstractFirstOrderNumericalFlux)
+    return SplitConservationForm(CreanMapping(), 
+    first_order_numerical_flux, NoSecondOrderFlux())
 end
 
 """
@@ -137,11 +149,12 @@ end
     Evaluate semi-discrete residual for strong/split conservation form
 """
 function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
-    solver::Solver{<:Union{StrongConservationForm,SplitConservationForm}, <:AbstractPhysicalOperators, d, N_eq}, t::Float64; print::Bool=false) where {d, N_eq}
+    solver::Solver{d, N_eq, <:Union{StrongConservationForm,SplitConservationForm},Hyperbolic}, t::Float64; print::Bool=false) where {d, N_eq}
 
     @timeit "rhs!" begin
 
         @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
+        @unpack first_order_numerical_flux = form
 
         N_el = size(operators)[1]
         N_f = size(operators[1].Vf)[1]
@@ -168,10 +181,9 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
 
             # evaluate physical and numerical flux
             f = @timeit to "eval flux" physical_flux(
-                conservation_law.first_order_flux, 
-                Matrix(operators[k].V * u[:,:,k]))
+                conservation_law, Matrix(operators[k].V * u[:,:,k]))
             f_star = @timeit to "eval numerical flux" numerical_flux(
-                conservation_law.first_order_numerical_flux,
+                conservation_law, first_order_numerical_flux,
                 u_facet[:,:,k], u_out, operators[k].scaled_normal)
             f_fac = @timeit to "eval flux diff" f_star - 
                 sum(convert(Matrix,operators[k].NTR[m] * f[m]) 
@@ -198,11 +210,12 @@ end
     Evaluate semi-discrete residual for weak conservation form
 """
 function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
-    solver::Solver{WeakConservationForm, <:AbstractPhysicalOperators, d, N_eq},
+    solver::Solver{d, N_eq, WeakConservationForm,Hyperbolic},
     t::Float64; print::Bool=false) where {d, N_eq}
 
     @timeit "rhs!" begin
         @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
+        @unpack first_order_numerical_flux = form
 
         N_el = size(operators)[1]
         N_f = size(operators[1].Vf)[1]
@@ -228,10 +241,9 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             
             # evaluate physical and numerical flux
             f = @timeit to "eval flux" physical_flux(
-                conservation_law.first_order_flux, 
-                convert(Matrix,operators[k].V * u[:,:,k]))
+                conservation_law, Matrix(operators[k].V * u[:,:,k]))
             f_star = @timeit to "eval numerical flux" numerical_flux(
-                conservation_law.first_order_numerical_flux,
+                conservation_law, first_order_numerical_flux,
                 u_facet[:,:,k], u_out, operators[k].scaled_normal)
             
             # evaluate source term, if there is one
