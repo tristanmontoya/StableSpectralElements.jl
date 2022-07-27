@@ -4,6 +4,11 @@ function burgers_lax_friedrichs_flux(λ::Float64=1.0)
     return LaxFriedrichsNumericalFlux{BurgersFlux{1}}(λ)
 end
 
+"""
+Inviscid Burgers' equation (1D)
+
+∂U/∂t + ∂(U²/2)∂x = 0
+"""
 function burgers_equation(; source_term=nothing,  
     numerical_flux=burgers_lax_friedrichs_flux(1.0),
     two_point_flux=EntropyConservativeFlux{BurgersFlux{1}}())

@@ -13,6 +13,12 @@ module ConservationLaws
     abstract type AbstractSecondOrderNumericalFlux{FluxType} end
     abstract type AbstractTwoPointFlux{FluxType} end
     
+    """
+    Second-order conservation law
+
+    ∂U/∂t + ∇⋅F¹(U) + ∇⋅F²(U,Q)
+    Q = ∇U 
+    """
     struct ConservationLaw{d, N_eq}
         first_order_flux::Union{AbstractFirstOrderFlux{d,N_eq},Nothing}
         second_order_flux::Union{AbstractSecondOrderFlux{d,N_eq},Nothing}

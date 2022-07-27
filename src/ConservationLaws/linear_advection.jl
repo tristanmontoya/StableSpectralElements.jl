@@ -7,6 +7,11 @@ struct ConstantLinearAdvectionNumericalFlux{d} <: AbstractFirstOrderNumericalFlu
     λ::Float64
 end
 
+"""
+Linear advection equation (1D)
+
+∂U/∂t + ∂(aU)/∂x = 0
+"""
 function linear_advection_equation(a::Float64; λ=1.0)
     return ConservationLaw{1,1}(ConstantLinearAdvectionFlux((a,)), 
         nothing, 
@@ -14,6 +19,11 @@ function linear_advection_equation(a::Float64; λ=1.0)
         nothing,nothing,nothing)
 end 
 
+"""
+Linear advection equation
+
+∂U/∂t + ∇⋅(aU) = 0
+"""
 function linear_advection_equation(a::NTuple{d,Float64}; λ=1.0) where {d}
     return ConservationLaw{d,1}(ConstantLinearAdvectionFlux(a), 
         nothing,
@@ -28,7 +38,9 @@ function physical_flux(flux::ConstantLinearAdvectionFlux{d},
 end
 
 """
-Numerical flux for standard coupling
+Standard advective numerical flux
+
+F*(U⁻, U⁺, n) = a⋅n(U⁻+U⁺)/2 + λ|a⋅n|(U⁺-U⁻)/2 
 """
 function numerical_flux(flux::ConstantLinearAdvectionNumericalFlux{d}, 
     u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
@@ -39,19 +51,4 @@ function numerical_flux(flux::ConstantLinearAdvectionNumericalFlux{d},
     
     # returns vector of length N_zeta
     return 0.5*a_n.*(u_in + u_out) - 0.5*flux.λ*abs.(a_n).*(u_out - u_in)
-end
-
-"""
-Numerical flux for skew-symmetric coupling
-"""
-function numerical_flux(flux::ConstantLinearAdvectionNumericalFlux{d}, 
-    u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
-    n::NTuple{d, Vector{Float64}}, f_vol_in::NTuple{d,Matrix{Float64}},
-    NTR::NTuple{d,Union{LinearMap,AbstractMatrix}}) where {d}
-
-    a_n = sum(flux.a[m].*n[m] for m in 1:d)
-
-    f_in = sum(NTR[m] * f_vol_in[m][:,1] for m in 1:d)
-
-    return 0.5*(f_in + a_n.*u_out) + 0.5*flux.λ*abs.(a_n).*(u_out - u_in)
 end
