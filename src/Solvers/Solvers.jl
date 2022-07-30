@@ -7,14 +7,14 @@ module Solvers
     using LinearMaps: LinearMap
     using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
 
-    using ..ConservationLaws: AbstractConservationLaw, AbstractPDEType, Hyperbolic, Parabolic, Mixed, AbstractFirstOrderNumericalFlux, AbstractSecondOrderNumericalFlux, NoFirstOrderFlux, NoSecondOrderFlux, physical_flux, numerical_flux#, two_point_flux
+    using ..ConservationLaws: AbstractConservationLaw, AbstractPDEType, Hyperbolic, Parabolic, Mixed, AbstractFirstOrderNumericalFlux, AbstractSecondOrderNumericalFlux, NoFirstOrderFlux, NoSecondOrderFlux, NoTwoPointFlux, physical_flux, numerical_flux#, two_point_flux
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization
     using ..ParametrizedFunctions: AbstractParametrizedFunction, AbstractParametrizedFunction, evaluate
     using ..Operators: flux_diff
 
     export AbstractResidualForm, AbstractMappingForm, AbstractStrategy, PhysicaOperators, Eager, Lazy, Solver, StandardMapping, SkewSymmetricMapping, CreanMapping, initialize, semidiscretize, precompute, apply_operators!, combine, get_dof, rhs!
 
-    abstract type AbstractResidualForm end
+    abstract type AbstractResidualForm{MappingForm, TwoPointFlux} end
     abstract type AbstractMappingForm end
     abstract type AbstractStrategy end
 
@@ -23,10 +23,6 @@ module Solvers
 
     struct StandardMapping <: AbstractMappingForm end
     struct SkewSymmetricMapping <: AbstractMappingForm end
-    
-    # TODO: Just make this the "skew-symmetric mapping"
-    # get rid of the other one which isn't energy stable
-    struct CreanMapping <: AbstractMappingForm end
 
     struct PhysicalOperators{d}
         VOL::NTuple{d,LinearMap}
@@ -35,7 +31,6 @@ module Solvers
         M::AbstractMatrix
         V::LinearMap
         Vf::LinearMap
-        NTR::NTuple{d,Union{LinearMap,AbstractMatrix}} 
         scaled_normal::NTuple{d, Vector{Float64}}
     end
 

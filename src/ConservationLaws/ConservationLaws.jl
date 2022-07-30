@@ -5,7 +5,7 @@ module ConservationLaws
 
     import ..ParametrizedFunctions: AbstractParametrizedFunction
 
-    export AbstractConservationLaw, AbstractPDEType, Parabolic, Hyperbolic, Mixed, AbstractFirstOrderNumericalFlux, AbstractSecondOrderNumericalFlux, NoFirstOrderFlux, NoSecondOrderFlux, LaxFriedrichsNumericalFlux, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, EntropyConservativeFlux
+    export AbstractConservationLaw, AbstractPDEType, Parabolic, Hyperbolic, Mixed, AbstractFirstOrderNumericalFlux, AbstractSecondOrderNumericalFlux, NoFirstOrderFlux, NoSecondOrderFlux, LaxFriedrichsNumericalFlux, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, EntropyConservativeFlux, NoTwoPointFlux
 
     abstract type AbstractConservationLaw{d, N_eq, PDEType} end
     abstract type AbstractPDEType end
@@ -45,9 +45,10 @@ module ConservationLaws
     struct EntropyConservativeNumericalFlux <: AbstractFirstOrderNumericalFlux end
 
     """Two-point fluxes"""
-    abstract type AbstractTwoPointFlux{d} end
-    struct ConservativeFlux{d} <: AbstractTwoPointFlux{d} end
-    struct EntropyConservativeFlux{d} <: AbstractTwoPointFlux{d} end
+    abstract type AbstractTwoPointFlux end
+    struct ConservativeFlux <: AbstractTwoPointFlux end
+    struct EntropyConservativeFlux <: AbstractTwoPointFlux end
+    struct NoTwoPointFlux <: AbstractTwoPointFlux end
     
     export LinearAdvectionEquation, LinearAdvectionDiffusionEquation,LinearAdvectionNumericalFlux, BR1
     include("linear_advection_diffusion.jl")

@@ -28,6 +28,10 @@ function LinearAdvectionDiffusionEquation(a::Float64, b::Float64) where {d}
 end
 
 """
+    function physical_flux(conservation_law::LinearAdvectionEquation{d}, u::Matrix{Float64})
+
+Evaluate the flux for 1D linear advection-diffusion equation 1D linear advection equation
+
 F(U) = aU
 """
 function physical_flux(conservation_law::LinearAdvectionEquation{d}, 
@@ -37,6 +41,10 @@ function physical_flux(conservation_law::LinearAdvectionEquation{d},
 end
 
 """
+    function physical_flux(conservation_law::LinearAdvectionDiffusionEquation{d}u::Matrix{Float64}, q::Tuple{d,Matrix{Float64}})
+
+Evaluate the flux for 1D linear advection-diffusion equation
+
 F(U,Q) = aU - bQ
 """
 function physical_flux(conservation_law::LinearAdvectionDiffusionEquation{d},
@@ -52,7 +60,9 @@ end
 struct BR1{d} <: AbstractSecondOrderNumericalFlux end
 
 """
-Standard advective numerical flux
+    numerical_flux(conservation_law::LinearAdvectionEquation{d},numerical_flux::LinearAdvectionNumericalFlux, u_in::Matrix{Float64}, u_out::Matrix{Float64}, n::NTuple{d, Vector{Float64}})
+
+Evaluate the standard advective numerical flux
 
 F*(U⁻, U⁺, n) = a⋅n(U⁻+U⁺)/2 + λ|a⋅n|(U⁺-U⁻)/2 
 """
