@@ -12,7 +12,7 @@ module Solvers
     using ..ParametrizedFunctions: AbstractParametrizedFunction, AbstractParametrizedFunction, evaluate
     using ..Operators: flux_diff
 
-    export AbstractResidualForm, AbstractMappingForm, AbstractStrategy, PhysicaOperators, Eager, Lazy, Solver, StandardMapping, SkewSymmetricMapping, CreanMapping, initialize, semidiscretize, precompute, apply_operators!, combine, get_dof, rhs!
+    export AbstractResidualForm, AbstractMappingForm, AbstractStrategy, PhysicaOperators, Eager, Lazy, Solver, StandardMapping, SkewSymmetricMapping, CreanMapping, initialize, semidiscretize, precompute, apply_operators!, auxiliary_variable!, combine, get_dof, rhs!
 
     abstract type AbstractResidualForm{MappingForm, TwoPointFlux} end
     abstract type AbstractMappingForm end
@@ -111,7 +111,7 @@ module Solvers
             Tuple(combine(inv_M*VOL[n]) for n in 1:d),
             combine(inv_M*FAC), 
             combine(inv_M*SRC),
-            M, V, Vf, NTR, scaled_normal)
+            M, V, Vf, scaled_normal)
     end
 
     function combine(operator::LinearMap)
@@ -124,11 +124,14 @@ module Solvers
             N_eq, spatial_discretization.N_el)
     end
 
+    """
+    Physical-operator form
+    """
     function apply_operators!(residual::Matrix{Float64},
         operators::PhysicalOperators{d},  
         f::NTuple{d,Matrix{Float64}}, 
         f_fac::Matrix{Float64}, ::Eager,
-        s::Union{Matrix{Float64},Nothing}=nothing) where {d}
+        s::Union{Matrix{Float64},Nothing}) where {d}
         to = get_timer(string("thread_timer_", Threads.threadid()))
         
         @timeit to "volume terms" begin
@@ -156,12 +159,15 @@ module Solvers
         return rhs
     end
 
+    """
+    Reference-operator form
+    """
     function apply_operators!(residual::Matrix{Float64},
         operators::PhysicalOperators{d},
         f::NTuple{d,Matrix{Float64}}, 
         f_fac::Matrix{Float64}, 
         ::Lazy,
-        s::Matrix{Float64}) where {d}
+        s::Union{Matrix{Float64},Nothing}) where {d}
         to = get_timer(string("thread_timer_", Threads.threadid()))
 
         @timeit to "volume terms" begin
@@ -175,40 +181,15 @@ module Solvers
             facet_terms = mul!(residual, operators.FAC, f_fac)
         end
  
-        @timeit to "source terms" begin
-            source_terms = mul!(residual, operators.SRC, s)
-        end
-        
-        rhs = volume_terms + facet_terms + rhs + source_terms
-
-        @timeit to "mass matrix solve" begin
-            residual = operators.M \ rhs
-        end
-        
-        return residual
-    end
-
-    function apply_operators!(residual::Matrix{Float64},
-        operators::PhysicalOperators{d},
-        f::NTuple{d,Matrix{Float64}}, 
-        f_fac::Matrix{Float64}, 
-        ::Lazy,
-        s::Nothing=nothing) where {d}
-        to = get_timer(string("thread_timer_", Threads.threadid()))
-
-        @timeit to "volume terms" begin
-            volume_terms = zero(residual)
-            @inbounds for m in 1:d
-                volume_terms += mul!(residual, operators.VOL[m], f[m])
-            end
-        end
-
-        @timeit to "facet terms" begin
-            facet_terms = mul!(residual, operators.FAC, f_fac)
-        end
-
         rhs = volume_terms + facet_terms
 
+        if !isnothing(s)
+            @timeit to "source terms" begin
+                source_terms = mul!(residual, operators.SRC, s)
+            end
+            rhs = rhs + source_terms
+        end
+
         @timeit to "mass matrix solve" begin
             residual = operators.M \ rhs
         end
@@ -216,6 +197,34 @@ module Solvers
         return residual
     end
 
+    """
+    Auxiliary variable in physical-operator form
+    """
+    function auxiliary_variable!(residual::Matrix{Float64},
+        operators::PhysicalOperators{d},
+        u::Matrix{Float64}, 
+        u_fac::Array{Float64,3}, 
+        ::Eager) where {d}
+
+        #TODO compute q
+        return q
+    end
+
+    """
+    Auxiliary variable in reference-operator form
+    """
+    function auxiliary_variable!(residual::Matrix{Float64},
+        operators::PhysicalOperators{d},
+        u::Matrix{Float64}, 
+        u_fac::Array{Float64,3}, 
+        ::Lazy) where {d}
+
+        #TODO compute q
+        return q
+    end
+
+#TODO add flux diff.
+#=
     function apply_operators!(residual::Matrix{Float64},
         operators::PhysicalOperators{d},
         F::NTuple{d,Array{Float64,3}}, 
@@ -284,7 +293,7 @@ module Solvers
         return rhs
         return residual
     end
-
+=#
     export StrongConservationForm, WeakConservationForm, SplitConservationForm
     include("conservation_form.jl")
 

@@ -1,6 +1,6 @@
 module ParametrizedFunctions
 
-    export AbstractParametrizedFunction, InitialDataSine, InitialDataGassner, BurgersSolution, SourceTermGassner, evaluate
+    export AbstractParametrizedFunction, InitialDataSine, InitialDataGassner, BurgersSolution, SourceTermGassner, NoSourceTerm, evaluate
     
     abstract type AbstractParametrizedFunction{d} end
 
@@ -27,6 +27,8 @@ module ParametrizedFunctions
         k::Float64
         eps::Float64
     end
+
+    struct NoSourceTerm{d} <: AbstractParametrizedFunction{d} end
 
     function InitialDataSine(A::Float64, k::Float64; N_eq::Int=1)
         return InitialDataSine(A,(k,),N_eq)
@@ -98,7 +100,7 @@ module ParametrizedFunctions
         return u0
     end
 
-    function evaluate(::Nothing, x::Any, t::Float64=0.0)
+    function evaluate(::NoSourceTerm{d}, ::NTuple{d,Vector{Float64}}, ::Float64) where {d}
         return nothing
     end
 end

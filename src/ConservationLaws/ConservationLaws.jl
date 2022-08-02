@@ -3,7 +3,7 @@ module ConservationLaws
     using LinearMaps: LinearMap
     using LinearAlgebra: mul!
 
-    import ..ParametrizedFunctions: AbstractParametrizedFunction
+    import ..ParametrizedFunctions: AbstractParametrizedFunction, NoSourceTerm
 
     export AbstractConservationLaw, AbstractPDEType, Parabolic, Hyperbolic, Mixed, AbstractFirstOrderNumericalFlux, AbstractSecondOrderNumericalFlux, NoFirstOrderFlux, NoSecondOrderFlux, LaxFriedrichsNumericalFlux, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, EntropyConservativeFlux, NoTwoPointFlux
 
