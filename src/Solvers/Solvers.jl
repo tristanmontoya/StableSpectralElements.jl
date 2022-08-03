@@ -200,27 +200,49 @@ module Solvers
     """
     Auxiliary variable in physical-operator form
     """
-    function auxiliary_variable!(residual::Matrix{Float64},
+    function auxiliary_variable!(m::Int, 
+        q::Matrix{Float64},
         operators::PhysicalOperators{d},
-        u::Matrix{Float64}, 
-        u_fac::Array{Float64,3}, 
+        u::Matrix{Float64},
+        u_fac::Matrix{Float64}, 
         ::Eager) where {d}
 
-        #TODO compute q
-        return q
+        to = get_timer(string("thread_timer_", Threads.threadid()))
+
+        @timeit to "volume terms" begin
+            volume_terms = -1.0*mul!(q, operators.VOL[m], u)
+        end
+
+        @timeit to "facet terms" begin
+            facet_terms = -1.0*mul!(residual, operators.FAC, u_fac[m])
+        end
+
+        return volume_terms + facet_terms
     end
+
 
     """
     Auxiliary variable in reference-operator form
     """
-    function auxiliary_variable!(residual::Matrix{Float64},
+    function auxiliary_variable!(m::Int, 
+        q::Matrix{Float64},
         operators::PhysicalOperators{d},
-        u::Matrix{Float64}, 
-        u_fac::Array{Float64,3}, 
+        u::Matrix{Float64},
+        u_fac::Matrix{Float64}, 
         ::Lazy) where {d}
 
-        #TODO compute q
-        return q
+        @unpack VOL, FAC, M = operators
+        to = get_timer(string("thread_timer_", Threads.threadid()))
+
+        @timeit to "volume terms" begin
+            volume_terms = -1.0*mul!(q, VOL[m], u)
+        end
+
+        @timeit to "facet terms" begin
+            facet_terms = -1.0*mul!(residual, FAC, u_fac[m])
+        end
+
+        return M \ volume_terms + facet_terms
     end
 
 #TODO add flux diff.
