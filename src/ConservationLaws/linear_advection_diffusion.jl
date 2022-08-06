@@ -10,6 +10,12 @@ struct LinearAdvectionDiffusionEquation{d} <: AbstractConservationLaw{d,1,Mixed}
     source_term::AbstractParametrizedFunction{d}
 end
 
+struct DiffusionSolution{InitialData} <: AbstractParametrizedFunction{1}
+    conservation_law::LinearAdvectionDiffusionEquation
+    initial_data::InitialData
+    N_eq::Int 
+end
+
 function LinearAdvectionEquation(a::NTuple{d,Float64}) where {d}
     return LinearAdvectionEquation{d}(a,NoSourceTerm{d}())
 end
@@ -25,6 +31,10 @@ end
 
 function LinearAdvectionDiffusionEquation(a::Float64, b::Float64)
     return LinearAdvectionDiffusionEquation{1}((a,),b,NoSourceTerm{1}())
+end
+
+function DiffusionSolution(conservation_law::LinearAdvectionDiffusionEquation, initial_data::AbstractParametrizedFunction)
+    return DiffusionSolution(conservation_law,initial_data,1)
 end
 
 """
@@ -124,4 +134,15 @@ function numerical_flux(conservation_law::LinearAdvectionDiffusionEquation{d},
     # the flux will be appropriately scaled by Jacobian too
     # returns vector of length N_f 
     return -1.0*sum(b*q_avg[m] .* n[m] for m in 1:d)
+end
+
+function evaluate(s::DiffusionSolution{InitialDataGaussian{d}}, 
+    x::NTuple{d,Float64},t::Float64=0.0) where {d}
+    @unpack A, k, x_0 = s.initial_data
+    @unpack b = s.conservation_law
+    # this seems to be right but maybe plug into equation to check
+    r² = sum((x[m] - x_0[m]).^2 for m in 1:d)
+    t_0 = k^2/(2.0*b)
+    C = A*(t_0/(t+t_0))^(0.5*d)
+    return [C*exp.(-r²/(4.0*b*(t_0 + t)))]
 end

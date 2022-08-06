@@ -1,7 +1,7 @@
 module ParametrizedFunctions
 
     using UnPack
-
+    
     export AbstractParametrizedFunction, InitialDataSine, InitialDataGaussian, InitialDataGassner, BurgersSolution, SourceTermGassner, NoSourceTerm, evaluate
     
     abstract type AbstractParametrizedFunction{d} end
@@ -90,6 +90,7 @@ module ParametrizedFunctions
         return [f.k .* cos(f.k*(x[1]-t))*(-1.0 + f.eps + sin(f.k*(x[1]-t)))]
     end
 
+    # TODO: move to burgers.jl
     function evaluate(s::BurgersSolution{InitialDataGassner,SourceTermGassner}, 
         x::NTuple{1,Float64},t::Float64=0.0)
         return [sin(s.initial_data.k*(x[1]-t))+s.initial_data.eps]

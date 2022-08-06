@@ -4,7 +4,8 @@ module ConservationLaws
     using LinearAlgebra: mul!
     using UnPack
 
-    import ..ParametrizedFunctions: AbstractParametrizedFunction, NoSourceTerm
+    import ..ParametrizedFunctions: AbstractParametrizedFunction, NoSourceTerm, InitialDataGaussian, evaluate
+
 
     export AbstractConservationLaw, AbstractPDEType, Parabolic, Hyperbolic, Mixed, AbstractFirstOrderNumericalFlux, AbstractSecondOrderNumericalFlux, NoFirstOrderFlux, NoSecondOrderFlux, LaxFriedrichsNumericalFlux, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, EntropyConservativeFlux, NoTwoPointFlux
 
@@ -51,7 +52,7 @@ module ConservationLaws
     struct EntropyConservativeFlux <: AbstractTwoPointFlux end
     struct NoTwoPointFlux <: AbstractTwoPointFlux end
     
-    export LinearAdvectionEquation, LinearAdvectionDiffusionEquation,LinearAdvectionNumericalFlux, BR1
+    export LinearAdvectionEquation, LinearAdvectionDiffusionEquation,LinearAdvectionNumericalFlux, BR1, DiffusionSolution
     include("linear_advection_diffusion.jl")
 
     #TODO add back burgers
