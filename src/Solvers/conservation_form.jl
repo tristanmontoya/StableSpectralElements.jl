@@ -161,7 +161,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
 
     @timeit "rhs!" begin
         @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
-        @unpack first_order_numerical_flux = form
+        @unpack first_order_numerical_flux, second_order_numerical_flux = form
          
         N_el = size(operators)[1]
         N_f, N_p = size(operators[1].Vf)
@@ -191,19 +191,29 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                 end
                 
                 # evaluate nodal solution
-                u = @timeit to "eval solution" physical_flux(
-                    conservation_law, Matrix(operators[k].V * u[:,:,k]))
+                u_nodal = @timeit to "eval solution" Matrix(
+                    operators[k].V * u[:,:,k])
 
-                # d-vector of approximations to u nJf
+                # evaluate numerical trace (d-vector of approximations to u nJf)
                 u_star = @timeit to "eval numerical flux" numerical_flux(
                     conservation_law, second_order_numerical_flux,
                     u_facet[:,:,k], u_out, operators[k].scaled_normal)
                 
                 # apply operators
-                @timeit to "apply operators" 
-                @inbounds for m in 1:d
-                    q[m][:,:,k] =auxiliary_variable!(m,
-                        q[m][:,:,k], operators[k], u, u_star[m], strategy)
+                @timeit to "apply operators" begin
+                    @inbounds for m in 1:d
+                        q[m][:,:,k] = auxiliary_variable!(m,
+                            q[m][:,:,k], operators[k], u_nodal, 
+                            u_star[m], strategy)
+                    end
+                end
+
+                @timeit to "extrapolate auxiliary variable" begin
+                    @inbounds for m in 1:d
+                        q_facet[m][:,:,k] = convert(
+                            Matrix, operators[k].Vf * q[m][:,:,k])
+                    end
+                    
                 end
             end
         end
@@ -220,7 +230,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                 end
                 q_out = Tuple(Matrix{Float64}(undef, N_f, N_eq) for m in 1:d)
                 @inbounds for e in 1:N_eq, m in 1:d
-                    q_out[m][:,:,e] = q_facet[m][:,e,:][connectivity[:,k]]
+                    q_out[m][:,e] = q_facet[m][:,e,:][connectivity[:,k]]
                 end
             end
             
@@ -230,18 +240,21 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                 Tuple(Matrix(operators[k].V * q[m][:,:,k]) for m in 1:d))
             
             # evaluate inviscid numerical flux 
-            f_star = @timeit to "eval inviscid numerical flux" numerical_flux(
-                conservation_law, first_order_numerical_flux,  
+            f_star_inv = @timeit to "eval inviscid numerical flux" numerical_flux(
+                conservation_law, first_order_numerical_flux,
                 u_facet[:,:,k], u_out, operators[k].scaled_normal)
                 
             # evaluate viscous numerical flux
-            f_star = f_star + 
+            f_star_vis = 
                 @timeit to "eval viscous numerical flux" numerical_flux(
                     conservation_law, second_order_numerical_flux,
                     u_facet[:,:,k], u_out, 
                     Tuple(q_facet[m][:,:,k] for m in 1:d), 
-                    Tuple(q_out[m][:,:,k] for m in 1:d),
+                    Tuple(q_out[m] for m in 1:d),
                     operators[k].scaled_normal)
+
+            #println("viscous flux:\n", f_star_vis)
+            f_star = f_star_inv + f_star_vis
             
             # evaluate source term, if there is one
             s = @timeit to "eval source term" evaluate(

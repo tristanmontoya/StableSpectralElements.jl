@@ -168,6 +168,7 @@ module Solvers
         f_fac::Matrix{Float64}, 
         ::Lazy,
         s::Union{Matrix{Float64},Nothing}) where {d}
+
         to = get_timer(string("thread_timer_", Threads.threadid()))
 
         @timeit to "volume terms" begin
@@ -214,10 +215,11 @@ module Solvers
         end
 
         @timeit to "facet terms" begin
-            facet_terms = -1.0*mul!(residual, operators.FAC, u_fac[m])
+            facet_terms = -1.0*mul!(q, operators.FAC, u_fac)
         end
 
-        return volume_terms + facet_terms
+        q = volume_terms + facet_terms
+        return q
     end
 
 
@@ -239,10 +241,11 @@ module Solvers
         end
 
         @timeit to "facet terms" begin
-            facet_terms = -1.0*mul!(residual, FAC, u_fac[m])
+            facet_terms = -1.0*mul!(q, FAC, u_fac)
         end
 
-        return M \ volume_terms + facet_terms
+        q = M \ (volume_terms + facet_terms)
+        return q
     end
 
 #TODO add flux diff.

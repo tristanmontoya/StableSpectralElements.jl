@@ -2,6 +2,7 @@ module ConservationLaws
 
     using LinearMaps: LinearMap
     using LinearAlgebra: mul!
+    using UnPack
 
     import ..ParametrizedFunctions: AbstractParametrizedFunction, NoSourceTerm
 
