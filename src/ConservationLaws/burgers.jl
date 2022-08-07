@@ -1,64 +1,73 @@
-struct BurgersFlux{d} <: AbstractFirstOrderFlux{d,1} end
+"""
+Inviscid Burgers' equation
 
-function burgers_lax_friedrichs_flux(λ::Float64=1.0)
-    return LaxFriedrichsNumericalFlux{BurgersFlux{1}}(λ)
+`∂ₜu + ∇⋅(a ½u²) = s`
+"""
+struct InviscidBurgersEquation{d} <: AbstractConservationLaw{d,1,Hyperbolic}
+    a::NTuple{d,Float64} 
+    source_term::AbstractParametrizedFunction{d}
 end
 
 """
-Inviscid Burgers' equation (1D)
+Viscous Burgers' equation (1D)
 
-∂U/∂t + ∂(U²/2)∂x = 0
+`∂ₜu + ∇⋅(a ½u² - b∇u) = s`
 """
-function burgers_equation(; source_term=nothing,  
-    numerical_flux=burgers_lax_friedrichs_flux(1.0),
-    two_point_flux=EntropyConservativeFlux{BurgersFlux{1}}())
-    return ConservationLaw{1,1}(
-        BurgersFlux{1}(), 
-        nothing, 
-        numerical_flux, 
-        nothing,
-        source_term,
-        two_point_flux)
-end 
+struct ViscousBurgersEquation{d} <: AbstractConservationLaw{d,1,Hyperbolic}
+    a::NTuple{d,Float64}
+    b::Float64
+    source_term::AbstractParametrizedFunction{d}
+end
 
-function physical_flux(::BurgersFlux{d}, u::Matrix{Float64}) where {d}
+"""
+    function physical_flux(conservation_law::InviscidBurgersEquation, u::Matrix{Float64})
+
+Evaluate the flux for 1D Burgers' equation
+
+`F(u) = a ½u^2`
+"""
+function physical_flux(conservation_law::LinearAdvectionEquation{d}, 
+    u::Matrix{Float64}) where {d}
     # returns d-tuple of matrices of size N_q x N_eq
-    return Tuple(0.5*u.^2 for m in 1:d)
+    return Tuple(conservation_law.a[m] * 0.5.*u.^2 for m in 1:d)
 end
 
-function two_point_flux(::ConservativeFlux{BurgersFlux{d}}, 
-    u::Matrix{Float64}) where {d}
-    e = ones(size(u,1))
-    u_L = u[:,1]*e'
-    u_R = e*(u[:,1])'
-    return Tuple(reshape(0.25*((u_L .* u_L) + (u_R .* u_R)),
-        (size(u,1), size(u,1), size(u,2))) for m in 1:d)
-end
+"""
+    function numerical_flux(conservation_law::Union{InviscidBurgersEquation{d},ViscousBurgersEquation{d}}, numerical_flux::LaxFriedrichsNumericalFlux, u_in::Matrix{Float64}, u_out::Matrix{Float64}, n::NTuple{d, Vector{Float64}})
 
-function two_point_flux(::EntropyConservativeFlux{BurgersFlux{d}}, 
-    u::Matrix{Float64}) where {d}
-    e = ones(size(u,1))
-    u_L = u[:,1]*e'
-    u_R = e*(u[:,1])'
-    return Tuple(reshape(
-        (1.0/6.0)*((u_L .* u_L) + (u_L .* u_R) + (u_R .* u_R)), 
-        (size(u,1), size(u,1), size(u,2))) for m in 1:d)
-end
+Evaluate the Lax-Friedrichs flux for Burgers' equation
 
-function numerical_flux(flux::LaxFriedrichsNumericalFlux{BurgersFlux{1}}, 
+`F*(u⁻, u⁺, n) = ½a⋅n(½(u⁻)² + ½(u⁺)²) + ½λ max(|au⁻⋅n|,|au⁺⋅n|)(u⁺ - u⁻)`
+"""
+function numerical_flux(
+    conservation_law::Union{InviscidBurgersEquation{d},ViscousBurgersEquation{d}}, numerical_flux::LaxFriedrichsNumericalFlux, 
     u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
-    n::NTuple{1, Vector{Float64}})
+    n::NTuple{d, Vector{Float64}}) where {d}
 
-    # returns vector of length N_zeta 
-    return (0.25*(u_in.^2 + u_out.^2).*n[1] - 
-    flux.λ*0.5*max.(abs.(u_out),abs.(u_in)).*(u_out - u_in))
+    a_n = sum(conservation_law.a[m].*n[m] for m in 1:d)
+    return (0.25*a_n.*(u_in.^2 + u_out.^2).*n[1] - 
+        numerical_flux.λ*0.5*max.(abs.(a_n.*u_out),abs.(a_n.*u_in)).*(u_out - u_in))
 end
 
-function numerical_flux(::EntropyConservativeNumericalFlux{BurgersFlux{1}}, 
-    u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
-    n::NTuple{1, Vector{Float64}})
+"""
+    function numerical_flux(::ViscousBurgersEquation{d}, ::BR1,u_in::Matrix{Float64}, u_out::Matrix{Float64}, n::NTuple{d, Vector{Float64}}
 
-    # returns vector of length N_zeta 
-    return (0.25*(u_in.^2 + u_out.^2) - 
-    (1.0/12.0)*(u_out - u_in).^2).*n[1]
+Evaluate the numerical flux for the viscous Burgers' equation using the BR1 approach
+
+F*(u⁻, u⁺, q⁻, q⁺, n) = ½(F²(u⁻,q⁻) + F²(u⁺, q⁺))⋅n
+"""
+function numerical_flux(conservation_law::ViscousBurgersEquation{d},
+    ::BR1, u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
+    q_in::NTuple{d,Matrix{Float64}}, q_out::NTuple{d,Matrix{Float64}}, 
+    n::NTuple{d, Vector{Float64}}) where {d}
+
+    @unpack b = conservation_law
+
+    # average both sides
+    q_avg = Tuple(0.5*(q_in[m] + q_out[m]) for m in 1:d)
+
+    # Note that if you give it scaled normal nJf, 
+    # the flux will be appropriately scaled by Jacobian too
+    # returns vector of length N_f 
+    return -1.0*sum(b*q_avg[m] .* n[m] for m in 1:d)
 end

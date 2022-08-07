@@ -1,14 +1,24 @@
+"""
+Linear advection equation
 
+`∂ₜu + ∇⋅(au) = s`
+"""
 struct LinearAdvectionEquation{d} <: AbstractConservationLaw{d,1,Hyperbolic}
     a::NTuple{d,Float64} 
     source_term::AbstractParametrizedFunction{d}
 end
 
+"""
+Linear advection-diffusion equation
+
+`∂ₜu + ∇⋅(au - b∇u) = s`
+"""
 struct LinearAdvectionDiffusionEquation{d} <: AbstractConservationLaw{d,1,Mixed}
     a::NTuple{d,Float64}
     b::Float64
     source_term::AbstractParametrizedFunction{d}
 end
+
 
 struct DiffusionSolution{InitialData} <: AbstractParametrizedFunction{1}
     conservation_law::LinearAdvectionDiffusionEquation
@@ -40,9 +50,9 @@ end
 """
     function physical_flux(conservation_law::LinearAdvectionEquation{d}, u::Matrix{Float64})
 
-Evaluate the flux for 1D linear advection-diffusion equation 1D linear advection equation
+Evaluate the flux for the linear advection equation 1D linear advection equation
 
-F(U) = aU
+`F(u) = au`
 """
 function physical_flux(conservation_law::LinearAdvectionEquation{d}, 
     u::Matrix{Float64}) where {d}
@@ -53,9 +63,9 @@ end
 """
     function physical_flux(conservation_law::LinearAdvectionDiffusionEquation{d}u::Matrix{Float64}, q::Tuple{d,Matrix{Float64}})
 
-Evaluate the flux for 1D linear advection-diffusion equation
+Evaluate the flux for the linear advection-diffusion equation
 
-F(U,Q) = aU - bQ
+`F(u,q) = au - bq`
 """
 function physical_flux(conservation_law::LinearAdvectionDiffusionEquation{d},
     u::Matrix{Float64}, q::NTuple{d,Matrix{Float64}}) where {d}
@@ -75,7 +85,7 @@ struct BR1 <: AbstractSecondOrderNumericalFlux end
 
 Evaluate the standard advective numerical flux
 
-F*(U⁻, U⁺, n) = 1/2 a⋅n(U⁻ + U⁺) + λ/2 |a⋅n|(U⁺ - U⁻)
+`F*(u⁻, u⁺, n) = ½a⋅n(u⁻ + u⁺) + ½λ|a⋅n|(u⁺ - u⁻)`
 """
 function numerical_flux(conservation_law::Union{LinearAdvectionEquation{d},LinearAdvectionDiffusionEquation{d}},
     numerical_flux::LinearAdvectionNumericalFlux,
@@ -96,7 +106,7 @@ end
 
 Evaluate the interface normal solution for the (advection-)diffusion equation using the BR1 approach
 
-U*(U⁻, U⁺, n) = 1/2 (U⁻ + U⁺)n
+`U*(u⁻, u⁺, n) = ½(u⁻ + u⁺)n`
 """
 
 function numerical_flux(::LinearAdvectionDiffusionEquation{d},
@@ -117,7 +127,7 @@ end
 
 Evaluate the numerical flux for the (advection-)diffusion equation using the BR1 approach
 
-F*(U⁻, U⁺, Q⁻, Q⁺, n) = 1/2 (F²``(U⁻, Q⁻) + F²(U⁺, Q⁺))⋅n
+`F*(u⁻, u⁺, q⁻, q⁺, n) = ½(F²(u⁻,q⁻) + F²(u⁺, q⁺))⋅n`
 """
 
 function numerical_flux(conservation_law::LinearAdvectionDiffusionEquation{d},

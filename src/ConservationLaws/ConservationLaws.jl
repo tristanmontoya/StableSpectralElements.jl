@@ -15,23 +15,21 @@ module ConservationLaws
     """
     Hyperbolic conservation law:
 
-    ∂U/∂t + ∇⋅F(U) = 0
+    `∂ₜu + ∇⋅F(u) = s`
     """
     struct Hyperbolic <: AbstractPDEType end
         
     """
     Parabolic conservation law:
 
-    ∂U/∂t + ∇⋅F(U,Q) = 0
-    Q = ∇U 
+    `∂ₜu + ∇⋅F(u,q) = s, q = ∇u` 
     """
     struct Parabolic <: AbstractPDEType end
 
     """
     Mixed hyperbolic-parabolic conservation law:
 
-    ∂U/∂t + ∇⋅F¹(U) + ∇⋅F²(U,Q) = 0
-    Q = ∇U 
+    `∂ₜu + ∇⋅(F¹(u) + F²(u,q)) = s, q = ∇u`
     """
     struct Mixed <: AbstractPDEType end
 
@@ -40,6 +38,7 @@ module ConservationLaws
     abstract type AbstractSecondOrderNumericalFlux end
     struct NoFirstOrderFlux <: AbstractFirstOrderNumericalFlux end
     struct NoSecondOrderFlux <: AbstractSecondOrderNumericalFlux end
+
     struct LaxFriedrichsNumericalFlux <: AbstractFirstOrderNumericalFlux 
         λ::Float64
     end
