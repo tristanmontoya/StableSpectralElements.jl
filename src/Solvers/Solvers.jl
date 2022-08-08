@@ -243,8 +243,10 @@ module Solvers
         @timeit to "facet terms" begin
             facet_terms = -1.0*mul!(q, FAC, u_fac)
         end
-
-        q = M \ (volume_terms + facet_terms)
+        
+        @timeit to "mass matrix solve" begin
+            q = M \ (volume_terms + facet_terms)
+        end
         return q
     end
 

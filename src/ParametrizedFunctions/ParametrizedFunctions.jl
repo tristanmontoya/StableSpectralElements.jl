@@ -24,12 +24,6 @@ module ParametrizedFunctions
         eps::Float64
     end
 
-    struct BurgersSolution{InitialData,SourceTerm} <: AbstractParametrizedFunction{1}
-        initial_data::InitialData
-        source_term::SourceTerm
-        N_eq::Int
-    end
-
     struct SourceTermGassner <: AbstractParametrizedFunction{1} 
         N_eq::Int
         k::Float64
@@ -53,11 +47,6 @@ module ParametrizedFunctions
 
     function InitialDataGassner()
         return InitialDataGassner(1,Float64(π),0.01)
-    end
-
-    function BurgersSolution(initial_data::AbstractParametrizedFunction{1},
-        source_term::AbstractParametrizedFunction{1})
-        return BurgersSolution(initial_data, source_term, 1)
     end
 
     function SourceTermGassner(k::Float64, eps::Float64)
@@ -88,12 +77,6 @@ module ParametrizedFunctions
     function evaluate(f::SourceTermGassner, 
         x::NTuple{1,Float64},t::Float64=0.0)
         return [f.k .* cos(f.k*(x[1]-t))*(-1.0 + f.eps + sin(f.k*(x[1]-t)))]
-    end
-
-    # TODO: move to burgers.jl
-    function evaluate(s::BurgersSolution{InitialDataGassner,SourceTermGassner}, 
-        x::NTuple{1,Float64},t::Float64=0.0)
-        return [sin(s.initial_data.k*(x[1]-t))+s.initial_data.eps]
     end
 
     function evaluate(f::AbstractParametrizedFunction{d},

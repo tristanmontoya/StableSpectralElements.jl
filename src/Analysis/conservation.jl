@@ -1,6 +1,6 @@
 abstract type ConservationAnalysis <: AbstractAnalysis end
 
-struct PrimaryConservationAnalysis{d} <: ConservationAnalysis
+struct PrimaryConservationAnalysis <: ConservationAnalysis
     WJ::Vector{<:AbstractMatrix}
     N_eq::Int
     N_el::Int
@@ -10,7 +10,7 @@ struct PrimaryConservationAnalysis{d} <: ConservationAnalysis
     dict_name::String
 end
 
-struct EnergyConservationAnalysis{d} <: ConservationAnalysis
+struct EnergyConservationAnalysis <: ConservationAnalysis
     WJ::Vector{<:AbstractMatrix}
     N_eq::Int
     N_el::Int
@@ -18,6 +18,11 @@ struct EnergyConservationAnalysis{d} <: ConservationAnalysis
     results_path::String
     analysis_path::String
     dict_name::String
+end
+
+struct ConservationAnalysisResults <:AbstractAnalysisResults
+    t::Vector{Float64}
+    E::Matrix{Float64}
 end
 
 function PrimaryConservationAnalysis(results_path::String,
@@ -32,7 +37,7 @@ function PrimaryConservationAnalysis(results_path::String,
     
     WJ = [Matrix(W) * Diagonal(geometric_factors.J_q[:,k]) for k in 1:N_el]
 
-    return PrimaryConservationAnalysis{d}(
+    return PrimaryConservationAnalysis(
         WJ, N_eq, N_el, V, results_path, analysis_path, "conservation.jld2")
 end
 
@@ -49,7 +54,7 @@ function EnergyConservationAnalysis(results_path::String,
     
     WJ = [Matrix(W) * Diagonal(geometric_factors.J_q[:,k]) for k in 1:N_el]
 
-    return EnergyConservationAnalysis{d}(
+    return EnergyConservationAnalysis(
         WJ, N_eq, N_el, V ,results_path, analysis_path, "energy.jld2")
 end
 
@@ -93,4 +98,34 @@ function analyze(analysis::ConservationAnalysis,
             "t_f" => t_f))
 
     return initial, final, difference
+end
+
+function analyze(analysis::ConservationAnalysis,
+    time_steps::Vector{Int})
+
+    @unpack results_path, N_eq, dict_name = analysis
+    N_t = length(time_steps)
+    t = Vector{Float64}(undef,N_t)
+    E = Matrix{Float64}(undef,N_t, N_eq)
+    for i in 1:N_t
+        u, t[i] = load_solution(results_path, time_steps[i])
+        E[i,:] = evaluate_conservation(analysis, u)
+    end
+
+    results = ConservationAnalysisResults(t,E)
+
+    save(string(results_path, dict_name), 
+    Dict("error_analysis" => analysis,
+        "error" => results))
+
+    return ConservationAnalysisResults(t,E)
+end
+    
+function plot_evolution(analysis::ConservationAnalysis, 
+    results::ConservationAnalysisResults, title::String; legend::Bool=false,
+    ylabel::String="Energy", e::Int=1)
+    p = plot(results.t, results.E[:,e], 
+        legend=legend, xlabel="t", ylabel=ylabel)
+    savefig(p, string(analysis.analysis_path, title))
+
 end

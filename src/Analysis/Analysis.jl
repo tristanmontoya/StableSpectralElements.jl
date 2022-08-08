@@ -94,7 +94,7 @@ module Analysis
     export LinearAnalysis, DynamicalAnalysisResults, DMDAnalysis
     include("dynamics.jl")
 
-    export ConservationAnalysis, PrimaryConservationAnalysis, EnergyConservationAnalysis
+    export ConservationAnalysis, PrimaryConservationAnalysis, EnergyConservationAnalysis, plot_evolution
     include("conservation.jl")
 
     export RefinementAnalysis, RefinementAnalysisResults, run_refinement

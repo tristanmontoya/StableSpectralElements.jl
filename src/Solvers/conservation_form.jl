@@ -151,7 +151,6 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
     return dudt
 end
 
-
 """
     Evaluate semi-discrete residual for a mixed/parabolic problem
 """
@@ -207,62 +206,62 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                             u_star[m], strategy)
                     end
                 end
-
-                @timeit to "extrapolate auxiliary variable" begin
-                    @inbounds for m in 1:d
-                        q_facet[m][:,:,k] = convert(
-                            Matrix, operators[k].Vf * q[m][:,:,k])
-                    end
-                    
+            end
+            
+            @timeit to "extrapolate auxiliary variable" begin
+                @inbounds for m in 1:d
+                    q_facet[m][:,:,k] = convert(
+                        Matrix, operators[k].Vf * q[m][:,:,k])
                 end
+                
             end
         end
 
         # evaluate all local residuals
         Threads.@threads for k in 1:N_el
             to = get_timer(string("thread_timer_", Threads.threadid()))
+            @timeit to "primary variable" begin
 
-            # gather external state to element
-            @timeit to "gather external state" begin
-                u_out = Matrix{Float64}(undef, N_f, N_eq)
-                @inbounds for e in 1:N_eq
-                    u_out[:,e] = u_facet[:,e,:][connectivity[:,k]]
+                # gather external state to element
+                @timeit to "gather external state" begin
+                    u_out = Matrix{Float64}(undef, N_f, N_eq)
+                    @inbounds for e in 1:N_eq
+                        u_out[:,e] = u_facet[:,e,:][connectivity[:,k]]
+                    end
+                    q_out = Tuple(Matrix{Float64}(undef, N_f, N_eq) for m in 1:d)
+                    @inbounds for e in 1:N_eq, m in 1:d
+                        q_out[m][:,e] = q_facet[m][:,e,:][connectivity[:,k]]
+                    end
                 end
-                q_out = Tuple(Matrix{Float64}(undef, N_f, N_eq) for m in 1:d)
-                @inbounds for e in 1:N_eq, m in 1:d
-                    q_out[m][:,e] = q_facet[m][:,e,:][connectivity[:,k]]
-                end
-            end
-            
-            # evaluate physical flux
-            f = @timeit to "eval flux" physical_flux(
-                conservation_law, Matrix(operators[k].V * u[:,:,k]), 
-                Tuple(Matrix(operators[k].V * q[m][:,:,k]) for m in 1:d))
-            
-            # evaluate inviscid numerical flux 
-            f_star_inv = @timeit to "eval inviscid numerical flux" numerical_flux(
-                conservation_law, first_order_numerical_flux,
-                u_facet[:,:,k], u_out, operators[k].scaled_normal)
                 
-            # evaluate viscous numerical flux
-            f_star_vis = 
-                @timeit to "eval viscous numerical flux" numerical_flux(
-                    conservation_law, second_order_numerical_flux,
-                    u_facet[:,:,k], u_out, 
-                    Tuple(q_facet[m][:,:,k] for m in 1:d), 
-                    Tuple(q_out[m] for m in 1:d),
-                    operators[k].scaled_normal)
+                # evaluate physical flux
+                f = @timeit to "eval flux" physical_flux(
+                    conservation_law, Matrix(operators[k].V * u[:,:,k]), 
+                    Tuple(Matrix(operators[k].V * q[m][:,:,k]) for m in 1:d))
+                
+                # evaluate inviscid numerical flux 
+                f_star_inv = @timeit to "eval inviscid numerical flux" numerical_flux(
+                    conservation_law, first_order_numerical_flux,
+                    u_facet[:,:,k], u_out, operators[k].scaled_normal)
+                    
+                # evaluate viscous numerical flux
+                f_star_vis = 
+                    @timeit to "eval viscous numerical flux" numerical_flux(
+                        conservation_law, second_order_numerical_flux,
+                        u_facet[:,:,k], u_out, 
+                        Tuple(q_facet[m][:,:,k] for m in 1:d), 
+                        Tuple(q_out[m] for m in 1:d),
+                        operators[k].scaled_normal)
+                
+                # evaluate source term, if there is one
+                s = @timeit to "eval source term" evaluate(
+                    conservation_law.source_term, Tuple(x_q[m][:,k] for m in 1:d),t)
 
-            #println("viscous flux:\n", f_star_vis)
-            f_star = f_star_inv + f_star_vis
-            
-            # evaluate source term, if there is one
-            s = @timeit to "eval source term" evaluate(
-                conservation_law.source_term, Tuple(x_q[m][:,k] for m in 1:d),t)
-
-            # apply operators
-            dudt[:,:,k] = @timeit to "apply operators" apply_operators!(
-                dudt[:,:,k], operators[k], f, f_star, strategy, s)
+                # apply operators
+                dudt[:,:,k] = @timeit to "apply operators" apply_operators!(
+                    dudt[:,:,k], operators[k], f, f_star_inv + f_star_vis, 
+                    strategy, s)
+            end
         end
     end
     return dudt
