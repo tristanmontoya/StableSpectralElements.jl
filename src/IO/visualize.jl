@@ -45,7 +45,8 @@ function visualize(sol::Vector{Array{Float64,3}}, labels::Vector{String}, file_n
         u = convert(Matrix, V_plot * sol[i][:,e,:])
         plot!(p, vec(vcat(x_plot[1],fill(NaN,1,N_el))), 
             vec(vcat(u,fill(NaN,1,N_el))), 
-            label=latexstring(labels[i]), 
+            label=labels[i], 
+            legend=:topleft,
             xlabel=latexstring("x"),
             ylabel=latexstring(ylabel))
     end

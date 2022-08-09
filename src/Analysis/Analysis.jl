@@ -91,7 +91,7 @@ module Analysis
     export ErrorAnalysis, AbstractNorm, QuadratureL2
     include("error.jl")
 
-    export LinearAnalysis, DynamicalAnalysisResults, DMDAnalysis
+    export LinearAnalysis, DynamicalAnalysisResults, DMDAnalysis, evolve_forward
     include("dynamics.jl")
 
     export ConservationAnalysis, PrimaryConservationAnalysis, EnergyConservationAnalysis, plot_evolution

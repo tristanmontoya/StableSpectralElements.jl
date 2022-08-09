@@ -340,6 +340,13 @@ function plot_modes(analysis::AbstractDynamicalAnalysis,
     return p
 end
 
+function evolve_forward(results::DynamicalAnalysisResults, Δt::Float64, starting_step::Int=1)
+    @unpack c, λ, ϕ = results
+    n_modes = size(ϕ,2)
+    c0 = c[:,starting_step]
+    return sum(ϕ[:,j]*exp(λ[j]*Δt)*c0[j] for j in 1:n_modes)
+end
+
 function find_conjugate_pairs(σ::Vector{ComplexF64}; tol=1.0e-8)
 
     N = size(σ,1)

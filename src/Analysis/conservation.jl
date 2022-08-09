@@ -125,7 +125,7 @@ function plot_evolution(analysis::ConservationAnalysis,
     results::ConservationAnalysisResults, title::String; legend::Bool=false,
     ylabel::String="Energy", e::Int=1)
     p = plot(results.t, results.E[:,e], 
-        legend=legend, xlabel="t", ylabel=ylabel)
+        legend=legend, xlabel="\$t\$", ylabel=ylabel)
     savefig(p, string(analysis.analysis_path, title))
-
+    return p
 end
