@@ -4,11 +4,6 @@
 
  `∂ₜu + ∇⋅(F¹(u) + F²(u,∇u)) = s`
 
-with a focus on dynamically dispatched strategies for operator evaluation. 
-
-## Documentation
-Currently in progress.
-
 ## Usage
 A Jupyter notebook containing example solutions of the 2D linear advection equation on curvilinear triangular and quadrilateral meshes using modal DG and nodal DGSEM schemes, respectively, is provided in `examples/advection_2D.ipynb`.
 

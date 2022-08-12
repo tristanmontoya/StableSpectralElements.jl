@@ -1,5 +1,8 @@
 abstract type ConservationAnalysis <: AbstractAnalysis end
 
+"""
+Evaluate change in ∫udx  
+"""
 struct PrimaryConservationAnalysis <: ConservationAnalysis
     WJ::Vector{<:AbstractMatrix}
     N_eq::Int
@@ -10,6 +13,9 @@ struct PrimaryConservationAnalysis <: ConservationAnalysis
     dict_name::String
 end
 
+"""
+Evaluate change in  ∫½u²dx  
+"""
 struct EnergyConservationAnalysis <: ConservationAnalysis
     WJ::Vector{<:AbstractMatrix}
     N_eq::Int
@@ -115,10 +121,46 @@ function analyze(analysis::ConservationAnalysis,
     results = ConservationAnalysisResults(t,E)
 
     save(string(results_path, dict_name), 
-    Dict("error_analysis" => analysis,
-        "error" => results))
+    Dict("conservation_analysis" => analysis,
+        "conservation_results" => results))
 
     return ConservationAnalysisResults(t,E)
+end
+
+function analyze(analysis::ConservationAnalysis,    
+    dynamical_model::DynamicalAnalysisResults,
+    time_steps::Vector{Int}, start::Int=1)
+
+    @unpack results_path, N_eq, dict_name = analysis
+    N_t = length(time_steps)
+    t = Vector{Float64}(undef,N_t)
+    E = Matrix{Float64}(undef,N_t, N_eq)
+    E_modeled = Matrix{Float64}(undef,N_t-start+1, N_eq)
+
+    u0, _ = load_solution(results_path, time_steps[1])
+    for i in 1:N_t
+        u, t[i] = load_solution(results_path, time_steps[i])
+        E[i,:] = evaluate_conservation(analysis, u)
+    end
+
+    (N_p,N_eq,N_el) = size(u0)
+
+    for i in start:N_t
+        u = reshape(real.(evolve_forward(
+            dynamical_model, t[i]-t[start]))[1:N_p*N_eq*N_el],
+            (N_p,N_eq,N_el))
+        E_modeled[i-start+1,:] = evaluate_conservation(analysis, u)
+    end
+
+    results = ConservationAnalysisResults(t,E)
+    modeled_results = ConservationAnalysisResults(t[start:end], E_modeled)
+
+    save(string(results_path, dict_name), 
+    Dict("conservation_analysis" => analysis,
+        "conservation_results" => results,
+        "modeled_conservation_results" => modeled_results))  
+
+    return results, modeled_results
 end
     
 function plot_evolution(analysis::ConservationAnalysis, 
@@ -126,6 +168,20 @@ function plot_evolution(analysis::ConservationAnalysis,
     ylabel::String="Energy", e::Int=1)
     p = plot(results.t, results.E[:,e], 
         legend=legend, xlabel="\$t\$", ylabel=ylabel)
+    savefig(p, string(analysis.analysis_path, title))
+    return p
+end
+
+function plot_evolution(analysis::ConservationAnalysis, 
+    results::Vector{ConservationAnalysisResults}, title::String; 
+    labels::Vector{String}=["Actual", "Predicted"],
+    ylabel::String="Energy", e::Int=1)
+    p = plot()
+    N = length(results)
+    for i in 1:N
+        plot!(p, results[i].t, results[i].E[:,e], xlabel="\$t\$",   
+        ylabel=ylabel, labels=labels[i])
+    end
     savefig(p, string(analysis.analysis_path, title))
     return p
 end

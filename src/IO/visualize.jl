@@ -33,7 +33,7 @@ function visualize(sol::Array{Float64,3},
         label=latexstring(label), xlabel=latexstring("x"))
     end
 
-    savefig(p, string(directory_name, file_name))   
+    savefig(p, string(directory_name, file_name))
     return p
 end
 

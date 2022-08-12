@@ -27,9 +27,11 @@ end
 struct DMDAnalysis{d} <: AbstractDynamicalAnalysis{d}
     results_path::String
     analysis_path::String
+    basis::Vector{<:Function}
     r::Int
-    n_s::Int
-    tol::Float64
+    range::Union{Nothing,NTuple{2,Int}}
+    svd_tol::Float64
+    proj_tol::Float64
     N_p::Int
     N_eq::Int
     N_el::Int
@@ -98,9 +100,11 @@ function analyze(analysis::LinearAnalysis)
     end
 end
 
+"""Standard DMD"""
 function DMDAnalysis(results_path::String, 
     conservation_law::AbstractConservationLaw,spatial_discretization::SpatialDiscretization; 
-    r=4, n_s=10, tol=1.0e-12, name="dmd_analysis")
+    r=4, range=nothing, svd_tol=1.0e-12, proj_tol=1.0e-12, 
+    name="dmd_analysis")
     
     # create path and get discretization information
     analysis_path = new_path(string(results_path, name, "/"))
@@ -111,48 +115,71 @@ function DMDAnalysis(results_path::String,
     M = blockdiag((kron(Diagonal(ones(N_eq)),
         sparse(spatial_discretization.M[k])) for k in 1:N_el)...)
 
-    return DMDAnalysis(results_path, analysis_path, r, n_s, tol,
-        N_p, N_eq, N_el, M, Plotter(spatial_discretization, analysis_path))
+    return DMDAnalysis(results_path, analysis_path, [identity], 
+        r, range, svd_tol, proj_tol, N_p, N_eq, N_el, M, 
+        Plotter(spatial_discretization, analysis_path))
+end
+
+"""Extended DMD"""
+function DMDAnalysis(results_path::String, 
+    conservation_law::AbstractConservationLaw,spatial_discretization::SpatialDiscretization,
+    basis::Vector{Function}; 
+    r=4, range=nothing, svd_tol=1.0e-12, proj_tol=1.0e-12, 
+    name="dmd_analysis")
+    
+    # create path and get discretization information
+    analysis_path = new_path(string(results_path, name, "/"))
+
+    N_p, N_eq, N_el = get_dof(spatial_discretization, conservation_law)
+ 
+    M = Diagonal(ones(N_p*N_eq*N_el*length(basis)))
+
+    return DMDAnalysis(results_path, analysis_path, basis, 
+        r, range, svd_tol, proj_tol, N_p, N_eq, N_el, M, 
+        Plotter(spatial_discretization, analysis_path))
 end
 
 function analyze(analysis::DMDAnalysis)
 
-    @unpack r, n_s, tol, M, results_path = analysis
+    @unpack basis, r, range, svd_tol, proj_tol, M, results_path = analysis
     time_steps = load_time_steps(results_path)
 
-    if n_s < length(time_steps)
-        time_steps = time_steps[1:n_s]
+    if !isnothing(range)
+        time_steps = time_steps[range[1]:range[2]]
     end
 
     X, t_s = load_snapshots(results_path, time_steps)
+    Y = vcat([ψ.(X) for ψ ∈ basis]...)
     
     if r > 0
         # SVD (i.e. POD) of initial states
-        U_full, S_full, V_full = svd(X[:,1:end-1])
+        U_full, S_full, V_full = svd(Y[:,1:end-1])
 
-        U = U_full[:,1:r]
-        S = S_full[1:r]
-        V = V_full[:,1:r]
+        U = U_full[:,1:r][:,S_full[1:r] .> svd_tol]
+        S = S_full[1:r][S_full[1:r] .> svd_tol]
+        V = V_full[:,1:r][:,S_full[1:r] .> svd_tol]
+
+        r = length(S)
 
         # eigendecomposition of reduced DMD matrix 
-        # (projected onto singular vecto2rs)
-        F = eigen((U') * X[:,2:end] * V * inv(Diagonal(S)))
+        # (projected onto singular vectors)
+        F = eigen((U') * Y[:,2:end] * V * inv(Diagonal(S)))
 
         # map eigenvectors back up into full space
-        ϕ_unscaled = X[:,2:end]*V*inv(Diagonal(S))*F.vectors
+        ϕ_unscaled = Y[:,2:end]*V*inv(Diagonal(S))*F.vectors
     else
         # compute full eigendecomposition w/ Moore-Penrose pseudo-inverse
-        A = X[:,2:end]*pinv(X[:,1:end-1])
+        A = U[:,2:end]*pinv(U[:,1:end-1])
         F = eigen(A)
         ϕ_unscaled = F.vectors
         r = size(F.vectors,2)
     end
 
     # normalize eigenvectors (although not orthogonal - this isn't POD)
-    ϕ =ϕ_unscaled/Diagonal([ϕ_unscaled[:,i]'*M*ϕ_unscaled[:,i] for i in 1:r])
+    ϕ = ϕ_unscaled/Diagonal([ϕ_unscaled[:,i]'*M*ϕ_unscaled[:,i] for i in 1:r])
     
     # project onto eigenvectors with respect to the inner product of the scheme
-    c = (ϕ'*M*ϕ) \ ϕ'*M*X
+    c = (ϕ'*M*ϕ) \ ϕ'*M*Y
 
     # calculate energy
     E = real([dot(c[i,j]*ϕ[:,i], M * (c[i,j]*ϕ[:,i]))
@@ -160,7 +187,7 @@ function analyze(analysis::DMDAnalysis)
     
     # sort modes by decreasing energy in initial data
     inds_no_cutoff = sortperm(-E[:,1])
-    inds = inds_no_cutoff[E[inds_no_cutoff,1] .> tol]
+    inds = inds_no_cutoff[E[inds_no_cutoff,1] .> proj_tol]
     σ = F.values[inds]
 
     # find conjugate pair indices
@@ -221,33 +248,19 @@ function plot_spectrum(eigs::Vector{Vector{ComplexF64}}, plots_path::String;
     labels=["Upwind", "Central"])
     p = plot(legendfontsize=10, xlabelfontsize=13, ylabelfontsize=13, xtickfontsize=10, ytickfontsize=10)
     max_real = @sprintf "%.2e" maximum(real.(eigs[1]))
-    plot!(p, eigs[1], 
+    for i in 1:length(eigs)
+        max_real = @sprintf "%.2e" maximum(real.(eigs[i]))
+        sr = @sprintf "%.2f" maximum(abs.(eigs[i]))
+        plot!(p, eigs[i], 
         xlabel= latexstring(string("\\mathrm{Re}\\,(", ylabel, ")")), 
         ylabel= latexstring(string("\\mathrm{Im}\\,(", ylabel, ")")), 
-        xlims=xlims, ylims=ylims,legend=:topleft,
-        label=string(labels[1]," (max Re(λ): ", max_real, ")"),  
-        markershape=:circle, seriestype=:scatter,
-        markersize=3,
+        legend=:topleft,
+        label=string(labels[i]," (max Re(λ): ", max_real,")"),  
+        markershape=:star, seriestype=:scatter,
+        markersize=5,
         markerstrokewidth=0, 
-        #markercolors=:grey, 
         size=(400,400)
-    )
-    if length(eigs) > 1
-        for i in 2:length(eigs)
-            max_real = @sprintf "%.2e" maximum(real.(eigs[i]))
-            sr = @sprintf "%.2f" maximum(abs.(eigs[i]))
-            plot!(p, eigs[i], 
-            xlabel= latexstring(string("\\mathrm{Re}\\,(", ylabel, ")")), 
-            ylabel= latexstring(string("\\mathrm{Im}\\,(", ylabel, ")")), 
-            legend=:topleft,
-            label=string(labels[i]," (max Re(λ): ", max_real,")"),  
-            markershape=:star, seriestype=:scatter,
-            markersize=5,
-            markerstrokewidth=0, 
-            #markercolors=:black, 
-            size=(400,400)
-            )
-        end
+        )
     end
     savefig(p, string(plots_path, title))
     return p
@@ -340,12 +353,29 @@ function plot_modes(analysis::AbstractDynamicalAnalysis,
     return p
 end
 
-function evolve_forward(results::DynamicalAnalysisResults, Δt::Float64, starting_step::Int=1)
+function evolve_forward(results::DynamicalAnalysisResults, Δt::Float64; starting_step::Int=0)
     @unpack c, λ, ϕ = results
     n_modes = size(ϕ,2)
-    c0 = c[:,starting_step]
+    if starting_step == 0
+        c0 = c[:,end]
+    else
+        c0 = c[:,starting_step]
+    end
     return sum(ϕ[:,j]*exp(λ[j]*Δt)*c0[j] for j in 1:n_modes)
 end
+
+function evolve_forward(results::DynamicalAnalysisResults, Δt::Float64, c0::Vector{ComplexF64})
+    @unpack λ, ϕ = results
+    n_modes = size(ϕ,2)
+    return sum(ϕ[:,j]*exp(λ[j]*Δt)*c0[j] for j in 1:n_modes)
+end
+
+function project_onto_modes(analysis::DMDAnalysis, results::DynamicalAnalysisResults, u0::Vector{Float64})
+    @unpack M, basis = analysis
+    @unpack ϕ = results
+    return (ϕ'*M*ϕ) \ ϕ' *M* vcat([ψ.(u0) for ψ ∈ basis]...)
+end
+
 
 function find_conjugate_pairs(σ::Vector{ComplexF64}; tol=1.0e-8)
 
