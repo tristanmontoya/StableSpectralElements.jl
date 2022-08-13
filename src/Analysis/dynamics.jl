@@ -29,7 +29,6 @@ struct DMDAnalysis{d} <: AbstractDynamicalAnalysis{d}
     analysis_path::String
     basis::Vector{<:Function}
     r::Int
-    range::Union{Nothing,NTuple{2,Int}}
     svd_tol::Float64
     proj_tol::Float64
     N_p::Int
@@ -103,7 +102,7 @@ end
 """Standard DMD"""
 function DMDAnalysis(results_path::String, 
     conservation_law::AbstractConservationLaw,spatial_discretization::SpatialDiscretization; 
-    r=4, range=nothing, svd_tol=1.0e-12, proj_tol=1.0e-12, 
+    r=4, svd_tol=1.0e-12, proj_tol=1.0e-12, 
     name="dmd_analysis")
     
     # create path and get discretization information
@@ -116,7 +115,7 @@ function DMDAnalysis(results_path::String,
         sparse(spatial_discretization.M[k])) for k in 1:N_el)...)
 
     return DMDAnalysis(results_path, analysis_path, [identity], 
-        r, range, svd_tol, proj_tol, N_p, N_eq, N_el, M, 
+        r, svd_tol, proj_tol, N_p, N_eq, N_el, M, 
         Plotter(spatial_discretization, analysis_path))
 end
 
@@ -124,7 +123,7 @@ end
 function DMDAnalysis(results_path::String, 
     conservation_law::AbstractConservationLaw,spatial_discretization::SpatialDiscretization,
     basis::Vector{Function}; 
-    r=4, range=nothing, svd_tol=1.0e-12, proj_tol=1.0e-12, 
+    r=4, svd_tol=1.0e-12, proj_tol=1.0e-12, 
     name="dmd_analysis")
     
     # create path and get discretization information
@@ -135,13 +134,13 @@ function DMDAnalysis(results_path::String,
     M = Diagonal(ones(N_p*N_eq*N_el*length(basis)))
 
     return DMDAnalysis(results_path, analysis_path, basis, 
-        r, range, svd_tol, proj_tol, N_p, N_eq, N_el, M, 
+        r, svd_tol, proj_tol, N_p, N_eq, N_el, M, 
         Plotter(spatial_discretization, analysis_path))
 end
 
-function analyze(analysis::DMDAnalysis)
+function analyze(analysis::DMDAnalysis, range=nothing)
 
-    @unpack basis, r, range, svd_tol, proj_tol, M, results_path = analysis
+    @unpack basis, r, svd_tol, proj_tol, M, results_path = analysis
     time_steps = load_time_steps(results_path)
 
     if !isnothing(range)
@@ -152,6 +151,10 @@ function analyze(analysis::DMDAnalysis)
     Y = vcat([ψ.(X) for ψ ∈ basis]...)
     
     if r > 0
+        if r >= length(time_steps)
+            r = length(time_steps)-1
+        end
+
         # SVD (i.e. POD) of initial states
         U_full, S_full, V_full = svd(Y[:,1:end-1])
 
@@ -353,7 +356,7 @@ function plot_modes(analysis::AbstractDynamicalAnalysis,
     return p
 end
 
-function evolve_forward(results::DynamicalAnalysisResults, Δt::Float64; starting_step::Int=0)
+function forecast(results::DynamicalAnalysisResults, Δt::Float64; starting_step::Int=0)
     @unpack c, λ, ϕ = results
     n_modes = size(ϕ,2)
     if starting_step == 0
@@ -364,10 +367,33 @@ function evolve_forward(results::DynamicalAnalysisResults, Δt::Float64; startin
     return sum(ϕ[:,j]*exp(λ[j]*Δt)*c0[j] for j in 1:n_modes)
 end
 
-function evolve_forward(results::DynamicalAnalysisResults, Δt::Float64, c0::Vector{ComplexF64})
+function forecast(results::DynamicalAnalysisResults, Δt::Float64, c0::Vector{ComplexF64})
     @unpack λ, ϕ = results
     n_modes = size(ϕ,2)
     return sum(ϕ[:,j]*exp(λ[j]*Δt)*c0[j] for j in 1:n_modes)
+end
+
+function forecast(analysis::DMDAnalysis, Δt::Float64, range::NTuple{2,Int64}, 
+    forecast_name::String="forecast")
+    
+    @unpack analysis_path, results_path, N_p, N_eq, N_el = analysis
+    time_steps = load_time_steps(results_path)
+    forecast_path = new_path(string(analysis_path, forecast_name, "/"),
+        true,true)
+    save_object(string(forecast_path, "time_steps.jld2"), time_steps)
+    u = Array{Float64,3}[]
+    t = Float64[]
+    for i in range[1]:range[2]
+        model = analyze(analysis, (1,i))
+        u0, t0 = load_solution(results_path, time_steps[i])
+        c0 = project_onto_modes(analysis,model, vec(u0))
+        push!(u,reshape(real.(forecast(model, Δt, c0))[1:N_p*N_eq*N_el],
+            (N_p,N_eq,N_el)))
+        push!(t, t0 + Δt)
+        save(string(forecast_path, "res_", time_steps[i], ".jld2"),
+            Dict("u" => last(u), "t" => last(t)))
+    end
+    return forecast_path
 end
 
 function project_onto_modes(analysis::DMDAnalysis, results::DynamicalAnalysisResults, u0::Vector{Float64})
@@ -375,7 +401,6 @@ function project_onto_modes(analysis::DMDAnalysis, results::DynamicalAnalysisRes
     @unpack ϕ = results
     return (ϕ'*M*ϕ) \ ϕ' *M* vcat([ψ.(u0) for ψ ∈ basis]...)
 end
-
 
 function find_conjugate_pairs(σ::Vector{ComplexF64}; tol=1.0e-8)
 

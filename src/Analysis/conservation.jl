@@ -146,7 +146,7 @@ function analyze(analysis::ConservationAnalysis,
     (N_p,N_eq,N_el) = size(u0)
 
     for i in start:N_t
-        u = reshape(real.(evolve_forward(
+        u = reshape(real.(forecast(
             dynamical_model, t[i]-t[start]))[1:N_p*N_eq*N_el],
             (N_p,N_eq,N_el))
         E_modeled[i-start+1,:] = evaluate_conservation(analysis, u)
@@ -162,6 +162,7 @@ function analyze(analysis::ConservationAnalysis,
 
     return results, modeled_results
 end
+
     
 function plot_evolution(analysis::ConservationAnalysis, 
     results::ConservationAnalysisResults, title::String; legend::Bool=false,
@@ -176,11 +177,11 @@ function plot_evolution(analysis::ConservationAnalysis,
     results::Vector{ConservationAnalysisResults}, title::String; 
     labels::Vector{String}=["Actual", "Predicted"],
     ylabel::String="Energy", e::Int=1)
-    p = plot()
+    p = plot(results[1].t, results[1].E[:,e], xlabel="\$t\$",   
+    ylabel=ylabel, labels=labels[1], ylims=[minimum(results[1].E[:,e]),maximum(results[1].E[:,e])], linewidth=2.0)
     N = length(results)
-    for i in 1:N
-        plot!(p, results[i].t, results[i].E[:,e], xlabel="\$t\$",   
-        ylabel=ylabel, labels=labels[i])
+    for i in 2:N
+        plot!(p, results[i].t, results[i].E[:,e], labels=labels[i], linestyle=:dash, linewidth=2.0)
     end
     savefig(p, string(analysis.analysis_path, title))
     return p

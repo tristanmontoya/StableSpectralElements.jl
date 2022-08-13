@@ -77,14 +77,19 @@ function save_callback(results_path::String, interval::Int=0)
 end
 
 function load_solution(results_path::String, time_step::Union{Int,String}=0)
+    #= TODO: check if this is necessary to keep
     if time_step == 0
         dict = load(string(results_path, "project.jld2"))
         return initialize(dict["initial_data"], dict["conservation_law"],
             dict["spatial_discretization"]), dict["tspan"][1]
     else
+    
         dict = load(string(results_path, "res_", time_step, ".jld2"))
         return dict["u"], dict["t"]
     end
+    =#
+    dict = load(string(results_path, "res_", time_step, ".jld2"))
+        return dict["u"], dict["t"]
 end
 
 function load_project(results_path::String)
