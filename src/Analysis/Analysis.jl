@@ -18,8 +18,8 @@ module Analysis
     using ..Mesh: uniform_periodic_mesh
     using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation
     using ..ParametrizedFunctions: AbstractParametrizedFunction, evaluate
-    using ..Solvers: AbstractResidualForm, AbstractStrategy, Solver, semidiscretize, LinearResidual, get_dof
-    using ..IO: new_path, load_project, load_solution, load_time_steps, load_snapshots, save_callback, save_solution, save_project, Plotter
+    using ..Solvers: AbstractResidualForm, AbstractStrategy, Solver, semidiscretize, LinearResidual, get_dof, rhs!
+    using ..IO: new_path, load_project, load_solution, load_time_steps, load_snapshots, load_snapshots_with_derivatives, load_solver, save_callback, save_solution, save_project, Plotter
 
     export AbstractAnalysis, AbstractAnalysisResults, analyze, save_analysis, plot_analysis, plot_spectrum, plot_modes, tabulate_analysis, tabulate_analysis_for_paper
 
@@ -91,7 +91,7 @@ module Analysis
     export ErrorAnalysis, AbstractNorm, QuadratureL2
     include("error.jl")
 
-    export LinearAnalysis, DynamicalAnalysisResults, DMDAnalysis, forecast, project_onto_modes
+    export LinearAnalysis, DynamicalAnalysisResults, DMDAnalysis, forecast, project_onto_modes, monomial_basis, monomial_derivatives, dmd
     include("dynamics.jl")
 
     export ConservationAnalysis, PrimaryConservationAnalysis, EnergyConservationAnalysis, plot_evolution

@@ -54,7 +54,8 @@ function save_solution(integrator::ODEIntegrator, results_path::String)
              "  t = ", integrator.t)
     end
     save(string(results_path, "res_", integrator.iter, ".jld2"),
-        Dict("u" => integrator.u, "t" => integrator.t))
+        Dict("u" => integrator.u, "t" => integrator.t, 
+            "du" => get_du(integrator)))
     time_steps=load_object(string(results_path, "time_steps.jld2"))
     save_object(string(results_path, "time_steps.jld2"),
         push!(time_steps, integrator.iter))
@@ -76,7 +77,9 @@ function save_callback(results_path::String, interval::Int=0)
     return DiscreteCallback(condition, affect!, save_positions=(true,false))
 end
 
-function load_solution(results_path::String, time_step::Union{Int,String}=0)
+function load_solution(results_path::String, time_step::Union{Int,String}=0;
+    load_du=false)
+
     #= TODO: check if this is necessary to keep
     if time_step == 0
         dict = load(string(results_path, "project.jld2"))
@@ -89,7 +92,12 @@ function load_solution(results_path::String, time_step::Union{Int,String}=0)
     end
     =#
     dict = load(string(results_path, "res_", time_step, ".jld2"))
-        return dict["u"], dict["t"]
+    if load_du
+        return dict["u"], dict["du"], dict["t"]
+    else
+       return dict["u"], dict["t"]
+    end
+
 end
 
 function load_project(results_path::String)
@@ -102,11 +110,17 @@ function load_project(results_path::String)
         dict["strategy"])
 end
 
+function load_solver(results_path::String)
+    dict = load(string(results_path,"project.jld2"))
+    return Solver(dict["conservation_law"],dict["spatial_discretization"], 
+        dict["form"],dict["strategy"])
+end
+
 function load_time_steps(results_path::String)
     return load_object(string(results_path, "time_steps.jld2"))
 end
 
-function load_snapshots(results_path::String, time_steps::Vector{Int})
+function load_snapshots(results_path::String, time_steps::Vector{Int}, du=false)
 
     dict = load(string(results_path,"project.jld2"))
     N_p, N_eq, N_el = get_dof(dict["spatial_discretization"], 
@@ -124,4 +138,28 @@ function load_snapshots(results_path::String, time_steps::Vector{Int})
     t_s = (times[N_t] - times[1])/(N_t - 1.0)
     
     return X, t_s
+end
+
+function load_snapshots_with_derivatives(results_path::String,
+    time_steps::Vector{Int})
+
+    dict = load(string(results_path,"project.jld2"))
+    N_p, N_eq, N_el = get_dof(dict["spatial_discretization"], 
+        dict["conservation_law"])
+    N_dof = N_p*N_eq*N_el
+    N_t = length(time_steps)
+
+    U = Matrix{Float64}(undef, N_dof, N_t)
+    dU = Matrix{Float64}(undef, N_dof, N_t)
+    times = Vector{Float64}(undef,N_t)
+    for i in 1:N_t
+        u, du, times[i] = load_solution(results_path, time_steps[i],
+            load_du=true)
+        U[:,i] = vec(u)
+        dU[:,i] = vec(du)
+    end
+
+    t_s = (times[N_t] - times[1])/(N_t - 1.0)
+    
+    return U,dU,t_s
 end

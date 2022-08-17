@@ -2,15 +2,26 @@ module ParametrizedFunctions
 
     using UnPack
     
-    export AbstractParametrizedFunction, InitialDataSine, InitialDataGaussian, InitialDataGassner, BurgersSolution, SourceTermGassner, NoSourceTerm, evaluate
+    export AbstractParametrizedFunction, SumOfFunctions, ConstantFunction, InitialDataSine, InitialDataGaussian, InitialDataGassner, BurgersSolution, SourceTermGassner, NoSourceTerm, evaluate
     
     abstract type AbstractParametrizedFunction{d} end
 
+    struct SumOfFunctions{d} <: AbstractParametrizedFunction{d}
+        f::AbstractParametrizedFunction{d}
+        g::AbstractParametrizedFunction{d}
+        N_eq::Int
+    end
+
+    struct ConstantFunction{d} <: AbstractParametrizedFunction{d}
+        c::Float64
+        N_eq::Int
+    end
     struct InitialDataSine{d} <: AbstractParametrizedFunction{d}
         A::Float64  # amplitude
         k::NTuple{d,Float64}  # wave number in each direction
         N_eq::Int
     end
+
     struct InitialDataGaussian{d} <: AbstractParametrizedFunction{d}
         A::Float64  # amplitude
         k::Float64 # width
@@ -31,6 +42,11 @@ module ParametrizedFunctions
     end
 
     struct NoSourceTerm{d} <: AbstractParametrizedFunction{d} end
+
+    function Base.:+(f::AbstractParametrizedFunction{d},
+        g::AbstractParametrizedFunction{d}) where {d}
+        return SumOfFunctions{d}(f,g,f.N_eq)
+    end
 
     function InitialDataSine(A::Float64, k::Float64; N_eq::Int=1)
         return InitialDataSine(A,(k,),N_eq)
@@ -55,6 +71,16 @@ module ParametrizedFunctions
 
     function SourceTermGassner()
         return SourceTermGassner(1,Float64(π),0.01)
+    end
+
+    function evaluate(func::SumOfFunctions{d}, 
+        x::NTuple{d,Float64},t::Float64=0.0) where {d}
+        return evaluate(func.f,x,t) .+ evaluate(func.g,x,t)
+    end
+
+    function evaluate(f::ConstantFunction{d},
+        x::NTuple{d,Float64},t::Float64=0.0) where {d}
+        return fill(f.c, f.N_eq)
     end
 
     function evaluate(f::InitialDataSine{d}, 

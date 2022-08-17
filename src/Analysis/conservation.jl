@@ -129,13 +129,15 @@ end
 
 function analyze(analysis::ConservationAnalysis,    
     dynamical_model::DynamicalAnalysisResults,
-    time_steps::Vector{Int}, start::Int=1)
+    time_steps::Vector{Int}, Δt::Float64, start::Int=1, resolution=100)
 
     @unpack results_path, N_eq, dict_name = analysis
     N_t = length(time_steps)
     t = Vector{Float64}(undef,N_t)
     E = Matrix{Float64}(undef,N_t, N_eq)
-    E_modeled = Matrix{Float64}(undef,N_t-start+1, N_eq)
+    
+    t_modeled = Vector{Float64}(undef,resolution+1)
+    E_modeled = Matrix{Float64}(undef,resolution+1, N_eq)
 
     u0, _ = load_solution(results_path, time_steps[1])
     for i in 1:N_t
@@ -145,15 +147,17 @@ function analyze(analysis::ConservationAnalysis,
 
     (N_p,N_eq,N_el) = size(u0)
 
-    for i in start:N_t
+    dt = Δt/resolution
+    for i in 0:resolution
         u = reshape(real.(forecast(
-            dynamical_model, t[i]-t[start]))[1:N_p*N_eq*N_el],
+            dynamical_model, dt*i, starting_step=start))[1:N_p*N_eq*N_el],
             (N_p,N_eq,N_el))
-        E_modeled[i-start+1,:] = evaluate_conservation(analysis, u)
+        t_modeled[i+1] = t[start]+dt*i
+        E_modeled[i+1,:] = evaluate_conservation(analysis, u)
     end
 
     results = ConservationAnalysisResults(t,E)
-    modeled_results = ConservationAnalysisResults(t[start:end], E_modeled)
+    modeled_results = ConservationAnalysisResults(t_modeled, E_modeled)
 
     save(string(results_path, dict_name), 
     Dict("conservation_analysis" => analysis,
@@ -176,13 +180,21 @@ end
 function plot_evolution(analysis::ConservationAnalysis, 
     results::Vector{ConservationAnalysisResults}, title::String; 
     labels::Vector{String}=["Actual", "Predicted"],
-    ylabel::String="Energy", e::Int=1)
+    ylabel::String="Energy", e::Int=1, xlims=nothing, ylims=nothing)
+    if isnothing(xlims)
+        xlims=[minimum(results[end].t),maximum(results[end].t)]
+    end
+    if isnothing(ylims)
+        ylims=[minimum(results[1].E[:,e]),maximum(results[1].E[:,e])]
+    end
+
     p = plot(results[1].t, results[1].E[:,e], xlabel="\$t\$",   
-    ylabel=ylabel, labels=labels[1], ylims=[minimum(results[1].E[:,e]),maximum(results[1].E[:,e])], linewidth=2.0)
+    ylabel=ylabel, labels=labels[1], xlims=xlims, ylims=ylims, linewidth=2.0)
     N = length(results)
     for i in 2:N
         plot!(p, results[i].t, results[i].E[:,e], labels=labels[i], linestyle=:dash, linewidth=2.0)
     end
+
     savefig(p, string(analysis.analysis_path, title))
     return p
 end
