@@ -1,7 +1,7 @@
 module Analysis
 
     using LinearMaps: LinearMap
-    using LinearAlgebra: Diagonal, dot, eigen, inv, svd, pinv, eigsortby
+    using LinearAlgebra: Diagonal, dot, eigen, inv, svd, pinv, eigsortby, I
     using JLD2: save, load, save_object, load_object
     using Plots: plot, savefig, plot!, scatter, text, annotate!, grid, theme_palette, @layout
     using LaTeXStrings: LaTeXString, latexstring
@@ -91,7 +91,7 @@ module Analysis
     export ErrorAnalysis, AbstractNorm, QuadratureL2
     include("error.jl")
 
-    export LinearAnalysis, DynamicalAnalysisResults, DMDAnalysis, forecast, project_onto_modes, monomial_basis, monomial_derivatives, dmd
+    export LinearAnalysis, DynamicalAnalysisResults, KoopmanAnalysis, StandardDMD, ExtendedDMD, KernelDMD, forecast, project_onto_modes, monomial_basis, monomial_derivatives, dmd
     include("dynamics.jl")
 
     export ConservationAnalysis, PrimaryConservationAnalysis, EnergyConservationAnalysis, plot_evolution
