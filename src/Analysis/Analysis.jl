@@ -1,7 +1,7 @@
 module Analysis
 
     using LinearMaps: LinearMap
-    using LinearAlgebra: Diagonal, dot, eigen, inv, svd, pinv, eigsortby, I
+    using LinearAlgebra: Diagonal, dot, eigen, inv, svd, pinv, eigsortby, I, rank
     using JLD2: save, load, save_object, load_object
     using Plots: plot, savefig, plot!, scatter, text, annotate!, grid, theme_palette, @layout
     using LaTeXStrings: LaTeXString, latexstring
