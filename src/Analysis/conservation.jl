@@ -187,14 +187,7 @@ function plot_evolution(analysis::ConservationAnalysis,
     results::Vector{ConservationAnalysisResults}, title::String; 
     labels::Vector{String}=["Actual", "Predicted"],
     ylabel::String="Energy", e::Int=1, xlims=nothing, ylims=nothing)
-    #=
-    if isnothing(xlims)
-        xlims=[minimum(results[end].t),maximum(results[end].t)]
-    end
-    if isnothing(ylims)
-        ylims=[minimum(results[1].E[:,e]),maximum(results[1].E[:,e])]
-    end
-    =#
+
     p = plot(results[1].t, results[1].E[:,e], xlabel="\$t\$",   
     ylabel=ylabel, labels=labels[1], xlims=xlims, ylims=ylims, linewidth=2.0)
     N = length(results)

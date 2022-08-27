@@ -2,6 +2,8 @@ abstract type AbstractDynamicalAnalysis{d} <: AbstractAnalysis end
 
 abstract type AbstractKoopmanAlgorithm end
 
+abstract type AbstractSamplingStrategy end
+
 struct DynamicalAnalysisResults <: AbstractAnalysisResults
     σ::Vector{ComplexF64}
     λ::Vector{ComplexF64}
@@ -29,8 +31,6 @@ end
 struct KoopmanAnalysis{d} <: AbstractDynamicalAnalysis{d}
     results_path::String
     analysis_path::String
-    basis::Vector{<:Function}
-    basis_derivatives::Vector{<:Function}
     r::Int
     svd_tol::Float64
     proj_tol::Float64
@@ -42,16 +42,32 @@ struct KoopmanAnalysis{d} <: AbstractDynamicalAnalysis{d}
 end
 
 """Tu et al. (2014) or Kutz et al. (2018)"""
-struct StandardDMD <: AbstractKoopmanAlgorithm end
+struct StandardDMD <: AbstractKoopmanAlgorithm 
+    basis::Vector{<:Function}
+end
 
-"""Williams et al. (2015)"""
+"""Williams et al. (2015aß)"""
 struct ExtendedDMD <: AbstractKoopmanAlgorithm
+    basis::Vector{<:Function}
     ϵ::Float64
 end
 
-"""Rosenfeld's algorithm (see youtube video)"""
+"""Klus et al. (2020)"""
+struct GeneratorDMD
+    basis::Vector{<:Function}
+    basis_derivatives::Vector{<:Function}
+    f::Function
+end
+
+"""Williams et al. (2015b)"""
 struct KernelDMD <: AbstractKoopmanAlgorithm 
     k::Function
+    ϵ::Float64
+end
+
+struct GaussianSampling <: AbstractSamplingStrategy
+    σ::Float64
+    n::Int
 end
 
 function LinearAnalysis(results_path::String,
@@ -72,7 +88,7 @@ function LinearAnalysis(results_path::String,
         r, tol, N_p, N_eq, N_el, M, Plotter(spatial_discretization, analysis_path), L, use_data)
 end
 
-"""Linear observables"""
+"""Koopman analysis"""
 function KoopmanAnalysis(results_path::String, 
     conservation_law::AbstractConservationLaw,spatial_discretization::SpatialDiscretization; 
     r=4, svd_tol=1.0e-12, proj_tol=1.0e-12, 
@@ -88,30 +104,16 @@ function KoopmanAnalysis(results_path::String,
         sparse(spatial_discretization.M[k])) for k in 1:N_el)...)
 
     return KoopmanAnalysis(results_path, analysis_path, 
-        [identity], [x->zeros(size(x))],
         r, svd_tol, proj_tol, N_p, N_eq, N_el, M, 
         Plotter(spatial_discretization, analysis_path))
 end
 
-"""Nonlinear observables"""
-function KoopmanAnalysis(results_path::String, 
-    conservation_law::AbstractConservationLaw,spatial_discretization::SpatialDiscretization,
-    basis::Vector{<:Function}; 
-    basis_derivatives::Vector{<:Function}=[x->ones(size(x))],
-    r=4, svd_tol=1.0e-12, proj_tol=1.0e-12, 
-    name="koopman")
-    
-    # create path and get discretization information
-    analysis_path = new_path(string(results_path, name, "/"))
-
-    N_p, N_eq, N_el = get_dof(spatial_discretization, conservation_law)
- 
-    M = Diagonal(ones(N_p*N_eq*N_el*length(basis)))
-
-    return KoopmanAnalysis(results_path, analysis_path, basis, basis_derivatives, 
-        r, svd_tol, proj_tol, N_p, N_eq, N_el, M, 
-        Plotter(spatial_discretization, analysis_path))
-end
+"""Default constructors"""
+StandardDMD() = StandardDMD([identity])
+ExtendedDMD(basis::Vector{<:Function}) = ExtendedDMD(basis, -1.0)
+ExtendedDMD() = ExtendedDMD([identity], -1.0)
+KernelDMD(k::Function) = KernelDMD(k,-1.0)
+KernelDMD() = KernelDMD((x,y) -> (1.0 + x'*y) , -1.0)
 
 """Linear eigensolution analysis"""
 function analyze(analysis::LinearAnalysis)
@@ -150,14 +152,16 @@ function analyze(analysis::LinearAnalysis)
 
 end
 
-"""Approximate the Koopman operator"""
+"""Approximate the Koopman operator from simulation trajectory data"""
 analyze(analysis::KoopmanAnalysis, range=nothing) = analyze(analysis, StandardDMD(), range)
+
 function analyze(analysis::KoopmanAnalysis, 
-    ::StandardDMD, range=nothing)
+    algorithm::AbstractKoopmanAlgorithm, 
+    range=nothing, samples=nothing)
 
-    @unpack basis, basis_derivatives, r, svd_tol, proj_tol, M, results_path = analysis
+    @unpack svd_tol, proj_tol, r, results_path = analysis
 
-    # load time step and ensure rank is suitable
+    # load time steps
     time_steps = load_time_steps(results_path)
     if !isnothing(range)
         time_steps = time_steps[range[1]:range[2]]
@@ -167,61 +171,15 @@ function analyze(analysis::KoopmanAnalysis,
     end
 
     # set up data matrices
-    U, t_s = load_snapshots(results_path, time_steps)
-    observables = vcat([ψ.(U) for ψ ∈ basis]...)
-    X = observables[:,1:end-1]
-    Y = observables[:,2:end]
-
-    eigenvectors, eigenvalues, r = dmd(X,Y,r,svd_tol)
-
-    # normalize Koopman modes for the observable basis
-    Z = eigenvectors/Diagonal([eigenvectors[:,i]'*M*eigenvectors[:,i]
-        for i in 1:r])
-    
-    # project observable data onto Koopman modes
-    c = (Z'*M*Z) \ Z'*M*observables
-    # calculate energy in each mode 
-    E = real([dot(c[i,j]*Z[:,i], M * (c[i,j]*Z[:,i]))
-        for i in 1:r, j in 1:size(observables,2)])
-
-    # sort modes by decreasing energy in initial data
-    inds_no_cutoff = sortperm(-E[:,1])
-    inds = inds_no_cutoff[E[inds_no_cutoff,1] .> proj_tol]
-
-    return DynamicalAnalysisResults(eigenvalues[inds], 
-        log.(Complex.(eigenvalues[inds]))./t_s, Z[:,inds], 
-        find_conjugate_pairs(eigenvalues[inds]), c[inds,:],
-        Z*c, E[inds,:])
-end
-
-function analyze(analysis::KoopmanAnalysis, 
-    algorithm::ExtendedDMD, range=nothing)
-
-    @unpack basis, basis_derivatives, r, N_p, N_eq, N_el, svd_tol, proj_tol, results_path = analysis
-
-    # load time step and ensure rank is suitable
-    time_steps = load_time_steps(results_path)
-    if !isnothing(range)
-        time_steps = time_steps[range[1]:range[2]]
+    if !isnothing(samples)
+        (X, Y, t_s) = samples
+        c, Z, σ, r = dmd(X, Y, algorithm, r, svd_tol)
+        N_s = size(X,2)
+    else
+        X, t_s = load_snapshots(results_path, time_steps)
+        c, Z, σ, r = dmd(X[:,1:end-1],X[:,2:end], algorithm, r, svd_tol)
+        N_s = length(time_steps) - 1
     end
-    if r >= length(time_steps)
-        r = length(time_steps)-1
-    end
-    N_s = length(time_steps) - 1
-
-    # set up data matrices
-    U, t_s = load_snapshots(results_path, time_steps)
-    observables = vcat([ψ.(U) for ψ ∈ basis]...)
-    X = (observables[:,1:end-1])'
-    Y = (observables[:,2:end])'
-
-    # perform the extended DMD
-    Ψ, σ, r = dmd(X,Y,algorithm,r,svd_tol)
-    
-    # Get Koopman modes by projecting observable onto eigenfunctions
-    Z = transpose(pinv(Ψ'*Ψ) * Ψ' * X)
-    c = transpose(Ψ)
-    r = size(Ψ,2)
 
     # calculate energy in each mode 
     E = real.([dot(c[i,j]*Z[:,i], (c[i,j]*Z[:,i]))
@@ -237,13 +195,13 @@ function analyze(analysis::KoopmanAnalysis,
         Z*c, E[inds,:])
 end
 
-"""Approximate the Koopman generator (requires known dynamics)"""
-analyze(analysis::KoopmanAnalysis, f::Function, range=nothing) = analyze(analysis, f, StandardDMD(), range)
 
-function analyze(analysis::KoopmanAnalysis, f::Function, 
-    ::StandardDMD, range=nothing)
+"""Approximate the Koopman generator (requires known dynamics + simulation trajectory data)"""
+function analyze(analysis::KoopmanAnalysis,
+    algorithm::GeneratorDMD, range=nothing)
 
-    @unpack basis, basis_derivatives, r, svd_tol, proj_tol, M, results_path = analysis
+    @unpack r, svd_tol, proj_tol, results_path = analysis
+    @unpack basis, basis_derivatives, f = algorithm
 
     # load time step and ensure rank is suitable
     time_steps = load_time_steps(results_path)
@@ -260,15 +218,8 @@ function analyze(analysis::KoopmanAnalysis, f::Function,
     dUdt = hcat([f(U[:,i]) for i in 1:size(X,2)]...)
     Y = vcat([dψdu.(U) .* dUdt for dψdu ∈ basis_derivatives]...)
 
-    # perform (reduced) DMD    
-    eigenvectors, eigenvalues, r = dmd(X,Y,r,svd_tol)
-
-    # normalize eigenvectors (although not orthogonal - this isn't POD)
-    Z = eigenvectors/Diagonal([eigenvectors[:,i]'*M*eigenvectors[:,i] 
-    for i in 1:r])
-
-    # project onto eigenvectors with respect to the inner product of the scheme
-    c = (Z'*M*Z) \ Z'*M*X
+    # perform (standard) DMD    
+    c, Z, λ, r = dmd(X,Y,StandardDMD(),r,svd_tol)
 
     # calculate energy
     E = real([dot(c[i,j]*Z[:,i], M * (c[i,j]*Z[:,i]))
@@ -278,8 +229,8 @@ function analyze(analysis::KoopmanAnalysis, f::Function,
     inds_no_cutoff = sortperm(-E[:,1])
     inds = inds_no_cutoff[E[inds_no_cutoff,1] .> proj_tol]
 
-    return DynamicalAnalysisResults(exp.(eigenvalues[inds].*t_s), 
-        eigenvalues[inds], Z[:,inds], find_conjugate_pairs(eigenvalues[inds]), 
+    return DynamicalAnalysisResults(exp.(λ[inds].*t_s), 
+        λ[inds], Z[:,inds], find_conjugate_pairs(λ[inds]), 
         c[inds,:], Z*c, E[inds,:])
 end
 
@@ -300,8 +251,64 @@ function forecast(results::DynamicalAnalysisResults, Δt::Float64, c0::Vector{Co
     return sum(Z[:,j]*exp(λ[j]*Δt)*c0[j] for j in 1:n_modes)
 end
 
+function analyze_running(analysis::KoopmanAnalysis,
+    algorithm::AbstractKoopmanAlgorithm, 
+    range::NTuple{2,Int64};
+    integrator=nothing,
+    sampling_strategy=nothing,
+    window_size=nothing)
+
+    @unpack analysis_path, results_path, N_p, N_eq, N_el = analysis
+
+    n_s = range[2]-range[1]
+    model = Vector{DynamicalAnalysisResults}(undef, n_s)
+    if !isnothing(sampling_strategy)
+        @unpack n = sampling_strategy
+        X = Matrix{Float64}(undef, N_p*N_eq*N_el, n_s*n)
+        Y = Matrix{Float64}(undef, N_p*N_eq*N_el, n_s*n)
+    end
+
+    for i in (range[1]+1):range[2]
+
+        # set finite window if desired
+        if isnothing(window_size) || (i - range[1]) < window_size
+            window_size_new = i-range[1]
+        else
+            window_size_new = window_size
+        end
+
+        # sample around trajectory
+        if !isnothing(sampling_strategy)
+            time_steps = load_time_steps(results_path)
+            u, _ = load_solution(results_path,time_steps[i])
+            reinit!(integrator, u)
+            @unpack n = sampling_strategy
+
+            sample_range = ((i-range[1]-1)*n+1, (i-range[1]-1)*n+n)
+
+            X[:,sample_range[1]:sample_range[2]], Y[
+                :,sample_range[1]:sample_range[2]] = generate_samples(
+                sampling_strategy,integrator)
+
+            samples = (X[:,1:sample_range[2]], Y[
+                :,1:sample_range[2]], integrator.dt)
+
+        # use trajectory data only
+        else
+            samples=nothing
+        end
+
+        model[i-range[1]] = analyze(analysis, 
+        algorithm, (i-window_size_new,i), samples)
+
+        save_object(string(results_path, "model_", i, ".jld2"), 
+            model[i-range[1]])
+    end
+    return model, X, Y
+end
+
 function forecast(analysis::KoopmanAnalysis, Δt::Float64, 
-    range::NTuple{2,Int64}, forecast_name::String="forecast"; window_size=nothing, algorithm::AbstractKoopmanAlgorithm=StandardDMD(), koopman_generator=false, new_projection=false)
+    range::NTuple{2,Int64}, forecast_name::String="forecast"; window_size=nothing, algorithm::AbstractKoopmanAlgorithm=StandardDMD(), new_projection=false)
     
     @unpack analysis_path, results_path, N_p, N_eq, N_el = analysis
     time_steps = load_time_steps(results_path)
@@ -330,10 +337,10 @@ function forecast(analysis::KoopmanAnalysis, Δt::Float64,
         end
         u0, t0 = load_solution(results_path, time_steps[i-1])
         if new_projection
-            push!(u,reshape(real.(forecast(last(model), Δt, last(model).c[:,end]))[1:N_p*N_eq*N_el], (N_p,N_eq,N_el)))
-        else
-            c = project_onto_modes(analysis,last(model),vec(u0))
+            c = pinv(Z) * vec(u0)
             push!(u,reshape(real.(forecast(last(model), Δt, c)[1:N_p*N_eq*N_el]), (N_p,N_eq,N_el)))
+        else
+            push!(u,reshape(real.(forecast(last(model), Δt, last(model).c[:,end]))[1:N_p*N_eq*N_el], (N_p,N_eq,N_el)))
         end
         push!(t, t0 + Δt)
         save(string(forecast_path, "res_", time_steps[i], ".jld2"),
@@ -341,17 +348,6 @@ function forecast(analysis::KoopmanAnalysis, Δt::Float64,
     end
     return forecast_path, model
 end
-
-#function linear_extrapolate()
-
-
-
-function project_onto_modes(analysis::KoopmanAnalysis, results::DynamicalAnalysisResults, u0::Vector{Float64})
-    @unpack M, basis = analysis
-    @unpack Z = results
-    return (Z'*M*Z) \ Z' *M* vcat([ψ.(u0) for ψ ∈ basis]...)
-end
-
 
 function monomial_basis(p::Int)
     return [u->u.^k for k in 1:p]
@@ -380,73 +376,127 @@ function find_conjugate_pairs(σ::Vector{ComplexF64}; tol=1.0e-8)
 
 end
 
-find_conjugate_pairs(σ::Vector{Float64}; tol=1.0e-8) = nothing
+find_conjugate_pairs(::Vector{Float64}; tol=1.0e-8) = nothing
 
-function dmd(X::Matrix{Float64},Y::Matrix{Float64}, r::Int, svd_tol=1.0e-10)
+function make_dmd_matrices(X::AbstractMatrix{Float64},Y::AbstractMatrix{Float64}, algorithm::ExtendedDMD)
+    @unpack basis = algorithm
 
+    Φ_X= vcat([ϕ.(X) for ϕ ∈ basis]...)
+    Φ_Y= vcat([ϕ.(Y) for ϕ ∈ basis]...)
+
+    return Φ_X' * Φ_X, Φ_Y' * Φ_X, Φ_Y' * Φ_Y
+end
+
+function make_dmd_matrices(X::AbstractMatrix{Float64},Y::AbstractMatrix{Float64}, algorithm::KernelDMD)
+
+    @unpack k = algorithm
+    N_s = size(X,2)
+    return ([k(X[:,i], X[:,j]) for i in 1:N_s, j in 1:N_s], 
+        [k(Y[:,i], X[:,j]) for i in 1:N_s, j in 1:N_s], 
+        [k(Y[:,i], Y[:,j]) for i in 1:N_s, j in 1:N_s])
+end
+
+function dmd(X::Matrix{Float64},Y::Matrix{Float64}, algorithm::StandardDMD,
+    r::Int=0, svd_tol=1.0e-10)
+
+    @unpack basis = algorithm
+
+    Φ_X= vcat([ϕ.(X) for ϕ ∈ basis]...)
+    Φ_Y= vcat([ϕ.(Y) for ϕ ∈ basis]...)
+    
     if r > 0
         # SVD (i.e. POD) of initial states
-        U_full, S_full, V_full = svd(X)
+        U_full, S_full, V_full = svd(Φ_X)
 
         U = U_full[:,1:r][:,S_full[1:r] .> svd_tol]
         S = S_full[1:r][S_full[1:r] .> svd_tol]
         V = V_full[:,1:r][:,S_full[1:r] .> svd_tol]
 
-        # eigendecomposition of reduced DMD matrix 
-        # (projected onto singular vectors)
-        F = eigen((U') * Y * V * inv(Diagonal(S)))
+        # eigendecomposition of DMD matrix (projected onto singular vectors)
+        K_hat_trans_decomp = eigen((U') * Φ_Y * V * inv(Diagonal(S)))
 
         # map eigenvectors back up into full space
-        Z = Y*V*inv(Diagonal(S))*F.vectors
-        Λ = F.values
-        r = length(S)
+        Z_unscaled = Φ_Y*V*inv(Diagonal(S))*K_hat_trans_decomp.vectors
+        σ = K_hat_trans_decomp.values
+        r = length(σ)
     else
-        A = Y*pinv(X)
-        F = eigen(A)
+        K_trans = Y*pinv(X)
+        K_trans_decomp = eigen(K_trans)
 
-        Z = F.vectors
-        Λ = F.values
-        r = size(F.vectors,2)
+        Z_unscaled = K_trans_decomp.vectors
+        σ = K_trans_decomp.values
+        r = length(σ)
     end
 
-    return Z, Λ, r
+    Z = hcat([Z_unscaled[:,i] ./ norm(Z_unscaled[:,i]) for i in 1:r]...)
+    c = pinv(Z)*X
+
+    return c, Z, σ, r
 end
 
-function dmd(X::AbstractMatrix{Float64},Y::AbstractMatrix{Float64}, algorithm::ExtendedDMD, r::Int, svd_tol=1.0e-10)
+function dmd(X::AbstractMatrix{Float64},Y::AbstractMatrix{Float64},
+    algorithm::Union{ExtendedDMD,KernelDMD}, r::Int=0, svd_tol=1.0e-10)
 
+    @unpack ϵ = algorithm
+    G_hat, A_hat, B_hat = make_dmd_matrices(X,Y,algorithm)
+    
+    # diagonalize the Gram matrix (method of snapshots)
+    G_hat_decomp = eigen(G_hat)
+    S_full = sqrt.(abs.(G_hat_decomp.values))
+    
     if r > 0
-        # SVD (i.e. POD) of initial states
-        U_full, S_full, Z_full = svd(X)
-
-        U = U_full[:,1:r][:,S_full[1:r] .> svd_tol]
+        U = G_hat_decomp.vectors[:,1:r][:,S_full[1:r] .> svd_tol]
         S = S_full[1:r][S_full[1:r] .> svd_tol]
-        Z = Z_full[:,1:r][:,S_full[1:r] .> svd_tol]
-
-        # eigendecomposition of reduced DMD matrix 
-        # (projected onto singular vectors)
-        F = eigen((inv(Diagonal(S))*U') * Y * X' * U * inv(Diagonal(S)))
-
-        # map eigenvectors back up into full space
-        V = Z*F.vectors
-        σ = F.values
-        r = length(S)
     else
-        F = eigen(pinv(X'*X)*X'*Y)
-        V = F.vectors
-        σ = F.values
-        r = size(F.vectors,2)
+        U = G_hat_decomp.vectors[:,S_full .> svd_tol]
+        S = S_full[S_full .> svd_tol]
     end
+    r = length(S)
 
-    # calculate residuals
-    G = X'*X
-    A = X'*Y
-    B = Y'*Y
-    res = sqrt.(abs.([ 
-        (V[:,i]' * (B - σ[i]*A' - conj(σ[i])*A + abs2(σ[i])*G) * V[:,i]) /
-        (V[:,i]' * G * V[:,i])
-            for i in 1:r]))
+    # koopman eigenfunctions evaluated at the data points
+    K_hat_decomp = eigen((inv(Diagonal(S))*U') * A_hat * (U * inv(Diagonal(S))))
+    V_hat = hcat([K_hat_decomp.vectors[:,i] ./ norm(K_hat_decomp.vectors[:,i])
+        for i in 1:r]...)
+    V = U * Diagonal(S) * V_hat
+    c = transpose(V)
 
-    return X*(V[:, res .< algorithm.ϵ]), σ[res .< algorithm.ϵ], r
+    # koopman modes
+    W_hat = pinv(V_hat)
+    #println(size(W_hat), size(inv(Diagonal(S))), size(U'), size(X'))
+    Z = hcat([transpose(transpose(W_hat[i,:]) * inv(Diagonal(S)) * U' * X')
+        for i in 1:r]...)
+
+    # koopman eigenvalues
+    σ = Complex.(K_hat_decomp.values)
+
+    if ϵ <= 0.0
+        return c, Z, σ, r
+    else
+        # full data matrices
+        res = sqrt.(abs.([(V_hat[:,i]' * 
+            (B_hat - σ[i]*A_hat' - conj(σ[i])*A_hat + abs2(σ[i])*G_hat) * 
+                V_hat[:,i]) / (V_hat[:,i]' * G_hat * V_hat[:,i])
+                for i in 1:r]))
+
+        return c[res .< ϵ,:], Z[res .< ϵ,:], σ[res .< ϵ], r
+    end
+end
+
+function generate_samples(sampling_strategy::GaussianSampling,  integrator::ODEIntegrator)
+    @unpack σ, n = sampling_strategy
+    u_centre = copy(integrator.sol.u[1] )
+    N = length(u_centre)
+    X = Matrix{Float64}(undef, N, n)
+    Y = Matrix{Float64}(undef, N, n)
+    for i in 1:n
+        perturbation = σ*randn(size(u_centre))
+        u0 = u_centre + perturbation
+        reinit!(integrator,u0)
+        step!(integrator)
+        X[:,i] = vec(u0)
+        Y[:,i] = vec(integrator.u)
+    end
+    return X, Y
 end
 
 function plot_analysis(analysis::AbstractDynamicalAnalysis,

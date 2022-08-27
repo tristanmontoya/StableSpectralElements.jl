@@ -37,7 +37,9 @@ function visualize(sol::Array{Float64,3},
     return p
 end
 
-function visualize(sol::Vector{Array{Float64,3}}, labels::Vector{String}, file_name::String, plotter::Plotter{1}, ylabel="U^h(x,t)"; e::Int=1)
+function visualize(sol::Vector{Array{Float64,3}}, plotter::Plotter{1},
+    file_name::String; ylabel::String="U^h(x,t)", 
+    labels::Vector{String}=["",""], e::Int=1)
     @unpack x_plot, V_plot, N_el, directory_name = plotter
 
     p = plot()
