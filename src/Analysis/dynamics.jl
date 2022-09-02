@@ -49,7 +49,6 @@ end
 """Williams et al. (2015aß)"""
 struct ExtendedDMD <: AbstractKoopmanAlgorithm
     basis::Vector{<:Function}
-    ϵ::Float64
 end
 
 """Klus et al. (2020)"""
@@ -61,6 +60,18 @@ end
 
 """Williams et al. (2015b)"""
 struct KernelDMD <: AbstractKoopmanAlgorithm 
+    k::Function
+    η::Float64
+end
+
+
+"""Colbrook and Townsend (2021)"""
+struct ExtendedResDMD <:AbstractKoopmanAlgorithm
+    basis::Vector{<:Function}
+end
+
+"""Colbrook and Townsend (2021)"""
+struct KernelResDMD <: AbstractKoopmanAlgorithm
     k::Function
     ϵ::Float64
 end
@@ -110,10 +121,10 @@ end
 
 """Default constructors"""
 StandardDMD() = StandardDMD([identity])
-ExtendedDMD(basis::Vector{<:Function}) = ExtendedDMD(basis, -1.0)
-ExtendedDMD() = ExtendedDMD([identity], -1.0)
-KernelDMD(k::Function) = KernelDMD(k,-1.0)
-KernelDMD() = KernelDMD((x,y) -> (1.0 + x'*y) , -1.0)
+ExtendedDMD() = ExtendedDMD([identity])
+KernelDMD() = KernelDMD((x,y) -> (1.0 + x'*y), 0.0)
+KernelDMD(k::Function) = KernelDMD(k, 0.0)
+
 
 """Linear eigensolution analysis"""
 function analyze(analysis::LinearAnalysis)
@@ -171,24 +182,24 @@ function analyze(analysis::KoopmanAnalysis,
     end
 
     # set up data matrices
+    
     if !isnothing(samples)
         (X, Y, t_s) = samples
         c, Z, σ, r = dmd(X, Y, algorithm, r, svd_tol)
-        N_s = size(X,2)
     else
         X, t_s = load_snapshots(results_path, time_steps)
         c, Z, σ, r = dmd(X[:,1:end-1],X[:,2:end], algorithm, r, svd_tol)
-        N_s = length(time_steps) - 1
     end
+    (r,N_s) = size(c)
 
     # calculate energy in each mode 
     E = real.([dot(c[i,j]*Z[:,i], (c[i,j]*Z[:,i]))
         for i in 1:r, j in 1:N_s])
-
+         
     # sort modes by decreasing energy in initial data
     inds_no_cutoff = sortperm(-E[:,1])
     inds = inds_no_cutoff[E[inds_no_cutoff,1] .> proj_tol]
-
+    
     return DynamicalAnalysisResults(σ[inds], 
         log.(σ[inds])./t_s, Z[:,inds], 
         find_conjugate_pairs(σ[inds]), c[inds,:],
@@ -260,15 +271,27 @@ function analyze_running(analysis::KoopmanAnalysis,
 
     @unpack analysis_path, results_path, N_p, N_eq, N_el = analysis
 
-    n_s = range[2]-range[1]
-    model = Vector{DynamicalAnalysisResults}(undef, n_s)
+    n_s = range[2]-range[1] + 1
+    model = Vector{DynamicalAnalysisResults}(undef, n_s - 1)
+
+    time_steps = load_time_steps(results_path)
+    U, t_s = load_snapshots(results_path, time_steps[range[1]:range[2]])
+    println("t_s = ", t_s)
+    time_steps = load_time_steps(results_path)
+
     if !isnothing(sampling_strategy)
         @unpack n = sampling_strategy
-        X = Matrix{Float64}(undef, N_p*N_eq*N_el, n_s*n)
-        Y = Matrix{Float64}(undef, N_p*N_eq*N_el, n_s*n)
+    else
+        n = 1
     end
-
+    X = Matrix{Float64}(undef, N_p*N_eq*N_el, (n_s-1)*n)
+    Y = Matrix{Float64}(undef, N_p*N_eq*N_el, (n_s-1)*n)
+    
     for i in (range[1]+1):range[2]
+        
+        open(string(analysis_path,"screen.txt"), "a") do io
+            println(io, "Koopman analysis of time step", time_steps[i], " of ", time_steps[end])
+        end
 
         # set finite window if desired
         if isnothing(window_size) || (i - range[1]) < window_size
@@ -279,19 +302,16 @@ function analyze_running(analysis::KoopmanAnalysis,
 
         # sample around trajectory
         if !isnothing(sampling_strategy)
-            time_steps = load_time_steps(results_path)
-            u, _ = load_solution(results_path,time_steps[i])
+            u, _ = load_solution(results_path,time_steps[i-1])
             reinit!(integrator, u)
-            @unpack n = sampling_strategy
-
             sample_range = ((i-range[1]-1)*n+1, (i-range[1]-1)*n+n)
 
             X[:,sample_range[1]:sample_range[2]], Y[
                 :,sample_range[1]:sample_range[2]] = generate_samples(
-                sampling_strategy,integrator)
+                sampling_strategy, integrator, t_s)
 
-            samples = (X[:,1:sample_range[2]], Y[
-                :,1:sample_range[2]], integrator.dt)
+            samples = (X[:, (((i-range[1])-window_size_new)*n + 1) : sample_range[2]],
+                Y[:,(((i-range[1])-window_size_new)*n + 1) : sample_range[2]], t_s)
 
         # use trajectory data only
         else
@@ -299,11 +319,12 @@ function analyze_running(analysis::KoopmanAnalysis,
         end
 
         model[i-range[1]] = analyze(analysis, 
-        algorithm, (i-window_size_new,i), samples)
+            algorithm, (i-window_size_new,i), samples)
 
-        save_object(string(results_path, "model_", i, ".jld2"), 
+        save_object(string(analysis_path, "model_", i, ".jld2"), 
             model[i-range[1]])
     end
+
     return model, X, Y
 end
 
@@ -389,9 +410,11 @@ end
 
 function make_dmd_matrices(X::AbstractMatrix{Float64},Y::AbstractMatrix{Float64}, algorithm::KernelDMD)
 
-    @unpack k = algorithm
+    @unpack k, η = algorithm
     N_s = size(X,2)
-    return ([k(X[:,i], X[:,j]) for i in 1:N_s, j in 1:N_s], 
+    G_hat = [k(X[:,i], X[:,j]) for i in 1:N_s, j in 1:N_s]
+
+    return (G_hat + η*norm(G_hat)*I,
         [k(Y[:,i], X[:,j]) for i in 1:N_s, j in 1:N_s], 
         [k(Y[:,i], Y[:,j]) for i in 1:N_s, j in 1:N_s])
 end
@@ -437,18 +460,22 @@ end
 function dmd(X::AbstractMatrix{Float64},Y::AbstractMatrix{Float64},
     algorithm::Union{ExtendedDMD,KernelDMD}, r::Int=0, svd_tol=1.0e-10)
 
-    @unpack ϵ = algorithm
-    G_hat, A_hat, B_hat = make_dmd_matrices(X,Y,algorithm)
-    
+    G_hat, A_hat, _ = make_dmd_matrices(X,Y,algorithm)
+
     # diagonalize the Gram matrix (method of snapshots)
     G_hat_decomp = eigen(G_hat)
     S_full = sqrt.(abs.(G_hat_decomp.values))
+
+    # order by descending singular values
+    sort!(S_full,rev=true)
+    U_full = G_hat_decomp.vectors[:,sortperm(S_full)]
     
+    # truncate the SVD if needed
     if r > 0
-        U = G_hat_decomp.vectors[:,1:r][:,S_full[1:r] .> svd_tol]
+        U = U_full[:,1:r][:,S_full[1:r] .> svd_tol]
         S = S_full[1:r][S_full[1:r] .> svd_tol]
     else
-        U = G_hat_decomp.vectors[:,S_full .> svd_tol]
+        U = U_full[:,S_full .> svd_tol]
         S = S_full[S_full .> svd_tol]
     end
     r = length(S)
@@ -462,46 +489,93 @@ function dmd(X::AbstractMatrix{Float64},Y::AbstractMatrix{Float64},
 
     # koopman modes
     W_hat = pinv(V_hat)
-    #println(size(W_hat), size(inv(Diagonal(S))), size(U'), size(X'))
-    Z = hcat([transpose(transpose(W_hat[i,:]) * inv(Diagonal(S)) * U' * X')
+    Z = hcat([transpose(transpose(W_hat[i,:]) * inv(Diagonal(S)) * U' * X') 
         for i in 1:r]...)
 
     # koopman eigenvalues
     σ = Complex.(K_hat_decomp.values)
 
-    if ϵ <= 0.0
-        return c, Z, σ, r
-    else
-        # full data matrices
-        res = sqrt.(abs.([(V_hat[:,i]' * 
-            (B_hat - σ[i]*A_hat' - conj(σ[i])*A_hat + abs2(σ[i])*G_hat) * 
-                V_hat[:,i]) / (V_hat[:,i]' * G_hat * V_hat[:,i])
-                for i in 1:r]))
+    return c, Z, σ, r
 
-        return c[res .< ϵ,:], Z[res .< ϵ,:], σ[res .< ϵ], r
-    end
 end
 
-function generate_samples(sampling_strategy::GaussianSampling,  integrator::ODEIntegrator)
+function dmd(X::AbstractMatrix{Float64},Y::AbstractMatrix{Float64},
+    algorithm::KernelResDMD, r::Int=0, svd_tol=1.0e-10)
+
+    @unpack k, ϵ = algorithm
+
+    (X_1, Y_1) = (X[:,2:2:end], Y[:,2:2:end])
+    (X_2, Y_2) = (X[:,1:2:end], Y[:,1:2:end])
+
+    G_hat, A_hat, _ = make_dmd_matrices(X_1,Y_1,KernelDMD(k,0.0))
+
+    # diagonalize the Gram matrix (method of snapshots)
+    G_hat_decomp = eigen(G_hat)
+    S_full = sqrt.(abs.(G_hat_decomp.values))
+    U = G_hat_decomp.vectors[:,S_full .> svd_tol]
+    S = S_full[S_full .> svd_tol]
+    r = length(S)
+
+    # koopman eigenfunctions evaluated at the data points
+    K_hat_decomp = eigen((inv(Diagonal(S))*U') * A_hat * (U * inv(Diagonal(S))))
+    V_hat = hcat([K_hat_decomp.vectors[:,i] ./ norm(K_hat_decomp.vectors[:,i])
+        for i in 1:r]...)
+    Q, _ = qr(V_hat')
+    N_s1 = size(X_1,2)
+    N_s2 = size(X_2,2)
+
+    G_X2 = [k(X_2[:,i], X_1[:,j]) for i in 1:N_s2, j in 1:N_s1]
+    G_Y2 = [k(Y_2[:,i], X_1[:,j]) for i in 1:N_s2, j in 1:N_s1]
+
+    println((size(inv(Diagonal(S))),size(V_hat)))
+    ϕ_X = hcat([G_X2 * (U * inv(Diagonal(S))) * Q[:,j] for j in 1:r]...)
+    ϕ_Y = hcat([G_Y2 * (U * inv(Diagonal(S))) * Q[:,j] for j in 1:r]...)
+    G = ϕ_X'*ϕ_X
+    A = ϕ_X'*ϕ_Y
+
+    K_decomp = eigen(pinv(G)*A)
+    Z = X_2*pinv(K_decomp.vectors)
+    c = transpose(K_decomp.vectors)
+    σ = Complex.(K_decomp.values)
+    #=
+    # full data matrices
+    res = sqrt.(abs.([(V_hat[:,i]' * 
+        (B_hat - σ[i]*A_hat' - conj(σ[i])*A_hat + abs2(σ[i])*G_hat) * 
+            V_hat[:,i]) / (V_hat[:,i]' * G_hat * V_hat[:,i])
+            for i in 1:r]))
+
+    =#
+    return c, Z, σ, r
+end
+
+function generate_samples(sampling_strategy::GaussianSampling,  integrator::ODEIntegrator, t_s=nothing)
     @unpack σ, n = sampling_strategy
-    u_centre = copy(integrator.sol.u[1] )
+    int_copy = deepcopy(integrator)
+    u_centre = int_copy.sol.u[1]
     N = length(u_centre)
     X = Matrix{Float64}(undef, N, n)
     Y = Matrix{Float64}(undef, N, n)
     for i in 1:n
-        perturbation = σ*randn(size(u_centre))
-        u0 = u_centre + perturbation
-        reinit!(integrator,u0)
-        step!(integrator)
-        X[:,i] = vec(u0)
-        Y[:,i] = vec(integrator.u)
+        if i == 1
+            reinit!(int_copy,u_centre)
+        else
+            reinit!(int_copy,u_centre + σ*randn(size(u_centre)))
+        end
+        if !isnothing(t_s)
+            step!(int_copy, t_s, true)
+        else
+            step!(int_copy)
+        end
+        X[:,i] = vec(int_copy.sol.u[1])
+        Y[:,i] = vec(int_copy.sol.u[end])
     end
     return X, Y
 end
 
 function plot_analysis(analysis::AbstractDynamicalAnalysis,
     results::DynamicalAnalysisResults; e=1, i=1, modes = 0,
-    scale=true, title="spectrum.pdf", xlims=nothing, ylims=nothing)
+    scale=true, title="spectrum.pdf", xlims=nothing, ylims=nothing, 
+        centre_on_circle=true)
     l = @layout [a{0.5w} b; c]
     if scale
         coeffs=results.c[:,i]
@@ -529,6 +603,14 @@ function plot_analysis(analysis::AbstractDynamicalAnalysis,
             maximum(imag.(results.λ[modes]))*1.1)
     end
 
+    if centre_on_circle
+        xlims_discrete = (-1.5,1.5)
+        ylims_discrete = (-1.5,1.5)
+    else
+        xlims_discrete = nothing
+        ylims_discrete = nothing
+    end
+
     p = plot(plot_spectrum(analysis,results.λ[modes], 
             label="\\tilde{\\lambda}", unit_circle=false, 
             xlims=xlims,
@@ -536,7 +618,7 @@ function plot_analysis(analysis::AbstractDynamicalAnalysis,
             title="continuous_time.pdf", xscale=-0.03, yscale=0.03), 
         plot_spectrum(analysis,results.σ[modes], 
             label="\\exp(\\tilde{\\lambda} t_s)",
-            unit_circle=true, xlims=(-1.5,1.5), ylims=(-1.5,1.5),
+            unit_circle=true, xlims=xlims_discrete,ylims=ylims_discrete,
             title="discrete_time.pdf"),
         plot_modes(analysis,results.Z[:,modes]::Matrix{ComplexF64}; e=e, 
             coeffs=coeffs[modes], conjugate_pairs=conjugate_pairs),
@@ -590,8 +672,10 @@ function plot_spectrum(analysis::AbstractDynamicalAnalysis,
         annotate!(real(eigs) .+ xscale*(xlims[2]-xlims[1]), 
             imag(eigs)+sign.(imag(eigs) .+ 1.0e-15)*yscale*(ylims[2]-ylims[1]),
             text.(1:length(eigs), :right, 8))
+    elseif numbering
+        annotate!(real(eigs).-0.1, imag(eigs),
+            text.(1:length(eigs), :right, 8))
     end
-
     savefig(p, string(analysis.analysis_path, title))
 
     return p

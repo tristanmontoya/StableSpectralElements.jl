@@ -129,7 +129,8 @@ end
 
 function analyze(analysis::ConservationAnalysis,    
     model::DynamicalAnalysisResults,
-    time_steps::Vector{Int}, Δt::Float64, start::Int=1, resolution=100; new_projection=false)
+    time_steps::Vector{Int}, Δt::Float64, start::Int=1,
+    resolution=100;  n=1, window_size=nothing, new_projection=false)
 
     @unpack results_path, N_eq, dict_name = analysis
     N_t = length(time_steps)
@@ -151,8 +152,11 @@ function analyze(analysis::ConservationAnalysis,
     dt = Δt/resolution
     if new_projection
         c = pinv(model.Z[1:N,:]) * vec(u0)
+    elseif !isnothing(window_size)
+        c = model.c[:,1]
+        t0 = t[max(start-window_size+1,1)]
     else
-        c = model.c[:, start]
+        c = model.c[:, (start-1)*n+1]
     end
 
     for i in 0:resolution
@@ -186,13 +190,16 @@ end
 function plot_evolution(analysis::ConservationAnalysis, 
     results::Vector{ConservationAnalysisResults}, title::String; 
     labels::Vector{String}=["Actual", "Predicted"],
-    ylabel::String="Energy", e::Int=1, xlims=nothing, ylims=nothing)
+    ylabel::String="Energy", e::Int=1, t=nothing, xlims=nothing, ylims=nothing)
 
     p = plot(results[1].t, results[1].E[:,e], xlabel="\$t\$",   
     ylabel=ylabel, labels=labels[1], xlims=xlims, ylims=ylims, linewidth=2.0)
     N = length(results)
     for i in 2:N
-        plot!(p, results[i].t, results[i].E[:,e], labels=labels[i], linestyle=:dash, linewidth=2.0, legend=:topleft)
+        plot!(p, results[i].t, results[i].E[:,e], labels=labels[i], linestyle=:dash, linewidth=3.0, legend=:topright)
+    end
+    if !isnothing(t)
+       vline!(p,[t], labels=nothing)
     end
 
     savefig(p, string(analysis.analysis_path, title))

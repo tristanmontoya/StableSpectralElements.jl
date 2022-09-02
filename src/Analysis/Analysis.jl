@@ -1,9 +1,9 @@
 module Analysis
 
     using LinearMaps: LinearMap
-    using LinearAlgebra: Diagonal, dot, norm, eigen, inv, svd, pinv, eigsortby, I, rank
+    using LinearAlgebra: Diagonal, dot, norm, eigen, inv, svd, qr, pinv, eigsortby, I, rank, cond
     using JLD2: save, load, save_object, load_object
-    using Plots: plot, savefig, plot!, scatter, text, annotate!, grid, theme_palette, @layout
+    using Plots: plot, savefig, plot!, scatter, text, annotate!, vline!, grid, theme_palette, @layout
     using LaTeXStrings: LaTeXString, latexstring
     using UnPack
     using StartUpDG: MeshData
@@ -91,7 +91,7 @@ module Analysis
     export ErrorAnalysis, AbstractNorm, QuadratureL2
     include("error.jl")
 
-    export LinearAnalysis, DynamicalAnalysisResults, KoopmanAnalysis, AbstractKoopmanAlgorithm, StandardDMD, ExtendedDMD, KernelDMD, GeneratorDMD, AbstractSamplingAlgorithmx, GaussianSampling, analyze_running, forecast, monomial_basis, monomial_derivatives, make_dmd_matrices, dmd, generate_samples
+    export LinearAnalysis, DynamicalAnalysisResults, KoopmanAnalysis, AbstractKoopmanAlgorithm, StandardDMD, ExtendedDMD, KernelDMD, KernelResDMD, ExtendedResDMD, GeneratorDMD, AbstractSamplingAlgorithmx, GaussianSampling, analyze_running, forecast, monomial_basis, monomial_derivatives, make_dmd_matrices, dmd, generate_samples
     include("dynamics.jl")
 
     export ConservationAnalysis, PrimaryConservationAnalysis, EnergyConservationAnalysis, plot_evolution

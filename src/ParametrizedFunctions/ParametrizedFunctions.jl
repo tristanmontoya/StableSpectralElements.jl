@@ -2,7 +2,7 @@ module ParametrizedFunctions
 
     using UnPack
     
-    export AbstractParametrizedFunction, SumOfFunctions, ConstantFunction, InitialDataSine, InitialDataGaussian, InitialDataGassner, BurgersSolution, SourceTermGassner, NoSourceTerm, evaluate
+    export AbstractParametrizedFunction, SumOfFunctions, ConstantFunction, InitialDataSine, InitialDataGaussian, InitialDataGassner, BurgersSolution, SourceTermGassner, GaussianNoise, NoSourceTerm, evaluate
     
     abstract type AbstractParametrizedFunction{d} end
 
@@ -39,6 +39,11 @@ module ParametrizedFunctions
         N_eq::Int
         k::Float64
         eps::Float64
+    end
+
+    struct GaussianNoise{d} <: AbstractParametrizedFunction{d}
+        N_eq::Int
+        σ::Float64
     end
 
     struct NoSourceTerm{d} <: AbstractParametrizedFunction{d} end
@@ -103,6 +108,11 @@ module ParametrizedFunctions
     function evaluate(f::SourceTermGassner, 
         x::NTuple{1,Float64},t::Float64=0.0)
         return [f.k .* cos(f.k*(x[1]-t))*(-1.0 + f.eps + sin(f.k*(x[1]-t)))]
+    end
+
+    function evaluate(f::GaussianNoise{d},
+        x::NTuple{d,Float64},t::Float64=0.0) where {d}
+        return [f.σ*randn() for e in 1:f.N_eq]
     end
 
     function evaluate(f::AbstractParametrizedFunction{d},
