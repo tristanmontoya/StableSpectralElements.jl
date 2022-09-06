@@ -13,23 +13,23 @@ struct WeakConservationForm{MappingForm,TwoPointFlux} <: AbstractResidualForm{Ma
 end 
 
 function StrongConservationForm(
-    first_order_numerical_flux::AbstractFirstOrderNumericalFlux)
-    return StrongConservationForm(StandardMapping(), 
-        first_order_numerical_flux, 
-        NoSecondOrderFlux(), 
-        NoTwoPointFlux())
+    mapping_form::AbstractMappingForm=StandardMapping(),
+    first_order_numerical_flux::AbstractFirstOrderNumericalFlux=
+    LaxFriedrichsNumericalFlux())
+    return StrongConservationForm(mapping_form,first_order_numerical_flux,
+        BR1(), NoTwoPointFlux())
 end
 
 function WeakConservationForm(
-    first_order_numerical_flux::AbstractFirstOrderNumericalFlux)
-    return WeakConservationForm(StandardMapping(),
-    first_order_numerical_flux, 
-    NoSecondOrderFlux(),
-    NoTwoPointFlux())
+    mapping_form::AbstractMappingForm=StandardMapping(),
+    first_order_numerical_flux::AbstractFirstOrderNumericalFlux=
+    LaxFriedrichsNumericalFlux())
+    return WeakConservationForm(mapping_form,first_order_numerical_flux,
+        BR1(), NoTwoPointFlux())
 end
 
 """
-    Make operators for strong conservation form
+Make operators for strong conservation form
 """
 function make_operators(spatial_discretization::SpatialDiscretization{d}, 
     ::StrongConservationForm) where {d}
@@ -62,7 +62,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
 end
 
 """
-    Make operators for weak conservation form
+Make operators for weak conservation form
 """
 function make_operators(spatial_discretization::SpatialDiscretization{d}, 
     form::WeakConservationForm) where {d}
@@ -98,7 +98,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
 end
 
 """
-    Evaluate semi-discrete residual for a hyperbolic problem
+Evaluate semi-discrete residual for a hyperbolic problem
 """
 function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
     solver::Solver{d, N_eq, <:AbstractResidualForm, Hyperbolic},
@@ -152,7 +152,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
 end
 
 """
-    Evaluate semi-discrete residual for a mixed/parabolic problem
+Evaluate semi-discrete residual for a mixed/parabolic problem
 """
 function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
     solver::Solver{d, N_eq, <:AbstractResidualForm, <:Union{Mixed,Parabolic}},

@@ -7,7 +7,8 @@ module Solvers
     using LinearMaps: LinearMap
     using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
 
-    using ..ConservationLaws: AbstractConservationLaw, AbstractPDEType, Hyperbolic, Parabolic, Mixed, AbstractFirstOrderNumericalFlux, AbstractSecondOrderNumericalFlux, NoFirstOrderFlux, NoSecondOrderFlux, NoTwoPointFlux, physical_flux, numerical_flux#, two_point_flux
+    using ..ConservationLaws: AbstractConservationLaw, AbstractPDEType, Hyperbolic, Parabolic, Mixed, AbstractFirstOrderNumericalFlux, AbstractSecondOrderNumericalFlux, AbstractTwoPointFlux, NoFirstOrderFlux, NoSecondOrderFlux, NoTwoPointFlux, physical_flux, numerical_flux, LaxFriedrichsNumericalFlux, BR1
+
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization
     using ..ParametrizedFunctions: AbstractParametrizedFunction, AbstractParametrizedFunction, evaluate
     using ..Operators: flux_diff
@@ -125,7 +126,7 @@ module Solvers
     end
 
     """
-    Physical-operator form
+        Physical-operator form
     """
     function apply_operators!(residual::Matrix{Float64},
         operators::PhysicalOperators{d},  
@@ -160,7 +161,7 @@ module Solvers
     end
 
     """
-    Reference-operator form
+        Reference-operator form
     """
     function apply_operators!(residual::Matrix{Float64},
         operators::PhysicalOperators{d},
@@ -199,7 +200,7 @@ module Solvers
     end
 
     """
-    Auxiliary variable in physical-operator form
+        Auxiliary variable in physical-operator form
     """
     function auxiliary_variable!(m::Int, 
         q::Matrix{Float64},

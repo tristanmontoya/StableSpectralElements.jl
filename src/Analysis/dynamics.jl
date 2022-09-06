@@ -64,12 +64,6 @@ struct KernelDMD <: AbstractKoopmanAlgorithm
     η::Float64
 end
 
-
-"""Colbrook and Townsend (2021)"""
-struct ExtendedResDMD <:AbstractKoopmanAlgorithm
-    basis::Vector{<:Function}
-end
-
 """Colbrook and Townsend (2021)"""
 struct KernelResDMD <: AbstractKoopmanAlgorithm
     k::Function
@@ -537,14 +531,7 @@ function dmd(X::AbstractMatrix{Float64},Y::AbstractMatrix{Float64},
     Z = X_2*pinv(K_decomp.vectors)
     c = transpose(K_decomp.vectors)
     σ = Complex.(K_decomp.values)
-    #=
-    # full data matrices
-    res = sqrt.(abs.([(V_hat[:,i]' * 
-        (B_hat - σ[i]*A_hat' - conj(σ[i])*A_hat + abs2(σ[i])*G_hat) * 
-            V_hat[:,i]) / (V_hat[:,i]' * G_hat * V_hat[:,i])
-            for i in 1:r]))
-
-    =#
+   
     return c, Z, σ, r
 end
 
