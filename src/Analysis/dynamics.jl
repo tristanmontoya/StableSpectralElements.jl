@@ -71,8 +71,8 @@ struct KernelResDMD <: AbstractKoopmanAlgorithm
 end
 
 struct GaussianSampling <: AbstractSamplingStrategy
-    σ::Float64
-    n::Int
+    σ::Float64  # width
+    n::Int  # number of samples
 end
 
 function LinearAnalysis(results_path::String,

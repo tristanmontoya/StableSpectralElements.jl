@@ -24,7 +24,7 @@ module ParametrizedFunctions
 
     struct InitialDataGaussian{d} <: AbstractParametrizedFunction{d}
         A::Float64  # amplitude
-        k::Float64 # width
+        σ::Float64 # width
         x_0::NTuple{d,Float64}
         N_eq::Int
     end
@@ -62,6 +62,11 @@ module ParametrizedFunctions
         return InitialDataSine(A,k,N_eq)
     end
 
+    function InitialDataGaussian(A::Float64, σ::Float64, x_0::Float64,
+        N_eq::Int=1)
+        return InitialDataGaussian(A,σ,(x_0,),N_eq)
+    end
+
     function InitialDataGassner(k::Float64, eps::Float64)
         return InitialDataGassner(1,k,eps)
     end
@@ -95,9 +100,9 @@ module ParametrizedFunctions
 
     function evaluate(f::InitialDataGaussian{d}, 
         x::NTuple{d,Float64},t::Float64=0.0) where {d}
-        @unpack A, k, x_0, N_eq = f
+        @unpack A, σ, x_0, N_eq = f
         r² = sum((x[m] - x_0[m]).^2 for m in 1:d)
-        return fill(A*exp.(-r²/(2.0*k^2)),N_eq)
+        return fill(A*exp.(-r²/(2.0*σ^2)),N_eq)
     end
 
     function evaluate(f::InitialDataGassner, 

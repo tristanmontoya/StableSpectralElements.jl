@@ -114,7 +114,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
 
         # get all facet state values
         Threads.@threads for k in 1:N_el
-            u_facet[:,:,k] = @timeit get_timer(string("thread_timer_", Threads.threadid())) "extrapolate solution" convert(
+            u_facet[:,:,k] = @timeit get_timer(string("thread_timer_", Threads.threadid())) "extrap solution" convert(
                 Matrix, operators[k].Vf * u[:,:,k])
         end
 
@@ -122,7 +122,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
         Threads.@threads for k in 1:N_el
             to = get_timer(string("thread_timer_", Threads.threadid()))
 
-            @timeit to "gather external state" begin
+            @timeit to "gather ext state" begin
                 # gather external state to element
                 u_out = Matrix{Float64}(undef, N_f, N_eq)
                 @inbounds for e in 1:N_eq
@@ -133,14 +133,17 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             # evaluate physical and numerical flux
             f = @timeit to "eval flux" physical_flux(
                 conservation_law, Matrix(operators[k].V * u[:,:,k]))
-            f_star = @timeit to "eval numerical flux" numerical_flux(
+            f_star = @timeit to "eval num flux" numerical_flux(
                 conservation_law, first_order_numerical_flux,
                 u_facet[:,:,k], u_out, operators[k].scaled_normal)
             
             # evaluate source term, if there is one
-            s = @timeit to "eval source term" evaluate(
-                    conservation_law.source_term, 
-                    Tuple(x_q[m][:,k] for m in 1:d),t)
+            if conservation_law.source_term isa NoSourceTerm
+                s = nothing
+            else
+                s = @timeit to "eval src term" evaluate(
+                    conservation_law.source_term, Tuple(x_q[m][:,k] for m in 1:d),t)
+            end
 
             # apply operators to obtain residual as
             # du/dt = M \ (VOL⋅f + FAC⋅f_star + SRC⋅s)
@@ -172,7 +175,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
 
         # get all facet state values
         Threads.@threads for k in 1:N_el
-            u_facet[:,:,k] = @timeit get_timer(string("thread_timer_", Threads.threadid())) "extrapolate solution" convert(
+            u_facet[:,:,k] = @timeit get_timer(string("thread_timer_", Threads.threadid())) "extrap solution" convert(
                 Matrix, operators[k].Vf * u[:,:,k])
         end
 
@@ -182,7 +185,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             @timeit to "auxiliary variable" begin
 
                 # gather external state to element
-                @timeit to "gather external state" begin
+                @timeit to "gather extern state" begin
                     u_out = Matrix{Float64}(undef, N_f, N_eq)
                     @inbounds for e in 1:N_eq
                         u_out[:,:,e] = u_facet[:,e,:][connectivity[:,k]]
@@ -194,7 +197,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                     operators[k].V * u[:,:,k])
 
                 # evaluate numerical trace (d-vector of approximations to u nJf)
-                u_star = @timeit to "eval numerical flux" numerical_flux(
+                u_star = @timeit to "eval num trace" numerical_flux(
                     conservation_law, second_order_numerical_flux,
                     u_facet[:,:,k], u_out, operators[k].scaled_normal)
                 
@@ -208,7 +211,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                 end
             end
             
-            @timeit to "extrapolate auxiliary variable" begin
+            @timeit to "extrap aux variable" begin
                 @inbounds for m in 1:d
                     q_facet[m][:,:,k] = convert(
                         Matrix, operators[k].Vf * q[m][:,:,k])
@@ -223,7 +226,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             @timeit to "primary variable" begin
 
                 # gather external state to element
-                @timeit to "gather external state" begin
+                @timeit to "gather extern state" begin
                     u_out = Matrix{Float64}(undef, N_f, N_eq)
                     @inbounds for e in 1:N_eq
                         u_out[:,e] = u_facet[:,e,:][connectivity[:,k]]
@@ -240,13 +243,13 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                     Tuple(Matrix(operators[k].V * q[m][:,:,k]) for m in 1:d))
                 
                 # evaluate inviscid numerical flux 
-                f_star_inv = @timeit to "eval inviscid numerical flux" numerical_flux(
+                f_star_inv = @timeit to "eval inv num flux" numerical_flux(
                     conservation_law, first_order_numerical_flux,
                     u_facet[:,:,k], u_out, operators[k].scaled_normal)
                     
                 # evaluate viscous numerical flux
                 f_star_vis = 
-                    @timeit to "eval viscous numerical flux" numerical_flux(
+                    @timeit to "eval visc num flux" numerical_flux(
                         conservation_law, second_order_numerical_flux,
                         u_facet[:,:,k], u_out, 
                         Tuple(q_facet[m][:,:,k] for m in 1:d), 
@@ -254,8 +257,12 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                         operators[k].scaled_normal)
                 
                 # evaluate source term, if there is one
-                s = @timeit to "eval source term" evaluate(
-                    conservation_law.source_term, Tuple(x_q[m][:,k] for m in 1:d),t)
+                if conservation_law.source_term isa NoSourceTerm
+                    s = nothing
+                else
+                    s = @timeit to "eval src term" evaluate(
+                        conservation_law.source_term, Tuple(x_q[m][:,k] for m in 1:d),t)
+                end
 
                 # apply operators
                 dudt[:,:,k] = @timeit to "apply operators" apply_operators!(
