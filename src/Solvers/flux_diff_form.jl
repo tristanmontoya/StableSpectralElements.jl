@@ -7,7 +7,7 @@ function StrongFluxDiffForm()
 end
 
 """
-    Make operators for strong (diagonal-E) flux differencing form
+Make operators for strong (diagonal-E) flux differencing form
 """
 function make_operators(spatial_discretization::SpatialDiscretization{d}, 
     form::StrongFluxDiffForm) where {d}
@@ -16,7 +16,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
 end
 
 """
-    Evaluate semi-discrete residual for strong flux-differencing form
+Evaluate semi-discrete residual for strong flux-differencing form
 """
 function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
     solver::Solver{StrongFluxDiffForm, <:AbstractPhysicalOperators, d, N_eq}, t::Float64; print::Bool=false) where {d, N_eq}

@@ -322,12 +322,8 @@ module Solvers
         return residual
     end
 =#
-    export StrongConservationForm, WeakConservationForm, SplitConservationForm
+    export StrongConservationForm, WeakConservationForm
     include("conservation_form.jl")
-
-    #TODO add flux diff back
-    #export StrongFluxDiffForm
-    #include("flux_diff_form.jl")
 
     export LinearResidual
     include("linear.jl")

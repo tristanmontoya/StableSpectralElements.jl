@@ -36,10 +36,10 @@ function parse_commandline()
             help = "spatial_discretization scheme"
             arg_type = String
             default = "DGMulti"
-        "--form", "-f"
-            help = "residual form"
+        "--mapping_form", "-f"
+            help = "mapping form"
             arg_type = String
-            default = "WeakConservationForm"
+            default = "StandardMapping"
         "--integrator", "-i"
             help = "time integrator"
             arg_type = String
@@ -96,7 +96,7 @@ struct AdvectionDriver{d}
     n_s::Int
     scheme::AbstractApproximationType
     elem_type::AbstractElemShape
-    form::AbstractResidualForm
+    mapping_form::AbstractMappingForm
     integrator::OrdinaryDiffEqAlgorithm
     path::String
 
@@ -133,14 +133,12 @@ function advection_driver_2d(parsed_args::Dict)
         error("Invalid discretization scheme")
     end
 
-    if parsed_args["form"] == "WeakConservationForm"
-        form = WeakConservationForm()
-    elseif parsed_args["form"] == "StrongConservationForm"
-        form = StrongConservationForm()
-    elseif parsed_args["form"] == "SplitConservationForm"
-        form = SplitConservationForm()
+    if parsed_args["mapping_form"] == "StandardMapping"
+        mapping_form = StandardMapping()
+    elseif parsed_args["mapping_form"] == "SkewSymmetricMapping"
+        mapping_form = SkewSymmetricMapping()
     else
-        error("Invalid discretization form")
+        error("Invalid discretization mapping_form")
     end
 
     if parsed_args["integrator"] == "RK4"
@@ -165,26 +163,31 @@ function advection_driver_2d(parsed_args::Dict)
     timer = parsed_args["timer"]
 
     return AdvectionDriver(p,r,β,n_s,scheme,elem_type,
-        form,integrator,path,M0,λ,L,(a*cos(θ), a*sin(θ)), T,
+        mapping_form,integrator,path,M0,λ,L,(a*cos(θ), a*sin(θ)), T,
         mesh_perturb, n_grids, timer)
 end
 
 function main(args)
     parsed_args = parse_commandline()
-    @unpack p,r,β,n_s,scheme,elem_type,form,integrator,path,M0,λ,L,a,T,mesh_perturb, n_grids, timer =  advection_driver_2d(parsed_args)
+    @unpack p,r,β,n_s,scheme,elem_type,mapping_form,integrator,path,M0,λ,L,a,T,mesh_perturb, n_grids, timer =  advection_driver_2d(parsed_args)
 
     date_time = Dates.format(now(), "yyyymmdd_HHMMSS")
-    path = new_path(string(path, "advection_", parsed_args["scheme"], "_p", string(p), "M", string(Int(M0)), "l", string(Int(λ)), "_", date_time, "/"))
+    path = new_path(string(path, "advection_", parsed_args["scheme"], "_p",
+        string(p), "M", string(Int(M0)), "l", string(Int(λ)), "_",
+        date_time, "/"))
 
     initial_data = InitialDataSine(1.0,(2*π/L, 2*π/L))
-    conservation_law = linear_advection_equation(a,λ=λ)
+    conservation_law = LinearAdvectionEquation(a)
+    form = WeakConservationForm(mapping_form, 
+            LaxFriedrichsNumericalFlux(λ))
+    strategy = Lazy()
 
     for n in 1:n_grids
 
         M = M0*2^(n-1)
 
         reference_approximation =ReferenceApproximation(
-            scheme, elem_type, mapping_degree=r, N_plot=ceil(Int,20/M));
+            scheme, elem_type, mapping_degree=r, N_plot=ceil(Int,20/M))
         
         results_path = new_path(string(path, "grid_", n, "/"))
         mesh = warp_mesh(uniform_periodic_mesh(
@@ -192,12 +195,14 @@ function main(args)
             (M,M)), reference_approximation.reference_element, mesh_perturb)
 
         spatial_discretization = SpatialDiscretization(mesh, 
-            reference_approximation);
-        solver = Solver(conservation_law, spatial_discretization, form, Lazy())
+            reference_approximation)
+
+        solver = Solver(conservation_law, spatial_discretization,
+            form, strategy)
 
         save_project(conservation_law,
             spatial_discretization, initial_data, form, 
-            (0.0, T), Lazy(), results_path, overwrite=true, clear=true)
+            (0.0, T), strategy, results_path, overwrite=true, clear=true)
 
         open(string(results_path,"screen.txt"), "a") do io
             println(io, "Number of Julia threads: ", Threads.nthreads())
@@ -209,9 +214,8 @@ function main(args)
         dt = β*(L/M)/(norm(a)*(2*p+1))
         ode_problem = semidiscretize(solver, initialize(initial_data, 
             conservation_law, spatial_discretization), (0.0, T))
-
+        save_solution(ode_problem.u0, 0.0, results_path, 0)
         if timer
-            save_solution(ode_problem.u0, 0.0, results_path, 0)
             for t in 1:Threads.nthreads()
                 reset_timer!(get_timer(string("thread_timer_",t)))
             end
