@@ -35,5 +35,6 @@ Manifest.toml
 # Results and plots files, scratch notebooks, etc.
 results/
 plots/
+scripts/
 notebooks/
 ICCFD11/
