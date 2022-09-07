@@ -3,7 +3,7 @@
 `CLOUD.jl` is a Julia framework for high-order discretizations of conservation laws of the form
 
 $$
-\frac{\partial U(\bm{x},t)}{\partial t} + \bm{\nabla}\cdot\bm{F}(U(\bm{x},t), \bm{\nabla} U(\bm{x},t)) = S(\bm{x},t)
+\frac{\partial U(\boldsymbol{x},t)}{\partial t} + \boldsymbol{\nabla}\cdot\boldsymbol{F}(U(\boldsymbol{x},t), \boldsymbol{\nabla} U(\boldsymbol{x},t)) = S(\boldsymbol{x},t)
 $$
  on general unstructured grids using dynamically dispatched strategies for the evaluation of a broad class of discretization operators. Documentation is currently in progress.
 
