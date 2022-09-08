@@ -1,10 +1,9 @@
-using Pkg
-pkg"activate .."
+push!(LOAD_PATH,"../src/")
 using Documenter, CLOUD
 
 makedocs(sitename="CLOUD.jl")
 
 deploydocs(
-    repo = "github.com/tristanmontoya/CLOUD.jl",
+    repo = "github.com/USER_NAME/PACKAGE_NAME.jl.git",
 )
 
