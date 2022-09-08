@@ -1,12 +1,10 @@
 # CLOUD.jl: Conservation Laws on Unstructured Domains
 
-CLOUD.jl is a Julia framework for high-order methods for conservation laws of the form
+CLOUD.jl is a Julia framework implementing several unstructured high-order methods for partial differential equations of the form
 ```math
-\frac{\partial U(\bm{x},t)}{\partial t} + \bm{\nabla} \cdot \bm{F}(U(\bm{x},t), \bm{\nabla}U(\bm{x},t)) = S(\bm{x},t)
+\frac{\partial \underline{U}(\bm{x},t)}{\partial t} + \bm{\nabla} \cdot \underline{\bm{F}}(\underline{U}(\bm{x},t), \bm{\nabla}\underline{U}(\bm{x},t)) = \underline{S}(\bm{x},t),
 ```
- on general unstructured grids using dynamically dispatched strategies for the evaluation of a broad class of discretization operators. 
-
-## Functions
+where $\underline{U}(\bm{x},t)$ is the vector of solution variables, $\underline{\bm{F}}(\underline{U}(\bm{x},t), \bm{\nabla}\underline{U}(\bm{x},t))$ is the flux tensor, and $\underline{S}(\bm{x},t)$ denotes a source term.
 
 ## License
 
