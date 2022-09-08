@@ -1,5 +1,9 @@
-push!(LOAD_PATH,"../src/")
+import Pkg
+Pkg.add("Documenter")
 using Documenter
+using CLOUD
+
+push!(LOAD_PATH,"../src/")
 
 makedocs(sitename="CLOUD.jl")
 

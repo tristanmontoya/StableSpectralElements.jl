@@ -23,12 +23,13 @@ module CLOUD
     include("Solvers/Solvers.jl")
     @reexport using .Solvers
 
-    #TODO fix conflict (I think with StartUpDG)
     include("IO/IO.jl")
     @reexport using .IO
 
     include("Analysis/Analysis.jl")
     @reexport using .Analysis
+
+    include("PyPlotTools/PyPlotTools.jl")
 
     using TimerOutputs
 
