@@ -1,7 +1,5 @@
 # Driver script - grid refinement studies for the linear advection equation
-
 push!(LOAD_PATH,"../")
-ENV["MPLBACKEND"]="agg"
 
 using OrdinaryDiffEq: solve, DP8, RK4, CarpenterKennedy2N54, OrdinaryDiffEqAlgorithm
 using LinearAlgebra
