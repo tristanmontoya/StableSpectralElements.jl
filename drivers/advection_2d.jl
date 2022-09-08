@@ -214,6 +214,7 @@ function main(args)
         dt = β*(L/M)/(norm(a)*(2*p+1))
         ode_problem = semidiscretize(solver, initialize(initial_data, 
             conservation_law, spatial_discretization), (0.0, T))
+
         save_solution(ode_problem.u0, 0.0, results_path, 0)
         if timer
             for t in 1:Threads.nthreads()
