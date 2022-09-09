@@ -61,4 +61,7 @@ module ConservationLaws
     export InviscidBurgersEquation, ViscousBurgersEquation, BurgersSolution
     include("burgers.jl")
 
+    export EulerEquations
+    include("euler_navierstokes.jl")
+
 end
