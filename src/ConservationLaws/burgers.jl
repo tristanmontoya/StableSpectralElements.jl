@@ -21,7 +21,6 @@ struct ViscousBurgersEquation{d} <: AbstractConservationLaw{d,Mixed}
     source_term::AbstractParametrizedFunction{d}
 end
 
-
 num_equations(::ViscousBurgersEquation) = 1
 
 struct BurgersSolution{InitialData,SourceTerm} <: AbstractParametrizedFunction{1}

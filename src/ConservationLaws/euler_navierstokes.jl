@@ -5,4 +5,6 @@ struct EulerEquations{d} <: AbstractConservationLaw{d,Hyperbolic}
     γ::Float64
 end
 
-num_equations(::EulerEquations{d}) = d+2
+function num_equations(::EulerEquations{d}) where {d}
+   return d+2 
+end

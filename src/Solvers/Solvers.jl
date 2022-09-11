@@ -35,8 +35,8 @@ module Solvers
         scaled_normal::NTuple{d, Vector{Float64}}
     end
 
-    struct Solver{d,N_eq,ResidualForm,PDEType}
-        conservation_law::AbstractConservationLaw{d,N_eq,PDEType}
+    struct Solver{d,ResidualForm,PDEType}
+        conservation_law::AbstractConservationLaw{d,PDEType}
         operators::Vector{PhysicalOperators}
         x_q::NTuple{d,Matrix{Float64}}
         connectivity::Matrix{Int}
@@ -70,10 +70,10 @@ module Solvers
         conservation_law::AbstractConservationLaw,
         spatial_discretization::SpatialDiscretization{d}) where {d}
 
-        @unpack N_el, M, geometric_factors = spatial_discretization
-        @unpack N_p, N_q, V, W = spatial_discretization.reference_approximation
+        @unpack M, geometric_factors = spatial_discretization
+        @unpack N_q, V, W = spatial_discretization.reference_approximation
         @unpack xyzq = spatial_discretization.mesh
-        _, N_eq, N_el = get_dof(spatial_discretization, conservation_law)
+        N_p, N_eq, N_el = get_dof(spatial_discretization, conservation_law)
         
         u0 = Array{Float64}(undef, N_p, N_eq, N_el)
         for k in 1:N_el

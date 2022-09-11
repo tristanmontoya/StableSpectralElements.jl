@@ -101,15 +101,16 @@ end
 Evaluate semi-discrete residual for a hyperbolic problem
 """
 function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
-    solver::Solver{d, N_eq, <:AbstractResidualForm, Hyperbolic},
-    t::Float64; print::Bool=false) where {d, N_eq}
+    solver::Solver{d, <:AbstractResidualForm, Hyperbolic},
+    t::Float64; print::Bool=false) where {d}
 
     @timeit "rhs!" begin
         @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
         @unpack first_order_numerical_flux = form
 
-        N_el = size(operators)[1]
-        N_f = size(operators[1].Vf)[1]
+        N_eq = num_equations(conservation_law)
+        N_el = size(operators,1)
+        N_f = size(operators[1].Vf,1)
         u_facet = Array{Float64}(undef, N_f, N_eq, N_el)
 
         # get all facet state values
@@ -158,14 +159,15 @@ end
 Evaluate semi-discrete residual for a mixed/parabolic problem
 """
 function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
-    solver::Solver{d, N_eq, <:AbstractResidualForm, <:Union{Mixed,Parabolic}},
-    t::Float64; print::Bool=false) where {d, N_eq}
+    solver::Solver{d, <:AbstractResidualForm, <:Union{Mixed,Parabolic}},
+    t::Float64; print::Bool=false) where {d}
 
     @timeit "rhs!" begin
         @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
         @unpack first_order_numerical_flux, second_order_numerical_flux = form
          
-        N_el = size(operators)[1]
+        N_eq = num_equations(conservation_law)
+        N_el = size(operators,1)
         N_f, N_p = size(operators[1].Vf)
         u_facet = Array{Float64}(undef, N_f, N_eq, N_el)
 
