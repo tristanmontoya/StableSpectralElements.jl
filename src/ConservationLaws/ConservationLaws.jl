@@ -7,9 +7,9 @@ module ConservationLaws
     import ..ParametrizedFunctions: AbstractParametrizedFunction, NoSourceTerm, InitialDataGaussian, InitialDataGassner, SourceTermGassner, evaluate
 
 
-    export AbstractConservationLaw, AbstractPDEType, Parabolic, Hyperbolic, Mixed, AbstractFirstOrderNumericalFlux, AbstractSecondOrderNumericalFlux, NoFirstOrderFlux, NoSecondOrderFlux, LaxFriedrichsNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, EntropyConservativeFlux, NoTwoPointFlux
+    export AbstractConservationLaw, AbstractPDEType, Parabolic, Hyperbolic, Mixed, AbstractFirstOrderNumericalFlux, AbstractSecondOrderNumericalFlux, NoFirstOrderFlux, NoSecondOrderFlux, LaxFriedrichsNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, EntropyConservativeFlux, NoTwoPointFlux, num_equations
 
-    abstract type AbstractConservationLaw{d, N_eq, PDEType} end
+    abstract type AbstractConservationLaw{d, PDEType} end
     abstract type AbstractPDEType end
 
     """
@@ -32,7 +32,6 @@ module ConservationLaws
     `∂ₜu + ∇⋅(F¹(u) + F²(u,q)) = s, q = ∇u`
     """
     struct Mixed <: AbstractPDEType end
-
 
     """First-order numerical fluxes"""
     abstract type AbstractFirstOrderNumericalFlux end

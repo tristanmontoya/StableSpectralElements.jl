@@ -3,22 +3,25 @@ Linear advection equation
 
 `∂ₜu + ∇⋅(au) = s`
 """
-struct LinearAdvectionEquation{d} <: AbstractConservationLaw{d,1,Hyperbolic}
+struct LinearAdvectionEquation{d} <: AbstractConservationLaw{d,Hyperbolic}
     a::NTuple{d,Float64} 
     source_term::AbstractParametrizedFunction{d}
 end
+
+num_equations(::LinearAdvectionEquation) = 1
 
 """
 Linear advection-diffusion equation
 
 `∂ₜu + ∇⋅(au - b∇u) = s`
 """
-struct LinearAdvectionDiffusionEquation{d} <: AbstractConservationLaw{d,1,Mixed}
+struct LinearAdvectionDiffusionEquation{d} <: AbstractConservationLaw{d,Mixed}
     a::NTuple{d,Float64}
     b::Float64
     source_term::AbstractParametrizedFunction{d}
 end
 
+num_equations(::LinearAdvectionDiffusionEquation) = 1
 
 struct DiffusionSolution{InitialData} <: AbstractParametrizedFunction{1}
     conservation_law::LinearAdvectionDiffusionEquation
@@ -29,6 +32,7 @@ end
 function LinearAdvectionEquation(a::NTuple{d,Float64}) where {d}
     return LinearAdvectionEquation{d}(a,NoSourceTerm{d}())
 end
+
 
 function LinearAdvectionEquation(a::Float64)
     return LinearAdvectionEquation{1}((a,),NoSourceTerm{1}())
@@ -144,6 +148,7 @@ function evaluate(s::DiffusionSolution{InitialDataGaussian{d}},
     x::NTuple{d,Float64},t::Float64=0.0) where {d}
     @unpack A, k, x_0 = s.initial_data
     @unpack b = s.conservation_law
+    
     # this seems to be right but maybe plug into equation to check
     r² = sum((x[m] - x_0[m]).^2 for m in 1:d)
     t_0 = k^2/(2.0*b)

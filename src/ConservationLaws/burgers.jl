@@ -3,21 +3,26 @@ Inviscid Burgers' equation
 
 `∂ₜu + ∇⋅(a ½u²) = s`
 """
-struct InviscidBurgersEquation{d} <: AbstractConservationLaw{d,1,Hyperbolic}
+struct InviscidBurgersEquation{d} <: AbstractConservationLaw{d,Hyperbolic}
     a::NTuple{d,Float64} 
     source_term::AbstractParametrizedFunction{d}
 end
+
+num_equations(::InviscidBurgersEquation) = 1
 
 """
 Viscous Burgers' equation (1D)
 
 `∂ₜu + ∇⋅(a ½u² - b∇u) = s`
 """
-struct ViscousBurgersEquation{d} <: AbstractConservationLaw{d,1,Mixed}
+struct ViscousBurgersEquation{d} <: AbstractConservationLaw{d,Mixed}
     a::NTuple{d,Float64}
     b::Float64
     source_term::AbstractParametrizedFunction{d}
 end
+
+
+num_equations(::ViscousBurgersEquation) = 1
 
 struct BurgersSolution{InitialData,SourceTerm} <: AbstractParametrizedFunction{1}
     initial_data::InitialData
