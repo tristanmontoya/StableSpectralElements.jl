@@ -1,7 +1,6 @@
 module IO
 
     using LinearMaps: LinearMap
-    using Combinatorics: combinations
     using Plots: plot, plot!, scatter, savefig
     using LaTeXStrings: latexstring
 

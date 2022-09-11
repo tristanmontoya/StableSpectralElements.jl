@@ -3,7 +3,6 @@ module Mesh
     using UnPack
     using StartUpDG: RefElemData, MeshData, uniform_mesh, connect_mesh, build_node_maps, diff, make_periodic, geometric_factors, compute_normals, AbstractElemShape, Line, Quad, Tri, Tet, Hex, Pyr
     using Random: rand, shuffle
-    using StaticArrays: SMatrix
     using LinearAlgebra: inv, det, transpose, diagm
 
     export GeometricFactors, uniform_periodic_mesh, warp_mesh, cartesian_mesh, Uniform, ZigZag, Collapsed
