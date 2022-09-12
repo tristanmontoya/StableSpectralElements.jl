@@ -11,11 +11,8 @@ To install CLOUD.jl, open a `julia` session and enter:
 ```julia
 julia> import Pkg
 
-julia> Pkg.add([
-    "https://github.com/tristanmontoya/CLOUD.jl.git",
-    "OrdinaryDiffEq"])
+julia> Pkg.add("https://github.com/tristanmontoya/CLOUD.jl.git")
 ```
-
 ## License
 
 This software is released under the [GPLv3 license](https://www.gnu.org/licenses/gpl-3.0.en.html).
