@@ -6,6 +6,17 @@ CLOUD.jl is a Julia framework implementing several unstructured high-order metho
 ```
 where $\underline{U}(\bm{x},t)$ is the vector of solution variables, $\underline{\bm{F}}(\underline{U}(\bm{x},t), \bm{\nabla}\underline{U}(\bm{x},t))$ is the flux tensor, and $\underline{S}(\bm{x},t)$ denotes a source term.
 
+## Installation
+
+To install CLOUD.jl, open a `julia` session and enter:
+
+```julia
+julia> import Pkg
+
+julia> Pkg.add([
+    "https://github.com/tristanmontoya/CLOUD.jl.git",
+    "OrdinaryDiffEq"])
+```
 ## License
 
 This software is released under the [GPLv3 license](https://www.gnu.org/licenses/gpl-3.0.en.html).
