@@ -3,6 +3,7 @@ Euler equations
 """
 struct EulerEquations{d} <: AbstractConservationLaw{d,Hyperbolic}
     γ::Float64
+    source_term::AbstractParametrizedFunction{d}
 end
 
 struct NavierStokesEquations{d} <: AbstractConservationLaw{d,Mixed} end

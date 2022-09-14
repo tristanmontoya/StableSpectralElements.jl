@@ -24,7 +24,7 @@ function ReferenceApproximation(
 
     VDM, ∇VDM = basis(Line(), p, rstq[1])     
     ∇V = (LinearMap(∇VDM),)
-    R = LinearMap(vandermonde(Line(),p,rstf[1]))
+    Vf = LinearMap(vandermonde(Line(),p,rstf[1]))
     V_plot = LinearMap(vandermonde(Line(), p, rstp[1]))
     V = LinearMap(VDM)
     inv_M = LinearMap(inv(VDM' * Diagonal(wq) * VDM))
@@ -32,8 +32,8 @@ function ReferenceApproximation(
     B = LinearMap(Diagonal(wf))
     P = inv_M * V' * W
     R = Vf * P
-    D = (∇V[m] * P,)
-    ADVw = (∇V[m]' * W,)
+    D = (∇V[1] * P,)
+    ADVw = (∇V[1]' * W,)
 
     return ReferenceApproximation{1}(approx_type, N_p, N_q, N_f, 
         reference_element, D, V, Vf, R, P, W, B, ADVw, V_plot, 
