@@ -9,8 +9,8 @@ include("test_advection_2d.jl")
 @testset "Advection 2D" begin
     (l2, conservation, energy) = test_advection_2d(
         DGMulti(4),Tri(), WeakConservationForm(
-            SkewSymmetricMapping(),
-            LaxFriedrichsNumericalFlux(0.0)))
+            mapping_form=SkewSymmetricMapping(),
+            inviscid_numerical_flux=LaxFriedrichsNumericalFlux(0.0)))
             
     @test l2 ≈ 0.07409452050788953 atol=tol
     @test conservation ≈ 0.0 atol=tol

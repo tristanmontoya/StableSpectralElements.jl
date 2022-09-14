@@ -19,7 +19,11 @@ end
 function num_equations(::EulerEquations{d}) where {d}
     return d+2 
 end
- 
+
+function EulerEquations{d}(γ::Float64) where {d}
+    return EulerEquations{d}(γ,NoSourceTerm{d}())
+end
+
 function pressure(conservation_law::EulerType{d}, 
     u::Matrix{Float64}) where {d}
     @unpack γ = conservation_law

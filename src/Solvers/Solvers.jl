@@ -10,7 +10,7 @@ module Solvers
     using ..ConservationLaws: AbstractConservationLaw, AbstractPDEType, Hyperbolic, Parabolic, Mixed, num_equations, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, AbstractTwoPointFlux, NoInviscidFlux, NoViscousFlux, NoTwoPointFlux, NoSourceTerm, physical_flux, numerical_flux, LaxFriedrichsNumericalFlux, BR1
 
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization
-    using ..ParametrizedFunctions: AbstractParametrizedFunction, AbstractParametrizedFunction, evaluate
+    using ..ParametrizedFunctions: AbstractParametrizedFunction, AbstractParametrizedFunction, NoSourceTerm, evaluate
     using ..Operators: flux_diff
 
     export AbstractResidualForm, AbstractMappingForm, AbstractStrategy, PhysicaOperators, Eager, Lazy, Solver, StandardMapping, SkewSymmetricMapping, CreanMapping, initialize, semidiscretize, precompute, apply_operators!, auxiliary_variable!, combine, get_dof, rhs!
@@ -35,13 +35,13 @@ module Solvers
         scaled_normal::NTuple{d, Vector{Float64}}
     end
 
-    struct Solver{d,ResidualForm,PDEType}
+    Base.@kwdef struct Solver{d,ResidualForm,PDEType}
         conservation_law::AbstractConservationLaw{d,PDEType}
         operators::Vector{PhysicalOperators}
         x_q::NTuple{d,Matrix{Float64}}
         connectivity::Matrix{Int}
-        form::ResidualForm
-        strategy::AbstractStrategy
+        form::ResidualForm = WeakConservationForm()
+        strategy::AbstractStrategy = Lazy()
     end
 
     function Solver(conservation_law::AbstractConservationLaw,     

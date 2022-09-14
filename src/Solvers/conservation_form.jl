@@ -1,31 +1,17 @@
-struct StrongConservationForm{MappingForm,TwoPointFlux} <: AbstractResidualForm{MappingForm,TwoPointFlux}
-    mapping_form::MappingForm
-    inviscid_numerical_flux::AbstractInviscidNumericalFlux
-    viscous_numerical_flux::AbstractViscousNumericalFlux
-    two_point_flux::TwoPointFlux
+Base.@kwdef struct StrongConservationForm{MappingForm,TwoPointFlux} <: AbstractResidualForm{MappingForm,TwoPointFlux}
+    mapping_form::MappingForm = StandardMapping()
+    inviscid_numerical_flux::AbstractInviscidNumericalFlux =
+        LaxFriedrichsNumericalFlux()
+    viscous_numerical_flux::AbstractViscousNumericalFlux = BR1()
+    two_point_flux::TwoPointFlux = NoTwoPointFlux()
 end
 
-struct WeakConservationForm{MappingForm,TwoPointFlux} <: AbstractResidualForm{MappingForm,TwoPointFlux}
-    mapping_form::MappingForm
-    inviscid_numerical_flux::AbstractInviscidNumericalFlux
-    viscous_numerical_flux::AbstractViscousNumericalFlux
-    two_point_flux::TwoPointFlux
-end 
-
-function StrongConservationForm(
-    mapping_form::AbstractMappingForm=StandardMapping(),
-    inviscid_numerical_flux::AbstractInviscidNumericalFlux=
-    LaxFriedrichsNumericalFlux())
-    return StrongConservationForm(mapping_form,inviscid_numerical_flux,
-        BR1(), NoTwoPointFlux())
-end
-
-function WeakConservationForm(
-    mapping_form::AbstractMappingForm=StandardMapping(),
-    inviscid_numerical_flux::AbstractInviscidNumericalFlux=
-    LaxFriedrichsNumericalFlux())
-    return WeakConservationForm(mapping_form,inviscid_numerical_flux,
-        BR1(), NoTwoPointFlux())
+Base.@kwdef struct WeakConservationForm{MappingForm,TwoPointFlux} <: AbstractResidualForm{MappingForm,TwoPointFlux}
+    mapping_form::MappingForm = StandardMapping()
+    inviscid_numerical_flux::AbstractInviscidNumericalFlux =
+        LaxFriedrichsNumericalFlux()
+    viscous_numerical_flux::AbstractViscousNumericalFlux = BR1()
+    two_point_flux::TwoPointFlux = NoTwoPointFlux()
 end
 
 """
@@ -215,7 +201,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             
             @timeit to "extrap aux variable" begin
                 @inbounds for m in 1:d
-                    q_facet[m][:,:,k] = Matrix(perators[k].Vf * q[m][:,:,k])
+                    q_facet[m][:,:,k] = Matrix(operators[k].Vf * q[m][:,:,k])
                 end
                 
             end

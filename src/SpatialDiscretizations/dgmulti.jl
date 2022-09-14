@@ -4,8 +4,14 @@ struct DGMulti <: AbstractApproximationType
     q_f::Int # facet quadrature parameter 
 end
 
-function DGMulti(p::Int)
-    return DGMulti(p,p,p)
+function DGMulti(p::Int; q=nothing, q_f=nothing)
+    if isnothing(q)
+        q = p
+    end
+    if isnothing(q_f)
+        q_f = p
+    end
+    return DGMulti(p,q,q_f)
 end
 
 function ReferenceApproximation(

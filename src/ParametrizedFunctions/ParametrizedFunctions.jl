@@ -2,7 +2,7 @@ module ParametrizedFunctions
 
     using UnPack
     
-    export AbstractParametrizedFunction, SumOfFunctions, ConstantFunction, InitialDataSine, InitialDataGaussian, InitialDataGassner, BurgersSolution, SourceTermGassner, GaussianNoise, NoSourceTerm, InitialDataEntropyWave, evaluate
+    export AbstractParametrizedFunction, SumOfFunctions, ConstantFunction, InitialDataSine, InitialDataGaussian, InitialDataGassner, BurgersSolution, SourceTermGassner, GaussianNoise, NoSourceTerm, evaluate
     
     abstract type AbstractParametrizedFunction{d} end
 
@@ -10,35 +10,62 @@ module ParametrizedFunctions
         f::AbstractParametrizedFunction{d}
         g::AbstractParametrizedFunction{d}
         N_eq::Int
+
+        function SumOfFunctions(f::AbstractParametrizedFunction{d},
+            g::AbstractParametrizedFunction{d}) where {d}
+            return new{d}(f,g,f.N_eq)
+        end
     end
 
     struct ConstantFunction{d} <: AbstractParametrizedFunction{d}
         c::Float64
         N_eq::Int
+
+        function ConstantFunction{d}(c) where {d}
+            return new{d}(c,1)
+        end
     end
+
     struct InitialDataSine{d} <: AbstractParametrizedFunction{d}
         A::Float64  # amplitude
         k::NTuple{d,Float64}  # wave number in each direction
         N_eq::Int
+
+        function InitialDataSine(A::Float64,
+            k::NTuple{d,Float64}) where {d} 
+            return new{d}(A,k,1)
+        end
     end
 
     struct InitialDataGaussian{d} <: AbstractParametrizedFunction{d}
         A::Float64  # amplitude
         σ::Float64 # width
-        x_0::NTuple{d,Float64}
-        N_eq::Int
+        x₀::NTuple{d,Float64}
+        N_eq::Int 
+        function InitialDataGaussian(A::Float64,σ::Float64,
+            x₀::NTuple{d,Float64}) where {d}
+            return new{d}(A,σ,x₀,1)
+        end
     end
 
     struct InitialDataGassner <: AbstractParametrizedFunction{1} 
         k::Float64
         ϵ::Float64
         N_eq::Int
+
+        function InitialDataGassner(k,ϵ)
+            return new(k,ϵ,1)
+        end
     end
 
     struct SourceTermGassner <: AbstractParametrizedFunction{1} 
         k::Float64
         ϵ::Float64
         N_eq::Int
+       
+        function SourceTermGassner(k,ϵ)
+            return new(k,ϵ,1)
+        end
     end
     struct GaussianNoise{d} <: AbstractParametrizedFunction{d}
         σ::Float64
@@ -49,37 +76,15 @@ module ParametrizedFunctions
 
     function Base.:+(f::AbstractParametrizedFunction{d},
         g::AbstractParametrizedFunction{d}) where {d}
-        return SumOfFunctions{d}(f,g,f.N_eq)
+        return SumOfFunctions(f,g)
     end
 
-    function InitialDataSine(A::Float64, k::Float64; N_eq::Int=1)
-        return InitialDataSine(A,(k,),N_eq)
+    function InitialDataSine(A::Float64, k::Float64)
+        return InitialDataSine(A,(k,))
     end
 
-    function InitialDataSine(A::Float64, k::NTuple{d,Float64}; 
-        N_eq::Int=1) where {d}
-        return InitialDataSine(A,k,N_eq)
-    end
-
-    function InitialDataGaussian(A::Float64, σ::Float64, x_0::Float64,
-        N_eq::Int=1)
-        return InitialDataGaussian(A,σ,(x_0,),N_eq)
-    end
-
-    function InitialDataGassner(k::Float64, ϵ::Float64)
-        return InitialDataGassner(k,ϵ,1)
-    end
-
-    function InitialDataGassner()
-        return InitialDataGassner(Float64(π),0.01,1)
-    end
-
-    function SourceTermGassner(k::Float64, ϵ::Float64)
-        return SourceTermGassner(k,ϵ,1)
-    end
-
-    function SourceTermGassner()
-        return SourceTermGassner(Float64(π),0.01,1)
+    function InitialDataGaussian(A::Float64, σ::Float64, x₀::Float64)
+        return InitialDataGaussian(A,σ,(x₀,))
     end
 
     function evaluate(func::SumOfFunctions{d}, 
@@ -99,8 +104,8 @@ module ParametrizedFunctions
 
     function evaluate(f::InitialDataGaussian{d}, 
         x::NTuple{d,Float64},t::Float64=0.0) where {d}
-        @unpack A, σ, x_0, N_eq = f
-        r² = sum((x[m] - x_0[m]).^2 for m in 1:d)
+        @unpack A, σ, x₀, N_eq = f
+        r² = sum((x[m] - x₀[m]).^2 for m in 1:d)
         return fill(A*exp.(-r²/(2.0*σ^2)),N_eq)
     end
 
