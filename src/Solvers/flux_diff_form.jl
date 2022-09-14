@@ -47,7 +47,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             end
             
             f = @timeit "eval flux" physical_flux(
-                conservation_law.first_order_flux, 
+                conservation_law.inviscid_flux, 
                 convert(Matrix, operators[k].V * u[:,:,k]))
 
             F = @timeit "eval volume two-point flux" two_point_flux(
@@ -55,7 +55,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                 convert(Matrix, operators[k].V * u[:,:,k]))
 
             f_star = @timeit "eval numerical flux" numerical_flux(
-                conservation_law.first_order_numerical_flux,
+                conservation_law.inviscid_numerical_flux,
                 u_facet[:,:,k], u_out, operators[k].scaled_normal)
 
             f_fac = @timeit "eval facet flux diff" f_star - 

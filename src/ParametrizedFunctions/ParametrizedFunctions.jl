@@ -2,7 +2,7 @@ module ParametrizedFunctions
 
     using UnPack
     
-    export AbstractParametrizedFunction, SumOfFunctions, ConstantFunction, InitialDataSine, InitialDataGaussian, InitialDataGassner, BurgersSolution, SourceTermGassner, GaussianNoise, NoSourceTerm, evaluate
+    export AbstractParametrizedFunction, SumOfFunctions, ConstantFunction, InitialDataSine, InitialDataGaussian, InitialDataGassner, BurgersSolution, SourceTermGassner, GaussianNoise, NoSourceTerm, InitialDataEntropyWave, evaluate
     
     abstract type AbstractParametrizedFunction{d} end
 
@@ -30,20 +30,19 @@ module ParametrizedFunctions
     end
 
     struct InitialDataGassner <: AbstractParametrizedFunction{1} 
-        N_eq::Int
         k::Float64
-        eps::Float64
+        ϵ::Float64
+        N_eq::Int
     end
 
     struct SourceTermGassner <: AbstractParametrizedFunction{1} 
-        N_eq::Int
         k::Float64
-        eps::Float64
-    end
-
-    struct GaussianNoise{d} <: AbstractParametrizedFunction{d}
+        ϵ::Float64
         N_eq::Int
+    end
+    struct GaussianNoise{d} <: AbstractParametrizedFunction{d}
         σ::Float64
+        N_eq::Int
     end
 
     struct NoSourceTerm{d} <: AbstractParametrizedFunction{d} end
@@ -67,20 +66,20 @@ module ParametrizedFunctions
         return InitialDataGaussian(A,σ,(x_0,),N_eq)
     end
 
-    function InitialDataGassner(k::Float64, eps::Float64)
-        return InitialDataGassner(1,k,eps)
+    function InitialDataGassner(k::Float64, ϵ::Float64)
+        return InitialDataGassner(k,ϵ,1)
     end
 
     function InitialDataGassner()
-        return InitialDataGassner(1,Float64(π),0.01)
+        return InitialDataGassner(Float64(π),0.01,1)
     end
 
-    function SourceTermGassner(k::Float64, eps::Float64)
-        return SourceTermGassner(1,k,eps)
+    function SourceTermGassner(k::Float64, ϵ::Float64)
+        return SourceTermGassner(k,ϵ,1)
     end
 
     function SourceTermGassner()
-        return SourceTermGassner(1,Float64(π),0.01)
+        return SourceTermGassner(Float64(π),0.01,1)
     end
 
     function evaluate(func::SumOfFunctions{d}, 
@@ -107,12 +106,12 @@ module ParametrizedFunctions
 
     function evaluate(f::InitialDataGassner, 
         x::NTuple{1,Float64},t::Float64=0.0)
-        return [sin(f.k*x[1])+f.eps]
+        return [sin(f.k*x[1])+f.ϵ]
     end
 
     function evaluate(f::SourceTermGassner, 
         x::NTuple{1,Float64},t::Float64=0.0)
-        return [f.k .* cos(f.k*(x[1]-t))*(-1.0 + f.eps + sin(f.k*(x[1]-t)))]
+        return [f.k .* cos(f.k*(x[1]-t))*(-1.0 + f.ϵ + sin(f.k*(x[1]-t)))]
     end
 
     function evaluate(f::GaussianNoise{d},

@@ -1,13 +1,13 @@
 module ConservationLaws
 
     using LinearMaps: LinearMap
-    using LinearAlgebra: mul!
+    using LinearAlgebra: mul!, I
     using UnPack
 
     import ..ParametrizedFunctions: AbstractParametrizedFunction, NoSourceTerm, InitialDataGaussian, InitialDataGassner, SourceTermGassner, evaluate
 
 
-    export AbstractConservationLaw, AbstractPDEType, Parabolic, Hyperbolic, Mixed, AbstractFirstOrderNumericalFlux, AbstractSecondOrderNumericalFlux, NoFirstOrderFlux, NoSecondOrderFlux, LaxFriedrichsNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, EntropyConservativeFlux, NoTwoPointFlux, num_equations
+    export AbstractConservationLaw, AbstractPDEType, Parabolic, Hyperbolic, Mixed, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, NoInviscidFlux, NoViscousFlux, LaxFriedrichsNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, EntropyConservativeFlux, NoTwoPointFlux, num_equations
 
     abstract type AbstractConservationLaw{d, PDEType} end
     abstract type AbstractPDEType end
@@ -34,33 +34,32 @@ module ConservationLaws
     struct Mixed <: AbstractPDEType end
 
     """First-order numerical fluxes"""
-    abstract type AbstractFirstOrderNumericalFlux end
-    struct NoFirstOrderFlux <: AbstractFirstOrderNumericalFlux end
-    struct LaxFriedrichsNumericalFlux <: AbstractFirstOrderNumericalFlux 
+    abstract type AbstractInviscidNumericalFlux end
+    struct NoInviscidFlux <: AbstractInviscidNumericalFlux end
+    struct LaxFriedrichsNumericalFlux <: AbstractInviscidNumericalFlux 
         λ::Float64
     end
-    struct EntropyConservativeNumericalFlux <: AbstractFirstOrderNumericalFlux end
+    struct EntropyConservativeNumericalFlux <: AbstractInviscidNumericalFlux end
     LaxFriedrichsNumericalFlux() = LaxFriedrichsNumericalFlux(1.0)
     
     """Second-order numerical fluxes"""
-    abstract type AbstractSecondOrderNumericalFlux end
-    struct BR1 <: AbstractSecondOrderNumericalFlux end
-    struct NoSecondOrderFlux <: AbstractSecondOrderNumericalFlux end
-
+    abstract type AbstractViscousNumericalFlux end
+    struct BR1 <: AbstractViscousNumericalFlux end
+    struct NoViscousFlux <: AbstractViscousNumericalFlux end
 
     """Two-point fluxes (for split forms and entropy-stable schemes)"""
     abstract type AbstractTwoPointFlux end
     struct ConservativeFlux <: AbstractTwoPointFlux end
     struct EntropyConservativeFlux <: AbstractTwoPointFlux end
     struct NoTwoPointFlux <: AbstractTwoPointFlux end
-    
+
     export LinearAdvectionEquation, LinearAdvectionDiffusionEquation, DiffusionSolution
     include("linear_advection_diffusion.jl")
 
     export InviscidBurgersEquation, ViscousBurgersEquation, BurgersSolution
     include("burgers.jl")
 
-    export EulerEquations
+    export EulerEquations, NavierStokesEquations, EntropyWave1D
     include("euler_navierstokes.jl")
 
 end

@@ -1,30 +1,30 @@
 struct StrongConservationForm{MappingForm,TwoPointFlux} <: AbstractResidualForm{MappingForm,TwoPointFlux}
     mapping_form::MappingForm
-    first_order_numerical_flux::AbstractFirstOrderNumericalFlux
-    second_order_numerical_flux::AbstractSecondOrderNumericalFlux
+    inviscid_numerical_flux::AbstractInviscidNumericalFlux
+    viscous_numerical_flux::AbstractViscousNumericalFlux
     two_point_flux::TwoPointFlux
 end
 
 struct WeakConservationForm{MappingForm,TwoPointFlux} <: AbstractResidualForm{MappingForm,TwoPointFlux}
     mapping_form::MappingForm
-    first_order_numerical_flux::AbstractFirstOrderNumericalFlux
-    second_order_numerical_flux::AbstractSecondOrderNumericalFlux
+    inviscid_numerical_flux::AbstractInviscidNumericalFlux
+    viscous_numerical_flux::AbstractViscousNumericalFlux
     two_point_flux::TwoPointFlux
 end 
 
 function StrongConservationForm(
     mapping_form::AbstractMappingForm=StandardMapping(),
-    first_order_numerical_flux::AbstractFirstOrderNumericalFlux=
+    inviscid_numerical_flux::AbstractInviscidNumericalFlux=
     LaxFriedrichsNumericalFlux())
-    return StrongConservationForm(mapping_form,first_order_numerical_flux,
+    return StrongConservationForm(mapping_form,inviscid_numerical_flux,
         BR1(), NoTwoPointFlux())
 end
 
 function WeakConservationForm(
     mapping_form::AbstractMappingForm=StandardMapping(),
-    first_order_numerical_flux::AbstractFirstOrderNumericalFlux=
+    inviscid_numerical_flux::AbstractInviscidNumericalFlux=
     LaxFriedrichsNumericalFlux())
-    return WeakConservationForm(mapping_form,first_order_numerical_flux,
+    return WeakConservationForm(mapping_form,inviscid_numerical_flux,
         BR1(), NoTwoPointFlux())
 end
 
@@ -102,11 +102,11 @@ Evaluate semi-discrete residual for a hyperbolic problem
 """
 function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
     solver::Solver{d, <:AbstractResidualForm, Hyperbolic},
-    t::Float64; print::Bool=false) where {d}
+    t::Float64) where {d}
 
     @timeit "rhs!" begin
         @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
-        @unpack first_order_numerical_flux = form
+        @unpack inviscid_numerical_flux = form
 
         N_eq = num_equations(conservation_law)
         N_el = size(operators,1)
@@ -135,7 +135,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             f = @timeit to "eval flux" physical_flux(
                 conservation_law, Matrix(operators[k].V * u[:,:,k]))
             f_star = @timeit to "eval num flux" numerical_flux(
-                conservation_law, first_order_numerical_flux,
+                conservation_law, inviscid_numerical_flux,
                 u_facet[:,:,k], u_out, operators[k].scaled_normal)
             
             # evaluate source term, if there is one
@@ -160,11 +160,11 @@ Evaluate semi-discrete residual for a mixed/parabolic problem
 """
 function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
     solver::Solver{d, <:AbstractResidualForm, <:Union{Mixed,Parabolic}},
-    t::Float64; print::Bool=false) where {d}
+    t::Float64) where {d}
 
     @timeit "rhs!" begin
         @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
-        @unpack first_order_numerical_flux, second_order_numerical_flux = form
+        @unpack inviscid_numerical_flux, viscous_numerical_flux = form
          
         N_eq = num_equations(conservation_law)
         N_el = size(operators,1)
@@ -200,7 +200,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
 
                 # evaluate numerical trace (d-vector of approximations to u nJf)
                 u_star = @timeit to "eval num trace" numerical_flux(
-                    conservation_law, second_order_numerical_flux,
+                    conservation_law, viscous_numerical_flux,
                     u_facet[:,:,k], u_out, operators[k].scaled_normal)
                 
                 # apply operators
@@ -215,8 +215,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             
             @timeit to "extrap aux variable" begin
                 @inbounds for m in 1:d
-                    q_facet[m][:,:,k] = convert(
-                        Matrix, operators[k].Vf * q[m][:,:,k])
+                    q_facet[m][:,:,k] = Matrix(perators[k].Vf * q[m][:,:,k])
                 end
                 
             end
@@ -233,7 +232,8 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                     @inbounds for e in 1:N_eq
                         u_out[:,e] = u_facet[:,e,:][connectivity[:,k]]
                     end
-                    q_out = Tuple(Matrix{Float64}(undef, N_f, N_eq) for m in 1:d)
+                    q_out = Tuple(Matrix{Float64}(undef, N_f, N_eq) 
+                        for m in 1:d)
                     @inbounds for e in 1:N_eq, m in 1:d
                         q_out[m][:,e] = q_facet[m][:,e,:][connectivity[:,k]]
                     end
@@ -246,13 +246,13 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                 
                 # evaluate inviscid numerical flux 
                 f_star_inv = @timeit to "eval inv num flux" numerical_flux(
-                    conservation_law, first_order_numerical_flux,
+                    conservation_law, inviscid_numerical_flux,
                     u_facet[:,:,k], u_out, operators[k].scaled_normal)
                     
                 # evaluate viscous numerical flux
                 f_star_vis = 
                     @timeit to "eval visc num flux" numerical_flux(
-                        conservation_law, second_order_numerical_flux,
+                        conservation_law, viscous_numerical_flux,
                         u_facet[:,:,k], u_out, 
                         Tuple(q_facet[m][:,:,k] for m in 1:d), 
                         Tuple(q_out[m] for m in 1:d),

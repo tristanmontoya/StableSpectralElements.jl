@@ -23,6 +23,8 @@ end
 
 num_equations(::LinearAdvectionDiffusionEquation) = 1
 
+const AdvectionType{d} = Union{LinearAdvectionEquation{d}, LinearAdvectionDiffusionEquation{d}}
+
 struct DiffusionSolution{InitialData} <: AbstractParametrizedFunction{1}
     conservation_law::LinearAdvectionDiffusionEquation
     initial_data::InitialData
@@ -76,10 +78,9 @@ end
 
 """
 Evaluate the upwind/blended/central advective numerical flux
-
 `F*(u⁻, u⁺, n) = ½a⋅n(u⁻ + u⁺) + ½λ|a⋅n|(u⁺ - u⁻)`
 """
-function numerical_flux(conservation_law::Union{LinearAdvectionEquation{d},LinearAdvectionDiffusionEquation{d}},
+function numerical_flux(conservation_law::AdvectionType{d},
     numerical_flux::LaxFriedrichsNumericalFlux,
     u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
     n::NTuple{d, Vector{Float64}}) where {d}
@@ -98,7 +99,7 @@ Evaluate the central advective numerical flux
 
 `F*(u⁻, u⁺, n) = ½a⋅n(u⁻ + u⁺)`
 """
-function numerical_flux(conservation_law::Union{LinearAdvectionEquation{d},LinearAdvectionDiffusionEquation{d}},
+function numerical_flux(conservation_law::AdvectionType{d},
     ::EntropyConservativeFlux,
     u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
     n::NTuple{d, Vector{Float64}}) where {d}
