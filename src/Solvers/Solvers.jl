@@ -35,13 +35,13 @@ module Solvers
         scaled_normal::NTuple{d, Vector{Float64}}
     end
 
-    Base.@kwdef struct Solver{d,ResidualForm,PDEType}
+    struct Solver{d,ResidualForm,PDEType}
         conservation_law::AbstractConservationLaw{d,PDEType}
         operators::Vector{PhysicalOperators}
         x_q::NTuple{d,Matrix{Float64}}
         connectivity::Matrix{Int}
-        form::ResidualForm = WeakConservationForm()
-        strategy::AbstractStrategy = Lazy()
+        form::ResidualForm
+        strategy::AbstractStrategy
     end
 
     function Solver(conservation_law::AbstractConservationLaw,     
