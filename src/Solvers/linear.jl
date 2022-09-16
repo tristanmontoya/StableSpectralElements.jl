@@ -20,7 +20,7 @@ function LinearAlgebra.mul!(y::AbstractVector,
         x::AbstractVector)
     u = reshape(x,(L.N_p,L.N_eq,L.N_el))
     dudt = Array{Float64}(undef,L.N_p,L.N_eq,L.N_el)
-    rhs!(dudt,u,L.solver,0.0,print=false)
+    rhs!(dudt,u,L.solver,0.0)
     y[:] = vec(dudt)
     return y
 end

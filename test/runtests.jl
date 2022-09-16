@@ -5,11 +5,14 @@ using CLOUD
 
 tol = 1.0e-10
 
-include("test_advection_2d.jl")
+include("test_2d.jl")
 
 @testset "Advection 2D Energy-Conservative DGMulti" begin
-    (l2, conservation, energy) = test_advection_2d(
-        DGMulti(4),Tri(), WeakConservationForm(
+    (l2, conservation, energy) = test_2d(
+        DGMulti(4),Tri(), 
+        LinearAdvectionEquation((1.0,1.0)),
+        InitialDataSine(1.0,(2*π, 2*π)),
+        WeakConservationForm(
             mapping_form=SkewSymmetricMapping(),
             inviscid_numerical_flux=LaxFriedrichsNumericalFlux(0.0)))
             
@@ -19,8 +22,11 @@ include("test_advection_2d.jl")
 end
 
 @testset "Advection 2D Standard DGSEM" begin
-    (l2, conservation, energy) = test_advection_2d(
-        DGSEM(4),Quad(), WeakConservationForm(
+    (l2, conservation, energy) = test_2d(
+        DGSEM(4),Quad(),
+        LinearAdvectionEquation((1.0,1.0)), 
+        InitialDataSine(1.0,(2*π, 2*π)),
+        WeakConservationForm(
             mapping_form=StandardMapping(),
             inviscid_numerical_flux=LaxFriedrichsNumericalFlux()))
     @test l2 ≈ 0.05018367633381625 atol=tol

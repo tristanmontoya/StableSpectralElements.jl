@@ -2,14 +2,14 @@ push!(LOAD_PATH,"../")
 
 using CLOUD, OrdinaryDiffEq
 
-function test_advection_2d(
+function test_2d(
     approx_type::AbstractApproximationType,
     elem_type::AbstractElemShape,
+    conservation_law::AbstractConservationLaw,
+    initial_data::AbstractParametrizedFunction{2},
     form::AbstractResidualForm,
     M::Int=2)
 
-    initial_data = InitialDataSine(1.0,(2*π, 2*π))
-    conservation_law = LinearAdvectionEquation((1.0,1.0))
     exact_solution = ExactSolution(conservation_law,initial_data)
     strategy = Lazy()
 
