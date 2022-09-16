@@ -7,8 +7,6 @@ tol = 1.0e-10
 
 include("test_advection_2d.jl")
 
-
-
 @testset "Advection 2D Energy-Conservative DGMulti" begin
     (l2, conservation, energy) = test_advection_2d(
         DGMulti(4),Tri(), WeakConservationForm(

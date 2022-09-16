@@ -9,7 +9,8 @@ function test_advection_2d(
     M::Int=2)
 
     initial_data = InitialDataSine(1.0,(2*π, 2*π))
-    conservation_law = LinearAdvectionEquation((1.0,1.0));
+    conservation_law = LinearAdvectionEquation((1.0,1.0))
+    exact_solution = ExactSolution(conservation_law,initial_data)
     strategy = Lazy()
 
     reference_approximation = ReferenceApproximation(
@@ -46,6 +47,6 @@ function test_advection_2d(
     energy_analysis = EnergyConservationAnalysis(results_path, 
         conservation_law, spatial_discretization)
 
-    return (analyze(error_analysis, last(sol.u), initial_data)..., 
+    return (analyze(error_analysis, last(sol.u), exact_solution, 1.0)..., 
         analyze(conservation_analysis)[3][1], analyze(energy_analysis)[3][1])
 end

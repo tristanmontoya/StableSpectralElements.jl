@@ -11,7 +11,8 @@ Base.size(L::LinearResidual) = (L.N_p*L.N_eq*L.N_el, L.N_p*L.N_eq*L.N_el)
 function LinearResidual(
     solver::Solver{ResidualForm,PhysicalOperators,d}) where {ResidualForm,PhysicalOperators,d}
 
-    return LinearResidual(solver,size(solver.operators[1].VOL[1],1),num_equations(solver.conservation_law),length(solver.operators))
+    return LinearResidual(solver,size(solver.operators[1].VOL[1],1),
+        solver.conservation_law.N_eq,length(solver.operators))
 end
 
 function LinearAlgebra.mul!(y::AbstractVector, 

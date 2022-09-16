@@ -7,7 +7,7 @@ module ConservationLaws
     import ..ParametrizedFunctions: AbstractParametrizedFunction, NoSourceTerm, InitialDataGaussian, InitialDataGassner, SourceTermGassner, evaluate
 
 
-    export AbstractConservationLaw, AbstractPDEType, Parabolic, Hyperbolic, Mixed, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, NoInviscidFlux, NoViscousFlux, LaxFriedrichsNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, EntropyConservativeFlux, NoTwoPointFlux, num_equations
+    export AbstractConservationLaw, AbstractPDEType, Parabolic, Hyperbolic, Mixed, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, NoInviscidFlux, NoViscousFlux, LaxFriedrichsNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, EntropyConservativeFlux, NoTwoPointFlux, ExactSolution
 
     abstract type AbstractConservationLaw{d, PDEType} end
     abstract type AbstractPDEType end
@@ -53,10 +53,30 @@ module ConservationLaws
     struct EntropyConservativeFlux <: AbstractTwoPointFlux end
     struct NoTwoPointFlux <: AbstractTwoPointFlux end
 
-    export LinearAdvectionEquation, LinearAdvectionDiffusionEquation, DiffusionSolution
+    """Generic structure for exact solution to PDE"""
+    struct ExactSolution{d,ConservationLaw,InitialData,SourceTerm} <: AbstractParametrizedFunction{d}
+        conservation_law::ConservationLaw
+        initial_data::InitialData
+        periodic::Bool
+        N_eq::Int
+
+        function ExactSolution(
+            conservation_law::AbstractConservationLaw{d,PDEType},
+            initial_data::AbstractParametrizedFunction{d};
+            periodic::Bool=false) where {d, PDEType}
+
+            return new{d,typeof(conservation_law),typeof(initial_data),typeof(conservation_law.source_term)}(
+                conservation_law,
+                initial_data,
+                periodic,
+                conservation_law.N_eq)
+        end
+    end
+
+    export LinearAdvectionEquation, LinearAdvectionDiffusionEquation
     include("linear_advection_diffusion.jl")
 
-    export InviscidBurgersEquation, ViscousBurgersEquation, BurgersSolution
+    export InviscidBurgersEquation, ViscousBurgersEquation
     include("burgers.jl")
 
     export EulerEquations, NavierStokesEquations, EntropyWave1D

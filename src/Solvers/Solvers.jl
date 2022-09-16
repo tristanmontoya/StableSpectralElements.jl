@@ -7,7 +7,7 @@ module Solvers
     using LinearMaps: LinearMap
     using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
 
-    using ..ConservationLaws: AbstractConservationLaw, AbstractPDEType, Hyperbolic, Parabolic, Mixed, num_equations, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, AbstractTwoPointFlux, NoInviscidFlux, NoViscousFlux, NoTwoPointFlux, NoSourceTerm, physical_flux, numerical_flux, LaxFriedrichsNumericalFlux, BR1
+    using ..ConservationLaws: AbstractConservationLaw, AbstractPDEType, Hyperbolic, Parabolic, Mixed, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, AbstractTwoPointFlux, NoInviscidFlux, NoViscousFlux, NoTwoPointFlux, NoSourceTerm, physical_flux, numerical_flux, LaxFriedrichsNumericalFlux, BR1
 
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization
     using ..ParametrizedFunctions: AbstractParametrizedFunction, AbstractParametrizedFunction, NoSourceTerm, evaluate
@@ -122,7 +122,7 @@ module Solvers
     function get_dof(spatial_discretization::SpatialDiscretization{d}, 
         conservation_law::AbstractConservationLaw{d}) where {d}
         return (spatial_discretization.reference_approximation.N_p, 
-            num_equations(conservation_law), spatial_discretization.N_el)
+            conservation_law.N_eq, spatial_discretization.N_el)
     end
 
     """

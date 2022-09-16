@@ -6,9 +6,13 @@ Inviscid Burgers' equation
 struct InviscidBurgersEquation{d} <: AbstractConservationLaw{d,Hyperbolic}
     a::NTuple{d,Float64} 
     source_term::AbstractParametrizedFunction{d}
-end
+    N_eq::Int
 
-num_equations(::InviscidBurgersEquation) = 1
+    function InviscidBurgersEquation(a::NTuple{d,Float64}, 
+        source_term::AbstractParametrizedFunction{d}) where {d}
+        return new{d}(a, source_term, 1)
+    end
+end
 
 """
 Viscous Burgers' equation (1D)
@@ -19,17 +23,15 @@ struct ViscousBurgersEquation{d} <: AbstractConservationLaw{d,Mixed}
     a::NTuple{d,Float64}
     b::Float64
     source_term::AbstractParametrizedFunction{d}
-end
+    N_eq::Int
 
-num_equations(::ViscousBurgersEquation) = 1
+    function LinearAdvectionDiffusionEquation(a::NTuple{d,Float64}, 
+        b::Float64, source_term::AbstractParametrizedFunction{d}) where {d}
+        return new{d}(a, b, source_term, 1)
+    end
+end
 
 const BurgersType{d} = Union{InviscidBurgersEquation{d}, ViscousBurgersEquation{d}}
-
-struct BurgersSolution{InitialData,SourceTerm} <: AbstractParametrizedFunction{1}
-    initial_data::InitialData
-    source_term::SourceTerm
-    N_eq::Int
-end
 
 """
 Evaluate the flux for the inviscid Burgers' equation
@@ -102,12 +104,15 @@ function numerical_flux(conservation_law::ViscousBurgersEquation{d},
     return -1.0*sum(b*q_avg[m] .* n[m] for m in 1:d)
 end
 
-function BurgersSolution(initial_data::AbstractParametrizedFunction{1},
-    source_term::AbstractParametrizedFunction{1})
-    return BurgersSolution(initial_data, source_term, 1)
-end
 
-function evaluate(s::BurgersSolution{InitialDataGassner,SourceTermGassner}, 
+function evaluate(
+    exact_solution::ExactSolution{1,InviscidBurgersEquation{1},InitialDataGassner,SourceTermGassner},
     x::NTuple{1,Float64},t::Float64=0.0)
-    return [sin(s.initial_data.k*(x[1]-t))+s.initial_data.eps]
+    if !exact_solution.periodic
+        z = x[1] - t
+    else
+        z = x[1]
+    end
+    return [sin(exact_solution.initial_data.k*z) +
+        exact_solution.initial_data.ϵ]
 end

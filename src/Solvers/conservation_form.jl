@@ -93,8 +93,8 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
     @timeit "rhs!" begin
         @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
         @unpack inviscid_numerical_flux = form
+        @unpack source_term, N_eq = conservation_law
 
-        N_eq = num_equations(conservation_law)
         N_el = size(operators,1)
         N_f = size(operators[1].Vf,1)
         u_facet = Array{Float64}(undef, N_f, N_eq, N_el)
@@ -129,7 +129,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                 s = nothing
             else
                 s = @timeit to "eval src term" evaluate(
-                    conservation_law.source_term, Tuple(x_q[m][:,k] for m in 1:d),t)
+                    source_term, Tuple(x_q[m][:,k] for m in 1:d),t)
             end
 
             # apply operators to obtain residual as
@@ -151,8 +151,8 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
     @timeit "rhs!" begin
         @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
         @unpack inviscid_numerical_flux, viscous_numerical_flux = form
-         
-        N_eq = num_equations(conservation_law)
+        @unpack source_term, N_eq = conservation_law
+        
         N_el = size(operators,1)
         N_f, N_p = size(operators[1].Vf)
         u_facet = Array{Float64}(undef, N_f, N_eq, N_el)
@@ -245,11 +245,11 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                         operators[k].scaled_normal)
                 
                 # evaluate source term, if there is one
-                if conservation_law.source_term isa NoSourceTerm
+                if source_term isa NoSourceTerm
                     s = nothing
                 else
                     s = @timeit to "eval src term" evaluate(
-                        conservation_law.source_term, Tuple(x_q[m][:,k] for m in 1:d),t)
+                        source_term, Tuple(x_q[m][:,k] for m in 1:d),t)
                 end
 
                 # apply operators

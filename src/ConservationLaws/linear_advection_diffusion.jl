@@ -6,9 +6,13 @@ Linear advection equation
 struct LinearAdvectionEquation{d} <: AbstractConservationLaw{d,Hyperbolic}
     a::NTuple{d,Float64} 
     source_term::AbstractParametrizedFunction{d}
-end
+    N_eq::Int
 
-num_equations(::LinearAdvectionEquation) = 1
+    function LinearAdvectionEquation(a::NTuple{d,Float64}, 
+        source_term::AbstractParametrizedFunction{d}) where {d}
+        return new{d}(a, source_term, 1)
+    end
+end
 
 """
 Linear advection-diffusion equation
@@ -19,38 +23,31 @@ struct LinearAdvectionDiffusionEquation{d} <: AbstractConservationLaw{d,Mixed}
     a::NTuple{d,Float64}
     b::Float64
     source_term::AbstractParametrizedFunction{d}
-end
+    N_eq::Int
 
-num_equations(::LinearAdvectionDiffusionEquation) = 1
+    function LinearAdvectionDiffusionEquation(a::NTuple{d,Float64}, 
+        b::Float64, source_term::AbstractParametrizedFunction{d}) where {d}
+        return new{d}(a, b, source_term, 1)
+    end
+end
 
 const AdvectionType{d} = Union{LinearAdvectionEquation{d}, LinearAdvectionDiffusionEquation{d}}
 
-struct DiffusionSolution{InitialData} <: AbstractParametrizedFunction{1}
-    conservation_law::LinearAdvectionDiffusionEquation
-    initial_data::InitialData
-    N_eq::Int 
-end
-
 function LinearAdvectionEquation(a::NTuple{d,Float64}) where {d}
-    return LinearAdvectionEquation{d}(a,NoSourceTerm{d}())
+    return LinearAdvectionEquation(a,NoSourceTerm{d}())
 end
-
 
 function LinearAdvectionEquation(a::Float64)
-    return LinearAdvectionEquation{1}((a,),NoSourceTerm{1}())
+    return LinearAdvectionEquation((a,),NoSourceTerm{1}())
 end
 
 function LinearAdvectionDiffusionEquation(a::NTuple{d,Float64}, 
     b::Float64) where {d}
-    return LinearAdvectionDiffusionEquation{d}(a,b,NoSourceTerm{d}())
+    return LinearAdvectionDiffusionEquation(a,b,NoSourceTerm{d}())
 end
 
 function LinearAdvectionDiffusionEquation(a::Float64, b::Float64)
-    return LinearAdvectionDiffusionEquation{1}((a,),b,NoSourceTerm{1}())
-end
-
-function DiffusionSolution(conservation_law::LinearAdvectionDiffusionEquation, initial_data::AbstractParametrizedFunction)
-    return DiffusionSolution(conservation_law,initial_data,1)
+    return LinearAdvectionDiffusionEquation((a,),b,NoSourceTerm{1}())
 end
 
 """
@@ -145,14 +142,34 @@ function numerical_flux(conservation_law::LinearAdvectionDiffusionEquation{d},
     return -1.0*sum(b*q_avg[m] .* n[m] for m in 1:d)
 end
 
-function evaluate(s::DiffusionSolution{InitialDataGaussian{d}}, 
+function evaluate(
+    exact_solution::ExactSolution{d,LinearAdvectionEquation{d}, <:AbstractParametrizedFunction{d},NoSourceTerm{d}},
     x::NTuple{d,Float64},t::Float64=0.0) where {d}
-    @unpack A, k, x_0 = s.initial_data
-    @unpack b = s.conservation_law
+    @unpack initial_data, conservation_law = exact_solution
     
-    # this seems to be right but maybe plug into equation to check
-    r² = sum((x[m] - x_0[m]).^2 for m in 1:d)
-    t_0 = k^2/(2.0*b)
-    C = A*(t_0/(t+t_0))^(0.5*d)
-    return [C*exp.(-r²/(4.0*b*(t_0 + t)))]
+    if !exact_solution.periodic
+        z = Tuple(x[m] - conservation_law.a[m]*t for m in 1:d)
+    else
+        z = x
+    end
+
+    return evaluate(initial_data,z)
+end
+
+function evaluate(
+    exact_solution::ExactSolution{d,LinearAdvectionDiffusionEquation{d}, InitialDataGaussian{d},NoSourceTerm{d}},
+    x::NTuple{d,Float64},t::Float64=0.0) where {d}
+    @unpack A, σ, x₀ = exact_solution.initial_data
+    @unpack a, b = exact_solution.conservation_law
+
+    if !exact_solution.periodic
+        z = Tuple(x[m] - a[m]*t for m in 1:d)
+    else
+        z = x
+    end
+
+    r² = sum((z[m] - x₀[m]).^2 for m in 1:d)
+    t₀ = σ^2/(2.0*b)
+    C = A*(t₀/(t+t₀))^(0.5*d)
+    return [C*exp.(-r²/(4.0*b*(t₀ + t)))]
 end

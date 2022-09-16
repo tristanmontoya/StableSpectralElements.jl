@@ -4,6 +4,12 @@ Euler equations
 struct EulerEquations{d} <: AbstractConservationLaw{d,Hyperbolic}
     γ::Float64
     source_term::AbstractParametrizedFunction{d}
+    N_eq::Int
+
+    function EulerEquations{d}(γ::Float64, 
+        source_term::AbstractParametrizedFunction{d}) where {d}
+        return new{d}(γ,source_term, d+2)
+    end
 end
 
 struct NavierStokesEquations{d} <: AbstractConservationLaw{d,Mixed} end
@@ -14,10 +20,6 @@ struct EntropyWave1D <: AbstractParametrizedFunction{1}
     conservation_law::EulerType{1}
     ϵ::Float64
     N_eq::Int
-end
-
-function num_equations(::EulerEquations{d}) where {d}
-    return d+2 
 end
 
 function EulerEquations{d}(γ::Float64) where {d}
@@ -66,7 +68,7 @@ function numerical_flux(
     u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
     n::NTuple{d, Vector{Float64}}) where {d}
 
-    @unpack γ = conservation_law
+    @unpack γ, N_eq = conservation_law
 
     ρ_in = u_in[:,1]
     V_in = velocity(conservation_law, u_in)
@@ -81,7 +83,7 @@ function numerical_flux(
 
     fn_avg = 0.5*hcat([
         sum((f_in[m][:,e] + f_out[m][:,e]) .* n[m] for m in 1:d)
-            for e in 1:num_equations(conservation_law)]...)
+            for e in 1:N_eq]...)
 
     a = sqrt.(sum(n[m].^2 for m in 1:d)) .*
         max.(abs.(sum(V_in[:,m].^2 for m in 1:d) 
