@@ -1,0 +1,64 @@
+# TODO: remove all uses of Plotter
+struct Plotter{d}
+    x_plot::NTuple{d,Matrix{Float64}}
+    V_plot::LinearMap
+    N_el::Int
+    directory_name::String
+end
+
+function Plotter(spatial_discretization::SpatialDiscretization{d},directory_name::String) where {d}
+    path = new_path(directory_name, true, false)
+
+    return Plotter{d}(spatial_discretization.x_plot, 
+        spatial_discretization.reference_approximation.V_plot,
+        spatial_discretization.N_el, path)
+end
+
+@recipe function plot(
+    spatial_discretization::SpatialDiscretization{1},
+    sol::Array{Float64,3}; e=1,
+    exact_solution=nothing,
+    label_exact="\$U(x,t)\$", t=0.0)
+
+    @unpack x_plot, N_el, reference_approximation = spatial_discretization
+    xlabel --> "\$x\$"
+    label --> "\$U^h(x,t)\$"
+
+    if !isnothing(exact_solution)
+        @series begin
+            label --> latexstring(label_exact)
+            vec(x_plot[1]), vec(evaluate(exact_solution,x_plot,t)[:,e,:])
+        end
+    end
+
+    vec(vcat(x_plot[1],fill(NaN,1,N_el))), vec(
+        vcat(convert(Matrix, 
+            reference_approximation.V_plot * sol[:,e,:]),fill(NaN,1,N_el)))
+end
+
+
+@recipe function plot(spatial_discretization::SpatialDiscretization{1},
+    sol::Vector{Array{Float64,3}}; e=1,
+    exact_solution=nothing,
+    label_exact="\$U(x,t)\$", t=0.0)
+
+    @unpack x_plot, N_el, reference_approximation = spatial_discretization
+    xlabel --> "\$x\$"
+    label --> "" 
+
+    for k in eachindex(sol)
+        @series begin
+            vec(vcat(x_plot[1],fill(NaN,1,N_el))), vec(
+                vcat(convert(Matrix,
+                    reference_approximation.V_plot * sol[k][:,e,:]),
+                    fill(NaN,1,N_el)))
+        end
+    end
+
+    if !isnothing(exact_solution)
+        @series begin
+            label --> latexstring(label_exact)
+            vec(x_plot[1]), vec(evaluate(exact_solution,x_plot,t)[:,e,:])
+        end
+    end
+end

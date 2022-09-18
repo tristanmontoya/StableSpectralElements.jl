@@ -13,13 +13,15 @@ module Analysis
     using PrettyTables
     using Printf
     using Markdown
+    using TimerOutputs
 
     using ..ConservationLaws: AbstractConservationLaw
     using ..Mesh: uniform_periodic_mesh
     using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation
     using ..ParametrizedFunctions: AbstractParametrizedFunction, evaluate
     using ..Solvers: AbstractResidualForm, AbstractStrategy, Solver, semidiscretize, LinearResidual, get_dof, rhs!
-    using ..IO: new_path, load_project, load_solution, load_time_steps, load_snapshots, load_snapshots_with_derivatives, load_solver, save_callback, save_solution, save_project, Plotter
+    using ..File: new_path, load_project, load_solution, load_time_steps, load_snapshots, load_snapshots_with_derivatives, load_solver, save_callback, save_solution, save_project
+    using ..Visualize: Plotter
 
     export AbstractAnalysis, AbstractAnalysisResults, analyze, save_analysis, plot_analysis, plot_spectrum, plot_modes, tabulate_analysis, tabulate_analysis_for_paper
 
@@ -44,4 +46,7 @@ module Analysis
 
     export RefinementAnalysis, RefinementAnalysisResults, run_refinement, get_tickslogscale
     include("refinement.jl")
+
+    export CLOUD_reset_timer, CLOUD_print_timer
+    include("timing.jl")
 end

@@ -5,6 +5,7 @@ module CLOUD
     end
 
     using Reexport
+
     include("ParametrizedFunctions/ParametrizedFunctions.jl")
     @reexport using .ParametrizedFunctions
 
@@ -23,29 +24,12 @@ module CLOUD
     include("Solvers/Solvers.jl")
     @reexport using .Solvers
 
-    include("IO/IO.jl")
-    @reexport using .IO
+    include("File/File.jl")
+    @reexport using .File
+
+    include("Visualize/Visualize.jl")
+    @reexport using .Visualize
 
     include("Analysis/Analysis.jl")
     @reexport using .Analysis
-
-    using TimerOutputs
-
-    function CLOUD_reset_timer()
-        for t in 1:Threads.nthreads()
-            thread_timer = get_timer(string("thread_timer_",t))
-            reset_timer!(thread_timer)
-        end
-        to = merge(Tuple(get_timer(string("thread_timer_",t)) 
-        for t in 1:Threads.nthreads())...)
-        reset_timer!(to)
-    end
-
-    function CLOUD_print_timer()
-        to = merge(Tuple(get_timer(string("thread_timer_",t)) 
-        for t in 1:Threads.nthreads())...)
-        print_timer(to)
-    end
-    
-    export CLOUD_reset_timer, CLOUD_print_timer
 end
