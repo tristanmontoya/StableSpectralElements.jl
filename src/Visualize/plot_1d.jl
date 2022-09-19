@@ -17,34 +17,33 @@ end
 @recipe function plot(
     spatial_discretization::SpatialDiscretization{1},
     sol::Array{Float64,3}; e=1,
-    exact_solution=nothing,
-    label_exact="\$U(x,t)\$", t=0.0)
+    exact_solution=nothing, time=0.0)
 
     @unpack x_plot, N_el, reference_approximation = spatial_discretization
     xlabel --> "\$x\$"
-    label --> "\$U^h(x,t)\$"
+    label --> ["\$U^h(x,t)\$" "\$U(x,t)\$"]
+
+    @series begin
+        vec(vcat(x_plot[1],fill(NaN,1,N_el))), vec(
+            vcat(convert(Matrix, 
+                reference_approximation.V_plot * sol[:,e,:]),fill(NaN,1,N_el)))
+    end
 
     if !isnothing(exact_solution)
         @series begin
-            label --> latexstring(label_exact)
-            vec(x_plot[1]), vec(evaluate(exact_solution,x_plot,t)[:,e,:])
+            vec(x_plot[1]), vec(evaluate(exact_solution,x_plot,time)[:,e,:])
         end
     end
-
-    vec(vcat(x_plot[1],fill(NaN,1,N_el))), vec(
-        vcat(convert(Matrix, 
-            reference_approximation.V_plot * sol[:,e,:]),fill(NaN,1,N_el)))
 end
 
 
 @recipe function plot(spatial_discretization::SpatialDiscretization{1},
     sol::Vector{Array{Float64,3}}; e=1,
-    exact_solution=nothing,
-    label_exact="\$U(x,t)\$", t=0.0)
+    exact_solution=nothing, t=0.0)
 
     @unpack x_plot, N_el, reference_approximation = spatial_discretization
     xlabel --> "\$x\$"
-    label --> "" 
+    label --> ""
 
     for k in eachindex(sol)
         @series begin
@@ -57,7 +56,6 @@ end
 
     if !isnothing(exact_solution)
         @series begin
-            label --> latexstring(label_exact)
             vec(x_plot[1]), vec(evaluate(exact_solution,x_plot,t)[:,e,:])
         end
     end
