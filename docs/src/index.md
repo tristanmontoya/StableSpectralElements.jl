@@ -2,9 +2,9 @@
 
 CLOUD.jl is a Julia framework implementing several unstructured high-order methods for partial differential equations of the form
 ```math
-\frac{\partial \underline{U}(\bm{x},t)}{\partial t} + \bm{\nabla} \cdot \underline{\bm{F}}(\underline{U}(\bm{x},t), \bm{\nabla}\underline{U}(\bm{x},t)) = \underline{0}, \quad \forall \, (\bm{x},t) \in \Omega \times (0,T),
+\frac{\partial \underline{U}(\bm{x},t)}{\partial t} + \bm{\nabla} \cdot \underline{\bm{F}}(\underline{U}(\bm{x},t), \bm{\nabla}\underline{U}(\bm{x},t)) = \underline{0},
 ```
-on a domain $\Omega \subset \mathbb{R}^d$, subject to appropriate initial and boundary conditions, where $\underline{U}(\bm{x},t)$ is the vector of solution variables and $\underline{\bm{F}}(\underline{U}(\bm{x},t),\bm{\nabla}\underline{U}(\bm{x},t))$ is the flux tensor containing advective and/or diffusive contributions.
+subject to appropriate initial and boundary conditions, where $\underline{U}(\bm{x},t)$ is the vector of solution variables and $\underline{\bm{F}}(\underline{U}(\bm{x},t),\bm{\nabla}\underline{U}(\bm{x},t))$ is the flux tensor containing advective and/or diffusive contributions.
 
 ## Installation
 

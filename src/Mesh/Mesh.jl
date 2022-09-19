@@ -5,12 +5,11 @@ module Mesh
     using Random: rand, shuffle
     using LinearAlgebra: inv, det, transpose, diagm
 
-    export GeometricFactors, uniform_periodic_mesh, warp_mesh, cartesian_mesh, Uniform, ZigZag, Collapsed
+    export GeometricFactors, uniform_periodic_mesh, warp_mesh, cartesian_mesh, Uniform, ZigZag
 
     abstract type AbstractMeshGenStrategy end
     struct Uniform <: AbstractMeshGenStrategy end
     struct ZigZag <: AbstractMeshGenStrategy end
-    struct Collapsed <: AbstractMeshGenStrategy end
 
     struct GeometricFactors{d}
         # first dimension is node index, second is element
@@ -24,11 +23,13 @@ module Mesh
         nJf::NTuple{d, Matrix{Float64}}
     end
 
-    function warp_mesh(mesh::MeshData{2}, 
-        reference_element::RefElemData{2}, factor::Float64=0.2)
+    function warp_mesh(mesh::MeshData{2}, reference_element::RefElemData{2}, 
+        factor::Float64=0.2)
         @unpack x, y = mesh
+
         x = x .+ factor*sin.(π*x).*sin.(π*y)
         y = y .+ factor*exp.(1.0.-y).*sin.(π*x).*sin.(π*y)
+        
         return MeshData(reference_element, mesh, x, y)
     end
   
@@ -41,15 +42,19 @@ module Mesh
         return make_periodic(mesh)
     end
 
-    function uniform_periodic_mesh(reference_element::RefElemData{2}, 
-        limits::NTuple{2,NTuple{2,Float64}}, M::NTuple{2,Int};
-        random_rotate::Bool=false, strategy::AbstractMeshGenStrategy=ZigZag())
+    function uniform_periodic_mesh(
+        reference_element::RefElemData{d}, 
+        limits::NTuple{d,NTuple{2,Float64}}, 
+        M::NTuple{d,Int};
+        random_rotate::Bool=false, 
+        strategy::AbstractMeshGenStrategy=ZigZag()) where {d}
 
-        (VX, VY), EtoV = cartesian_mesh(reference_element.elementType, 
+        VXY, EtoV = cartesian_mesh(reference_element.elementType, 
             M, strategy)
+        N_el = size(EtoV,1)
         
         if random_rotate
-            for k in 1:size(EtoV,1)
+            for k in 1:N_el
                 len = size(EtoV,2)
                 step = rand(0:len-1)
                 row = EtoV[k,:]
@@ -57,58 +62,24 @@ module Mesh
             end
         end
 
-        return make_periodic(MeshData(limits[1][1] .+ 
-                0.5*(limits[1][2]-limits[1][1])*(VX .+ 1.0),
-                limits[2][1] .+ 0.5*(limits[2][2]-limits[2][1])*(VY .+ 1.0),
-                EtoV, reference_element))
+        return make_periodic(MeshData([limits[m][1] .+ 
+            0.5*(limits[m][2]-limits[m][1])*(VXY[m] .+ 1.0) for m in 1:d]..., EtoV, reference_element))
     end
 
     function cartesian_mesh(elem_type::AbstractElemShape, 
-        M::NTuple{2,Int}, ::Uniform)
-        return uniform_mesh(elem_type, M[1], M[2])
+        M::NTuple{d,Int}, ::Uniform) where {d}
+        return uniform_mesh(elem_type, [M[m] for m in 1:d]...)
     end
 
-    function cartesian_mesh(elem_type::Union{Quad,Hex},
-        M::NTuple{2,Int}, ::ZigZag)
-        return uniform_mesh(elem_type, M[1], M[2])
-    end
-
-    function cartesian_mesh(::Tri,  M::NTuple{2,Int}, ::Collapsed)
-
-        Nquad = (M[1]+1)*(M[2]+1)
-        Nmid = M[1]*M[2]
-        Nv = Nquad + Nmid
-        VX = Vector{Float64}(undef, Nv)
-        VY = Vector{Float64}(undef, Nv)
-        EtoV = Matrix{Int64}(undef, 4*M[1]*M[2], 3)
-
-        (VX[1:Nquad], VY[1:Nquad]), _ = uniform_mesh(Quad(), M[1], M[2])
-        
-        for i in 1:M[1]
-            for j in 1:M[2]
-                m = (j-1)*M[2] + i
-                bot_left = (j-1)*(M[2]+1) + i  # bottom left
-                bot_right = j*(M[2]+1) + i  
-                mid = Nquad+m
-                top_left = bot_left + 1
-                top_right = bot_right + 1
-
-                VX[mid] = 0.5*(VX[bot_left] + VX[bot_right])
-                VY[mid]= 0.5*(VY[bot_left] + VY[top_left])
-                EtoV[(m-1)*4+1:m*4,:] = [
-                    top_left mid bot_left;
-                    bot_left mid bot_right;
-                    bot_right mid top_right;
-                    top_right mid top_left]
-            end
-        end
-        return (VX, VY), EtoV
+    function cartesian_mesh(elem_type::Union{Quad,Hex,Tet},
+        M::NTuple{d,Int}, ::ZigZag) where {d}
+        # zigzag not implemented for quad/hex/tet etc.
+        return uniform_mesh(elem_type, [M[m] for m in 1:d]...)
     end
 
     function cartesian_mesh(::Tri,  M::NTuple{2,Int}, ::ZigZag)
         if !(iseven(M[1]) && iseven(M[2]))
-            println("ERROR: ZigZag mesh must have even number of elements in each direction")
-            return nothing
+            error("ERROR: ZigZag mesh must have even number of elements in each direction")
         end
 
         (VX,VY), _ = uniform_mesh(Quad(), M[1], M[2])
@@ -131,7 +102,6 @@ module Mesh
         end
         return (VX, VY), EtoV
     end
-    
     
     function GeometricFactors(mesh::MeshData{d}, 
         reference_element::RefElemData{d}) where {d}
