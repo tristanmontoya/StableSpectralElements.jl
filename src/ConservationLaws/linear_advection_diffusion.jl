@@ -186,6 +186,6 @@ function evaluate(
         z = x
     end
 
-    return evaluate(initial_data,z) * 
-        exp(-b^2*π^2*sum(k[m]^2 for m in 1:d))
+    return evaluate(exact_solution.initial_data,z) * 
+        exp(-b*sum(k[m]^2 for m in 1:d)*t)
 end
