@@ -4,7 +4,7 @@ module ConservationLaws
     using LinearAlgebra: mul!, I
     using UnPack
 
-    import ..ParametrizedFunctions: AbstractParametrizedFunction, NoSourceTerm, InitialDataGaussian, InitialDataGassner, SourceTermGassner, evaluate
+    import ..ParametrizedFunctions: AbstractParametrizedFunction, NoSourceTerm, InitialDataSine, InitialDataGaussian, InitialDataGassner, SourceTermGassner, evaluate
 
 
     export AbstractConservationLaw, AbstractPDEType, Parabolic, Hyperbolic, Mixed, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, NoInviscidFlux, NoViscousFlux, LaxFriedrichsNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, EntropyConservativeFlux, NoTwoPointFlux, ExactSolution

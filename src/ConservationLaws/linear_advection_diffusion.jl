@@ -170,6 +170,22 @@ function evaluate(
 
     r² = sum((z[m] - x₀[m]).^2 for m in 1:d)
     t₀ = σ^2/(2.0*b)
-    C = A*(t₀/(t+t₀))^(0.5*d)
-    return [C*exp.(-r²/(4.0*b*(t₀ + t)))]
+    return [A*(t₀/(t+t₀))^(0.5*d)*exp.(-r²/(4.0*b*(t₀ + t)))]
+end
+
+
+function evaluate(
+    exact_solution::ExactSolution{d,LinearAdvectionDiffusionEquation{d}, InitialDataSine{d},NoSourceTerm{d}},
+    x::NTuple{d,Float64},t::Float64=0.0) where {d}
+    @unpack A, k = exact_solution.initial_data
+    @unpack a, b = exact_solution.conservation_law
+
+    if !exact_solution.periodic
+        z = Tuple(x[m] - a[m]*t for m in 1:d)
+    else
+        z = x
+    end
+
+    return evaluate(initial_data,z) * 
+        exp(-b^2*π^2*sum(k[m]^2 for m in 1:d))
 end
