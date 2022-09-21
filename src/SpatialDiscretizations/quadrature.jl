@@ -10,8 +10,8 @@ const JacobiQuadrature = Union{JGLQuadrature,JGQuadrature,JGRQuadrature}
 const LegendreQuadrature = Union{LGLQuadrature,LGQuadrature,LGRQuadrature}
 
 function meshgrid(x::Vector{Float64}, y::Vector{Float64})
-    return ([x[i] for i in 1:length(x), j in 1:length(y)],
-        [y[j] for i in 1:length(x), j in 1:length(y)])
+    return ([x[j] for i in 1:length(y), j in 1:length(x)],
+        [y[i] for i in 1:length(y), j in 1:length(x)])
 end
 
 function quadrature(::Line, ::LGQuadrature, N::Int)
@@ -88,8 +88,9 @@ function facet_node_ids(::Line, N::Int)
 end
 
 function facet_node_ids(::Quad, N::NTuple{2,Int})
-    return [1:N[1]:(N[1]*(N[2]-1)+1);  # left
-            N[1]:N[1]:(N[1]*N[2]);  # right
-            1:N[1];  # bottom
-            (N[1]*(N[2]-1)+1):(N[1]*N[2])]  # top 
+    return [
+        1:N[1];  # bottom
+        (N[1]*(N[2]-1)+1):(N[1]*N[2]); # top 
+        1:N[1]:(N[1]*(N[2]-1)+1);  # left
+            N[1]:N[1]:(N[1]*N[2])]  # right
 end
