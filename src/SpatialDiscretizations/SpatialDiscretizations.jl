@@ -37,7 +37,6 @@ module SpatialDiscretizations
         V::LinearMap
         Vf::LinearMap
         R::LinearMap
-        P::LinearMap
         W::LinearMap
         B::LinearMap
         ADVw::NTuple{d, LinearMap}
@@ -83,10 +82,12 @@ module SpatialDiscretizations
         reference_mapping::ReferenceMapping)
         @unpack J_q, Λ_q, nJf = geometric_factors
         @unpack J_ref, Λ_ref = reference_mapping
+
         (N_q, N_el) = size(J_q)
         d = size(Λ_q, 2)
         Λ_η = similar(Λ_q)
         J_η = similar(J_q)
+
         for k in 1:N_el
             for i in 1:N_q
                 for m in 1:d, n in 1:d
@@ -96,6 +97,7 @@ module SpatialDiscretizations
                 J_η[i,k] = J_ref[i] * J_q[i,k]
             end
         end
+        
         return GeometricFactors{d}(J_η, Λ_η, nJf)
     end
 
@@ -134,10 +136,13 @@ module SpatialDiscretizations
             ))) for m in 1:d)
     end
 
+    """
+    Check if the SBP property is satisfied on the physical element
+    """
     function check_sbp_property(
         spatial_discretization::SpatialDiscretization{d}, k::Int=1) where {d}
 
-        @unpack ADVw, V, Vf, D, P, B = spatial_discretization.reference_approximation
+        @unpack ADVw, V, Vf, D, B = spatial_discretization.reference_approximation
         @unpack Λ_q, nJf = spatial_discretization.geometric_factors
 
         S = Tuple((sum(0.5 * D[m]' * W * Diagonal(Λ_q[:,m,n,k]) * V -
@@ -149,11 +154,6 @@ module SpatialDiscretizations
             
         return Tuple(maximum(abs.(convert(Matrix,
             S[n] + S[n]' - E[n]))) for n in 1:d)
-    end
-
-    function meshgrid(x::Vector{Float64}, y::Vector{Float64})
-        return ([x[i] for i in 1:length(x), j in 1:length(y)],
-            [y[j] for i in 1:length(x), j in 1:length(y)])
     end
 
     """

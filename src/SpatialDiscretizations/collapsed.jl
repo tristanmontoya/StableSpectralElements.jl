@@ -79,9 +79,11 @@ function ReferenceApproximation(
     # set up mapping nodes and interpolation matrices
     r,s = nodes(Tri(), mapping_degree)  
     VDM, Vr, Vs = basis(Tri(), mapping_degree, r, s)
-    # from mapping interpolation nodes to quadrature nodes
+
+    # transformation from mapping  nodes to vol/fac quadrature nodes
     Vq_map = vandermonde(Tri(), mapping_degree, rq, sq) / VDM
     Vf_map = vandermonde(Tri(), mapping_degree, rf, sf) / VDM
+
     # reference element data structure from StartUpDG
     reference_element = RefElemData(Tri(), Polynomial(), mapping_degree,
                     face_vertices(Tri()), 
@@ -167,24 +169,18 @@ function ReferenceApproximation(
     @unpack rstp, rstq = reference_element
     if approx_type isa CollapsedModal
         N_p = binomial(p+2, 2)
-        V_modal = vandermonde(Tri(), p, rstq...)
+        V = LinearMap(vandermonde(Tri(), p, rstq...))
         V_plot = LinearMap(vandermonde(Tri(), p, rstp...))
-        V = LinearMap(V_modal)
-        inv_M = LinearMap(inv(V_modal' * Diagonal(wq) * V_modal))
-        P = inv_M * V' * W
-        Vf = R * V
-        ADVw = Tuple(V' * D[m]' * W for m in 1:2)
     else
         N_p = N_q
         V_plot = LinearMap(vandermonde(Quad(), p, rstp...) / 
             kron(rd_1.VDM, rd_2.VDM))
         V = LinearMap(I, N_q)
-        P = LinearMap(I, N_q)
-        Vf = R
-        ADVw = Tuple(D[m]' * W for m in 1:2)
     end
 
+    Vf = R * V
+    ADVw = Tuple(V' * D[m]' * W for m in 1:2)
+
     return ReferenceApproximation{2}(approx_type, N_p, N_q, N_f, 
-        reference_element, D, V, Vf, R, P, W, B, ADVw, V_plot,
-        reference_mapping)
+        reference_element, D, V, Vf, R, W, B, ADVw, V_plot, reference_mapping)
 end

@@ -27,15 +27,13 @@ function ReferenceApproximation(
 
     V_plot = LinearMap(vandermonde(elem_type, p, rstp[1]) / VDM)
     V = LinearMap(I, N_q)
-    P = LinearMap(I, N_q)
-    R = Vf * P
+    R = Vf
     W = LinearMap(Diagonal(wq))
     B = LinearMap(Diagonal(wf))
     ADVw = (D[1]' * W,)
 
     return ReferenceApproximation{1}(approx_type, N_p, N_q, N_f, 
-        reference_element, D, V, Vf, R, P, W, B, ADVw, V_plot,
-        NoMapping())
+        reference_element, D, V, Vf, R, W, B, ADVw, V_plot, NoMapping())
 end
 
 function ReferenceApproximation(approx_type::DGSEM, 
@@ -95,13 +93,11 @@ function ReferenceApproximation(approx_type::DGSEM,
         TensorProductMap(D_1D, I, sigma, sigma))
 
     V = LinearMap(I, N_q)
-    P = LinearMap(I, N_q)
-    R = Vf * P
+    R = Vf
     W = LinearMap(Diagonal(wq))
     B = LinearMap(Diagonal(wf))
     ADVw = Tuple(D[m]' * W for m in 1:2)
 
     return ReferenceApproximation{2}(approx_type, N_p, N_q, N_f, 
-        reference_element, D, V, Vf, R, P, W, B, ADVw, V_plot,
-        NoMapping())
+        reference_element, D, V, Vf, R, W, B, ADVw, V_plot, NoMapping())
 end

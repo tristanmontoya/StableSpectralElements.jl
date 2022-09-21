@@ -21,7 +21,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     ::StrongConservationForm) where {d}
 
     @unpack N_el, M = spatial_discretization
-    @unpack V, Vf, R, P, W, B = spatial_discretization.reference_approximation
+    @unpack V, Vf, R, W, B = spatial_discretization.reference_approximation
     @unpack nrstJ = 
         spatial_discretization.reference_approximation.reference_element
     @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
@@ -54,7 +54,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     form::WeakConservationForm) where {d}
 
     @unpack N_el, M, reference_approximation = spatial_discretization
-    @unpack ADVw, V, Vf, R, P, W, B, D = reference_approximation
+    @unpack ADVw, V, Vf, R, W, B, D = reference_approximation
     @unpack nrstJ = reference_approximation.reference_element
     @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
 

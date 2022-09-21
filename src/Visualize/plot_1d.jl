@@ -36,7 +36,6 @@ end
     end
 end
 
-
 @recipe function plot(spatial_discretization::SpatialDiscretization{1},
     sol::Vector{Array{Float64,3}}; e=1,
     exact_solution=nothing, t=0.0)

@@ -5,7 +5,7 @@ module File
     using UnPack
 
     using ..ConservationLaws: AbstractConservationLaw
-    using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation, centroids
+    using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation
     using ..ParametrizedFunctions: AbstractParametrizedFunction, evaluate
     using ..Solvers: AbstractResidualForm, AbstractStrategy, Solver, initialize, get_dof
 

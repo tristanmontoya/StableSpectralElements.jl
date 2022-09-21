@@ -42,8 +42,7 @@ function ReferenceApproximation(
     ADVw = (∇V[1]' * W,)
 
     return ReferenceApproximation{1}(approx_type, N_p, N_q, N_f, 
-        reference_element, D, V, Vf, R, P, W, B, ADVw, V_plot, 
-        NoMapping())
+        reference_element, D, V, Vf, R, W, B, ADVw, V_plot, NoMapping())
 end
 
 function ReferenceApproximation(
@@ -73,6 +72,5 @@ function ReferenceApproximation(
     ADVw = Tuple(∇V[m]' * W for m in 1:2)
 
     return ReferenceApproximation{2}(approx_type, N_p, N_q, N_f, 
-        reference_element, D, V, Vf, R, P, W, B, ADVw, V_plot, 
-        NoMapping())
+        reference_element, D, V, Vf, R, W, B, ADVw, V_plot, NoMapping())
 end
