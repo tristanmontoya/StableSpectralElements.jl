@@ -11,7 +11,6 @@ module Solvers
 
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization
     using ..ParametrizedFunctions: AbstractParametrizedFunction, AbstractParametrizedFunction, NoSourceTerm, evaluate
-    using ..Operators: flux_diff
 
     export AbstractResidualForm, AbstractMappingForm, AbstractStrategy, PhysicalOperators, Eager, Lazy, Solver, StandardMapping, SkewSymmetricMapping, CreanMapping, initialize, semidiscretize, precompute, apply_operators!, auxiliary_variable!, combine, get_dof, rhs!
 
@@ -255,7 +254,23 @@ module Solvers
     end
 
 #TODO add flux diff.
+
 #=
+"""
+Compute the flux-differencing term (D ⊙ F)1 (note: this currently is not supported in this version)
+"""
+    function flux_diff(D::LinearMaps.WrappedMap, F::AbstractArray{Float64,3})
+        N_p = size(D,1)
+        N_eq = size(F,3)
+
+        y = Matrix{Float64}(undef,N_p,N_eq)
+        
+        for l in 1:N_eq, i in 1:N_p
+            y[i,l] = dot(D.lmap[i,:], F[i,:,l])
+        end
+        return 2.0*y
+    end
+
     function apply_operators!(residual::Matrix{Float64},
         operators::PhysicalOperators{d},
         F::NTuple{d,Array{Float64,3}}, 
@@ -325,6 +340,8 @@ module Solvers
         return residual
     end
 =#
+
+
     export StrongConservationForm, WeakConservationForm
     include("conservation_form.jl")
 

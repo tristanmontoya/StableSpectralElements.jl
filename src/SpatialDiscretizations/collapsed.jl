@@ -61,8 +61,6 @@ end
 function warped_product(::Tri, p, η1D::NTuple{2,Vector{Float64}})
     M1 = length(η1D[1])
     M2 = length(η1D[2])
-    println((M1,M2))
-
     σₒ = [M2*(i-1) + j for i in 1:M1, j in 1:M2]
     σᵢ = zeros(Int,p+1,p+1)
 

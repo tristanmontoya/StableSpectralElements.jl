@@ -15,8 +15,8 @@ module CLOUD
     include("Mesh/Mesh.jl")
     @reexport using .Mesh
     
-    include("Operators/Operators.jl")
-    @reexport using .Operators
+    include("MatrixFreeOperators/MatrixFreeOperators.jl")
+    @reexport using .MatrixFreeOperators
 
     include("SpatialDiscretizations/SpatialDiscretizations.jl")
     @reexport using .SpatialDiscretizations
