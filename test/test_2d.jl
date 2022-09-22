@@ -8,10 +8,10 @@ function test_2d(
     conservation_law::AbstractConservationLaw,
     initial_data::AbstractParametrizedFunction{2},
     form::AbstractResidualForm,
+    strategy::AbstractStrategy,
     M::Int=2)
 
     exact_solution = ExactSolution(conservation_law,initial_data)
-    strategy = Lazy()
 
     reference_approximation = ReferenceApproximation(
         approx_type, elem_type, mapping_degree=approx_type.p, N_plot=10)

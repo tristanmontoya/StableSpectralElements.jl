@@ -13,7 +13,7 @@ module Solvers
     using ..ParametrizedFunctions: AbstractParametrizedFunction, AbstractParametrizedFunction, NoSourceTerm, evaluate
     using ..Operators: flux_diff
 
-    export AbstractResidualForm, AbstractMappingForm, AbstractStrategy, PhysicaOperators, Eager, Lazy, Solver, StandardMapping, SkewSymmetricMapping, CreanMapping, initialize, semidiscretize, precompute, apply_operators!, auxiliary_variable!, combine, get_dof, rhs!
+    export AbstractResidualForm, AbstractMappingForm, AbstractStrategy, PhysicalOperators, Eager, Lazy, Solver, StandardMapping, SkewSymmetricMapping, CreanMapping, initialize, semidiscretize, precompute, apply_operators!, auxiliary_variable!, combine, get_dof, rhs!
 
     abstract type AbstractResidualForm{MappingForm, TwoPointFlux} end
     abstract type AbstractMappingForm end
@@ -37,7 +37,7 @@ module Solvers
 
     struct Solver{d,ResidualForm,PDEType}
         conservation_law::AbstractConservationLaw{d,PDEType}
-        operators::Vector{PhysicalOperators}
+        operators::Vector{<:PhysicalOperators} # shouldn't actually need subtype
         x_q::NTuple{d,Matrix{Float64}}
         connectivity::Matrix{Int}
         form::ResidualForm
@@ -48,8 +48,10 @@ module Solvers
         spatial_discretization::SpatialDiscretization,
         form::AbstractResidualForm,
         strategy::Lazy)
+
+        operators = make_operators(spatial_discretization, form)
         return Solver(conservation_law, 
-            make_operators(spatial_discretization, form),
+            operators,
             spatial_discretization.mesh.xyzq,
             spatial_discretization.mesh.mapP, form, strategy)
     end
@@ -60,8 +62,10 @@ module Solvers
         strategy::Eager)
 
         operators = make_operators(spatial_discretization, form)
+
         return Solver(conservation_law, 
-            [precompute(operators[k]) for k in 1:spatial_discretization.N_el],
+                [precompute(operators[k]) 
+                    for k in 1:spatial_discretization.N_el],
                 spatial_discretization.mesh.xyzq,
                 spatial_discretization.mesh.mapP, form, strategy)
     end
@@ -106,9 +110,9 @@ module Solvers
     end
 
     function precompute(operators::PhysicalOperators{d}) where {d}
-        @unpack VOL, FAC, SRC, M, V, Vf, NTR, scaled_normal = operators
+        @unpack VOL, FAC, SRC, M, V, Vf, scaled_normal = operators
         inv_M = inv(M)
-        return PhysicalOperators(
+        return PhysicalOperators{d}(
             Tuple(combine(inv_M*VOL[n]) for n in 1:d),
             combine(inv_M*FAC), 
             combine(inv_M*SRC),
@@ -222,7 +226,6 @@ module Solvers
         q = volume_terms + facet_terms
         return q
     end
-
 
     """
     Auxiliary variable in reference-operator form

@@ -3,18 +3,18 @@ module SpatialDiscretizations
     using UnPack
     using LinearAlgebra: I, inv, Diagonal, diagm, kron
     using LinearMaps: LinearMap
-    using StartUpDG: MeshData, RefElemData, basis, vandermonde, quad_nodes, gauss_quad, gauss_lobatto_quad, face_vertices, nodes, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial
+    using StartUpDG: MeshData, RefElemData, basis, vandermonde, quad_nodes, gauss_quad, gauss_lobatto_quad, face_vertices, nodes, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial, jacobiP
 
     using Jacobi: zgrjm, wgrjm, zgj, wgj
     import StartUpDG: face_type, init_face_data
 
     using ..Mesh: GeometricFactors
-    using ..Operators: TensorProductMap, SelectionMap
+    using ..Operators: TensorProductMap, WarpedTensorProductMap, SelectionMap
 
     using Reexport
     @reexport using StartUpDG: AbstractElemShape, Line, Quad, Tri, Tet, Hex, Pyr
 
-    export AbstractApproximationType, AbstractReferenceMapping, NoMapping, CollapsedMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, make_sbp_operator, χ
+    export AbstractApproximationType, AbstractReferenceMapping, NoMapping, CollapsedMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, make_sbp_operator, χ, warped_product
     
     abstract type AbstractApproximationType end
 

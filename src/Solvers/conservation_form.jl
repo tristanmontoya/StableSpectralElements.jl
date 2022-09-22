@@ -18,10 +18,10 @@ end
 Make operators for strong conservation form
 """
 function make_operators(spatial_discretization::SpatialDiscretization{d}, 
-    ::StrongConservationForm) where {d}
+    form::StrongConservationForm) where {d}
 
     @unpack N_el, M = spatial_discretization
-    @unpack V, Vf, R, W, B = spatial_discretization.reference_approximation
+    @unpack D, V, Vf, R, W, B = spatial_discretization.reference_approximation
     @unpack nrstJ = 
         spatial_discretization.reference_approximation.reference_element
     @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
@@ -35,13 +35,13 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
                 error("StrongConservationForm only implements standard conservative mapping")
             else
                 VOL = Tuple(sum(-V' * W * D[m] * Diagonal(Λ_q[:,m,n,k]) + 
-                        Diagonal(nrstJ[m]) * R * Diagonal(Λ_q[:,m,n,k]) 
+                    Vf' * B * Diagonal(nrstJ[m]) * R * Diagonal(Λ_q[:,m,n,k]) 
                         for m in 1:d) for n in 1:d)
             end
         end
         FAC = -Vf' * B
         SRC = V' * W * Diagonal(J_q[:,k])
-        operators[k] = PhysicalOperators(VOL, FAC, SRC, M[k], V, Vf,
+        operators[k] = PhysicalOperators{d}(VOL, FAC, SRC, M[k], V, Vf,
             Tuple(nJf[m][:,k] for m in 1:d))
     end
     return operators
@@ -77,7 +77,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
         end
         FAC = -Vf' * B
         SRC = V' * W * Diagonal(J_q[:,k])
-        operators[k] = PhysicalOperators(VOL, FAC, SRC, M[k], V, Vf,
+        operators[k] = PhysicalOperators{d}(VOL, FAC, SRC, M[k], V, Vf,
             Tuple(nJf[m][:,k] for m in 1:d))
     end
     return operators
@@ -109,8 +109,8 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
         Threads.@threads for k in 1:N_el
             to = get_timer(string("thread_timer_", Threads.threadid()))
 
+            # gather external state to element
             @timeit to "gather ext state" begin
-                # gather external state to element
                 u_out = Matrix{Float64}(undef, N_f, N_eq)
                 @inbounds for e in 1:N_eq
                     u_out[:,e] = u_facet[:,e,:][connectivity[:,k]]
@@ -210,6 +210,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
         # evaluate all local residuals
         Threads.@threads for k in 1:N_el
             to = get_timer(string("thread_timer_", Threads.threadid()))
+
             @timeit to "primary variable" begin
 
                 # gather external state to element

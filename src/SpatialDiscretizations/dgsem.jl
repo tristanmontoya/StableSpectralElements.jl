@@ -69,7 +69,6 @@ function ReferenceApproximation(approx_type::DGSEM,
 
     # scalar ordering of multi-indices
     sigma = [(p+1)*(i-1) + j for i in 1:p+1, j in 1:p+1]
-    #sigma = [(p+1)*(j-1) + i for i in 1:p+1, j in 1:p+1]
 
     # extrapolation operators
     if (volume_quadrature_rule isa LGLQuadrature && 
@@ -77,10 +76,10 @@ function ReferenceApproximation(approx_type::DGSEM,
         Vf = SelectionMap(facet_node_ids(Quad(),(p+1,p+1)),N_p)
     elseif typeof(volume_quadrature_rule) == typeof(facet_quadrature_rule)
         Vf = [
-            TensorProductMap(R_L, I, sigma, [i for i in 1:p+1, j in 1:1]) ; #L
-            TensorProductMap(R_R, I, sigma, [i for i in 1:p+1, j in 1:1]) ; #R
-            TensorProductMap(I, R_L, sigma, [j for i in 1:1, j in 1:p+1]) ; #B
-            TensorProductMap(I, R_R ,sigma, [j for i in 1:1, j in 1:p+1])]  #T
+            TensorProductMap(R_L, I, sigma, [j for i in 1:1, j in 1:p+1]) ; #L
+            TensorProductMap(R_R, I, sigma, [j for i in 1:1, j in 1:p+1]) ; #R
+            TensorProductMap(I, R_L, sigma, [i for i in 1:p+1, j in 1:1]) ; #B
+            TensorProductMap(I, R_R ,sigma, [i for i in 1:p+1, j in 1:1])]  #T
     else
         Vf = LinearMap(vandermonde(elem_type,p,rstf...) / 
             vandermonde(elem_type,p,rstq...))
