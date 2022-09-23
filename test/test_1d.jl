@@ -1,15 +1,11 @@
-push!(LOAD_PATH,"../")
-
-using CLOUD, OrdinaryDiffEq
-
-function test_2d(
+function test_1d(
     approx_type::AbstractApproximationType,
     elem_type::AbstractElemShape,
     conservation_law::AbstractConservationLaw,
-    initial_data::AbstractParametrizedFunction{2},
+    initial_data::AbstractParametrizedFunction{1},
     form::AbstractResidualForm,
     strategy::AbstractStrategy,
-    M::Int, 
+    M::Int,
     test_name::String)
 
     exact_solution = ExactSolution(conservation_law,initial_data)
@@ -17,10 +13,8 @@ function test_2d(
     reference_approximation = ReferenceApproximation(
         approx_type, elem_type, mapping_degree=approx_type.p, N_plot=10)
 
-    mesh = warp_mesh(uniform_periodic_mesh(
-        reference_approximation.reference_element, 
-        ((0.0,1.0),(0.0,1.0)), (M,M)), 
-        reference_approximation.reference_element, 0.1)
+    mesh = uniform_periodic_mesh(
+        reference_approximation.reference_element, (0.0,1.0), M)
 
     spatial_discretization = SpatialDiscretization(mesh, 
         reference_approximation)
@@ -29,12 +23,12 @@ function test_2d(
         spatial_discretization, initial_data, form, (0.0, 1.0), strategy,
         string("results/", test_name,"/"),  overwrite=true, clear=true)
 
-    ode_problem = semidiscretize(conservation_law,
-        spatial_discretization,
-        initial_data, 
-        form,
-        (0.0, 1.0),
-        strategy)
+        ode_problem = semidiscretize(conservation_law,
+            spatial_discretization,
+            initial_data, 
+            form,
+            (0.0, 1.0),
+            strategy)
     
     save_solution(ode_problem.u0, 0.0, results_path, 0)
     sol = solve(ode_problem, CarpenterKennedy2N54(),

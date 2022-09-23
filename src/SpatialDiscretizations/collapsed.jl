@@ -205,7 +205,6 @@ function ReferenceApproximation(
     N_p = size(V,2)
     B = LinearMap(Diagonal(wf))
     W = LinearMap(Diagonal(w_η))
-    println((size(R), size(V)))
     Vf = R * V
     ADVw = Tuple(V' * D[m]' * W for m in 1:2)
 

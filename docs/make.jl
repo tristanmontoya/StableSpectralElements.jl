@@ -5,7 +5,7 @@ using CLOUD
 
 push!(LOAD_PATH,"../src/")
 
-makedocs(sitename="CLOUD.jl")
+makedocs(sitename="CLOUD.jl", authors = "Tristan Montoya")
 
 deploydocs(#
     repo="github.com/tristanmontoya/CLOUD.jl.git"
