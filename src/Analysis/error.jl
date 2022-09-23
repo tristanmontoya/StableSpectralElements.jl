@@ -34,7 +34,7 @@ end
 
 function analyze(analysis::ErrorAnalysis{QuadratureL2, d}, 
     sol::Array{Float64,3}, 
-    exact_solution::AbstractParametrizedFunction{d}, 
+    exact_solution::AbstractGridFunction{d}, 
     t::Float64=0.0) where {d}
 
     @unpack norm, N_eq, N_el, V_err, x_err, results_path = analysis 

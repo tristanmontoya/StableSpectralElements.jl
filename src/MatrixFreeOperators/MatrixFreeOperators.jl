@@ -5,8 +5,6 @@ module MatrixFreeOperators
     
     const Operator1D{T} = Union{UniformScaling{Bool}, 
         Matrix{T}, Transpose{T,Matrix{T}}}
-
-    const NotIdentity{T} = Union{Matrix{T}, Transpose{T,Matrix{T}}}
     
     export TensorProductMap
     include("tensor_product.jl")

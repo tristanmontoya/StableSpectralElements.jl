@@ -1,23 +1,23 @@
-module ParametrizedFunctions
+module GridFunctions
 
     using UnPack
     
-    export AbstractParametrizedFunction, SumOfFunctions, ConstantFunction, InitialDataSine, InitialDataGaussian, InitialDataGassner, BurgersSolution, SourceTermGassner, GaussianNoise, NoSourceTerm, evaluate
+    export AbstractGridFunction, SumOfFunctions, ConstantFunction, InitialDataSine, InitialDataGaussian, InitialDataGassner, BurgersSolution, SourceTermGassner, GaussianNoise, NoSourceTerm, evaluate
     
-    abstract type AbstractParametrizedFunction{d} end
+    abstract type AbstractGridFunction{d} end
 
-    struct SumOfFunctions{d} <: AbstractParametrizedFunction{d}
-        f::AbstractParametrizedFunction{d}
-        g::AbstractParametrizedFunction{d}
+    struct SumOfFunctions{d} <: AbstractGridFunction{d}
+        f::AbstractGridFunction{d}
+        g::AbstractGridFunction{d}
         N_eq::Int
 
-        function SumOfFunctions(f::AbstractParametrizedFunction{d},
-            g::AbstractParametrizedFunction{d}) where {d}
+        function SumOfFunctions(f::AbstractGridFunction{d},
+            g::AbstractGridFunction{d}) where {d}
             return new{d}(f,g,f.N_eq)
         end
     end
 
-    struct ConstantFunction{d} <: AbstractParametrizedFunction{d}
+    struct ConstantFunction{d} <: AbstractGridFunction{d}
         c::Float64
         N_eq::Int
 
@@ -26,7 +26,7 @@ module ParametrizedFunctions
         end
     end
 
-    struct InitialDataSine{d} <: AbstractParametrizedFunction{d}
+    struct InitialDataSine{d} <: AbstractGridFunction{d}
         A::Float64  # amplitude
         k::NTuple{d,Float64}  # wave number in each direction
         N_eq::Int
@@ -37,7 +37,7 @@ module ParametrizedFunctions
         end
     end
 
-    struct InitialDataGaussian{d} <: AbstractParametrizedFunction{d}
+    struct InitialDataGaussian{d} <: AbstractGridFunction{d}
         A::Float64  # amplitude
         σ::Float64 # width
         x₀::NTuple{d,Float64}
@@ -48,7 +48,7 @@ module ParametrizedFunctions
         end
     end
 
-    struct InitialDataGassner <: AbstractParametrizedFunction{1} 
+    struct InitialDataGassner <: AbstractGridFunction{1} 
         k::Float64
         ϵ::Float64
         N_eq::Int
@@ -58,7 +58,7 @@ module ParametrizedFunctions
         end
     end
 
-    struct SourceTermGassner <: AbstractParametrizedFunction{1} 
+    struct SourceTermGassner <: AbstractGridFunction{1} 
         k::Float64
         ϵ::Float64
         N_eq::Int
@@ -67,15 +67,15 @@ module ParametrizedFunctions
             return new(k,ϵ,1)
         end
     end
-    struct GaussianNoise{d} <: AbstractParametrizedFunction{d}
+    struct GaussianNoise{d} <: AbstractGridFunction{d}
         σ::Float64
         N_eq::Int
     end
 
-    struct NoSourceTerm{d} <: AbstractParametrizedFunction{d} end
+    struct NoSourceTerm{d} <: AbstractGridFunction{d} end
 
-    function Base.:+(f::AbstractParametrizedFunction{d},
-        g::AbstractParametrizedFunction{d}) where {d}
+    function Base.:+(f::AbstractGridFunction{d},
+        g::AbstractGridFunction{d}) where {d}
         return SumOfFunctions(f,g)
     end
 
@@ -124,7 +124,7 @@ module ParametrizedFunctions
         return [f.σ*randn() for e in 1:f.N_eq]
     end
 
-    function evaluate(f::AbstractParametrizedFunction{d},
+    function evaluate(f::AbstractGridFunction{d},
         x::NTuple{d,Vector{Float64}}, t::Float64=0.0) where {d}
         N = length(x[1])
         u0 = Matrix{Float64}(undef, N, f.N_eq)
@@ -134,7 +134,7 @@ module ParametrizedFunctions
         return u0
     end
 
-    function evaluate(f::AbstractParametrizedFunction{d},
+    function evaluate(f::AbstractGridFunction{d},
         x::NTuple{d,Matrix{Float64}},t::Float64=0.0) where {d}
         N, N_el = size(x[1])
         u0 = Array{Float64}(undef, N, f.N_eq, N_el)

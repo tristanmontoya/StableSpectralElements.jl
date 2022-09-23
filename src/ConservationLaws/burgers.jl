@@ -5,11 +5,11 @@ Inviscid Burgers' equation
 """
 struct InviscidBurgersEquation{d} <: AbstractConservationLaw{d,Hyperbolic}
     a::NTuple{d,Float64} 
-    source_term::AbstractParametrizedFunction{d}
+    source_term::AbstractGridFunction{d}
     N_eq::Int
 
     function InviscidBurgersEquation(a::NTuple{d,Float64}, 
-        source_term::AbstractParametrizedFunction{d}) where {d}
+        source_term::AbstractGridFunction{d}) where {d}
         return new{d}(a, source_term, 1)
     end
 end
@@ -22,11 +22,11 @@ Viscous Burgers' equation (1D)
 struct ViscousBurgersEquation{d} <: AbstractConservationLaw{d,Mixed}
     a::NTuple{d,Float64}
     b::Float64
-    source_term::AbstractParametrizedFunction{d}
+    source_term::AbstractGridFunction{d}
     N_eq::Int
 
     function LinearAdvectionDiffusionEquation(a::NTuple{d,Float64}, 
-        b::Float64, source_term::AbstractParametrizedFunction{d}) where {d}
+        b::Float64, source_term::AbstractGridFunction{d}) where {d}
         return new{d}(a, b, source_term, 1)
     end
 end

@@ -6,7 +6,7 @@ function test_2d(
     approx_type::AbstractApproximationType,
     elem_type::AbstractElemShape,
     conservation_law::AbstractConservationLaw,
-    initial_data::AbstractParametrizedFunction{2},
+    initial_data::AbstractGridFunction{2},
     form::AbstractResidualForm,
     strategy::AbstractStrategy,
     M::Int, 

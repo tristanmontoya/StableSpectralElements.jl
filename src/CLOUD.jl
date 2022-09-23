@@ -6,8 +6,8 @@ module CLOUD
 
     using Reexport
 
-    include("ParametrizedFunctions/ParametrizedFunctions.jl")
-    @reexport using .ParametrizedFunctions
+    include("GridFunctions/GridFunctions.jl")
+    @reexport using .GridFunctions
 
     include("ConservationLaws/ConservationLaws.jl")
     @reexport using .ConservationLaws

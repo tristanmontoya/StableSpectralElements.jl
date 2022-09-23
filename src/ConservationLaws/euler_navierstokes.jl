@@ -3,11 +3,11 @@ Euler equations
 """
 struct EulerEquations{d} <: AbstractConservationLaw{d,Hyperbolic}
     γ::Float64
-    source_term::AbstractParametrizedFunction{d}
+    source_term::AbstractGridFunction{d}
     N_eq::Int
 
     function EulerEquations{d}(γ::Float64, 
-        source_term::AbstractParametrizedFunction{d}) where {d}
+        source_term::AbstractGridFunction{d}) where {d}
         return new{d}(γ,source_term, d+2)
     end
 end
@@ -16,7 +16,7 @@ struct NavierStokesEquations{d} <: AbstractConservationLaw{d,Mixed} end
 
 const EulerType{d} = Union{EulerEquations{d}, NavierStokesEquations{d}}
 
-struct EntropyWave1D <: AbstractParametrizedFunction{1}
+struct EntropyWave1D <: AbstractGridFunction{1}
     conservation_law::EulerType{1}
     ϵ::Float64
     N_eq::Int

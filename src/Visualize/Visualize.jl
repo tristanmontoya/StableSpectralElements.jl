@@ -10,7 +10,7 @@ module Visualize
     using Triangulate
 
     using ..SpatialDiscretizations: SpatialDiscretization
-    using ..ParametrizedFunctions: AbstractParametrizedFunction, evaluate
+    using ..GridFunctions: AbstractGridFunction, evaluate
     export visualize, plotter
     include("plot_1d.jl")
 

@@ -1,6 +1,6 @@
 """Analyze results from grid refinement studies"""
 struct RefinementAnalysis{d} <: AbstractAnalysis
-    exact_solution::AbstractParametrizedFunction{d}
+    exact_solution::AbstractGridFunction{d}
     sequence_path::String
     analysis_path::String
     label::String

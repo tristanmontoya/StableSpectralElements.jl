@@ -37,9 +37,9 @@ or C = A ⊗ B. The action of this matrix on a vector x is
                 = ∑_{β1} A[α1,β1] Z[α2,β1] 
 """
 function tensor_mul!(y::AbstractVector, 
-    A::NotIdentity{T}, B::NotIdentity{T},
+    A::AbstractMatrix, B::AbstractMatrix,
     σᵢ::Matrix{Int}, σₒ::Matrix{Int},
-    x::AbstractVector) where {T}
+    x::AbstractVector)
 
     (M1,M2) = size(σₒ)
     (N1,N2) = size(σᵢ)
@@ -72,7 +72,7 @@ or C = A ⊗ I_{M2}. The action of this matrix on a vector x is
                 = ∑_{β1} A[α1,β1] x[σᵢ[β1,α2]] 
 """
 function tensor_mul!(y::AbstractVector, 
-    A::NotIdentity, ::UniformScaling,
+    A::AbstractMatrix, ::UniformScaling,
     σᵢ::Matrix{Int}, σₒ::Matrix{Int},
     x::AbstractVector)
 
@@ -98,7 +98,7 @@ or C = I_{M1} ⊗ B. The action of this matrix on a vector x is
                 = ∑_{β2} B[α2,β2] x[σᵢ[α1,β2]]) 
 """
 function tensor_mul!(y::AbstractVector, 
-    ::UniformScaling, B::NotIdentity,
+    ::UniformScaling, B::AbstractMatrix,
     σᵢ::Matrix{Int}, σₒ::Matrix{Int},
     x::AbstractVector)
 

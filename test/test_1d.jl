@@ -2,7 +2,7 @@ function test_1d(
     approx_type::AbstractApproximationType,
     elem_type::AbstractElemShape,
     conservation_law::AbstractConservationLaw,
-    initial_data::AbstractParametrizedFunction{1},
+    initial_data::AbstractGridFunction{1},
     form::AbstractResidualForm,
     strategy::AbstractStrategy,
     M::Int,

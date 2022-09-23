@@ -5,11 +5,11 @@ Linear advection equation
 """
 struct LinearAdvectionEquation{d} <: AbstractConservationLaw{d,Hyperbolic}
     a::NTuple{d,Float64} 
-    source_term::AbstractParametrizedFunction{d}
+    source_term::AbstractGridFunction{d}
     N_eq::Int
 
     function LinearAdvectionEquation(a::NTuple{d,Float64}, 
-        source_term::AbstractParametrizedFunction{d}) where {d}
+        source_term::AbstractGridFunction{d}) where {d}
         return new{d}(a, source_term, 1)
     end
 end
@@ -22,11 +22,11 @@ Linear advection-diffusion equation
 struct LinearAdvectionDiffusionEquation{d} <: AbstractConservationLaw{d,Mixed}
     a::NTuple{d,Float64}
     b::Float64
-    source_term::AbstractParametrizedFunction{d}
+    source_term::AbstractGridFunction{d}
     N_eq::Int
 
     function LinearAdvectionDiffusionEquation(a::NTuple{d,Float64}, 
-        b::Float64, source_term::AbstractParametrizedFunction{d}) where {d}
+        b::Float64, source_term::AbstractGridFunction{d}) where {d}
         return new{d}(a, b, source_term, 1)
     end
 end
@@ -143,7 +143,7 @@ function numerical_flux(conservation_law::LinearAdvectionDiffusionEquation{d},
 end
 
 function evaluate(
-    exact_solution::ExactSolution{d,LinearAdvectionEquation{d}, <:AbstractParametrizedFunction{d},NoSourceTerm{d}},
+    exact_solution::ExactSolution{d,LinearAdvectionEquation{d}, <:AbstractGridFunction{d},NoSourceTerm{d}},
     x::NTuple{d,Float64},t::Float64=0.0) where {d}
     @unpack initial_data, conservation_law = exact_solution
     

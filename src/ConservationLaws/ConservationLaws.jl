@@ -4,7 +4,7 @@ module ConservationLaws
     using LinearAlgebra: mul!, I
     using UnPack
 
-    import ..ParametrizedFunctions: AbstractParametrizedFunction, NoSourceTerm, InitialDataSine, InitialDataGaussian, InitialDataGassner, SourceTermGassner, evaluate
+    import ..GridFunctions: AbstractGridFunction, NoSourceTerm, InitialDataSine, InitialDataGaussian, InitialDataGassner, SourceTermGassner, evaluate
 
 
     export AbstractConservationLaw, AbstractPDEType, Parabolic, Hyperbolic, Mixed, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, NoInviscidFlux, NoViscousFlux, LaxFriedrichsNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, EntropyConservativeFlux, NoTwoPointFlux, ExactSolution
@@ -54,7 +54,7 @@ module ConservationLaws
     struct NoTwoPointFlux <: AbstractTwoPointFlux end
 
     """Generic structure for exact solution to PDE"""
-    struct ExactSolution{d,ConservationLaw,InitialData,SourceTerm} <: AbstractParametrizedFunction{d}
+    struct ExactSolution{d,ConservationLaw,InitialData,SourceTerm} <: AbstractGridFunction{d}
         conservation_law::ConservationLaw
         initial_data::InitialData
         periodic::Bool
@@ -62,7 +62,7 @@ module ConservationLaws
 
         function ExactSolution(
             conservation_law::AbstractConservationLaw{d,PDEType},
-            initial_data::AbstractParametrizedFunction{d};
+            initial_data::AbstractGridFunction{d};
             periodic::Bool=false) where {d, PDEType}
 
             return new{d,typeof(conservation_law),typeof(initial_data),typeof(conservation_law.source_term)}(

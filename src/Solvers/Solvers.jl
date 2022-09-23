@@ -10,7 +10,7 @@ module Solvers
     using ..ConservationLaws: AbstractConservationLaw, AbstractPDEType, Hyperbolic, Parabolic, Mixed, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, AbstractTwoPointFlux, NoInviscidFlux, NoViscousFlux, NoTwoPointFlux, NoSourceTerm, physical_flux, numerical_flux, LaxFriedrichsNumericalFlux, BR1
 
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization
-    using ..ParametrizedFunctions: AbstractParametrizedFunction, AbstractParametrizedFunction, NoSourceTerm, evaluate
+    using ..GridFunctions: AbstractGridFunction, AbstractGridFunction, NoSourceTerm, evaluate
 
     export AbstractResidualForm, AbstractMappingForm, AbstractStrategy, PhysicalOperators, Eager, Lazy, Solver, StandardMapping, SkewSymmetricMapping, CreanMapping, initialize, semidiscretize, precompute, apply_operators!, auxiliary_variable!, combine, get_dof, rhs!
 
@@ -69,7 +69,7 @@ module Solvers
                 spatial_discretization.mesh.mapP, form, strategy)
     end
 
-    function initialize(initial_data::AbstractParametrizedFunction,
+    function initialize(initial_data::AbstractGridFunction,
         conservation_law::AbstractConservationLaw,
         spatial_discretization::SpatialDiscretization{d}) where {d}
 
@@ -89,7 +89,7 @@ module Solvers
 
     function semidiscretize(
         conservation_law::AbstractConservationLaw,spatial_discretization::SpatialDiscretization,
-        initial_data::AbstractParametrizedFunction, 
+        initial_data::AbstractGridFunction, 
         form::AbstractResidualForm,
         tspan::NTuple{2,Float64}, 
         strategy::AbstractStrategy)

@@ -35,7 +35,7 @@ The action of this matrix on a vector x is
                 = ∑_{β1} A[α1,β1] Z[α2,β1] 
 """
 function tensor_mul!(y::AbstractVector, 
-    A::NotIdentity{T}, B::Vector{<:NotIdentity{T}},
+    A::AbstractMatrix{T}, B::Vector{<:AbstractMatrix{T}},
     σᵢ::Matrix{Int}, σₒ::Matrix{Int},
     x::AbstractVector) where {T}
 
