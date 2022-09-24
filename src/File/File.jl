@@ -6,7 +6,7 @@ module File
 
     using ..ConservationLaws: AbstractConservationLaw
     using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation
-    using ..ParametrizedFunctions: AbstractParametrizedFunction, evaluate
+    using ..GridFunctions: AbstractGridFunction, evaluate
     using ..Solvers: AbstractResidualForm, AbstractStrategy, Solver, initialize, get_dof
 
     export new_path, save_callback, save_project, save_solution
