@@ -7,31 +7,24 @@ module ConservationLaws
     import ..GridFunctions: AbstractGridFunction, NoSourceTerm, InitialDataSine, InitialDataGaussian, InitialDataGassner, SourceTermGassner, evaluate
 
 
-    export AbstractConservationLaw, AbstractPDEType, Parabolic, Hyperbolic, Mixed, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, NoInviscidFlux, NoViscousFlux, LaxFriedrichsNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, EntropyConservativeFlux, NoTwoPointFlux, ExactSolution
+    export AbstractConservationLaw, AbstractPDEType, Parabolic, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, NoInviscidFlux, NoViscousFlux, LaxFriedrichsNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, EntropyConservativeFlux, NoTwoPointFlux, ExactSolution
 
     abstract type AbstractConservationLaw{d, PDEType} end
     abstract type AbstractPDEType end
 
     """
-    Hyperbolic conservation law:
+    First-order conservation law:
 
     `∂ₜu + ∇⋅F(u) = s`
     """
-    struct Hyperbolic <: AbstractPDEType end
-        
+    struct FirstOrder <: AbstractPDEType end
+    
     """
-    Parabolic conservation law:
-
-    `∂ₜu + ∇⋅F(u,q) = s, q = ∇u` 
-    """
-    struct Parabolic <: AbstractPDEType end
-
-    """
-    Mixed hyperbolic-parabolic conservation law:
+    Second-order conservation law:
 
     `∂ₜu + ∇⋅(F¹(u) + F²(u,q)) = s, q = ∇u`
     """
-    struct Mixed <: AbstractPDEType end
+    struct SecondOrder <: AbstractPDEType end
 
     """First-order numerical fluxes"""
     abstract type AbstractInviscidNumericalFlux end

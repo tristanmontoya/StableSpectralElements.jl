@@ -3,7 +3,7 @@ Linear advection equation
 
 `∂ₜu + ∇⋅(au) = s`
 """
-struct LinearAdvectionEquation{d} <: AbstractConservationLaw{d,Hyperbolic}
+struct LinearAdvectionEquation{d} <: AbstractConservationLaw{d,FirstOrder}
     a::NTuple{d,Float64} 
     source_term::AbstractGridFunction{d}
     N_eq::Int
@@ -19,7 +19,7 @@ Linear advection-diffusion equation
 
 `∂ₜu + ∇⋅(au - b∇u) = s`
 """
-struct LinearAdvectionDiffusionEquation{d} <: AbstractConservationLaw{d,Mixed}
+struct LinearAdvectionDiffusionEquation{d} <: AbstractConservationLaw{d,SecondOrder}
     a::NTuple{d,Float64}
     b::Float64
     source_term::AbstractGridFunction{d}

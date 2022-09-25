@@ -1,7 +1,7 @@
 """
 Euler equations
 """
-struct EulerEquations{d} <: AbstractConservationLaw{d,Hyperbolic}
+struct EulerEquations{d} <: AbstractConservationLaw{d,FirstOrder}
     γ::Float64
     source_term::AbstractGridFunction{d}
     N_eq::Int
@@ -12,7 +12,7 @@ struct EulerEquations{d} <: AbstractConservationLaw{d,Hyperbolic}
     end
 end
 
-struct NavierStokesEquations{d} <: AbstractConservationLaw{d,Mixed} end
+struct NavierStokesEquations{d} <: AbstractConservationLaw{d,SecondOrder} end
 
 const EulerType{d} = Union{EulerEquations{d}, NavierStokesEquations{d}}
 

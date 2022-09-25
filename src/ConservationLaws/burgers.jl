@@ -3,7 +3,7 @@ Inviscid Burgers' equation
 
 `∂ₜu + ∇⋅(a ½u²) = s`
 """
-struct InviscidBurgersEquation{d} <: AbstractConservationLaw{d,Hyperbolic}
+struct InviscidBurgersEquation{d} <: AbstractConservationLaw{d,FirstOrder}
     a::NTuple{d,Float64} 
     source_term::AbstractGridFunction{d}
     N_eq::Int
@@ -19,7 +19,7 @@ Viscous Burgers' equation (1D)
 
 `∂ₜu + ∇⋅(a ½u² - b∇u) = s`
 """
-struct ViscousBurgersEquation{d} <: AbstractConservationLaw{d,Mixed}
+struct ViscousBurgersEquation{d} <: AbstractConservationLaw{d,SecondOrder}
     a::NTuple{d,Float64}
     b::Float64
     source_term::AbstractGridFunction{d}

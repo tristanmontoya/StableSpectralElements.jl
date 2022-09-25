@@ -84,10 +84,10 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
 end
 
 """
-Evaluate semi-discrete residual for a hyperbolic problem
+Evaluate semi-discrete residual for a first-order problem
 """
 function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
-    solver::Solver{d, <:AbstractResidualForm, Hyperbolic},
+    solver::Solver{d, <:AbstractResidualForm, FirstOrder},
     t::Float64) where {d}
 
     @timeit "rhs!" begin
@@ -142,10 +142,10 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
 end
 
 """
-Evaluate semi-discrete residual for a mixed/parabolic problem
+Evaluate semi-discrete residual for a second-order problem
 """
 function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
-    solver::Solver{d, <:AbstractResidualForm, <:Union{Mixed,Parabolic}},
+    solver::Solver{d, <:AbstractResidualForm, SecondOrder},
     t::Float64) where {d}
 
     @timeit "rhs!" begin
