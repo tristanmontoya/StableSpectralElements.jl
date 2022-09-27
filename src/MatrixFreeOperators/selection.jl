@@ -34,5 +34,6 @@ function LinearMaps._unsafe_mul!(y::AbstractVector,
             y[i] = sum(x[j] for j in transR.lmap.volume_ids[i])
         end
     end
+    
     return y
 end

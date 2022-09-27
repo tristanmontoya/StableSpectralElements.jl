@@ -47,14 +47,14 @@ function tensor_mul!(y::AbstractVector,
     Z = zeros(Float64, M2, N1)
     for α2 in 1:M2, β1 in 1:N1
         @simd for β2 in 1:N2
-            Z[α2,β1] += B[α2,β2]*x[σᵢ[β1,β2]]
+            @muladd Z[α2,β1] = Z[α2,β1] + B[α2,β2]*x[σᵢ[β1,β2]]
         end
     end
 
     for α1 in 1:M1, α2 in 1:M2
         y[σₒ[α1,α2]] = 0.0
         @simd for β1 in 1:N1
-            y[σₒ[α1,α2]] += A[α1,β1]*Z[α2,β1]
+            @muladd y[σₒ[α1,α2]] = y[σₒ[α1,α2]] + A[α1,β1]*Z[α2,β1]
         end
     end
 
@@ -82,7 +82,7 @@ function tensor_mul!(y::AbstractVector,
     for α1 in 1:M1, α2 in 1:M2
         y[σₒ[α1,α2]] = 0.0
         @simd for β1 in 1:N1
-            y[σₒ[α1,α2]] += A[α1,β1]*x[σᵢ[β1,α2]]
+            @muladd y[σₒ[α1,α2]] = y[σₒ[α1,α2]] + A[α1,β1]*x[σᵢ[β1,α2]]
         end
     end
     return y
@@ -108,7 +108,7 @@ function tensor_mul!(y::AbstractVector,
     for α1 in 1:M1, α2 in 1:M2
         y[σₒ[α1,α2]] = 0.0
         @simd for β2 in 1:N2
-            y[σₒ[α1,α2]] += B[α2,β2]*x[σᵢ[α1,β2]]
+            @muladd y[σₒ[α1,α2]] = y[σₒ[α1,α2]] + B[α2,β2]*x[σᵢ[α1,β2]]
         end
     end
     return y

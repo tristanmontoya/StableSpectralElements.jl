@@ -79,10 +79,11 @@ module Solvers
         N_p, N_eq, N_el = get_dof(spatial_discretization, conservation_law)
         
         u0 = Array{Float64}(undef, N_p, N_eq, N_el)
-        for k in 1:N_el
-            u0[:,:,k] = M[k] \ convert(Matrix, V' * W * 
-                Diagonal(geometric_factors.J_q[:,k]) * 
+        Threads.@threads for k in 1:N_el
+            rhs = similar(u0[:,:,k])
+            mul!(rhs, V' * W * Diagonal(geometric_factors.J_q[:,k]), 
                 evaluate(initial_data, Tuple(xyzq[m][:,k] for m in 1:d)))
+            u0[:,:,k] = M[k] \ rhs
         end
         return u0
     end
@@ -111,6 +112,7 @@ module Solvers
     function precompute(operators::PhysicalOperators{d}) where {d}
         @unpack VOL, FAC, SRC, M, V, Vf, scaled_normal = operators
         inv_M = inv(M)
+
         return PhysicalOperators{d}(
             Tuple(combine(inv_M*VOL[n]) for n in 1:d),
             combine(inv_M*FAC), 
@@ -136,31 +138,31 @@ module Solvers
         f::NTuple{d,Matrix{Float64}}, 
         f_fac::Matrix{Float64}, ::Eager,
         s::Union{Matrix{Float64},Nothing}) where {d}
+
+        @unpack VOL, FAC, SRC = operators
         to = get_timer(string("thread_timer_", Threads.threadid()))
-        
+        rhs = zero(residual) # only allocation
+
         @timeit to "volume terms" begin
-            # compute volume terms
-            volume_terms = zero(residual)
             @inbounds for m in 1:d
-                volume_terms += mul!(residual, operators.VOL[m], f[m])
+                rhs += mul!(residual, VOL[m], f[m])
             end
         end
 
         @timeit to "facet terms" begin
-            # compute facet terms
-            facet_terms = mul!(residual, operators.FAC, f_fac)
+            rhs += mul!(residual, FAC, f_fac)
         end
-
-        rhs = volume_terms + facet_terms
 
         if !isnothing(s)
             @timeit to "source terms" begin
-                source_terms = mul!(residual, operators.SRC, s)
+                rhs += mul!(residual, SRC, s)
             end
-            rhs = rhs + source_terms
         end
 
-        return rhs
+        # no mass matrix solve
+        residual = rhs
+
+        return residual
     end
 
     """
@@ -173,30 +175,28 @@ module Solvers
         ::Lazy,
         s::Union{Matrix{Float64},Nothing}) where {d}
 
+        @unpack VOL, FAC, SRC, M = operators
         to = get_timer(string("thread_timer_", Threads.threadid()))
+        rhs = zero(residual) # only allocation
 
         @timeit to "volume terms" begin
-            volume_terms = zero(residual)
             @inbounds for m in 1:d
-                volume_terms += mul!(residual, operators.VOL[m], f[m])
+                rhs += mul!(residual, VOL[m], f[m])
             end
         end
 
         @timeit to "facet terms" begin
-            facet_terms = mul!(residual, operators.FAC, f_fac)
+            rhs += mul!(residual, FAC, f_fac)
         end
- 
-        rhs = volume_terms + facet_terms
 
         if !isnothing(s)
             @timeit to "source terms" begin
-                source_terms = mul!(residual, operators.SRC, s)
+                rhs += mul!(residual, SRC, s)
             end
-            rhs = rhs + source_terms
         end
 
         @timeit to "mass matrix solve" begin
-            residual = operators.M \ rhs
+            residual = M \ rhs
         end
         
         return residual
@@ -212,17 +212,21 @@ module Solvers
         u_fac::Matrix{Float64}, 
         ::Eager) where {d}
 
+        @unpack VOL, FAC = operators
         to = get_timer(string("thread_timer_", Threads.threadid()))
+        rhs = similar(q) # only allocation
 
         @timeit to "volume terms" begin
-            volume_terms = -1.0*mul!(q, operators.VOL[m], u)
+            mul!(rhs, -VOL[m], u)
         end
 
         @timeit to "facet terms" begin
-            facet_terms = -1.0*mul!(q, operators.FAC, u_fac)
+            rhs += mul!(q, -FAC, u_fac)
         end
 
-        q = volume_terms + facet_terms
+        # no mass matrix solve
+        q = rhs
+
         return q
     end
 
@@ -238,18 +242,20 @@ module Solvers
 
         @unpack VOL, FAC, M = operators
         to = get_timer(string("thread_timer_", Threads.threadid()))
+        rhs = similar(q) # only allocation
 
         @timeit to "volume terms" begin
-            volume_terms = -1.0*mul!(q, VOL[m], u)
+            mul!(rhs, -VOL[m], u)
         end
 
         @timeit to "facet terms" begin
-            facet_terms = -1.0*mul!(q, FAC, u_fac)
+            rhs += mul!(q, -FAC, u_fac)
         end
         
         @timeit to "mass matrix solve" begin
-            q = M \ (volume_terms + facet_terms)
+            q = M \ rhs
         end
+
         return q
     end
 

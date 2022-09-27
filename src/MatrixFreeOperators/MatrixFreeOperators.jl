@@ -1,6 +1,6 @@
 module MatrixFreeOperators
 
-    using LinearAlgebra, LinearMaps
+    using LinearAlgebra, LinearMaps, MuladdMacro
     using UnPack
     
     const Operator1D{T} = Union{UniformScaling{Bool}, 

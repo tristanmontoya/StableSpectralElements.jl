@@ -46,14 +46,14 @@ function tensor_mul!(y::AbstractVector,
     Z = zeros(Float64, M2, N1)
     for α2 in 1:M2, β1 in 1:N1
         @simd for β2 in 1:N2[β1]
-            Z[α2,β1] += B[β1][α2,β2]*x[σᵢ[β1,β2]]
+            @muladd Z[α2,β1] = Z[α2,β1] + B[β1][α2,β2]*x[σᵢ[β1,β2]]
         end
     end
 
     for α1 in 1:M1, α2 in 1:M2
         y[σₒ[α1,α2]] = 0.0
         @simd for β1 in 1:N1
-            y[σₒ[α1,α2]] += A[α1,β1]*Z[α2,β1]
+            @muladd y[σₒ[α1,α2]] =  y[σₒ[α1,α2]] + A[α1,β1]*Z[α2,β1]
         end
     end
 
@@ -74,7 +74,7 @@ function LinearMaps._unsafe_mul!(y::AbstractVector,
     Z = zeros(Float64, M1, N2)
     for α1 in 1:M1, β2 in 1:N2
         @simd for β1 in 1:N1
-            Z[α1,β2] += A[β1,α1]*x[σₒ[β1,β2]]
+            @muladd Z[α1,β2] = Z[α1,β2] + A[β1,α1]*x[σₒ[β1,β2]]
         end
     end
 
@@ -82,7 +82,7 @@ function LinearMaps._unsafe_mul!(y::AbstractVector,
         for α2 in 1:M2[α1]
             y[σᵢ[α1,α2]] = 0.0
             @simd for β2 in 1:N2
-                y[σᵢ[α1,α2]] += B[α1][β2,α2]*Z[α1,β2]
+                @muladd y[σᵢ[α1,α2]] = y[σᵢ[α1,α2]] + B[α1][β2,α2]*Z[α1,β2]
             end
         end
     end

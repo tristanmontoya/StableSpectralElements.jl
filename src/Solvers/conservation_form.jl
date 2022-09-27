@@ -91,39 +91,45 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
     t::Float64) where {d}
 
     @timeit "rhs!" begin
+
         @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
         @unpack inviscid_numerical_flux = form
         @unpack source_term, N_eq = conservation_law
 
         N_el = size(operators,1)
+        N_q = size(operators[1].V,1)
         N_f = size(operators[1].Vf,1)
-        u_facet = Array{Float64}(undef, N_f, N_eq, N_el)
 
-        # get all facet state values
+        # get all internal facet state values
+        u_in = Array{Float64}(undef, N_f, N_eq, N_el)
         Threads.@threads for k in 1:N_el
-            u_facet[:,:,k] = @timeit get_timer(string("thread_timer_", Threads.threadid())) "extrap solution" convert(
-                Matrix, operators[k].Vf * u[:,:,k])
+            to = get_timer(string("thread_timer_", Threads.threadid()))
+            u_in[:,:,k] = @timeit to "extrap solution" mul!(
+                similar(u_in[:,:,k]), operators[k].Vf, u[:,:,k])
         end
 
         # evaluate all local residuals
         Threads.@threads for k in 1:N_el
+
+            @unpack V, scaled_normal = operators[k]
             to = get_timer(string("thread_timer_", Threads.threadid()))
 
-            # gather external state to element
-            @timeit to "gather ext state" begin
-                u_out = Matrix{Float64}(undef, N_f, N_eq)
-                @inbounds for e in 1:N_eq
-                    u_out[:,e] = u_facet[:,e,:][connectivity[:,k]]
-                end
-            end
-            
-            # evaluate physical and numerical flux
-            f = @timeit to "eval flux" physical_flux(
-                conservation_law, Matrix(operators[k].V * u[:,:,k]))
+            # gather external state at facet nodes
+            u_out =  @timeit to "gather ext state" hcat(
+                [u_in[:,e,:][connectivity[:,k]] for e in 1:N_eq]...)
+
+            # evaluate numerical flux at facet nodes
             f_star = @timeit to "eval num flux" numerical_flux(
                 conservation_law, inviscid_numerical_flux,
-                u_facet[:,:,k], u_out, operators[k].scaled_normal)
-            
+                u_in[:,:,k], u_out, scaled_normal)
+
+            # evaluate solution at volume nodes
+            u_nodal = Matrix{Float64}(undef,N_q,N_eq)
+            @timeit to "eval solution" mul!(u_nodal, V, u[:,:,k])
+
+            # evaluate physical flux at volume nodes
+            f = @timeit to "eval flux" physical_flux(conservation_law, u_nodal)
+
             # evaluate source term, if there is one
             if conservation_law.source_term isa NoSourceTerm
                 s = nothing
@@ -132,12 +138,11 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                     source_term, Tuple(x_q[m][:,k] for m in 1:d),t)
             end
 
-            # apply operators to obtain residual as
-            # du/dt = M \ (VOL⋅f + FAC⋅f_star + SRC⋅s)
             dudt[:,:,k] = @timeit to "eval residual" apply_operators!(
                 dudt[:,:,k], operators[k], f, f_star, strategy, s)
         end
     end
+
     return dudt
 end
 
@@ -155,16 +160,19 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
         
         N_el = size(operators,1)
         N_f, N_p = size(operators[1].Vf)
-        u_facet = Array{Float64}(undef, N_f, N_eq, N_el)
+        N_q = size(operators[1].V,1)
+        u_in = Array{Float64}(undef, N_f, N_eq, N_el)
 
         # auxiliary variable q = ∇u
         q = Tuple(Array{Float64}(undef, N_p, N_eq, N_el) for m in 1:d) 
         q_facet = Tuple(Array{Float64}(undef, N_f, N_eq, N_el) for m in 1:d)
 
-        # get all facet state values
+        # get all internal facet state values
+        u_in = Array{Float64}(undef, N_f, N_eq, N_el)
         Threads.@threads for k in 1:N_el
-            u_facet[:,:,k] = @timeit get_timer(string("thread_timer_", Threads.threadid())) "extrap solution" convert(
-                Matrix, operators[k].Vf * u[:,:,k])
+            to = get_timer(string("thread_timer_", Threads.threadid()))
+            u_in[:,:,k] = @timeit to "extrap solution" mul!(
+                similar(u_in[:,:,k]), operators[k].Vf, u[:,:,k])
         end
 
         # evaluate auxiliary variable 
@@ -176,7 +184,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                 @timeit to "gather extern state" begin
                     u_out = Matrix{Float64}(undef, N_f, N_eq)
                     @inbounds for e in 1:N_eq
-                        u_out[:,:,e] = u_facet[:,e,:][connectivity[:,k]]
+                        u_out[:,:,e] = u_in[:,e,:][connectivity[:,k]]
                     end
                 end
                 
@@ -187,7 +195,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                 # evaluate numerical trace (d-vector of approximations to u nJf)
                 u_star = @timeit to "eval num trace" numerical_flux(
                     conservation_law, viscous_numerical_flux,
-                    u_facet[:,:,k], u_out, operators[k].scaled_normal)
+                    u_in[:,:,k], u_out, operators[k].scaled_normal)
                 
                 # apply operators
                 @timeit to "apply operators" begin
@@ -217,7 +225,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                 @timeit to "gather extern state" begin
                     u_out = Matrix{Float64}(undef, N_f, N_eq)
                     @inbounds for e in 1:N_eq
-                        u_out[:,e] = u_facet[:,e,:][connectivity[:,k]]
+                        u_out[:,e] = u_in[:,e,:][connectivity[:,k]]
                     end
                     q_out = Tuple(Matrix{Float64}(undef, N_f, N_eq) 
                         for m in 1:d)
@@ -234,13 +242,13 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                 # evaluate inviscid numerical flux 
                 f_star_inv = @timeit to "eval inv num flux" numerical_flux(
                     conservation_law, inviscid_numerical_flux,
-                    u_facet[:,:,k], u_out, operators[k].scaled_normal)
+                    u_in[:,:,k], u_out, operators[k].scaled_normal)
                     
                 # evaluate viscous numerical flux
                 f_star_vis = 
                     @timeit to "eval visc num flux" numerical_flux(
                         conservation_law, viscous_numerical_flux,
-                        u_facet[:,:,k], u_out, 
+                        u_in[:,:,k], u_out, 
                         Tuple(q_facet[m][:,:,k] for m in 1:d), 
                         Tuple(q_out[m] for m in 1:d),
                         operators[k].scaled_normal)
