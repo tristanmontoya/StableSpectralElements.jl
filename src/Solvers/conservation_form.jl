@@ -26,7 +26,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
         spatial_discretization.reference_approximation.reference_element
     @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
 
-    operators = Array{PhysicalOperators}(undef, N_el)
+    operators = Array{DiscretizationOperators}(undef, N_el)
     for k in 1:N_el
         if d == 1
             VOL = (-V' * W * D[1] + Diagonal(nrstJ[1]) * R,)
@@ -41,7 +41,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
         end
         FAC = -Vf' * B
         SRC = V' * W * Diagonal(J_q[:,k])
-        operators[k] = PhysicalOperators{d}(VOL, FAC, SRC, M[k], V, Vf,
+        operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC, M[k], V, Vf,
             Tuple(nJf[m][:,k] for m in 1:d))
     end
     return operators
@@ -58,7 +58,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     @unpack nrstJ = reference_approximation.reference_element
     @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
 
-    operators = Array{PhysicalOperators}(undef, N_el)
+    operators = Array{DiscretizationOperators}(undef, N_el)
     for k in 1:N_el
         if d == 1
             VOL = (ADVw[1],)
@@ -77,7 +77,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
         end
         FAC = -Vf' * B
         SRC = V' * W * Diagonal(J_q[:,k])
-        operators[k] = PhysicalOperators{d}(VOL, FAC, SRC, M[k], V, Vf,
+        operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC, M[k], V, Vf,
             Tuple(nJf[m][:,k] for m in 1:d))
     end
     return operators

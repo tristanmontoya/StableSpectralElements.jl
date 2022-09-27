@@ -12,7 +12,7 @@ module Solvers
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization
     using ..GridFunctions: AbstractGridFunction, AbstractGridFunction, NoSourceTerm, evaluate
 
-    export AbstractResidualForm, AbstractMappingForm, AbstractStrategy, PhysicalOperators, Eager, Lazy, Solver, StandardMapping, SkewSymmetricMapping, CreanMapping, initialize, semidiscretize, precompute, apply_operators!, auxiliary_variable!, combine, get_dof, rhs!
+    export AbstractResidualForm, AbstractMappingForm, AbstractStrategy, DiscretizationOperators, Eager, Lazy, Solver, StandardMapping, SkewSymmetricMapping, CreanMapping, initialize, semidiscretize, precompute, apply_operators!, auxiliary_variable!, combine, get_dof, rhs!
 
     abstract type AbstractResidualForm{MappingForm, TwoPointFlux} end
     abstract type AbstractMappingForm end
@@ -24,7 +24,7 @@ module Solvers
     struct StandardMapping <: AbstractMappingForm end
     struct SkewSymmetricMapping <: AbstractMappingForm end
 
-    struct PhysicalOperators{d}
+    struct DiscretizationOperators{d}
         VOL::NTuple{d,LinearMap}
         FAC::LinearMap
         SRC::LinearMap
@@ -36,7 +36,7 @@ module Solvers
 
     struct Solver{d,ResidualForm,PDEType}
         conservation_law::AbstractConservationLaw{d,PDEType}
-        operators::Vector{<:PhysicalOperators} # shouldn't actually need subtype
+        operators::Vector{<:DiscretizationOperators}
         x_q::NTuple{d,Matrix{Float64}}
         connectivity::Matrix{Int}
         form::ResidualForm
@@ -109,11 +109,13 @@ module Solvers
         return ODEProblem(rhs!, u0, tspan, solver)
     end
 
-    function precompute(operators::PhysicalOperators{d}) where {d}
+    function precompute(operators::DiscretizationOperators{d}) where {d}
         @unpack VOL, FAC, SRC, M, V, Vf, scaled_normal = operators
+
+        #precompute the physical mass matrix inverse
         inv_M = inv(M)
 
-        return PhysicalOperators{d}(
+        return DiscretizationOperators{d}(
             Tuple(combine(inv_M*VOL[n]) for n in 1:d),
             combine(inv_M*FAC), 
             combine(inv_M*SRC),
@@ -134,7 +136,7 @@ module Solvers
         Physical-operator form
     """
     function apply_operators!(residual::Matrix{Float64},
-        operators::PhysicalOperators{d},  
+        operators::DiscretizationOperators{d},  
         f::NTuple{d,Matrix{Float64}}, 
         f_fac::Matrix{Float64}, ::Eager,
         s::Union{Matrix{Float64},Nothing}) where {d}
@@ -169,7 +171,7 @@ module Solvers
         Reference-operator form
     """
     function apply_operators!(residual::Matrix{Float64},
-        operators::PhysicalOperators{d},
+        operators::DiscretizationOperators{d},
         f::NTuple{d,Matrix{Float64}}, 
         f_fac::Matrix{Float64}, 
         ::Lazy,
@@ -207,7 +209,7 @@ module Solvers
     """
     function auxiliary_variable!(m::Int, 
         q::Matrix{Float64},
-        operators::PhysicalOperators{d},
+        operators::DiscretizationOperators{d},
         u::Matrix{Float64},
         u_fac::Matrix{Float64}, 
         ::Eager) where {d}
@@ -235,7 +237,7 @@ module Solvers
     """
     function auxiliary_variable!(m::Int, 
         q::Matrix{Float64},
-        operators::PhysicalOperators{d},
+        operators::DiscretizationOperators{d},
         u::Matrix{Float64},
         u_fac::Matrix{Float64}, 
         ::Lazy) where {d}
@@ -278,7 +280,7 @@ Compute the flux-differencing term (D ⊙ F)1 (note: this currently is not suppo
     end
 
     function apply_operators!(residual::Matrix{Float64},
-        operators::PhysicalOperators{d},
+        operators::DiscretizationOperators{d},
         F::NTuple{d,Array{Float64,3}}, 
         f_fac::Matrix{Float64}, 
         ::Lazy,
@@ -313,7 +315,7 @@ Compute the flux-differencing term (D ⊙ F)1 (note: this currently is not suppo
     end
 
     function apply_operators!(residual::Matrix{Float64},
-        operators::PhysicalOperators{d},
+        operators::DiscretizationOperators{d},
         F::NTuple{d,Array{Float64,3}}, 
         f_fac::Matrix{Float64}, 
         ::Eager,

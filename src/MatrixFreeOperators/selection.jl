@@ -1,13 +1,13 @@
 """
 Select the nodes corresponding to `facet_node_ids` from a vector of volume nodes (avoids multiplication by zeros)
 """
-struct SelectionMap{T} <: LinearMaps.LinearMap{T}
+struct SelectionMap <: LinearMaps.LinearMap{Float64}
     facet_ids::Vector{Int} # vol node inds for each fac node
     volume_ids::Tuple{Vararg{Vector{Int}}} # fac node inds for each vol node
 end
 
 function SelectionMap(facet_ids::Vector{Int}, N_vol::Int)
-    return SelectionMap{Float64}(facet_ids, 
+    return SelectionMap(facet_ids, 
         Tuple(findall(j->j==i, facet_ids) for i in 1:N_vol))
 end
 
@@ -21,19 +21,19 @@ function LinearAlgebra.mul!(y::AbstractVector,
 end
 
 function LinearMaps._unsafe_mul!(y::AbstractVector, 
-    transR::LinearMaps.TransposeMap{T, SelectionMap{T}},
-    x::AbstractVector) where {T}
+    transR::LinearMaps.TransposeMap{Float64, <:SelectionMap},
+    x::AbstractVector)
     
     LinearMaps.check_dim_mul(y, transR, x)
-    N_vol = length(transR.lmap.volume_ids)
+    @unpack volume_ids = transR.lmap
     
-    @simd for i in 1:N_vol
-        if isempty(transR.lmap.volume_ids[i])
+    @simd for i in eachindex(volume_ids)
+        if isempty(volume_ids[i])
             y[i] = 0.0
         else
-            y[i] = sum(x[j] for j in transR.lmap.volume_ids[i])
+            y[i] = sum(x[j] for j in volume_ids[i])
         end
     end
-    
+
     return y
 end

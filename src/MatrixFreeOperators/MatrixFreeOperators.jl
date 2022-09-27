@@ -1,10 +1,6 @@
 module MatrixFreeOperators
 
-    using LinearAlgebra, LinearMaps, MuladdMacro
-    using UnPack
-    
-    const Operator1D{T} = Union{UniformScaling{Bool}, 
-        Matrix{T}, Transpose{T,Matrix{T}}}
+    using LinearAlgebra, LinearMaps, MuladdMacro, UnPack
     
     export TensorProductMap
     include("tensor_product.jl")

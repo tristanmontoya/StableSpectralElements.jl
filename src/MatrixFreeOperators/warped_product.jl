@@ -1,27 +1,15 @@
-
 """
-Warped tensor-product operator
-
-The primal operator takes a partially tenorized vector to a fully tensorized vector
+Warped tensor-product operator (e.g. for Dubiner-type bases)
 """    
-struct WarpedTensorProductMap{T} <: LinearMaps.LinearMap{T}
-    A::Operator1D{T}
-    B::Vector{<:Operator1D{T}}
+struct WarpedTensorProductMap{A_type, B_type} <: LinearMaps.LinearMap{Float64}
+    A::A_type
+    B::Vector{B_type}
     σᵢ::Matrix{Int}
     σₒ::Matrix{Int}
 end
 
 Base.size(C::WarpedTensorProductMap) = (count(a->a>0,C.σₒ), 
     count(a->a>0,C.σᵢ))
-
-function LinearAlgebra.mul!(y::AbstractVector, 
-    C::WarpedTensorProductMap, x::AbstractVector)
-    
-    LinearMaps.check_dim_mul(y, C, x)
-    @unpack A, B, σᵢ, σₒ = C
-
-    return tensor_mul!(y,A,B,σᵢ,σₒ,x)
-end
 
 """
 Multiply a vector of length Σ_{β1}N2[β1] by the M1*M2 x Σ_{β1}N2[β1] matrix
@@ -34,11 +22,11 @@ The action of this matrix on a vector x is
                 = ∑_{β1} A[α1,β1] (∑_{β2} B[β1][α2,β2] x[σᵢ[β1,β2]]) 
                 = ∑_{β1} A[α1,β1] Z[α2,β1] 
 """
-function tensor_mul!(y::AbstractVector, 
-    A::AbstractMatrix{T}, B::Vector{<:AbstractMatrix{T}},
-    σᵢ::Matrix{Int}, σₒ::Matrix{Int},
-    x::AbstractVector) where {T}
-
+function LinearAlgebra.mul!(y::AbstractVector, 
+    C::WarpedTensorProductMap, x::AbstractVector)
+    
+    LinearMaps.check_dim_mul(y, C, x)
+    @unpack A, B, σᵢ, σₒ = C
     (M1,M2) = size(σₒ)
     N1 = size(σᵢ,1)
     N2 = [count(a -> a>0, σᵢ[β1,:]) for β1 in 1:N1]
@@ -61,8 +49,8 @@ function tensor_mul!(y::AbstractVector,
 end
 
 function LinearMaps._unsafe_mul!(y::AbstractVector, 
-    transC::LinearMaps.TransposeMap{T, WarpedTensorProductMap{T}},
-    x::AbstractVector) where {T}
+    transC::LinearMaps.TransposeMap{Float64, <:WarpedTensorProductMap},
+    x::AbstractVector)
 
     LinearMaps.check_dim_mul(y, transC, x)
     @unpack A, B, σᵢ, σₒ = transC.lmap
