@@ -15,13 +15,101 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
         StrongConservationForm(form.mapping_form))
 end
 
+#TODO add flux differencing operators (old code below does not work)
+
+#=
+"""
+Compute the flux-differencing term (D ⊙ F)1 (note: this currently is not supported in this version)
+"""
+    function flux_diff(D::LinearMaps.WrappedMap, F::AbstractArray{Float64,3})
+        N_p = size(D,1)
+        N_eq = size(F,3)
+
+        y = Matrix{Float64}(undef,N_p,N_eq)
+        
+        for l in 1:N_eq, i in 1:N_p
+            y[i,l] = dot(D.lmap[i,:], F[i,:,l])
+        end
+        return 2.0*y
+    end
+
+    function apply_operators!(residual::Matrix{Float64},
+        operators::DiscretizationOperators{d},
+        F::NTuple{d,Array{Float64,3}}, 
+        f_fac::Matrix{Float64}, 
+        ::ReferenceOperator,
+        s::Union{Matrix{Float64},Nothing}=nothing) where {d}
+        
+
+        @CLOUD_timeit "volume terms" begin
+            volume_terms = zero(residual)
+            @inbounds for m in 1:d
+                volume_terms += flux_diff(operators.VOL[m], F[m])
+            end
+        end
+
+        @CLOUD_timeit "facet terms" begin
+            facet_terms = mul!(residual, operators.FAC, f_fac)
+        end
+
+        rhs = volume_terms + facet_terms
+ 
+        if !isnothing(s)
+            @CLOUD_timeit "source terms" begin
+                source_terms = mul!(residual, operators.SRC, s)
+            end
+            rhs = rhs + source_terms
+        end
+
+        @CLOUD_timeit "mass matrix solve" begin
+            residual = operators.M \ rhs
+        end
+        
+        return residual
+    end
+
+    function apply_operators!(residual::Matrix{Float64},
+        operators::DiscretizationOperators{d},
+        F::NTuple{d,Array{Float64,3}}, 
+        f_fac::Matrix{Float64}, 
+        ::PhysicalOperator,
+        s::Union{Matrix{Float64},Nothing}=nothing) where {d}
+        
+
+        @CLOUD_timeit "volume terms" begin
+            # compute volume terms
+            volume_terms = zero(residual)
+            for m in 1:d
+                volume_terms += flux_diff(operators.VOL[m], F[m])
+            end
+        end
+
+        @CLOUD_timeit "facet terms" begin
+            # compute facet terms
+            facet_terms = mul!(residual, operators.FAC, f_fac)
+        end
+
+        rhs = volume_terms + facet_terms
+
+        if !isnothing(s)
+            @CLOUD_timeit "source terms" begin
+                source_terms = mul!(residual, operators.SRC, s)
+            end
+            rhs = rhs + source_terms
+        end
+
+        return rhs
+        return residual
+    end
+=#
+
 """
 Evaluate semi-discrete residual for strong flux-differencing form
 """
 function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
     solver::Solver{StrongFluxDiffForm, <:AbstractDiscretizationOperators, d, N_eq}, t::Float64; print::Bool=false) where {d, N_eq}
 
-    @timeit "rhs!" begin
+    @CLOUD_timeit "rhs!" begin
 
         @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
 
@@ -32,7 +120,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
         # get all facet state values
         for k in 1:N_el
             u_facet[:,:,k] = 
-                @timeit "extrapolate solution" convert(
+                @CLOUD_timeit "extrapolate solution" convert(
                     Matrix, operators[k].Vf * u[:,:,k])
         end
 
@@ -42,30 +130,30 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             u_out = Matrix{Float64}(undef, N_f, N_eq)
 
             for e in 1:N_eq
-                u_out[:,e] = @timeit "gather external state" u_facet[
+                u_out[:,e] = @CLOUD_timeit "gather external state" u_facet[
                     :,e,:][connectivity[:,k]]
             end
             
-            f = @timeit "eval flux" physical_flux(
+            f = @CLOUD_timeit "eval flux" physical_flux(
                 conservation_law.inviscid_flux, 
                 convert(Matrix, operators[k].V * u[:,:,k]))
 
-            F = @timeit "eval volume two-point flux" two_point_flux(
+            F = @CLOUD_timeit "eval volume two-point flux" two_point_flux(
                 conservation_law.two_point_flux, 
                 convert(Matrix, operators[k].V * u[:,:,k]))
 
-            f_star = @timeit "eval numerical flux" numerical_flux(
+            f_star = @CLOUD_timeit "eval numerical flux" numerical_flux(
                 conservation_law.inviscid_numerical_flux,
                 u_facet[:,:,k], u_out, operators[k].scaled_normal)
 
-            f_fac = @timeit "eval facet flux diff" f_star - 
+            f_fac = @CLOUD_timeit "eval facet flux diff" f_star - 
                 sum(convert(Matrix,operators[k].NTR[m] * f[m]) 
                     for m in 1:d)
 
             if isnothing(conservation_law.source_term)
                 s = nothing
             else
-                s = @timeit "eval source term" evaluate(
+                s = @CLOUD_timeit "eval source term" evaluate(
                     conservation_law.source_term, 
                     Tuple(x_q[m][:,k] for m in 1:d), t)
             end
@@ -76,7 +164,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             end
             
             # apply operators
-            dudt[:,:,k] = @timeit "eval residual" apply_operators!(
+            dudt[:,:,k] = @CLOUD_timeit "eval residual" apply_operators!(
                 dudt[:,:,k], operators[k], F, f_fac, strategy, s)
         end
     end

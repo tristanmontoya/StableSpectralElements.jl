@@ -88,7 +88,6 @@ function ReferenceApproximation(approx_type::DGSEM,
     V_plot = LinearMap(vandermonde(elem_type, p, rstp...) / 
         vandermonde(elem_type, p, rstq...))
     
-    # sum-factorized lazy evaluation of (D₁, D₂) = (I ⊗ D, D ⊗ I) 
     D = (TensorProductMap(D_1D, I, sigma, sigma),
         TensorProductMap(I, D_1D, sigma, sigma))
 

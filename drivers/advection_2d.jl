@@ -178,7 +178,7 @@ function main(args)
     conservation_law = LinearAdvectionEquation(a)
     form = WeakConservationForm(mapping_form, 
             LaxFriedrichsNumericalFlux(λ))
-    strategy = Lazy()
+    strategy = ReferenceOperator()
 
     for n in 1:n_grids
 

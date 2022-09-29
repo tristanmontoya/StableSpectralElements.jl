@@ -8,7 +8,6 @@ end
 Base.size(C::TensorProductMap) = (size(C.σₒ,1)*size(C.σₒ,2), 
     size(C.σᵢ,1)*size(C.σᵢ,2))
 
-
 """
 Compute transpose using
 (A ⊗ B)ᵀ = Aᵀ ⊗ Bᵀ 
@@ -78,7 +77,7 @@ function LinearAlgebra.mul!(y::AbstractVector,
         end
     end
 
-    y = B.λ * y
+    y = B.λ .* y
     return y
 end
 
@@ -106,6 +105,6 @@ function LinearAlgebra.mul!(y::AbstractVector,
         end
     end
 
-    y = A.λ*y
+    y = A.λ .* y
     return y
 end

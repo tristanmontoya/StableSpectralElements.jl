@@ -46,7 +46,4 @@ module Analysis
 
     export RefinementAnalysis, RefinementAnalysisResults, run_refinement, get_tickslogscale
     include("refinement.jl")
-
-    export CLOUD_reset_timer, CLOUD_print_timer
-    include("timing.jl")
 end

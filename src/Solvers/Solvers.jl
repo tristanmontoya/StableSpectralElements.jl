@@ -6,20 +6,37 @@ module Solvers
     using TimerOutputs
     using LinearMaps: LinearMap
     using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
+    
 
     using ..ConservationLaws: AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, AbstractTwoPointFlux, NoInviscidFlux, NoViscousFlux, NoTwoPointFlux, NoSourceTerm, physical_flux, numerical_flux, LaxFriedrichsNumericalFlux, BR1
 
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization
     using ..GridFunctions: AbstractGridFunction, AbstractGridFunction, NoSourceTerm, evaluate
 
-    export AbstractResidualForm, AbstractMappingForm, AbstractStrategy, DiscretizationOperators, Eager, Lazy, Solver, StandardMapping, SkewSymmetricMapping, CreanMapping, initialize, semidiscretize, precompute, apply_operators!, auxiliary_variable!, combine, get_dof, rhs!
+    const timer = TimerOutput(); export timer
+    
+    macro time_first_thread(args...)
+        TimerOutputs.timer_expr(__module__, false, :($timer), args...)
+    end
+ 
+    macro CLOUD_timeit(args...)
+        esc(quote
+            if Threads.threadid() == 1
+                @time_first_thread($(args...))
+            else
+                esc($(last(args)))
+            end
+        end)
+    end
+    
+    export AbstractResidualForm, AbstractMappingForm, AbstractStrategy, DiscretizationOperators, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, apply_operators!, auxiliary_variable!, get_dof, rhs!
 
     abstract type AbstractResidualForm{MappingForm, TwoPointFlux} end
     abstract type AbstractMappingForm end
     abstract type AbstractStrategy end
 
-    struct Eager <: AbstractStrategy end
-    struct Lazy <: AbstractStrategy end
+    struct PhysicalOperator <: AbstractStrategy end
+    struct ReferenceOperator <: AbstractStrategy end
 
     struct StandardMapping <: AbstractMappingForm end
     struct SkewSymmetricMapping <: AbstractMappingForm end
@@ -43,312 +60,19 @@ module Solvers
         strategy::AbstractStrategy
     end
 
-    function Solver(conservation_law::AbstractConservationLaw,     
-        spatial_discretization::SpatialDiscretization,
-        form::AbstractResidualForm,
-        strategy::Lazy)
-
-        operators = make_operators(spatial_discretization, form)
-        return Solver(conservation_law, 
-            operators,
-            spatial_discretization.mesh.xyzq,
-            spatial_discretization.mesh.mapP, form, strategy)
-    end
-
-    function Solver(conservation_law::AbstractConservationLaw,     
-        spatial_discretization::SpatialDiscretization,
-        form::AbstractResidualForm,
-        strategy::Eager)
-
-        operators = make_operators(spatial_discretization, form)
-
-        return Solver(conservation_law, 
-                [precompute(operators[k]) 
-                    for k in 1:spatial_discretization.N_el],
-                spatial_discretization.mesh.xyzq,
-                spatial_discretization.mesh.mapP, form, strategy)
-    end
-
-    function initialize(initial_data::AbstractGridFunction,
-        conservation_law::AbstractConservationLaw,
-        spatial_discretization::SpatialDiscretization{d}) where {d}
-
-        @unpack M, geometric_factors = spatial_discretization
-        @unpack N_q, V, W = spatial_discretization.reference_approximation
-        @unpack xyzq = spatial_discretization.mesh
-        N_p, N_eq, N_el = get_dof(spatial_discretization, conservation_law)
-        
-        u0 = Array{Float64}(undef, N_p, N_eq, N_el)
-        Threads.@threads for k in 1:N_el
-            rhs = similar(u0[:,:,k])
-            mul!(rhs, V' * W * Diagonal(geometric_factors.J_q[:,k]), 
-                evaluate(initial_data, Tuple(xyzq[m][:,k] for m in 1:d)))
-            u0[:,:,k] = M[k] \ rhs
-        end
-        return u0
-    end
-
-    function semidiscretize(
-        conservation_law::AbstractConservationLaw,spatial_discretization::SpatialDiscretization,
-        initial_data::AbstractGridFunction, 
-        form::AbstractResidualForm,
-        tspan::NTuple{2,Float64}, 
-        strategy::AbstractStrategy)
-
-        u0 = initialize(
-            initial_data,
-            conservation_law,
-            spatial_discretization)
-
-        return semidiscretize(Solver(conservation_law,spatial_discretization,
-            form,strategy),u0, tspan)
-    end
-
-    function semidiscretize(solver::Solver, u0::Array{Float64,3},
-        tspan::NTuple{2,Float64})
-        return ODEProblem(rhs!, u0, tspan, solver)
-    end
-
-    function precompute(operators::DiscretizationOperators{d}) where {d}
-        @unpack VOL, FAC, SRC, M, V, Vf, scaled_normal = operators
-
-        #precompute the physical mass matrix inverse
-        inv_M = inv(M)
-
-        return DiscretizationOperators{d}(
-            Tuple(combine(inv_M*VOL[n]) for n in 1:d),
-            combine(inv_M*FAC), 
-            combine(inv_M*SRC),
-            M, V, Vf, scaled_normal)
-    end
-
-    function combine(operator::LinearMap)
-        return LinearMap(convert(Matrix,operator))
-    end
-
     function get_dof(spatial_discretization::SpatialDiscretization{d}, 
         conservation_law::AbstractConservationLaw{d}) where {d}
         return (spatial_discretization.reference_approximation.N_p, 
             conservation_law.N_eq, spatial_discretization.N_el)
     end
 
-    """
-        Physical-operator form
-    """
-    function apply_operators!(residual::Matrix{Float64},
-        operators::DiscretizationOperators{d},  
-        f::NTuple{d,Matrix{Float64}}, 
-        f_fac::Matrix{Float64}, ::Eager,
-        s::Union{Matrix{Float64},Nothing}) where {d}
+    include("reference_operator_strategy.jl")
 
-        @unpack VOL, FAC, SRC = operators
-        to = get_timer(string("thread_timer_", Threads.threadid()))
-        rhs = zero(residual) # only allocation
+    export combine, precompute
+    include("physical_operator_strategy.jl")
 
-        @timeit to "volume terms" begin
-            @inbounds for m in 1:d
-                rhs += mul!(residual, VOL[m], f[m])
-            end
-        end
-
-        @timeit to "facet terms" begin
-            rhs += mul!(residual, FAC, f_fac)
-        end
-
-        if !isnothing(s)
-            @timeit to "source terms" begin
-                rhs += mul!(residual, SRC, s)
-            end
-        end
-
-        # no mass matrix solve
-        residual = rhs
-
-        return residual
-    end
-
-    """
-        Reference-operator form
-    """
-    function apply_operators!(residual::Matrix{Float64},
-        operators::DiscretizationOperators{d},
-        f::NTuple{d,Matrix{Float64}}, 
-        f_fac::Matrix{Float64}, 
-        ::Lazy,
-        s::Union{Matrix{Float64},Nothing}) where {d}
-
-        @unpack VOL, FAC, SRC, M = operators
-        to = get_timer(string("thread_timer_", Threads.threadid()))
-        rhs = zero(residual) # only allocation
-
-        @timeit to "volume terms" begin
-            @inbounds for m in 1:d
-                rhs += mul!(residual, VOL[m], f[m])
-            end
-        end
-
-        @timeit to "facet terms" begin
-            rhs += mul!(residual, FAC, f_fac)
-        end
-
-        if !isnothing(s)
-            @timeit to "source terms" begin
-                rhs += mul!(residual, SRC, s)
-            end
-        end
-
-        @timeit to "mass matrix solve" begin
-            residual = M \ rhs
-        end
-        
-        return residual
-    end
-
-    """
-        Auxiliary variable in physical-operator form
-    """
-    function auxiliary_variable!(m::Int, 
-        q::Matrix{Float64},
-        operators::DiscretizationOperators{d},
-        u::Matrix{Float64},
-        u_fac::Matrix{Float64}, 
-        ::Eager) where {d}
-
-        @unpack VOL, FAC = operators
-        to = get_timer(string("thread_timer_", Threads.threadid()))
-        rhs = similar(q) # only allocation
-
-        @timeit to "volume terms" begin
-            mul!(rhs, -VOL[m], u)
-        end
-
-        @timeit to "facet terms" begin
-            rhs += mul!(q, -FAC, u_fac)
-        end
-
-        # no mass matrix solve
-        q = rhs
-
-        return q
-    end
-
-    """
-    Auxiliary variable in reference-operator form
-    """
-    function auxiliary_variable!(m::Int, 
-        q::Matrix{Float64},
-        operators::DiscretizationOperators{d},
-        u::Matrix{Float64},
-        u_fac::Matrix{Float64}, 
-        ::Lazy) where {d}
-
-        @unpack VOL, FAC, M = operators
-        to = get_timer(string("thread_timer_", Threads.threadid()))
-        rhs = similar(q) # only allocation
-
-        @timeit to "volume terms" begin
-            mul!(rhs, -VOL[m], u)
-        end
-
-        @timeit to "facet terms" begin
-            rhs += mul!(q, -FAC, u_fac)
-        end
-        
-        @timeit to "mass matrix solve" begin
-            q = M \ rhs
-        end
-
-        return q
-    end
-
-#TODO add flux diff.
-
-#=
-"""
-Compute the flux-differencing term (D ⊙ F)1 (note: this currently is not supported in this version)
-"""
-    function flux_diff(D::LinearMaps.WrappedMap, F::AbstractArray{Float64,3})
-        N_p = size(D,1)
-        N_eq = size(F,3)
-
-        y = Matrix{Float64}(undef,N_p,N_eq)
-        
-        for l in 1:N_eq, i in 1:N_p
-            y[i,l] = dot(D.lmap[i,:], F[i,:,l])
-        end
-        return 2.0*y
-    end
-
-    function apply_operators!(residual::Matrix{Float64},
-        operators::DiscretizationOperators{d},
-        F::NTuple{d,Array{Float64,3}}, 
-        f_fac::Matrix{Float64}, 
-        ::Lazy,
-        s::Union{Matrix{Float64},Nothing}=nothing) where {d}
-        to = get_timer(string("thread_timer_", Threads.threadid()))
-
-        @timeit to "volume terms" begin
-            volume_terms = zero(residual)
-            @inbounds for m in 1:d
-                volume_terms += flux_diff(operators.VOL[m], F[m])
-            end
-        end
-
-        @timeit to "facet terms" begin
-            facet_terms = mul!(residual, operators.FAC, f_fac)
-        end
-
-        rhs = volume_terms + facet_terms
- 
-        if !isnothing(s)
-            @timeit to "source terms" begin
-                source_terms = mul!(residual, operators.SRC, s)
-            end
-            rhs = rhs + source_terms
-        end
-
-        @timeit to "mass matrix solve" begin
-            residual = operators.M \ rhs
-        end
-        
-        return residual
-    end
-
-    function apply_operators!(residual::Matrix{Float64},
-        operators::DiscretizationOperators{d},
-        F::NTuple{d,Array{Float64,3}}, 
-        f_fac::Matrix{Float64}, 
-        ::Eager,
-        s::Union{Matrix{Float64},Nothing}=nothing) where {d}
-        to = get_timer(string("thread_timer_", Threads.threadid()))
-
-        @timeit to "volume terms" begin
-            # compute volume terms
-            volume_terms = zero(residual)
-            for m in 1:d
-                volume_terms += flux_diff(operators.VOL[m], F[m])
-            end
-        end
-
-        @timeit to "facet terms" begin
-            # compute facet terms
-            facet_terms = mul!(residual, operators.FAC, f_fac)
-        end
-
-        rhs = volume_terms + facet_terms
-
-        if !isnothing(s)
-            @timeit to "source terms" begin
-                source_terms = mul!(residual, operators.SRC, s)
-            end
-            rhs = rhs + source_terms
-        end
-
-        return rhs
-        return residual
-    end
-=#
-
+    export initialize, semidiscretize
+    include("preprocessing.jl")
 
     export StrongConservationForm, WeakConservationForm
     include("conservation_form.jl")
