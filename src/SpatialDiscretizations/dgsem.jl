@@ -5,7 +5,8 @@ end
 function ReferenceApproximation(
     approx_type::DGSEM, elem_type::Line; 
     volume_quadrature_rule::AbstractQuadratureRule=LGLQuadrature(),
-    mapping_degree::Int=1, N_plot::Int=10)
+    mapping_degree::Int=1, N_plot::Int=10,
+    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm())
 
     @unpack p = approx_type
     N_p = p+1
@@ -17,12 +18,13 @@ function ReferenceApproximation(
         volume_quadrature_rule, p+1), Nplot=N_plot)
     @unpack rstp, rstq, rstf, wq, wf = reference_element
     VDM, ∇VDM = basis(Line(), p, rstq[1])
-    D = (LinearMap(∇VDM / VDM),)
+    D = (make_operator(LinearMap(∇VDM / VDM), operator_algorithm),)
 
     if volume_quadrature_rule isa LGLQuadrature
         Vf = SelectionMap(facet_node_ids(Line(),p+1),p+1)
     else
-        Vf = LinearMap(vandermonde(elem_type,p,rstf[1]) / VDM) 
+        Vf = make_operator(LinearMap(vandermonde(elem_type,p,rstf[1]) / VDM),
+            operator_algorithm)
     end
 
     V_plot = LinearMap(vandermonde(elem_type, p, rstp[1]) / VDM)
@@ -40,7 +42,8 @@ function ReferenceApproximation(approx_type::DGSEM,
     elem_type::Quad;
     volume_quadrature_rule::AbstractQuadratureRule=LGLQuadrature(),
     facet_quadrature_rule::AbstractQuadratureRule=LGLQuadrature(),
-    mapping_degree::Int=1, N_plot::Int=10)
+    mapping_degree::Int=1, N_plot::Int=10,
+    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm())
 
     @unpack p = approx_type
 
@@ -75,21 +78,24 @@ function ReferenceApproximation(approx_type::DGSEM,
             facet_quadrature_rule isa LGLQuadrature)
         Vf = SelectionMap(facet_node_ids(Quad(),(p+1,p+1)),N_p)
     elseif typeof(volume_quadrature_rule) == typeof(facet_quadrature_rule)
-        Vf = [
+        Vf = make_operator([
             TensorProductMap(R_L, I, sigma, [j for i in 1:1, j in 1:p+1]) ; #L
             TensorProductMap(R_R, I, sigma, [j for i in 1:1, j in 1:p+1]) ; #R
             TensorProductMap(I, R_L, sigma, [i for i in 1:p+1, j in 1:1]) ; #B
-            TensorProductMap(I, R_R ,sigma, [i for i in 1:p+1, j in 1:1])]  #T
+            TensorProductMap(I, R_R ,sigma, [i for i in 1:p+1, j in 1:1])], #T
+            operator_algorithm)
     else
-        Vf = LinearMap(vandermonde(elem_type,p,rstf...) / 
-            vandermonde(elem_type,p,rstq...))
+        Vf = make_operator(LinearMap(vandermonde(elem_type,p,rstf...) / 
+            vandermonde(elem_type,p,rstq...)), operator_algorithm)
     end
 
     V_plot = LinearMap(vandermonde(elem_type, p, rstp...) / 
         vandermonde(elem_type, p, rstq...))
     
-    D = (TensorProductMap(D_1D, I, sigma, sigma),
-        TensorProductMap(I, D_1D, sigma, sigma))
+    D = (make_operator(TensorProductMap(D_1D, I, sigma, sigma),             
+            operator_algorithm),
+        make_operator(TensorProductMap(I, D_1D, sigma, sigma),
+            operator_algorithm))
 
     V = LinearMap(I, N_q)
     R = Vf

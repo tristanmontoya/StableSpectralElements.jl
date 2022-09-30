@@ -38,7 +38,7 @@ Evaluate the flux for the inviscid Burgers' equation
 
 `F(u) = a ½u^2`
 """
-function physical_flux(conservation_law::BurgersType{d}, 
+@inline function physical_flux(conservation_law::BurgersType{d}, 
     u::Matrix{Float64}) where {d}
     return Tuple(conservation_law.a[m] * 0.5.*u.^2 for m in 1:d)
 end
@@ -48,17 +48,17 @@ Evaluate the flux for the viscous Burgers' equation
 
 `F(u,q) = a ½u^2 - bq`
 """
-function physical_flux(conservation_law::ViscousBurgersEquation{d},
+@inline function physical_flux(conservation_law::ViscousBurgersEquation{d},
     u::Matrix{Float64}, q::NTuple{d,Matrix{Float64}}) where {d}
-    @unpack a, b = conservation_law
-    return Tuple(a[m]*0.5.*u.^2 - b*q[m] for m in 1:d)
+    return Tuple(conservation_law.a[m]*0.5.*u.^2 - 
+        conservation_law.b*q[m] for m in 1:d)
 end
 
 """
 Evaluate the Lax-Friedrichs flux for Burgers' equation
 `F*(u⁻, u⁺, n) = ½a⋅n(½(u⁻)² + ½(u⁺)²) + ½λ max(|au⁻⋅n|,|au⁺⋅n|)(u⁺ - u⁻)`
 """
-function numerical_flux(
+@inline function numerical_flux(
     conservation_law::BurgersType{d}, numerical_flux::LaxFriedrichsNumericalFlux, 
     u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
     n::NTuple{d, Vector{Float64}}) where {d}
@@ -73,7 +73,7 @@ Evaluate the interface normal solution for the viscous Burgers' equation using t
 
 `U*(u⁻, u⁺, n) = ½(u⁻ + u⁺)n`
 """
-function numerical_flux(::ViscousBurgersEquation{d},
+@inline function numerical_flux(::ViscousBurgersEquation{d},
     ::BR1,u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
     n::NTuple{d, Vector{Float64}}) where {d}
 
@@ -88,12 +88,10 @@ Evaluate the numerical flux for the viscous Burgers' equation using the BR1 appr
 
 F*(u⁻, u⁺, q⁻, q⁺, n) = ½(F²(u⁻,q⁻) + F²(u⁺, q⁺))⋅n
 """
-function numerical_flux(conservation_law::ViscousBurgersEquation{d},
+@inline function numerical_flux(conservation_law::ViscousBurgersEquation{d},
     ::BR1, u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
     q_in::NTuple{d,Matrix{Float64}}, q_out::NTuple{d,Matrix{Float64}}, 
     n::NTuple{d, Vector{Float64}}) where {d}
-
-    @unpack b = conservation_law
 
     # average both sides
     q_avg = Tuple(0.5*(q_in[m] + q_out[m]) for m in 1:d)
@@ -101,9 +99,8 @@ function numerical_flux(conservation_law::ViscousBurgersEquation{d},
     # Note that if you give it scaled normal nJf, 
     # the flux will be appropriately scaled by Jacobian too
     # returns vector of length N_f 
-    return -1.0*sum(b*q_avg[m] .* n[m] for m in 1:d)
+    return -1.0*sum(conservation_law.b*q_avg[m] .* n[m] for m in 1:d)
 end
-
 
 function evaluate(
     exact_solution::ExactSolution{1,InviscidBurgersEquation{1},InitialDataGassner,SourceTermGassner},

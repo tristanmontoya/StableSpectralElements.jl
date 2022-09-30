@@ -25,10 +25,6 @@ function precompute(operators::DiscretizationOperators{d}) where {d}
         M, V, Vf, scaled_normal)
 end
 
-function combine(operator::LinearMap)
-    return LinearMap(convert(Matrix,operator))
-end
-
 function apply_operators!(residual::Matrix{Float64},
     operators::DiscretizationOperators{d},  
     f::NTuple{d,Matrix{Float64}}, 

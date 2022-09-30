@@ -26,7 +26,7 @@ function EulerEquations{d}(γ::Float64) where {d}
     return EulerEquations{d}(γ,NoSourceTerm{d}())
 end
 
-function pressure(conservation_law::EulerType{d}, 
+@inline function pressure(conservation_law::EulerType{d}, 
     u::Matrix{Float64}) where {d}
     @unpack γ = conservation_law
     ρ = u[:,1]
@@ -35,7 +35,7 @@ function pressure(conservation_law::EulerType{d},
     return (γ-1).*(E .- 0.5./ρ.*(sum(ρV[:,m].^2 for m in 1:d)))
 end
 
-function velocity(conservation_law::EulerType{d}, 
+@inline function velocity(conservation_law::EulerType{d}, 
     u::Matrix{Float64}) where {d}
     @unpack γ = conservation_law
     ρ = u[:,1]
@@ -62,7 +62,7 @@ Evaluate the flux for the Euler equations
 end
 
 """Lax-Friedrichs/Rusanov flux for the Euler equations"""
-function numerical_flux(
+@inline function numerical_flux(
     conservation_law::AbstractConservationLaw{d},
     numerical_flux::LaxFriedrichsNumericalFlux, 
     u_in::Matrix{Float64}, u_out::Matrix{Float64}, 

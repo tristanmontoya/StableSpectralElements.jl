@@ -27,7 +27,7 @@ function LinearMaps._unsafe_mul!(y::AbstractVector,
     LinearMaps.check_dim_mul(y, transR, x)
     @unpack volume_ids = transR.lmap
     
-    @simd for i in eachindex(volume_ids)
+    for i in eachindex(volume_ids)
         if isempty(volume_ids[i])
             y[i] = 0.0
         else

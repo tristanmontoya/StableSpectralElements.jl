@@ -8,7 +8,7 @@ struct WarpedTensorProductMap{A_type, B_type} <: LinearMaps.LinearMap{Float64}
     σₒ::Matrix{Int}
 end
 
-Base.size(C::WarpedTensorProductMap) = (count(a->a>0,C.σₒ), 
+@inline Base.size(C::WarpedTensorProductMap) = (count(a->a>0,C.σₒ), 
     count(a->a>0,C.σᵢ))
 
 """
@@ -31,18 +31,21 @@ function LinearAlgebra.mul!(y::AbstractVector,
     N1 = size(σᵢ,1)
     N2 = [count(a -> a>0, σᵢ[β1,:]) for β1 in 1:N1]
 
-    Z = zeros(Float64, M2, N1)
-    for α2 in 1:M2, β1 in 1:N1
-        @simd for β2 in 1:N2[β1]
-            @muladd Z[α2,β1] = Z[α2,β1] + B[β1][α2,β2]*x[σᵢ[β1,β2]]
+    Z = Matrix{Float64}(undef, M2, N1)
+    @inbounds for α2 in 1:M2, β1 in 1:N1
+        Zij = 0.0
+        @turbo for β2 in 1:N2[β1]
+            @muladd Zij = Zij + B[β1][α2,β2]*x[σᵢ[β1,β2]]
         end
+        Z[α2,β1] = Zij
     end
 
-    for α1 in 1:M1, α2 in 1:M2
-        y[σₒ[α1,α2]] = 0.0
-        @simd for β1 in 1:N1
-            @muladd y[σₒ[α1,α2]] =  y[σₒ[α1,α2]] + A[α1,β1]*Z[α2,β1]
+    @turbo for α1 in 1:M1, α2 in 1:M2
+        yi = 0.0
+        for β1 in 1:N1
+            @muladd yi = yi + A[α1,β1]*Z[α2,β1]
         end
+        y[σₒ[α1,α2]] = yi
     end
 
     return y
@@ -59,19 +62,22 @@ function LinearMaps._unsafe_mul!(y::AbstractVector,
     M1 = size(σᵢ,1)
     M2 = [count(a -> a>0, σᵢ[α1,:]) for α1 in 1:M1]
 
-    Z = zeros(Float64, M1, N2)
-    for α1 in 1:M1, β2 in 1:N2
-        @simd for β1 in 1:N1
-            @muladd Z[α1,β2] = Z[α1,β2] + A[β1,α1]*x[σₒ[β1,β2]]
+    Z = Matrix{Float64}(undef, M1, N2)
+    @turbo for α1 in 1:M1, β2 in 1:N2
+        Zij = 0.0
+        for β1 in 1:N1
+            @muladd Zij = Zij + A[β1,α1]*x[σₒ[β1,β2]]
         end
+        Z[α1,β2] = Zij
     end
 
-    for α1 in 1:M1
-        for α2 in 1:M2[α1]
-            y[σᵢ[α1,α2]] = 0.0
-            @simd for β2 in 1:N2
-                @muladd y[σᵢ[α1,α2]] = y[σᵢ[α1,α2]] + B[α1][β2,α2]*Z[α1,β2]
+    @inbounds for α1 in 1:M1
+        @turbo for α2 in 1:M2[α1]
+            yi = 0.0
+            for β2 in 1:N2
+                @muladd yi = yi + B[α1][β2,α2]*Z[α1,β2]
             end
+            y[σᵢ[α1,α2]] = yi
         end
     end
 

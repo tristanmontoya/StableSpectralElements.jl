@@ -55,7 +55,7 @@ Evaluate the flux for the linear advection equation 1D linear advection equation
 
 `F(u) = au`
 """
-function physical_flux(conservation_law::LinearAdvectionEquation{d}, 
+@inline function physical_flux(conservation_law::LinearAdvectionEquation{d}, 
     u::Matrix{Float64}) where {d}
     # returns d-tuple of matrices of size N_q x N_eq
     return Tuple(conservation_law.a[m] * u for m in 1:d)
@@ -66,18 +66,19 @@ Evaluate the flux for the linear advection-diffusion equation
 
 `F(u,q) = au - bq`
 """
-function physical_flux(conservation_law::LinearAdvectionDiffusionEquation{d},
+@inline function physical_flux(
+    conservation_law::LinearAdvectionDiffusionEquation{d},
     u::Matrix{Float64}, q::NTuple{d,Matrix{Float64}}) where {d}
-    @unpack a, b = conservation_law
     # returns d-tuple of matrices of size N_q x N_eq
-    return Tuple(a[m]*u - b*q[m] for m in 1:d)
+    return Tuple(conservation_law.a[m]*u - 
+        conservation_law.b*q[m] for m in 1:d)
 end
 
 """
 Evaluate the upwind/blended/central advective numerical flux
 `F*(u⁻, u⁺, n) = ½a⋅n(u⁻ + u⁺) + ½λ|a⋅n|(u⁺ - u⁻)`
 """
-function numerical_flux(conservation_law::AdvectionType{d},
+@inline function numerical_flux(conservation_law::AdvectionType{d},
     numerical_flux::LaxFriedrichsNumericalFlux,
     u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
     n::NTuple{d, Vector{Float64}}) where {d}
@@ -96,7 +97,7 @@ Evaluate the central advective numerical flux
 
 `F*(u⁻, u⁺, n) = ½a⋅n(u⁻ + u⁺)`
 """
-function numerical_flux(conservation_law::AdvectionType{d},
+@inline function numerical_flux(conservation_law::AdvectionType{d},
     ::EntropyConservativeFlux,
     u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
     n::NTuple{d, Vector{Float64}}) where {d}
@@ -110,7 +111,7 @@ Evaluate the interface normal solution for the (advection-)diffusion equation us
 
 `U*(u⁻, u⁺, n) = ½(u⁻ + u⁺)n`
 """
-function numerical_flux(::LinearAdvectionDiffusionEquation{d},
+@inline function numerical_flux(::LinearAdvectionDiffusionEquation{d},
     ::BR1,u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
     n::NTuple{d, Vector{Float64}}) where {d}
 
@@ -126,12 +127,10 @@ Evaluate the numerical flux for the (advection-)diffusion equation using the BR1
 `F*(u⁻, u⁺, q⁻, q⁺, n) = ½(F²(u⁻,q⁻) + F²(u⁺, q⁺))⋅n`
 """
 
-function numerical_flux(conservation_law::LinearAdvectionDiffusionEquation{d},
+@inline function numerical_flux(conservation_law::LinearAdvectionDiffusionEquation{d},
     ::BR1, u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
     q_in::NTuple{d,Matrix{Float64}}, q_out::NTuple{d,Matrix{Float64}}, 
     n::NTuple{d, Vector{Float64}}) where {d}
-
-    @unpack b = conservation_law
 
     # average both sides
     q_avg = Tuple(0.5*(q_in[m] + q_out[m]) for m in 1:d)
@@ -139,7 +138,7 @@ function numerical_flux(conservation_law::LinearAdvectionDiffusionEquation{d},
     # Note that if you give it scaled normal nJf, 
     # the flux will be appropriately scaled by Jacobian too
     # returns vector of length N_f 
-    return -1.0*sum(b*q_avg[m] .* n[m] for m in 1:d)
+    return -1.0*sum(conservation_law.b*q_avg[m] .* n[m] for m in 1:d)
 end
 
 function evaluate(

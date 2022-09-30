@@ -132,7 +132,7 @@ module Mesh
             end
 
             # loops over slower indices
-            @inbounds @simd for i in 1:N_q
+            @inbounds for i in 1:N_q
                 J_q[i,k] = det(dxdr_q[i,:,:,k])
                 Λ_q[i,:,:,k] = J_q[i,k]*inv(dxdr_q[i,:,:,k])
             end

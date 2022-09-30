@@ -4,6 +4,7 @@ function test_1d(
     conservation_law::AbstractConservationLaw,
     initial_data::AbstractGridFunction{1},
     form::AbstractResidualForm,
+    operator_algorithm::AbstractOperatorAlgorithm,
     strategy::AbstractStrategy,
     M::Int,
     test_name::String)
@@ -11,7 +12,8 @@ function test_1d(
     exact_solution = ExactSolution(conservation_law,initial_data)
 
     reference_approximation = ReferenceApproximation(
-        approx_type, elem_type, mapping_degree=approx_type.p, N_plot=10)
+        approx_type, elem_type, mapping_degree=approx_type.p, N_plot=10,
+        operator_algorithm=operator_algorithm)
 
     mesh = uniform_periodic_mesh(
         reference_approximation.reference_element, (0.0,1.0), M)

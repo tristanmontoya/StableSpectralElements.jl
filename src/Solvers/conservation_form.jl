@@ -104,7 +104,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
         
         # get all internal facet state values
         Threads.@threads for k in 1:N_el
-            u_in[:,:,k] = mul!(similar(u_in[:,:,k]), operators[k].Vf, u[:,:,k])
+            u_in[:,:,k] = @CLOUD_timeit "extrap solution" mul!(similar(u_in[:,:,k]), operators[k].Vf, u[:,:,k])
         end
 
         # evaluate all local residuals
@@ -113,10 +113,8 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             @unpack V, scaled_normal = operators[k]
             
             # gather external state at facet nodes
-            u_out = Matrix{Float64}(undef, N_f, N_eq)
-            @CLOUD_timeit "gather ext state" for e in 1:N_eq
-                u_out[:,e] = u_in[:,e,:][connectivity[:,k]]
-            end
+            u_out = @CLOUD_timeit "gather ext state" hcat(
+                [u_in[:,e,:][connectivity[:,k]] for e in 1:N_eq]... )
 
             # evaluate numerical flux at facet nodes
             f_star = @CLOUD_timeit "eval num flux" numerical_flux(
@@ -182,10 +180,8 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                 @unpack V, scaled_normal = operators[k]
 
                 # gather external state at facet nodes
-                u_out = Matrix{Float64}(undef, N_f, N_eq)
-                @CLOUD_timeit "gather ext state" for e in 1:N_eq
-                    u_out[:,e] = u_in[:,e,:][connectivity[:,k]]
-                end
+                u_out = @CLOUD_timeit "gather ext state" hcat(
+                    [u_in[:,e,:][connectivity[:,k]] for e in 1:N_eq]...)
                 
                 # evaluate solution at volume nodes
                 u_nodal = Matrix{Float64}(undef,N_q,N_eq)
@@ -219,7 +215,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                 # gather external state to element
                 u_out = Matrix{Float64}(undef, N_f, N_eq)
                 q_out = Tuple(Array{Float64}(undef, N_f, N_eq) for m in 1:d)
-                @CLOUD_timeit "gather extern state" @inbounds for e in 1:N_eq
+                @CLOUD_timeit "gather ext state" @inbounds for e in 1:N_eq
                     u_out[:,e] = u_in[:,e,:][connectivity[:,k]]
                     @inbounds for m in 1:d
                         q_out[m][:,e] = q_in[m][:,e,:][connectivity[:,k]]
