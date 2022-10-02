@@ -35,18 +35,18 @@ function apply_operators!(residual::Matrix{Float64},
     
     rhs = zero(residual) # only allocation
 
-    @CLOUD_timeit "volume terms" begin
+    @timeit thread_timer() "volume terms" begin
         @inbounds for m in 1:d
             rhs += mul!(residual, VOL[m], f[m])
         end
     end
 
-    @CLOUD_timeit "facet terms" begin
+    @timeit thread_timer() "facet terms" begin
         rhs += mul!(residual, FAC, f_fac)
     end
 
     if !isnothing(s)
-        @CLOUD_timeit "source terms" begin
+        @timeit thread_timer() "source terms" begin
             rhs += mul!(residual, SRC, s)
         end
     end
@@ -68,11 +68,11 @@ function auxiliary_variable!(m::Int,
     
     rhs = similar(q) # only allocation
 
-    @CLOUD_timeit "volume terms" begin
+    @timeit thread_timer() "volume terms" begin
         mul!(rhs, -VOL[m], u)
     end
 
-    @CLOUD_timeit "facet terms" begin
+    @timeit thread_timer() "facet terms" begin
         rhs += mul!(q, -FAC, u_fac)
     end
 

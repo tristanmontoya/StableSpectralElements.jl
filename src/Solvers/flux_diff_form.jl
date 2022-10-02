@@ -41,27 +41,27 @@ Compute the flux-differencing term (D ⊙ F)1 (note: this currently is not suppo
         s::Union{Matrix{Float64},Nothing}=nothing) where {d}
         
 
-        @CLOUD_timeit "volume terms" begin
+        @timeit thread_timer() "volume terms" begin
             volume_terms = zero(residual)
             @inbounds for m in 1:d
                 volume_terms += flux_diff(operators.VOL[m], F[m])
             end
         end
 
-        @CLOUD_timeit "facet terms" begin
+        @timeit thread_timer() "facet terms" begin
             facet_terms = mul!(residual, operators.FAC, f_fac)
         end
 
         rhs = volume_terms + facet_terms
  
         if !isnothing(s)
-            @CLOUD_timeit "source terms" begin
+            @timeit thread_timer() "source terms" begin
                 source_terms = mul!(residual, operators.SRC, s)
             end
             rhs = rhs + source_terms
         end
 
-        @CLOUD_timeit "mass matrix solve" begin
+        @timeit thread_timer() "mass matrix solve" begin
             residual = operators.M \ rhs
         end
         
@@ -76,7 +76,7 @@ Compute the flux-differencing term (D ⊙ F)1 (note: this currently is not suppo
         s::Union{Matrix{Float64},Nothing}=nothing) where {d}
         
 
-        @CLOUD_timeit "volume terms" begin
+        @timeit thread_timer() "volume terms" begin
             # compute volume terms
             volume_terms = zero(residual)
             for m in 1:d
@@ -84,7 +84,7 @@ Compute the flux-differencing term (D ⊙ F)1 (note: this currently is not suppo
             end
         end
 
-        @CLOUD_timeit "facet terms" begin
+        @timeit thread_timer() "facet terms" begin
             # compute facet terms
             facet_terms = mul!(residual, operators.FAC, f_fac)
         end
@@ -92,7 +92,7 @@ Compute the flux-differencing term (D ⊙ F)1 (note: this currently is not suppo
         rhs = volume_terms + facet_terms
 
         if !isnothing(s)
-            @CLOUD_timeit "source terms" begin
+            @timeit thread_timer() "source terms" begin
                 source_terms = mul!(residual, operators.SRC, s)
             end
             rhs = rhs + source_terms
@@ -109,7 +109,7 @@ Evaluate semi-discrete residual for strong flux-differencing form
 function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
     solver::Solver{StrongFluxDiffForm, <:AbstractDiscretizationOperators, d, N_eq}, t::Float64; print::Bool=false) where {d, N_eq}
 
-    @CLOUD_timeit "rhs!" begin
+    @timeit thread_timer() "rhs!" begin
 
         @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
 
@@ -120,7 +120,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
         # get all facet state values
         for k in 1:N_el
             u_facet[:,:,k] = 
-                @CLOUD_timeit "extrapolate solution" convert(
+                @timeit thread_timer() "extrapolate solution" convert(
                     Matrix, operators[k].Vf * u[:,:,k])
         end
 
@@ -130,30 +130,30 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             u_out = Matrix{Float64}(undef, N_f, N_eq)
 
             for e in 1:N_eq
-                u_out[:,e] = @CLOUD_timeit "gather external state" u_facet[
+                u_out[:,e] = @timeit thread_timer() "gather external state" u_facet[
                     :,e,:][connectivity[:,k]]
             end
             
-            f = @CLOUD_timeit "eval flux" physical_flux(
+            f = @timeit thread_timer() "eval flux" physical_flux(
                 conservation_law.inviscid_flux, 
                 convert(Matrix, operators[k].V * u[:,:,k]))
 
-            F = @CLOUD_timeit "eval volume two-point flux" two_point_flux(
+            F = @timeit thread_timer() "eval volume two-point flux" two_point_flux(
                 conservation_law.two_point_flux, 
                 convert(Matrix, operators[k].V * u[:,:,k]))
 
-            f_star = @CLOUD_timeit "eval numerical flux" numerical_flux(
+            f_star = @timeit thread_timer() "eval numerical flux" numerical_flux(
                 conservation_law.inviscid_numerical_flux,
                 u_facet[:,:,k], u_out, operators[k].scaled_normal)
 
-            f_fac = @CLOUD_timeit "eval facet flux diff" f_star - 
+            f_fac = @timeit thread_timer() "eval facet flux diff" f_star - 
                 sum(convert(Matrix,operators[k].NTR[m] * f[m]) 
                     for m in 1:d)
 
             if isnothing(conservation_law.source_term)
                 s = nothing
             else
-                s = @CLOUD_timeit "eval source term" evaluate(
+                s = @timeit thread_timer() "eval source term" evaluate(
                     conservation_law.source_term, 
                     Tuple(x_q[m][:,k] for m in 1:d), t)
             end
@@ -164,7 +164,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             end
             
             # apply operators
-            dudt[:,:,k] = @CLOUD_timeit "eval residual" apply_operators!(
+            dudt[:,:,k] = @timeit thread_timer() "eval residual" apply_operators!(
                 dudt[:,:,k], operators[k], F, f_fac, strategy, s)
         end
     end

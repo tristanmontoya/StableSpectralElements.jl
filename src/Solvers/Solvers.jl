@@ -10,25 +10,9 @@ module Solvers
     using ..MatrixFreeOperators: combine
     using ..ConservationLaws: AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, AbstractTwoPointFlux, NoInviscidFlux, NoViscousFlux, NoTwoPointFlux, NoSourceTerm, physical_flux, numerical_flux, LaxFriedrichsNumericalFlux, BR1
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization
-    using ..GridFunctions: AbstractGridFunction, AbstractGridFunction, NoSourceTerm, evaluate
-
-    const timer = TimerOutput(); export timer
+    using ..GridFunctions: AbstractGridFunction, AbstractGridFunction, NoSourceTerm, evaluate    
     
-    macro time_first_thread(args...)
-        TimerOutputs.timer_expr(__module__, false, :($timer), args...)
-    end
- 
-    macro CLOUD_timeit(args...)
-        esc(quote
-            if Threads.threadid() == 1
-                @time_first_thread($(args...))
-            else
-                esc($(last(args)))
-            end
-        end)
-    end
-    
-    export AbstractResidualForm, AbstractMappingForm, AbstractStrategy, DiscretizationOperators, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, apply_operators!, auxiliary_variable!, get_dof, rhs!
+    export AbstractResidualForm, AbstractMappingForm, AbstractStrategy, DiscretizationOperators, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, apply_operators!, auxiliary_variable!, get_dof, CLOUD_print_timer, CLOUD_reset_timer!, thread_timer, rhs!
 
     abstract type AbstractResidualForm{MappingForm, TwoPointFlux} end
     abstract type AbstractMappingForm end
@@ -36,7 +20,6 @@ module Solvers
 
     struct PhysicalOperator <: AbstractStrategy end
     struct ReferenceOperator <: AbstractStrategy end
-
     struct StandardMapping <: AbstractMappingForm end
     struct SkewSymmetricMapping <: AbstractMappingForm end
 
@@ -65,6 +48,25 @@ module Solvers
             conservation_law.N_eq, spatial_discretization.N_el)
     end
 
+    function CLOUD_reset_timer!()
+        for t in 1:Threads.nthreads()
+            thread_timer = get_timer(string("thread_timer_",t))
+            reset_timer!(thread_timer)
+        end
+    end
+    
+    function CLOUD_print_timer()
+        for t in 1:Threads.nthreads()
+            println("Thread ", t)
+            thread_timer = get_timer(string("thread_timer_",t))
+            print_timer(thread_timer)
+        end
+    end
+
+    @inline function thread_timer()
+        return get_timer(string("thread_timer_", Threads.threadid()))
+    end
+        
     include("reference_operator_strategy.jl")
 
     export combine, precompute
