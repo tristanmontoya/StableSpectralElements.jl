@@ -2,26 +2,27 @@ struct GenericMatrixMap <: LinearMaps.LinearMap{Float64}
     A::AbstractMatrix
 end
 
-function GenericMatrixMap(C::LinearMap)
-    return GenericMatrixMap(Matrix(C))
+function GenericMatrixMap(map::LinearMap)
+    return GenericMatrixMap(Matrix(map))
 end
 
-@inline Base.size(C::GenericMatrixMap) = size(C.A)
+@inline Base.size(map::GenericMatrixMap) = size(map.A)
 
-function LinearAlgebra.transpose(C::GenericMatrixMap)
-    return GenericMatrixMap(transpose(C.A))
+function LinearAlgebra.transpose(map::GenericMatrixMap)
+    return GenericMatrixMap(transpose(map.A))
 end
 
 function LinearAlgebra.mul!(y::AbstractVector{Float64},
-    C::GenericMatrixMap, x::AbstractVector{Float64})
-    
+    map::GenericMatrixMap, x::AbstractVector{Float64})
+    @unpack A = map
+
     @turbo for i in eachindex(y)
-        yi = 0.0
+        temp = 0.0
         for j in eachindex(x)
-            @muladd yi = yi + C.A[i,j]*x[j]
+            @muladd temp = temp + A[i,j]*x[j]
         end
-        y[i] = yi
+        y[i] = temp
     end
-        
+    
     return y
 end

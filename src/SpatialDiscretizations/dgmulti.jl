@@ -53,7 +53,7 @@ end
 function ReferenceApproximation(
     approx_type::DGMulti, ::Tri;
     mapping_degree::Int=1, N_plot::Int=10, 
-    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm())
+    operator_algorithm::AbstractOperatorAlgorithm=GenericMatrixAlgorithm())
 
     @unpack p,q,q_f = approx_type
     N_p = binomial(p+2, 2)

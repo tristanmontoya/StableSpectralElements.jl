@@ -90,67 +90,72 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
     solver::Solver{d, <:AbstractResidualForm, FirstOrder},
     t::Float64) where {d}
 
-    @timeit thread_timer() "rhs!" begin
+    #@timeit thread_timer() "rhs!" begin
 
-        @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
-        @unpack inviscid_numerical_flux = form
-        @unpack source_term, N_eq = conservation_law
+        @timeit thread_timer() "unpack/allocations" begin
+            @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
+            @unpack inviscid_numerical_flux = form
+            @unpack source_term, N_eq = conservation_law
 
-        N_el = size(operators,1)
-        N_q = size(operators[1].V,1)
-        N_f = size(operators[1].Vf,1)
+            N_el = size(operators,1)
+            N_q = size(operators[1].V,1)
+            N_f = size(operators[1].Vf,1)
 
+            u_in = Array{Float64}(undef, N_f, N_eq, N_el)
+        end
         # get all internal facet state values
-        u_in = Array{Float64}(undef, N_f, N_eq, N_el)
         Threads.@threads for k in 1:N_el
+            @unpack Vf = operators[k]
             for e in 1:N_eq
                 @timeit thread_timer() "extrap solution" begin
-                    u_in[:,e,k] = operators[k].Vf * u[:,e,k]
+                    u_in[:,e,k] = Vf * u[:,e,k]
                 end
             end
         end
 
         # evaluate all local residuals
         Threads.@threads for k in 1:N_el
+            @timeit thread_timer() "local residual" begin
 
-            @unpack V, scaled_normal = operators[k]
-            
-            u_nodal = Matrix{Float64}(undef,N_q,N_eq)
-            u_out = Matrix{Float64}(undef,N_f,N_eq)
-            @inbounds for e in 1:N_eq
-                @timeit thread_timer() "gather ext state" begin
-                    u_out[:,e] = u_in[:,e,:][connectivity[:,k]]
-                end
+                @unpack V, scaled_normal = operators[k]
                 
-                @timeit thread_timer() "eval nodal solution" begin
-                    u_nodal[:,e] = V * u[:,e,k]
+                u_nodal = Matrix{Float64}(undef,N_q,N_eq)
+                u_out = Matrix{Float64}(undef,N_f,N_eq)
+                
+                @inbounds for e in 1:N_eq
+                    @timeit thread_timer() "gather ext state" begin
+                        u_out[:,e] = u_in[:,e,:][connectivity[:,k]]
+                    end
+                    @timeit thread_timer() "eval nodal solution" begin
+                        u_nodal[:,e] = V * u[:,e,k]
+                    end
                 end
-            end
 
-            @timeit thread_timer() "eval flux" begin
-                f = physical_flux(conservation_law, u_nodal)
-            end
-
-            @timeit thread_timer() "eval num flux" begin
-                f_star = numerical_flux(
-                    conservation_law, inviscid_numerical_flux,
-                    u_in[:,:,k], u_out, scaled_normal)
-            end
-
-            if source_term isa NoSourceTerm
-                s = nothing
-            else
-                @timeit thread_timer() "eval src term" begin
-                    s = evaluate(source_term, Tuple(x_q[m][:,k] for m in 1:d),t)
+                @timeit thread_timer() "eval flux" begin
+                    f = physical_flux(conservation_law, u_nodal)
                 end
-            end
 
-            @timeit thread_timer() "apply operators" begin
-                apply_operators!(dudt[:,:,k], operators[k], f, f_star,
-                    strategy, s)
+                @timeit thread_timer() "eval num flux" begin
+                    f_star = numerical_flux(
+                        conservation_law, inviscid_numerical_flux,
+                        u_in[:,:,k], u_out, scaled_normal)
+                end
+
+                if source_term isa NoSourceTerm
+                    s = nothing
+                else
+                    @timeit thread_timer() "eval src term" begin
+                        s = evaluate(source_term, Tuple(x_q[m][:,k] for m in 1:d),t)
+                    end
+                end
+
+                @timeit thread_timer() "apply operators" begin
+                    dudt[:,:,k] = apply_operators(operators[k], f, f_star,
+                        strategy, s)
+                end
             end
         end
-    end
+    #end
 
     return dudt
 end
@@ -173,14 +178,15 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
         N_q = size(operators[1].V,1)
         
         q = Tuple(Array{Float64}(undef, N_p, N_eq, N_el) for m in 1:d) 
+        u_in = Array{Float64}(undef, N_f, N_eq, N_el)
         q_in = Tuple(Array{Float64}(undef, N_f, N_eq, N_el) for m in 1:d)
         
         # get all internal facet state values
-        u_in = Array{Float64}(undef, N_f, N_eq, N_el)
         Threads.@threads for k in 1:N_el
+            @unpack Vf = operators[k]
             @inbounds for e in 1:N_eq
                 @timeit thread_timer() "extrap solution" begin
-                    u_in[:,e,k] = operators[k].Vf * u[:,e,k]
+                    u_in[:,e,k] = Vf * u[:,e,k]
                 end
             end
         end
@@ -194,11 +200,11 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
 
                 u_nodal = Matrix{Float64}(undef,N_q,N_eq)
                 u_out = Matrix{Float64}(undef,N_f,N_eq)
+
                 @inbounds for e in 1:N_eq
                     @timeit thread_timer() "gather ext state" begin
                         u_out[:,e] = u_in[:,e,:][connectivity[:,k]]
                     end
-                    
                     @timeit thread_timer() "eval nodal solution" begin
                         u_nodal[:,e] = V * u[:,e,k]
                     end
@@ -211,15 +217,13 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                         u_in[:,:,k], u_out, operators[k].scaled_normal)
                 end
                 
-                @timeit thread_timer() "apply operators" begin
-                    @inbounds for m in 1:d
-                        auxiliary_variable!(m, q[m][:,:,k], 
-                            operators[k], u_nodal, u_star[m], strategy)
-                    end
+                @timeit thread_timer() "apply operators" @inbounds for m in 1:d
+                    q[m][:,:,k] = auxiliary_variable(
+                        m, operators[k], u_nodal, u_star[m], strategy)
                 end
             end
             
-            @inbounds for m in 1:d, e in 1:N_eq
+            @inbounds for e in 1:N_eq, m in 1:d
                 @timeit thread_timer() "extrap aux variable" begin
                     q_in[m][:,e,k] = operators[k].Vf * q[m][:,e,k]
                 end
@@ -229,7 +233,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
         # evaluate all local residuals
         Threads.@threads for k in 1:N_el
 
-            @timeit thread_timer() "primary variable" begin
+            @timeit thread_timer() "local residual" begin
 
                 @unpack V, scaled_normal = operators[k]
 
@@ -237,6 +241,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                 u_out = Matrix{Float64}(undef,N_f,N_eq)
                 q_nodal = Tuple(Array{Float64}(undef, N_q, N_eq) for m in 1:d)
                 q_out = Tuple(Array{Float64}(undef, N_f, N_eq) for m in 1:d)
+
                 @inbounds for e in 1:N_eq
 
                     @timeit thread_timer() "gather ext state" begin
@@ -268,7 +273,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                 end
                     
                 @timeit thread_timer() "eval visc num flux" begin
-                    f_star += numerical_flux(conservation_law,
+                    f_star = f_star + numerical_flux(conservation_law,
                         viscous_numerical_flux, u_in[:,:,k], u_out, 
                             Tuple(q_in[m][:,:,k] for m in 1:d), 
                             q_out, operators[k].scaled_normal)
@@ -284,8 +289,8 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                 end
 
                 @timeit thread_timer() "apply operators" begin
-                    apply_operators!(
-                        dudt[:,:,k], operators[k], f, f_star, strategy, s)
+                    dudt[:,:,k] = apply_operators(
+                        operators[k], f, f_star, strategy, s)
                 end
             end
         end

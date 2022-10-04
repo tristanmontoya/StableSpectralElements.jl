@@ -38,19 +38,19 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
 
     Z = Matrix{Float64}(undef, M2, N1)
     @turbo for α2 in 1:M2, β1 in 1:N1
-        Zij = 0.0
+        temp = 0.0
         for β2 in 1:N2
-            @muladd Zij = Zij + B[α2,β2]*x[σᵢ[β1,β2]]
+            @muladd temp = temp + B[α2,β2]*x[σᵢ[β1,β2]]
         end
-        Z[α2,β1] = Zij
+        Z[α2,β1] = temp
     end
 
     @turbo for α1 in 1:M1, α2 in 1:M2
-        yi = 0.0
+        temp = 0.0
         for β1 in 1:N1
-            @muladd yi = yi + A[α1,β1]*Z[α2,β1]
+            @muladd temp = temp + A[α1,β1]*Z[α2,β1]
         end
-        y[σₒ[α1,α2]] = yi
+        y[σₒ[α1,α2]] = temp
     end
 
     return y
@@ -76,11 +76,11 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
     (N1,N2) = size(σᵢ)
 
     @turbo for α1 in 1:M1, α2 in 1:M2
-        yi = 0.0
+        temp = 0.0
         for β1 in 1:N1
-            @muladd yi = yi + A[α1,β1]*x[σᵢ[β1,α2]]
+            @muladd temp = temp + A[α1,β1]*x[σᵢ[β1,α2]]
         end
-        y[σₒ[α1,α2]] = yi
+        y[σₒ[α1,α2]] = temp
     end
 
     y = B * y
@@ -106,11 +106,11 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
     (N1,N2) = size(σᵢ)
 
     @turbo for α1 in 1:M1, α2 in 1:M2
-        yi = 0.0
+        temp = 0.0
         for β2 in 1:N2
-            @muladd yi = yi + B[α2,β2]*x[σᵢ[α1,β2]]
+            @muladd temp = temp + B[α2,β2]*x[σᵢ[α1,β2]]
         end
-        y[σₒ[α1,α2]] = yi
+        y[σₒ[α1,α2]] = temp
     end
 
     y = A * y

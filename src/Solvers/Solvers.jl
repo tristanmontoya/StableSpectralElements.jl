@@ -12,7 +12,7 @@ module Solvers
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization
     using ..GridFunctions: AbstractGridFunction, AbstractGridFunction, NoSourceTerm, evaluate    
     
-    export AbstractResidualForm, AbstractMappingForm, AbstractStrategy, DiscretizationOperators, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, apply_operators!, auxiliary_variable!, get_dof, CLOUD_print_timer, CLOUD_reset_timer!, thread_timer, rhs!
+    export AbstractResidualForm, AbstractMappingForm, AbstractStrategy, DiscretizationOperators, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, apply_operators, auxiliary_variable, get_dof, CLOUD_print_timer, CLOUD_reset_timer!, thread_timer, rhs!
 
     abstract type AbstractResidualForm{MappingForm, TwoPointFlux} end
     abstract type AbstractMappingForm end
@@ -57,9 +57,8 @@ module Solvers
     
     function CLOUD_print_timer()
         for t in 1:Threads.nthreads()
-            println("Thread ", t)
             thread_timer = get_timer(string("thread_timer_",t))
-            print_timer(thread_timer)
+            print_timer(thread_timer, title=string("Thread ", t))
         end
     end
 

@@ -10,62 +10,77 @@ function Solver(conservation_law::AbstractConservationLaw,
         spatial_discretization.mesh.mapP, form, strategy)
 end
 
-function apply_operators!(residual::Matrix{Float64},
+function apply_operators(
     operators::DiscretizationOperators{d},
     f::NTuple{d,Matrix{Float64}}, 
     f_fac::Matrix{Float64}, 
     ::ReferenceOperator,
-    s::Union{Matrix{Float64},Nothing}) where {d}
+    s::Matrix{Float64}) where {d}
 
     @unpack VOL, FAC, SRC, M = operators
-    
-    rhs = zero(residual) # only allocation
+    N_eq = size(f[1],2)
+    rhs = zeros(size(VOL[1],1), N_eq)
 
-    @timeit thread_timer() "volume terms" begin
-        @inbounds for m in 1:d
-            rhs += mul!(residual, VOL[m], f[m])
+    @inbounds for e in 1:N_eq
+        @timeit thread_timer() "volume terms" @inbounds for m in 1:d
+            rhs[:,e] = rhs[:,e] + VOL[m] * f[m][:,e]
         end
-    end
 
-    @timeit thread_timer() "facet terms" begin
-        rhs += mul!(residual, FAC, f_fac)
-    end
+        @timeit thread_timer() "facet terms" begin
+            rhs[:,e] = rhs[:,e] + FAC * f_fac[:,e]
+        end
 
-    if !isnothing(s)
         @timeit thread_timer() "source terms" begin
-            rhs += mul!(residual, SRC, s)
+            rhs[:,e] = rhs[:,e] + SRC * s[:,e]
         end
     end
 
-    @timeit thread_timer() "mass matrix solve" begin
-        residual = M \ rhs
-    end
-    
-    return residual
+    @timeit thread_timer() "mass matrix solve" return M \ rhs
 end
 
-function auxiliary_variable!(m::Int, 
-    q::Matrix{Float64},
+function apply_operators(
+    operators::DiscretizationOperators{d},
+    f::NTuple{d,Matrix{Float64}}, 
+    f_fac::Matrix{Float64}, 
+    ::ReferenceOperator,
+    s::Nothing) where {d}
+
+    @unpack VOL, FAC, SRC, M = operators
+    N_eq = size(f[1],2)
+    rhs = zeros(size(VOL[1],1), N_eq)
+
+    @inbounds for e in 1:N_eq
+        @timeit thread_timer() "volume terms" @inbounds for m in 1:d
+            rhs[:,e] = rhs[:,e] + VOL[m] * f[m][:,e]
+        end
+
+        @timeit thread_timer() "facet terms" begin
+            rhs[:,e] = rhs[:,e] + FAC * f_fac[:,e]
+        end
+    end
+
+    @timeit thread_timer() "mass matrix solve" return M \ rhs
+end
+
+function auxiliary_variable(m::Int, 
     operators::DiscretizationOperators{d},
     u::Matrix{Float64},
     u_fac::Matrix{Float64}, 
     ::ReferenceOperator) where {d}
 
     @unpack VOL, FAC, M = operators
-    
-    rhs = similar(q) # only allocation
+    N_eq = size(u,2)
+    rhs = zeros(size(VOL[1],1), N_eq)
 
-    @timeit thread_timer() "volume terms" begin
-        mul!(rhs, -VOL[m], u)
+    @inbounds for e in 1:N_eq
+        @timeit thread_timer() "volume terms" begin
+            rhs[:,e] = rhs[:,e] - VOL[m] * u[:,e]
+        end
+
+        @timeit thread_timer() "facet terms" begin
+            rhs[:,e] = rhs[:,e] - FAC * u_fac[:,e]
+        end
     end
 
-    @timeit thread_timer() "facet terms" begin
-        rhs += mul!(q, -FAC, u_fac)
-    end
-    
-    @timeit thread_timer() "mass matrix solve" begin
-        q = M \ rhs
-    end
-
-    return q
+    @timeit thread_timer() "mass matrix solve" return M \ rhs
 end
