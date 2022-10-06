@@ -66,15 +66,15 @@ module Mesh
             0.5*(limits[m][2]-limits[m][1])*(VXY[m] .+ 1.0) for m in 1:d]..., EtoV, reference_element))
     end
 
-    function cartesian_mesh(elem_type::AbstractElemShape, 
+    function cartesian_mesh(element_type::AbstractElemShape, 
         M::NTuple{d,Int}, ::Uniform) where {d}
-        return uniform_mesh(elem_type, [M[m] for m in 1:d]...)
+        return uniform_mesh(element_type, [M[m] for m in 1:d]...)
     end
 
-    function cartesian_mesh(elem_type::Union{Quad,Hex,Tet},
+    function cartesian_mesh(element_type::Union{Quad,Hex,Tet},
         M::NTuple{d,Int}, ::ZigZag) where {d}
         # zigzag not implemented for quad/hex/tet etc.
-        return uniform_mesh(elem_type, [M[m] for m in 1:d]...)
+        return uniform_mesh(element_type, [M[m] for m in 1:d]...)
     end
 
     function cartesian_mesh(::Tri,  M::NTuple{2,Int}, ::ZigZag)

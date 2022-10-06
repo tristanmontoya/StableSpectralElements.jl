@@ -84,7 +84,7 @@ end
 
 function ReferenceApproximation(
     approx_type::Union{CollapsedSEM,CollapsedModal}, 
-    elem_type::Tri;
+    element_type::Tri;
     volume_quadrature_rule::NTuple{2,AbstractQuadratureRule}=(
         LGQuadrature(),LGRQuadrature()),
     facet_quadrature_rule::NTuple{2,AbstractQuadratureRule}=(
@@ -98,7 +98,7 @@ function ReferenceApproximation(
 
     # set up quadrature rules and nodes
     rq, sq, wq = quadrature(Tri(), volume_quadrature_rule, (p+1, p+1))
-    rf, sf, wf, nrJ, nsJ = init_face_data(elem_type, p, facet_quadrature_rule)
+    rf, sf, wf, nrJ, nsJ = init_face_data(element_type, p, facet_quadrature_rule)
     rp, sp = χ(Tri(),equi_nodes(Quad(),N_plot)) 
 
     # set up mapping nodes and interpolation matrices
@@ -215,6 +215,6 @@ function ReferenceApproximation(
     Vf = R * V
     ADVw = Tuple(V' * D[m]' * W for m in 1:2)
 
-    return ReferenceApproximation{2}(approx_type, N_p, N_q, N_f, 
+    return ReferenceApproximation(approx_type, N_p, N_q, N_f, 
         reference_element, D, V, Vf, R, W, B, ADVw, V_plot, reference_mapping)
 end

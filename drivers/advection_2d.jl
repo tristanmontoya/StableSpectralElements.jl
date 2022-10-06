@@ -89,7 +89,7 @@ struct AdvectionDriver{d}
     β::Float64
     n_s::Int
     scheme::AbstractApproximationType
-    elem_type::AbstractElemShape
+    element_type::AbstractElemShape
     mapping_form::AbstractMappingForm
     ode_algorithm::OrdinaryDiffEqAlgorithm
     path::String
@@ -112,16 +112,16 @@ function advection_driver_2d(parsed_args::Dict)
     
     if parsed_args["scheme"] == "DGMulti"
         scheme = DGMulti(p)
-        elem_type = Tri()
+        element_type = Tri()
     elseif parsed_args["scheme"] == "DGSEM"
         scheme = DGSEM(p)
-        elem_type = Quad()
+        element_type = Quad()
     elseif parsed_args["scheme"] == "CollapsedSEM"
         scheme = CollapsedSEM(p)
-        elem_type = Tri()
+        element_type = Tri()
     elseif parsed_args["scheme"] == "CollapsedModal"
         scheme = CollapsedModal(p)
-        elem_type = Tri()
+        element_type = Tri()
     else
         error("Invalid discretization scheme")
     end
@@ -154,14 +154,14 @@ function advection_driver_2d(parsed_args::Dict)
     mesh_perturb = parsed_args["mesh_perturb"]
     n_grids = parsed_args["n_grids"]
 
-    return AdvectionDriver(p,r,β,n_s,scheme,elem_type,
+    return AdvectionDriver(p,r,β,n_s,scheme,element_type,
         mapping_form,ode_algorithm,path,M0,λ,L,(a*cos(θ), a*sin(θ)), T,
         mesh_perturb, n_grids)
 end
 
 function main(args)
     parsed_args = parse_commandline()
-    @unpack p,r,β,n_s,scheme,elem_type,mapping_form,ode_algorithm,path,M0,λ,L,a,T,mesh_perturb, n_grids =  advection_driver_2d(parsed_args)
+    @unpack p,r,β,n_s,scheme,element_type,mapping_form,ode_algorithm,path,M0,λ,L,a,T,mesh_perturb, n_grids =  advection_driver_2d(parsed_args)
 
     date_time = Dates.format(now(), "yyyymmdd_HHMMSS")
     path = new_path(string(path, "advection_", parsed_args["scheme"], "_p",
@@ -179,7 +179,7 @@ function main(args)
         M = M0*2^(n-1)
 
         reference_approximation =ReferenceApproximation(
-            scheme, elem_type, mapping_degree=r, N_plot=ceil(Int,20/M))
+            scheme, element_type, mapping_degree=r, N_plot=ceil(Int,20/M))
         
         results_path = new_path(string(path, "grid_", n, "/"))
         mesh = warp_mesh(uniform_periodic_mesh(

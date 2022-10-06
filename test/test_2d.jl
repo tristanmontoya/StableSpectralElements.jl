@@ -4,7 +4,7 @@ using CLOUD, OrdinaryDiffEq
 
 function test_2d(
     approx_type::AbstractApproximationType,
-    elem_type::AbstractElemShape,
+    element_type::AbstractElemShape,
     conservation_law::AbstractConservationLaw,
     initial_data::AbstractGridFunction{2},
     form::AbstractResidualForm,
@@ -16,7 +16,7 @@ function test_2d(
     exact_solution = ExactSolution(conservation_law,initial_data)
 
     reference_approximation = ReferenceApproximation(
-        approx_type, elem_type, mapping_degree=approx_type.p,
+        approx_type, element_type, mapping_degree=approx_type.p,
         N_plot=10, operator_algorithm=operator_algorithm)
 
     mesh = warp_mesh(uniform_periodic_mesh(

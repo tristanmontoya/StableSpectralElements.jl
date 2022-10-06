@@ -34,3 +34,107 @@ function postprocess_vtk(spatial_discretization::SpatialDiscretization{2},
         vtk[variable_name] = u_nodal
     end
 end
+
+@recipe function plot(
+    reference_approximation::ReferenceApproximation{2,<:AbstractElemShape,<:AbstractApproximationType}; 
+    volume_quadrature=true,
+    facet_quadrature=true,
+    grid_connect=false,
+    stride = nothing,
+    node_color = 1,
+    grid_line_width = 1.0)
+
+    @unpack element_type, rq, sq, rf, sf = reference_approximation.reference_element
+
+    xlabel --> "\$\\xi_1\$"
+    ylabel --> "\$\\xi_2\$"
+    xlims --> [-1.1, 1.1]
+    ylims --> [-1.1, 1.1]
+    aspect_ratio --> 1.0
+    legend --> false
+    grid --> false
+
+    ref_edge_nodes = map_face_nodes(element_type,
+        collect(LinRange(-1.0,1.0, 2)))
+    edges = find_face_nodes(element_type, ref_edge_nodes...)
+    
+    for edge ∈ edges
+        @series begin
+            linewidth --> 5.0
+            linecolor --> :black
+            ref_edge_nodes[1][edge], ref_edge_nodes[2][edge]
+        end
+    end
+
+    if grid_connect && 
+        (reference_approximation.approx_type isa Union{DGSEM, CollapsedModal, CollapsedSEM})
+
+        if isnothing(stride)
+            stride = Int(sqrt(reference_approximation.N_q))
+        end
+
+        N1 = stride
+        N2 = reference_approximation.N_q ÷ stride
+
+        if element_type isa Tri
+            
+            for i in 1:N1
+                @series begin
+                    color --> node_color
+                    linewidth --> grid_line_width
+                    (rq[i:N2:(N2*(N1-1) + i)], sq[i:N2:(N2*(N1-1) + i)])
+                end
+            end
+
+            for i in 1:N2
+                @series begin
+                    color --> node_color
+                    linewidth --> grid_line_width
+                    (rq[(i-1)*N1+1:i*N1],sq[(i-1)*N1+1:i*N1])
+                end
+            end
+
+        elseif element_type isa Quad
+
+            for i in 1:N1
+                @series begin
+                    color --> node_color
+                    linewidth --> grid_line_width
+                    (rq[i:N2:(N2*(N1-1) + i)], sq[i:N2:(N2*(N1-1) + i)])
+                end
+            end
+
+            for i in 1:N2
+                @series begin
+                    color --> node_color
+                    linewidth --> grid_line_width
+                    (rq[(i-1)*N1+1:i*N1], sq[(i-1)*N1+1:i*N1])
+                end
+            end
+        end
+        volume_quadrature = false
+    end
+
+    if volume_quadrature
+        @series begin 
+            seriestype --> :scatter
+            markerstrokewidth --> 0.0
+            markersize --> 5
+            color --> node_color
+            rq, sq
+        end
+    end
+
+    if facet_quadrature
+        @series begin 
+            seriestype --> :scatter
+            markershape --> :rect
+            markercolor --> node_color
+            markerstrokewidth --> 0.0
+            markersize --> 5
+            rf, sf
+        end
+    end
+
+
+end

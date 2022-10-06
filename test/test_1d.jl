@@ -1,6 +1,6 @@
 function test_1d(
     approx_type::AbstractApproximationType,
-    elem_type::AbstractElemShape,
+    element_type::AbstractElemShape,
     conservation_law::AbstractConservationLaw,
     initial_data::AbstractGridFunction{1},
     form::AbstractResidualForm,
@@ -12,7 +12,7 @@ function test_1d(
     exact_solution = ExactSolution(conservation_law,initial_data)
 
     reference_approximation = ReferenceApproximation(
-        approx_type, elem_type, mapping_degree=approx_type.p, N_plot=10,
+        approx_type, element_type, mapping_degree=approx_type.p, N_plot=10,
         operator_algorithm=operator_algorithm)
 
     mesh = uniform_periodic_mesh(

@@ -27,12 +27,12 @@ module SpatialDiscretizations
     end
 
     """MatrixFreeOperators for local approximation on reference element"""
-    struct ReferenceApproximation{d}
-        approx_type::AbstractApproximationType
+    struct ReferenceApproximation{d, ElemShape, ApproxType}
+        approx_type::ApproxType
         N_p::Int
         N_q::Int
         N_f::Int
-        reference_element::RefElemData{d}
+        reference_element::RefElemData{d, ElemShape}
         D::NTuple{d, LinearMap}
         V::LinearMap
         Vf::LinearMap

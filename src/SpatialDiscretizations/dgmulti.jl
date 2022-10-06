@@ -46,7 +46,7 @@ function ReferenceApproximation(
     D = (make_operator(∇V[1] * P, operator_algorithm),)
     ADVw = (make_operator(∇V[1]' * Matrix(W), operator_algorithm),)
 
-    return ReferenceApproximation{1}(approx_type, N_p, N_q, N_f, 
+    return ReferenceApproximation(approx_type, N_p, N_q, N_f, 
         reference_element, D, V, Vf, R, W, B, ADVw, V_plot, NoMapping())
 end
 
@@ -81,6 +81,6 @@ function ReferenceApproximation(
     ADVw = Tuple(make_operator(∇V[m]' * Matrix(W), operator_algorithm) 
         for m in 1:2)
 
-    return ReferenceApproximation{2}(approx_type, N_p, N_q, N_f, 
+    return ReferenceApproximation(approx_type, N_p, N_q, N_f, 
         reference_element, D, V, Vf, R, W, B, ADVw, V_plot, NoMapping())
 end
