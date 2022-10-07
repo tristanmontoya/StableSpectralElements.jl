@@ -12,11 +12,11 @@ function low_order_subdivision(reference_nodes::NTuple{2,Vector{Float64}},
     connectivity = permutedims(tri_out.trianglelist)
     points = transpose(hcat(vec(physical_nodes[1]), vec(physical_nodes[2])))
     N_sub = size(connectivity,1)
-    (N_p,N_el) = size(physical_nodes[1])
+    (N_p,N_e) = size(physical_nodes[1])
 
     cells = [MeshCell(VTKCellTypes.VTK_TRIANGLE, 
                 connectivity[mod1(i,N_sub),:] .+ N_p*div(i-1,N_sub)) 
-                for i in 1:N_sub*N_el]
+                for i in 1:N_sub*N_e]
 
     return points, cells
 end
@@ -40,29 +40,44 @@ end
     volume_quadrature=true,
     facet_quadrature=true,
     grid_connect=false,
+    sketch=false,
     stride = nothing,
     node_color = 1,
-    grid_line_width = 1.0)
+    grid_line_width = 2.0,
+    X=nothing)
 
     @unpack element_type, rq, sq, rf, sf = reference_approximation.reference_element
 
-    xlabel --> "\$\\xi_1\$"
-    ylabel --> "\$\\xi_2\$"
-    xlims --> [-1.1, 1.1]
-    ylims --> [-1.1, 1.1]
+    if isnothing(X)
+        xlims --> [-1.1, 1.1]
+        ylims --> [-1.1, 1.1]
+        X = (x,y) -> (x,y)
+    end
     aspect_ratio --> 1.0
     legend --> false
     grid --> false
+    xlabelfontsize --> 15
+    ylabelfontsize --> 15
+
+    if sketch
+        xlabel --> ""
+        ylabel --> ""
+        ticks --> false
+        showaxis --> false
+    else
+        xlabel --> "\$\\xi_1\$"
+        ylabel --> "\$\\xi_2\$"
+    end
 
     ref_edge_nodes = map_face_nodes(element_type,
-        collect(LinRange(-1.0,1.0, 2)))
+        collect(LinRange(-1.0,1.0, 40)))
     edges = find_face_nodes(element_type, ref_edge_nodes...)
     
     for edge ∈ edges
         @series begin
-            linewidth --> 5.0
+            linewidth --> 3.0
             linecolor --> :black
-            ref_edge_nodes[1][edge], ref_edge_nodes[2][edge]
+            X(ref_edge_nodes[1][edge][1:end-1], ref_edge_nodes[2][edge][1:end-1])
         end
     end
 
@@ -82,7 +97,7 @@ end
                 @series begin
                     color --> node_color
                     linewidth --> grid_line_width
-                    (rq[i:N2:(N2*(N1-1) + i)], sq[i:N2:(N2*(N1-1) + i)])
+                    X(rq[i:N2:(N2*(N1-1) + i)], sq[i:N2:(N2*(N1-1) + i)])
                 end
             end
 
@@ -90,7 +105,7 @@ end
                 @series begin
                     color --> node_color
                     linewidth --> grid_line_width
-                    (rq[(i-1)*N1+1:i*N1],sq[(i-1)*N1+1:i*N1])
+                    X(rq[(i-1)*N1+1:i*N1], sq[(i-1)*N1+1:i*N1])
                 end
             end
 
@@ -100,7 +115,7 @@ end
                 @series begin
                     color --> node_color
                     linewidth --> grid_line_width
-                    (rq[i:N2:(N2*(N1-1) + i)], sq[i:N2:(N2*(N1-1) + i)])
+                    X(rq[i:N2:(N2*(N1-1) + i)], sq[i:N2:(N2*(N1-1) + i)])
                 end
             end
 
@@ -108,7 +123,7 @@ end
                 @series begin
                     color --> node_color
                     linewidth --> grid_line_width
-                    (rq[(i-1)*N1+1:i*N1], sq[(i-1)*N1+1:i*N1])
+                    X(rq[(i-1)*N1+1:i*N1], sq[(i-1)*N1+1:i*N1])
                 end
             end
         end
@@ -121,18 +136,18 @@ end
             markerstrokewidth --> 0.0
             markersize --> 5
             color --> node_color
-            rq, sq
+            X(rq, sq)
         end
     end
 
     if facet_quadrature
         @series begin 
             seriestype --> :scatter
-            markershape --> :rect
+            markershape --> :circle
             markercolor --> node_color
             markerstrokewidth --> 0.0
-            markersize --> 5
-            rf, sf
+            markersize --> 4
+            X(rf, sf)
         end
     end
 

@@ -47,7 +47,7 @@ module SpatialDiscretizations
     """Data for constructing the global spatial discretization"""
     struct SpatialDiscretization{d}
         mesh::MeshData{d}
-        N_el::Int
+        N_e::Int
         reference_approximation::ReferenceApproximation{d}
         geometric_factors::GeometricFactors{d}
         M::Vector{AbstractMatrix}
@@ -59,18 +59,18 @@ module SpatialDiscretizations
 
         @unpack reference_element, reference_mapping, W = reference_approximation
 
-        N_el = size(mesh.xyz[1])[2]
+        N_e = size(mesh.xyz[1])[2]
         geometric_factors = apply_reference_mapping(GeometricFactors(mesh,
             reference_element), reference_mapping)
 
         return SpatialDiscretization{d}(
             mesh,
-            N_el,
+            N_e,
             reference_approximation,
             geometric_factors,
             [convert(Matrix, reference_approximation.V' * W *
                 Diagonal(geometric_factors.J_q[:,k]) * 
-                reference_approximation.V) for k in 1:N_el],
+                reference_approximation.V) for k in 1:N_e],
             Tuple(reference_element.Vp * mesh.xyz[m] for m in 1:d))
     end
 
@@ -83,12 +83,12 @@ module SpatialDiscretizations
         @unpack J_q, Λ_q, nJf = geometric_factors
         @unpack J_ref, Λ_ref = reference_mapping
 
-        (N_q, N_el) = size(J_q)
+        (N_q, N_e) = size(J_q)
         d = size(Λ_q, 2)
         Λ_η = similar(Λ_q)
         J_η = similar(J_q)
 
-        for k in 1:N_el
+        for k in 1:N_e
             for i in 1:N_q
                 for m in 1:d, n in 1:d
                     Λ_η[i,m,n,k] = sum( Λ_ref[i,m,l] * Λ_q[i,l,n,k] 
@@ -106,9 +106,9 @@ module SpatialDiscretizations
     """
     function check_normals(
         spatial_discretization::SpatialDiscretization{d}) where {d}
-        @unpack geometric_factors, mesh, N_el = spatial_discretization
+        @unpack geometric_factors, mesh, N_e = spatial_discretization
         return Tuple([maximum(abs.(geometric_factors.nJf[m][:,k] + 
-                geometric_factors.nJf[m][mesh.mapP[:,k]])) for k in 1:N_el]
+                geometric_factors.nJf[m][mesh.mapP[:,k]])) for k in 1:N_e]
                 for m in 1:d)
     end
 
@@ -117,9 +117,9 @@ module SpatialDiscretizations
     """
     function check_facet_nodes(
         spatial_discretization::SpatialDiscretization{d}) where {d}
-        @unpack geometric_factors, mesh, N_el = spatial_discretization
+        @unpack geometric_factors, mesh, N_e = spatial_discretization
         return Tuple([maximum(abs.(mesh.xyzf[m][:,k] -
-                mesh.xyzf[m][mesh.mapP[:,k]])) for k in 1:N_el]
+                mesh.xyzf[m][mesh.mapP[:,k]])) for k in 1:N_e]
                 for m in 1:d)
     end
 
@@ -165,7 +165,7 @@ module SpatialDiscretizations
 
         @unpack xyz = spatial_discretization.mesh
         return [Tuple(sum(xyz[m][:,k])/length(xyz[m][:,k]) 
-            for m in 1:d) for k in 1:spatial_discretization.N_el]
+            for m in 1:d) for k in 1:spatial_discretization.N_e]
     end
 
     export AbstractQuadratureRule, LGLQuadrature, LGQuadrature, LGRQuadrature, JGLQuadrature, JGRQuadrature, JGQuadrature, JacobiQuadrature, LegendreQuadrature, quadrature, facet_node_ids

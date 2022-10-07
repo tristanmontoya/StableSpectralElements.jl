@@ -51,10 +51,10 @@ module Mesh
 
         VXY, EtoV = cartesian_mesh(reference_element.elementType, 
             M, strategy)
-        N_el = size(EtoV,1)
+        N_e = size(EtoV,1)
         
         if random_rotate
-            for k in 1:N_el
+            for k in 1:N_e
                 len = size(EtoV,2)
                 step = rand(0:len-1)
                 row = EtoV[k,:]
@@ -109,20 +109,20 @@ module Mesh
         # note, here we assume that mesh is same N_q, N_f every element
         N_q = size(mesh.xyzq[1],1)
         N_f = size(mesh.xyzf[1],1)
-        N_el = size(mesh.xyzq[1],2)
+        N_e = size(mesh.xyzq[1],2)
 
-        J_q = Matrix{Float64}(undef, N_q, N_el)
-        nJf = Tuple(Matrix{Float64}(undef, N_f, N_el) for m in 1:d)
+        J_q = Matrix{Float64}(undef, N_q, N_e)
+        nJf = Tuple(Matrix{Float64}(undef, N_f, N_e) for m in 1:d)
 
         # first dimension is node index, 
         # second and third are matrix indices mn,
         # fourth is element index.
-        dxdr_q = Array{Float64, 4}(undef, N_q, d, d, N_el)
-        Λ_q = Array{Float64, 4}(undef, N_q, d, d, N_el)
-        dxdr_f = Array{Float64, 4}(undef, N_f, d, d, N_el)        
+        dxdr_q = Array{Float64, 4}(undef, N_q, d, d, N_e)
+        Λ_q = Array{Float64, 4}(undef, N_q, d, d, N_e)
+        dxdr_f = Array{Float64, 4}(undef, N_f, d, d, N_e)        
 
-        for k in 1:N_el
-            for m in 1:d, n in 1:d
+        Threads.@threads for k in 1:N_e
+            @inbounds for m in 1:d, n in 1:d
                 # evaluate metric at mapping nodes
                 dxdr = reference_element.Drst[n]*mesh.xyz[m][:,k]
 
@@ -132,7 +132,7 @@ module Mesh
             end
 
             # loops over slower indices
-            @inbounds for i in 1:N_q
+            for i in 1:N_q
                 J_q[i,k] = det(dxdr_q[i,:,:,k])
                 Λ_q[i,:,:,k] = J_q[i,k]*inv(dxdr_q[i,:,:,k])
             end
@@ -142,7 +142,7 @@ module Mesh
             for i in 1:N_f
                 Jdrdx_f = det(dxdr_f[i,:,:,k]) *
                     inv(dxdr_f[i,:,:,k])
-                for m in 1:d
+                @inbounds for m in 1:d
                     nJf[m][i,k] = sum(
                         Jdrdx_f[n,m]*reference_element.nrstJ[n][i] 
                             for n in 1:d)

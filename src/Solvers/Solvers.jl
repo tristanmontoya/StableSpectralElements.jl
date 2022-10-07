@@ -45,7 +45,7 @@ module Solvers
     function get_dof(spatial_discretization::SpatialDiscretization{d}, 
         conservation_law::AbstractConservationLaw{d}) where {d}
         return (spatial_discretization.reference_approximation.N_p, 
-            conservation_law.N_eq, spatial_discretization.N_el)
+            conservation_law.N_c, spatial_discretization.N_e)
     end
 
     function CLOUD_reset_timer!()

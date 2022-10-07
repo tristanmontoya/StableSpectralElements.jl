@@ -20,14 +20,14 @@ Make operators for strong conservation form
 function make_operators(spatial_discretization::SpatialDiscretization{d}, 
     form::StrongConservationForm) where {d}
 
-    @unpack N_el, M = spatial_discretization
+    @unpack N_e, M = spatial_discretization
     @unpack D, V, Vf, R, W, B = spatial_discretization.reference_approximation
     @unpack nrstJ = 
         spatial_discretization.reference_approximation.reference_element
     @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
 
-    operators = Array{DiscretizationOperators}(undef, N_el)
-    for k in 1:N_el
+    operators = Array{DiscretizationOperators}(undef, N_e)
+    Threads.@threads for k in 1:N_e
         if d == 1
             VOL = (-V' * W * D[1] + Diagonal(nrstJ[1]) * R,)
         else
@@ -53,13 +53,13 @@ Make operators for weak conservation form
 function make_operators(spatial_discretization::SpatialDiscretization{d}, 
     form::WeakConservationForm) where {d}
 
-    @unpack N_el, M, reference_approximation = spatial_discretization
+    @unpack N_e, M, reference_approximation = spatial_discretization
     @unpack ADVw, V, Vf, R, W, B, D = reference_approximation
     @unpack nrstJ = reference_approximation.reference_element
     @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
 
-    operators = Array{DiscretizationOperators}(undef, N_el)
-    for k in 1:N_el
+    operators = Array{DiscretizationOperators}(undef, N_e)
+    Threads.@threads for k in 1:N_e
         if d == 1
             VOL = (ADVw[1],)
         else
@@ -95,18 +95,18 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
         @timeit thread_timer() "unpack/allocations" begin
             @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
             @unpack inviscid_numerical_flux = form
-            @unpack source_term, N_eq = conservation_law
+            @unpack source_term, N_c = conservation_law
 
-            N_el = size(operators,1)
+            N_e = size(operators,1)
             N_q = size(operators[1].V,1)
             N_f = size(operators[1].Vf,1)
 
-            u_in = Array{Float64}(undef, N_f, N_eq, N_el)
+            u_in = Array{Float64}(undef, N_f, N_c, N_e)
         end
         # get all internal facet state values
-        Threads.@threads for k in 1:N_el
+        Threads.@threads for k in 1:N_e
             @unpack Vf = operators[k]
-            for e in 1:N_eq
+            for e in 1:N_c
                 @timeit thread_timer() "extrap solution" begin
                     u_in[:,e,k] = Vf * u[:,e,k]
                 end
@@ -114,15 +114,15 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
         end
 
         # evaluate all local residuals
-        Threads.@threads for k in 1:N_el
+        Threads.@threads for k in 1:N_e
             @timeit thread_timer() "local residual" begin
 
                 @unpack V, scaled_normal = operators[k]
                 
-                u_nodal = Matrix{Float64}(undef,N_q,N_eq)
-                u_out = Matrix{Float64}(undef,N_f,N_eq)
+                u_nodal = Matrix{Float64}(undef,N_q,N_c)
+                u_out = Matrix{Float64}(undef,N_f,N_c)
                 
-                @inbounds for e in 1:N_eq
+                @inbounds for e in 1:N_c
                     @timeit thread_timer() "gather ext state" begin
                         u_out[:,e] = u_in[:,e,:][connectivity[:,k]]
                     end
@@ -171,20 +171,20 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
 
         @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
         @unpack inviscid_numerical_flux, viscous_numerical_flux = form
-        @unpack source_term, N_eq = conservation_law
+        @unpack source_term, N_c = conservation_law
         
-        N_el = size(operators,1)
+        N_e = size(operators,1)
         N_f, N_p = size(operators[1].Vf)
         N_q = size(operators[1].V,1)
         
-        q = Tuple(Array{Float64}(undef, N_p, N_eq, N_el) for m in 1:d) 
-        u_in = Array{Float64}(undef, N_f, N_eq, N_el)
-        q_in = Tuple(Array{Float64}(undef, N_f, N_eq, N_el) for m in 1:d)
+        q = Tuple(Array{Float64}(undef, N_p, N_c, N_e) for m in 1:d) 
+        u_in = Array{Float64}(undef, N_f, N_c, N_e)
+        q_in = Tuple(Array{Float64}(undef, N_f, N_c, N_e) for m in 1:d)
         
         # get all internal facet state values
-        Threads.@threads for k in 1:N_el
+        Threads.@threads for k in 1:N_e
             @unpack Vf = operators[k]
-            @inbounds for e in 1:N_eq
+            @inbounds for e in 1:N_c
                 @timeit thread_timer() "extrap solution" begin
                     u_in[:,e,k] = Vf * u[:,e,k]
                 end
@@ -192,16 +192,16 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
         end
 
         # evaluate auxiliary variable 
-        Threads.@threads for k in 1:N_el
+        Threads.@threads for k in 1:N_e
 
             @timeit thread_timer() "auxiliary variable" begin
 
                 @unpack V, scaled_normal = operators[k]
 
-                u_nodal = Matrix{Float64}(undef,N_q,N_eq)
-                u_out = Matrix{Float64}(undef,N_f,N_eq)
+                u_nodal = Matrix{Float64}(undef,N_q,N_c)
+                u_out = Matrix{Float64}(undef,N_f,N_c)
 
-                @inbounds for e in 1:N_eq
+                @inbounds for e in 1:N_c
                     @timeit thread_timer() "gather ext state" begin
                         u_out[:,e] = u_in[:,e,:][connectivity[:,k]]
                     end
@@ -223,7 +223,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                 end
             end
             
-            @inbounds for e in 1:N_eq, m in 1:d
+            @inbounds for e in 1:N_c, m in 1:d
                 @timeit thread_timer() "extrap aux variable" begin
                     q_in[m][:,e,k] = operators[k].Vf * q[m][:,e,k]
                 end
@@ -231,18 +231,18 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
         end
 
         # evaluate all local residuals
-        Threads.@threads for k in 1:N_el
+        Threads.@threads for k in 1:N_e
 
             @timeit thread_timer() "local residual" begin
 
                 @unpack V, scaled_normal = operators[k]
 
-                u_nodal = Matrix{Float64}(undef,N_q,N_eq)
-                u_out = Matrix{Float64}(undef,N_f,N_eq)
-                q_nodal = Tuple(Array{Float64}(undef, N_q, N_eq) for m in 1:d)
-                q_out = Tuple(Array{Float64}(undef, N_f, N_eq) for m in 1:d)
+                u_nodal = Matrix{Float64}(undef,N_q,N_c)
+                u_out = Matrix{Float64}(undef,N_f,N_c)
+                q_nodal = Tuple(Array{Float64}(undef, N_q, N_c) for m in 1:d)
+                q_out = Tuple(Array{Float64}(undef, N_f, N_c) for m in 1:d)
 
-                @inbounds for e in 1:N_eq
+                @inbounds for e in 1:N_c
 
                     @timeit thread_timer() "gather ext state" begin
                         u_out[:,e] = u_in[:,e,:][connectivity[:,k]]

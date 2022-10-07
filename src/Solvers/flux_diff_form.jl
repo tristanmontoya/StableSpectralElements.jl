@@ -23,11 +23,11 @@ Compute the flux-differencing term (D ⊙ F)1 (note: this currently is not suppo
 """
     function flux_diff(D::LinearMaps.WrappedMap, F::AbstractArray{Float64,3})
         N_p = size(D,1)
-        N_eq = size(F,3)
+        N_c = size(F,3)
 
-        y = Matrix{Float64}(undef,N_p,N_eq)
+        y = Matrix{Float64}(undef,N_p,N_c)
         
-        for l in 1:N_eq, i in 1:N_p
+        for l in 1:N_c, i in 1:N_p
             y[i,l] = dot(D.lmap[i,:], F[i,:,l])
         end
         return 2.0*y
@@ -107,29 +107,29 @@ Compute the flux-differencing term (D ⊙ F)1 (note: this currently is not suppo
 Evaluate semi-discrete residual for strong flux-differencing form
 """
 function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
-    solver::Solver{StrongFluxDiffForm, <:AbstractDiscretizationOperators, d, N_eq}, t::Float64; print::Bool=false) where {d, N_eq}
+    solver::Solver{StrongFluxDiffForm, <:AbstractDiscretizationOperators, d, N_c}, t::Float64; print::Bool=false) where {d, N_c}
 
     @timeit thread_timer() "rhs!" begin
 
         @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
 
-        N_el = size(operators)[1]
+        N_e = size(operators)[1]
         N_f = size(operators[1].Vf)[1]
-        u_facet = Array{Float64}(undef, N_f, N_eq, N_el)
+        u_facet = Array{Float64}(undef, N_f, N_c, N_e)
 
         # get all facet state values
-        for k in 1:N_el
+        for k in 1:N_e
             u_facet[:,:,k] = 
                 @timeit thread_timer() "extrapolate solution" convert(
                     Matrix, operators[k].Vf * u[:,:,k])
         end
 
         # evaluate all local residuals
-        for k in 1:N_el
+        for k in 1:N_e
             # gather external state to element
-            u_out = Matrix{Float64}(undef, N_f, N_eq)
+            u_out = Matrix{Float64}(undef, N_f, N_c)
 
-            for e in 1:N_eq
+            for e in 1:N_c
                 u_out[:,e] = @timeit thread_timer() "gather external state" u_facet[
                     :,e,:][connectivity[:,k]]
             end

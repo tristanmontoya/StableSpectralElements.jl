@@ -6,7 +6,7 @@ Linear advection equation
 struct LinearAdvectionEquation{d} <: AbstractConservationLaw{d,FirstOrder}
     a::NTuple{d,Float64} 
     source_term::AbstractGridFunction{d}
-    N_eq::Int
+    N_c::Int
 
     function LinearAdvectionEquation(a::NTuple{d,Float64}, 
         source_term::AbstractGridFunction{d}) where {d}
@@ -23,7 +23,7 @@ struct LinearAdvectionDiffusionEquation{d} <: AbstractConservationLaw{d,SecondOr
     a::NTuple{d,Float64}
     b::Float64
     source_term::AbstractGridFunction{d}
-    N_eq::Int
+    N_c::Int
 
     function LinearAdvectionDiffusionEquation(a::NTuple{d,Float64}, 
         b::Float64, source_term::AbstractGridFunction{d}) where {d}
@@ -57,7 +57,7 @@ Evaluate the flux for the linear advection equation 1D linear advection equation
 """
 @inline function physical_flux(conservation_law::LinearAdvectionEquation{d}, 
     u::Matrix{Float64}) where {d}
-    # returns d-tuple of matrices of size N_q x N_eq
+    # returns d-tuple of matrices of size N_q x N_c
     return Tuple(conservation_law.a[m] * u for m in 1:d)
 end
 
@@ -69,7 +69,7 @@ Evaluate the flux for the linear advection-diffusion equation
 @inline function physical_flux(
     conservation_law::LinearAdvectionDiffusionEquation{d},
     u::Matrix{Float64}, q::NTuple{d,Matrix{Float64}}) where {d}
-    # returns d-tuple of matrices of size N_q x N_eq
+    # returns d-tuple of matrices of size N_q x N_c
     return Tuple(conservation_law.a[m]*u - 
         conservation_law.b*q[m] for m in 1:d)
 end

@@ -18,10 +18,10 @@ function apply_operators(
     s::Matrix{Float64}) where {d}
 
     @unpack VOL, FAC, SRC, M = operators
-    N_eq = size(f[1],2)
-    rhs = zeros(size(VOL[1],1), N_eq)
+    N_c = size(f[1],2)
+    rhs = zeros(size(VOL[1],1), N_c)
 
-    @inbounds for e in 1:N_eq
+    @inbounds for e in 1:N_c
         @timeit thread_timer() "volume terms" @inbounds for m in 1:d
             rhs[:,e] = rhs[:,e] + VOL[m] * f[m][:,e]
         end
@@ -46,10 +46,10 @@ function apply_operators(
     s::Nothing) where {d}
 
     @unpack VOL, FAC, SRC, M = operators
-    N_eq = size(f[1],2)
-    rhs = zeros(size(VOL[1],1), N_eq)
+    N_c = size(f[1],2)
+    rhs = zeros(size(VOL[1],1), N_c)
 
-    @inbounds for e in 1:N_eq
+    @inbounds for e in 1:N_c
         @timeit thread_timer() "volume terms" @inbounds for m in 1:d
             rhs[:,e] = rhs[:,e] + VOL[m] * f[m][:,e]
         end
@@ -69,10 +69,10 @@ function auxiliary_variable(m::Int,
     ::ReferenceOperator) where {d}
 
     @unpack VOL, FAC, M = operators
-    N_eq = size(u,2)
-    rhs = zeros(size(VOL[1],1), N_eq)
+    N_c = size(u,2)
+    rhs = zeros(size(VOL[1],1), N_c)
 
-    @inbounds for e in 1:N_eq
+    @inbounds for e in 1:N_c
         @timeit thread_timer() "volume terms" begin
             rhs[:,e] = rhs[:,e] - VOL[m] * u[:,e]
         end

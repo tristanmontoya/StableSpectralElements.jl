@@ -9,7 +9,7 @@ end
 struct RefinementAnalysisResults <: AbstractAnalysisResults
     error::Matrix{Float64} # columns are solution variables
     eoc::Matrix{Union{Float64,Missing}}
-    dof::Matrix{Int} # columns are N_p, N_el
+    dof::Matrix{Int} # columns are N_p, N_e
     conservation::Matrix{Float64}
     energy::Matrix{Float64}
 end
@@ -20,8 +20,8 @@ function analyze(analysis::RefinementAnalysis{d}, n_grids=100) where {d}
 
     results_path = string(sequence_path, "grid_1/")
     conservation_law, spatial_discretization = load_project(results_path) 
-    (N_p, N_eq, N_el) = get_dof(spatial_discretization, conservation_law)
-    dof = [N_p N_el]
+    (N_p, N_c, N_e) = get_dof(spatial_discretization, conservation_law)
+    dof = [N_p N_e]
     u, _ = load_solution(results_path, "final")
     error = transpose(analyze(ErrorAnalysis(results_path, conservation_law,  
         spatial_discretization), u, exact_solution))
@@ -30,15 +30,15 @@ function analyze(analysis::RefinementAnalysis{d}, n_grids=100) where {d}
     energy = transpose(analyze(EnergyConservationAnalysis(results_path, 
         conservation_law, spatial_discretization))[3])
 
-    eoc = fill!(Array{Union{Float64, Missing}}(undef,1,N_eq), missing)
+    eoc = fill!(Array{Union{Float64, Missing}}(undef,1,N_c), missing)
 
     i = 2
     grid_exists = true
     while grid_exists && i <= n_grids
         results_path = string(sequence_path, "grid_", i, "/")
         conservation_law, spatial_discretization = load_project(results_path) 
-        (N_p, N_eq, N_el) = get_dof(spatial_discretization, conservation_law)
-        dof = [dof; [N_p N_el]]
+        (N_p, N_c, N_e) = get_dof(spatial_discretization, conservation_law)
+        dof = [dof; [N_p N_e]]
         u, _ = load_solution(results_path, "final")
         error = [error; transpose(analyze(ErrorAnalysis(results_path,       
             conservation_law, spatial_discretization), u, exact_solution))]
@@ -46,7 +46,7 @@ function analyze(analysis::RefinementAnalysis{d}, n_grids=100) where {d}
             (log(error[i,e]) - log(error[i-1,e])) /
                 (log((dof[i,1]*dof[i,2])^(-1.0/d) ) - 
                 log((dof[i-1,1]*dof[i-1,2])^(-1.0/d)))
-            for e in 1:N_eq])]
+            for e in 1:N_c])]
         conservation = [conservation; 
             transpose(analyze(PrimaryConservationAnalysis(results_path, 
                 conservation_law, spatial_discretization))[3])]

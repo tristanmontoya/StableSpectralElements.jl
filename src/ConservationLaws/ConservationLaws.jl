@@ -51,7 +51,7 @@ module ConservationLaws
         conservation_law::ConservationLaw
         initial_data::InitialData
         periodic::Bool
-        N_eq::Int
+        N_c::Int
 
         function ExactSolution(
             conservation_law::AbstractConservationLaw{d,PDEType},
@@ -62,7 +62,7 @@ module ConservationLaws
                 conservation_law,
                 initial_data,
                 periodic,
-                conservation_law.N_eq)
+                conservation_law.N_c)
         end
     end
 

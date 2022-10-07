@@ -6,7 +6,7 @@ Inviscid Burgers' equation
 struct InviscidBurgersEquation{d} <: AbstractConservationLaw{d,FirstOrder}
     a::NTuple{d,Float64} 
     source_term::AbstractGridFunction{d}
-    N_eq::Int
+    N_c::Int
 
     function InviscidBurgersEquation(a::NTuple{d,Float64}, 
         source_term::AbstractGridFunction{d}) where {d}
@@ -23,7 +23,7 @@ struct ViscousBurgersEquation{d} <: AbstractConservationLaw{d,SecondOrder}
     a::NTuple{d,Float64}
     b::Float64
     source_term::AbstractGridFunction{d}
-    N_eq::Int
+    N_c::Int
 
     function LinearAdvectionDiffusionEquation(a::NTuple{d,Float64}, 
         b::Float64, source_term::AbstractGridFunction{d}) where {d}

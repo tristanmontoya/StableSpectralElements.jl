@@ -5,10 +5,10 @@ function initialize(initial_data::AbstractGridFunction,
     @unpack M, geometric_factors = spatial_discretization
     @unpack N_q, V, W = spatial_discretization.reference_approximation
     @unpack xyzq = spatial_discretization.mesh
-    N_p, N_eq, N_el = get_dof(spatial_discretization, conservation_law)
+    N_p, N_c, N_e = get_dof(spatial_discretization, conservation_law)
     
-    u0 = Array{Float64}(undef, N_p, N_eq, N_el)
-    Threads.@threads for k in 1:N_el
+    u0 = Array{Float64}(undef, N_p, N_c, N_e)
+    Threads.@threads for k in 1:N_e
         rhs = similar(u0[:,:,k])
         mul!(rhs, V' * W * Diagonal(geometric_factors.J_q[:,k]), 
             evaluate(initial_data, Tuple(xyzq[m][:,k] for m in 1:d)))

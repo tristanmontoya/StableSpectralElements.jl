@@ -44,9 +44,9 @@ end
 function load_snapshots(results_path::String, time_steps::Vector{Int}, du=false)
 
     dict = load(string(results_path,"project.jld2"))
-    N_p, N_eq, N_el = get_dof(dict["spatial_discretization"], 
+    N_p, N_c, N_e = get_dof(dict["spatial_discretization"], 
         dict["conservation_law"])
-    N_dof = N_p*N_eq*N_el
+    N_dof = N_p*N_c*N_e
     N_t = length(time_steps)
 
     X = Matrix{Float64}(undef, N_dof, N_t)
@@ -65,9 +65,9 @@ function load_snapshots_with_derivatives(results_path::String,
     time_steps::Vector{Int})
 
     dict = load(string(results_path,"project.jld2"))
-    N_p, N_eq, N_el = get_dof(dict["spatial_discretization"], 
+    N_p, N_c, N_e = get_dof(dict["spatial_discretization"], 
         dict["conservation_law"])
-    N_dof = N_p*N_eq*N_el
+    N_dof = N_p*N_c*N_e
     N_t = length(time_steps)
 
     U = Matrix{Float64}(undef, N_dof, N_t)

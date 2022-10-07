@@ -4,7 +4,7 @@ Euler equations
 struct EulerEquations{d} <: AbstractConservationLaw{d,FirstOrder}
     γ::Float64
     source_term::AbstractGridFunction{d}
-    N_eq::Int
+    N_c::Int
 
     function EulerEquations{d}(γ::Float64, 
         source_term::AbstractGridFunction{d}) where {d}
@@ -19,7 +19,7 @@ const EulerType{d} = Union{EulerEquations{d}, NavierStokesEquations{d}}
 struct EntropyWave1D <: AbstractGridFunction{1}
     conservation_law::EulerType{1}
     ϵ::Float64
-    N_eq::Int
+    N_c::Int
 end
 
 function EulerEquations{d}(γ::Float64) where {d}
@@ -68,7 +68,7 @@ end
     u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
     n::NTuple{d, Vector{Float64}}) where {d}
 
-    @unpack γ, N_eq = conservation_law
+    @unpack γ, N_c = conservation_law
 
     ρ_in = u_in[:,1]
     V_in = velocity(conservation_law, u_in)
@@ -83,7 +83,7 @@ end
 
     fn_avg = 0.5*hcat([
         sum((f_in[m][:,e] + f_out[m][:,e]) .* n[m] for m in 1:d)
-            for e in 1:N_eq]...)
+            for e in 1:N_c]...)
 
     a = sqrt.(sum(n[m].^2 for m in 1:d)) .*
         max.(abs.(sum(V_in[:,m].^2 for m in 1:d) 

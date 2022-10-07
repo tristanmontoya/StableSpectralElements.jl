@@ -20,8 +20,8 @@ struct LinearAnalysis{d} <: AbstractDynamicalAnalysis{d}
     r::Int
     tol::Float64
     N_p::Int
-    N_eq::Int
-    N_el::Int
+    N_c::Int
+    N_e::Int
     M::AbstractMatrix
     plotter::Plotter{d}
     L::LinearMap
@@ -35,8 +35,8 @@ struct KoopmanAnalysis{d} <: AbstractDynamicalAnalysis{d}
     svd_tol::Float64
     proj_tol::Float64
     N_p::Int
-    N_eq::Int
-    N_el::Int
+    N_c::Int
+    N_e::Int
     M::AbstractMatrix
     plotter::Plotter{d}
 end
@@ -83,14 +83,14 @@ function LinearAnalysis(results_path::String,
     use_data=true)
 
     analysis_path = new_path(string(results_path, name, "/"))
-    N_p, N_eq, N_el = get_dof(spatial_discretization, conservation_law)
+    N_p, N_c, N_e = get_dof(spatial_discretization, conservation_law)
 
     # define mass matrix for the state space as a Hilbert space 
-    M = blockdiag((kron(Diagonal(ones(N_eq)),
-        sparse(spatial_discretization.M[k])) for k in 1:N_el)...)
+    M = blockdiag((kron(Diagonal(ones(N_c)),
+        sparse(spatial_discretization.M[k])) for k in 1:N_e)...)
             
     return LinearAnalysis(results_path, analysis_path, 
-        r, tol, N_p, N_eq, N_el, M, Plotter(spatial_discretization, analysis_path), L, use_data)
+        r, tol, N_p, N_c, N_e, M, Plotter(spatial_discretization, analysis_path), L, use_data)
 end
 
 """Koopman analysis"""
@@ -102,14 +102,14 @@ function KoopmanAnalysis(results_path::String,
     # create path and get discretization information
     analysis_path = new_path(string(results_path, name, "/"))
 
-    N_p, N_eq, N_el = get_dof(spatial_discretization, conservation_law)
+    N_p, N_c, N_e = get_dof(spatial_discretization, conservation_law)
 
     # define mass matrix for the state space as a Hilbert space 
-    M = blockdiag((kron(Diagonal(ones(N_eq)),
-        sparse(spatial_discretization.M[k])) for k in 1:N_el)...)
+    M = blockdiag((kron(Diagonal(ones(N_c)),
+        sparse(spatial_discretization.M[k])) for k in 1:N_e)...)
 
     return KoopmanAnalysis(results_path, analysis_path, 
-        r, svd_tol, proj_tol, N_p, N_eq, N_el, M, 
+        r, svd_tol, proj_tol, N_p, N_c, N_e, M, 
         Plotter(spatial_discretization, analysis_path))
 end
 
@@ -263,7 +263,7 @@ function analyze_running(analysis::KoopmanAnalysis,
     sampling_strategy=nothing,
     window_size=nothing)
 
-    @unpack analysis_path, results_path, N_p, N_eq, N_el = analysis
+    @unpack analysis_path, results_path, N_p, N_c, N_e = analysis
 
     n_s = range[2]-range[1] + 1
     model = Vector{DynamicalAnalysisResults}(undef, n_s - 1)
@@ -278,8 +278,8 @@ function analyze_running(analysis::KoopmanAnalysis,
     else
         n = 1
     end
-    X = Matrix{Float64}(undef, N_p*N_eq*N_el, (n_s-1)*n)
-    Y = Matrix{Float64}(undef, N_p*N_eq*N_el, (n_s-1)*n)
+    X = Matrix{Float64}(undef, N_p*N_c*N_e, (n_s-1)*n)
+    Y = Matrix{Float64}(undef, N_p*N_c*N_e, (n_s-1)*n)
     
     for i in (range[1]+1):range[2]
         
@@ -325,15 +325,15 @@ end
 function forecast(analysis::KoopmanAnalysis, Δt::Float64, 
     range::NTuple{2,Int64}, forecast_name::String="forecast"; window_size=nothing, algorithm::AbstractKoopmanAlgorithm=StandardDMD(), new_projection=false)
     
-    @unpack analysis_path, results_path, N_p, N_eq, N_el = analysis
+    @unpack analysis_path, results_path, N_p, N_c, N_e = analysis
     time_steps = load_time_steps(results_path)
     forecast_path = new_path(string(analysis_path, forecast_name, "/"),
         true,true)
     save_object(string(forecast_path, "time_steps.jld2"), time_steps)
     if koopman_generator
         solver = load_solver(results_path)
-        f(u::Vector{Float64}) = vec(rhs!(similar(reshape(u,(N_p,N_eq,N_el))),
-            reshape(u,(N_p,N_eq,N_el)),solver,0.0))  # assume time invariant
+        f(u::Vector{Float64}) = vec(rhs!(similar(reshape(u,(N_p,N_c,N_e))),
+            reshape(u,(N_p,N_c,N_e)),solver,0.0))  # assume time invariant
     end
 
     u = Array{Float64,3}[]
@@ -353,9 +353,9 @@ function forecast(analysis::KoopmanAnalysis, Δt::Float64,
         u0, t0 = load_solution(results_path, time_steps[i-1])
         if new_projection
             c = pinv(Z) * vec(u0)
-            push!(u,reshape(real.(forecast(last(model), Δt, c)[1:N_p*N_eq*N_el]), (N_p,N_eq,N_el)))
+            push!(u,reshape(real.(forecast(last(model), Δt, c)[1:N_p*N_c*N_e]), (N_p,N_c,N_e)))
         else
-            push!(u,reshape(real.(forecast(last(model), Δt, last(model).c[:,end]))[1:N_p*N_eq*N_el], (N_p,N_eq,N_el)))
+            push!(u,reshape(real.(forecast(last(model), Δt, last(model).c[:,end]))[1:N_p*N_c*N_e], (N_p,N_c,N_e)))
         end
         push!(t, t0 + Δt)
         save(string(forecast_path, "res_", time_steps[i], ".jld2"),
@@ -673,7 +673,7 @@ function plot_modes(analysis::AbstractDynamicalAnalysis,
     coeffs=nothing, projection=nothing,
     conjugate_pairs=nothing)
     #println("conj pairs: ", conjugate_pairs)
-    @unpack N_p, N_eq, N_el, plotter = analysis
+    @unpack N_p, N_c, N_e, plotter = analysis
     @unpack x_plot, V_plot = plotter
 
     n_modes = size(Z,2)
@@ -694,7 +694,7 @@ function plot_modes(analysis::AbstractDynamicalAnalysis,
             continue
         end
 
-        sol = reshape(Z[:,j][1:N_p*N_eq*N_el],(N_p, N_eq, N_el))
+        sol = reshape(Z[:,j][1:N_p*N_c*N_e],(N_p, N_c, N_e))
         u = convert(Matrix, V_plot * real(coeffs[j]*sol[:,e,:]))
 
         if conjugate_pairs[j] == 0
@@ -706,19 +706,19 @@ function plot_modes(analysis::AbstractDynamicalAnalysis,
             skip[conjugate_pairs[j]] = true
         end
 
-        plot!(p,vec(vcat(x_plot[1],fill(NaN,1,N_el))), 
-            vec(vcat(scale_factor*u,fill(NaN,1,N_el))), 
+        plot!(p,vec(vcat(x_plot[1],fill(NaN,1,N_e))), 
+            vec(vcat(scale_factor*u,fill(NaN,1,N_e))), 
             label=latexstring(linelabel),
             ylabel="Koopman Modes",
             legendfontsize=6)
     end
 
     if !isnothing(projection)
-        sol = reshape(projection,(N_p, N_eq, N_el))
+        sol = reshape(projection,(N_p, N_c, N_e))
         linelabel = string("\\mathrm{Projection}")
         u = convert(Matrix, V_plot * real(sol[:,e,:]))
-        plot!(p,vec(vcat(x_plot[1],fill(NaN,1,N_el))), 
-            vec(vcat(u,fill(NaN,1,N_el))), 
+        plot!(p,vec(vcat(x_plot[1],fill(NaN,1,N_e))), 
+            vec(vcat(u,fill(NaN,1,N_e))), 
             label=latexstring(linelabel), xlabel=latexstring("x"), 
             linestyle=:dash, linecolor="black")
     end

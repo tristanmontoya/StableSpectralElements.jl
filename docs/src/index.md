@@ -21,10 +21,11 @@ julia> Pkg.add("https://github.com/tristanmontoya/CLOUD.jl.git")
 
 ## Basic Usage
 
-Example usage of CLOUD.jl is provided in the following Jupyter notebooks:
+As this documentation is currently a work in progress, we recommend that users refer to the following Jupyter notebooks for examples of how to use CLOUD.jl:
 * [Linear advection-diffusion equation in 1D](https://github.com/tristanmontoya/CLOUD.jl/blob/main/examples/advection_diffusion_1d.ipynb)
 * [Linear advection equation in 2D](https://github.com/tristanmontoya/CLOUD.jl/blob/main/examples/advection_2d.ipynb)
 
+More detailed tutorials will be added soon!
 ## Conservation Laws
 
 Wherever possible, CLOUD.jl separates the physical problem definition from the numerical discretization. The equations to be solved are defined by subtypes of `AbstractConservationLaw` on which functions such as `physical_flux` and `numerical_flux` are dispatched. Objects of type `AbstractConservationLaw` contain two type parameters, `d` and `PDEType`, the former denoting the spatial dimension of the problem, which is inherited by all subtypes, and the latter being a subtype of `AbstractPDEType` denoting the particular type of PDE being solved, which is either `FirstOrder` or `SecondOrder`. Second-order problems are treated by CLOUD.jl as first-order systems of the form 
@@ -35,6 +36,30 @@ Wherever possible, CLOUD.jl separates the physical problem definition from the n
 \end{aligned}
 ```
 CLOUD.jl also supports source terms of the form $\underline{S}(\bm{x},t)$, specifically for code verification using the method of manufactured solutions.
+
+## Approximation on the Reference Element
+Discretizations in CLOUD.jl are constructed by first building a local approximation on a canonical reference element, denoted generically as $\hat{\Omega} \subset \mathbb{R}^d$, and using a bijective transformation $\bm{X}^{(\kappa)} : \hat{\Omega} \rightarrow \Omega^{(\kappa)}$ to construct the approximation on each physical element of the mesh $\mathcal{T}^h = \{ \Omega^{(\kappa)}\}_{\kappa=1}^{N_e}$ in terms of the associated operators on the reference element. In order to define the different geometric reference elements, existing subtypes of `AbstractElemShape` from StartUpDG.jl (e.g. `Line`, `Quad`, and `Tri`) are used and re-exported by CLOUD.jl. For example, we have 
+```math
+\begin{aligned}
+\hat{\Omega}_{\mathrm{line}} &= [-1,1],\\
+\hat{\Omega}_{\mathrm{quad}} &= [-1,1]^2,\\
+\hat{\Omega}_{\mathrm{tri}} &= \big\{ \bm{\xi} \in [-1,1]^2 : \xi_1 + \xi_2 \leq 1 \big\}.
+\end{aligned}
+```
+These element types are used in the constructor for CLOUD.jl's `ReferenceApproximation` type, along with a subtype of `AbstractApproximationType` specifying the nature of the local approximation (and, optionally, the associated volume and facet quadrature rules). As an example, we can construct a collapsed-edge tensor-product spectral-element method of degree 4 on the reference triangle by first loading the CLOUD.jl package and then using the appropriate constructor:
+
+```julia
+julia> using CLOUD
+
+julia> ref_tri = ReferenceApproximation(CollapsedSEM(4), Tri())
+```
+Using CLOUD.jl's built-in plotting recipes, we can easily visualize such a discretization:
+```julia
+julia> using Plots
+
+julia> plot(ref_elem_tri, grid_connect=true)
+```
+![CollapsedSEM](./assets/ref_tri.svg)
 
 ## License
 

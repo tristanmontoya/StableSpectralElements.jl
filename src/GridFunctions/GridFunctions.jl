@@ -9,17 +9,17 @@ module GridFunctions
     struct SumOfFunctions{d} <: AbstractGridFunction{d}
         f::AbstractGridFunction{d}
         g::AbstractGridFunction{d}
-        N_eq::Int
+        N_c::Int
 
         function SumOfFunctions(f::AbstractGridFunction{d},
             g::AbstractGridFunction{d}) where {d}
-            return new{d}(f,g,f.N_eq)
+            return new{d}(f,g,f.N_c)
         end
     end
 
     struct ConstantFunction{d} <: AbstractGridFunction{d}
         c::Float64
-        N_eq::Int
+        N_c::Int
 
         function ConstantFunction{d}(c) where {d}
             return new{d}(c,1)
@@ -29,7 +29,7 @@ module GridFunctions
     struct InitialDataSine{d} <: AbstractGridFunction{d}
         A::Float64  # amplitude
         k::NTuple{d,Float64}  # wave number in each direction
-        N_eq::Int
+        N_c::Int
 
         function InitialDataSine(A::Float64,
             k::NTuple{d,Float64}) where {d} 
@@ -41,7 +41,7 @@ module GridFunctions
         A::Float64  # amplitude
         σ::Float64 # width
         x₀::NTuple{d,Float64}
-        N_eq::Int 
+        N_c::Int 
         function InitialDataGaussian(A::Float64,σ::Float64,
             x₀::NTuple{d,Float64}) where {d}
             return new{d}(A,σ,x₀,1)
@@ -51,7 +51,7 @@ module GridFunctions
     struct InitialDataGassner <: AbstractGridFunction{1} 
         k::Float64
         ϵ::Float64
-        N_eq::Int
+        N_c::Int
 
         function InitialDataGassner(k,ϵ)
             return new(k,ϵ,1)
@@ -61,7 +61,7 @@ module GridFunctions
     struct SourceTermGassner <: AbstractGridFunction{1} 
         k::Float64
         ϵ::Float64
-        N_eq::Int
+        N_c::Int
        
         function SourceTermGassner(k,ϵ)
             return new(k,ϵ,1)
@@ -69,7 +69,7 @@ module GridFunctions
     end
     struct GaussianNoise{d} <: AbstractGridFunction{d}
         σ::Float64
-        N_eq::Int
+        N_c::Int
     end
 
     struct NoSourceTerm{d} <: AbstractGridFunction{d} end
@@ -94,19 +94,19 @@ module GridFunctions
 
     function evaluate(f::ConstantFunction{d},
         x::NTuple{d,Float64},t::Float64=0.0) where {d}
-        return fill(f.c, f.N_eq)
+        return fill(f.c, f.N_c)
     end
 
     function evaluate(f::InitialDataSine{d}, 
         x::NTuple{d,Float64},t::Float64=0.0) where {d}
-        return fill(f.A*prod(Tuple(sin(f.k[m]*x[m]) for m in 1:d)), f.N_eq)
+        return fill(f.A*prod(Tuple(sin(f.k[m]*x[m]) for m in 1:d)), f.N_c)
     end
 
     function evaluate(f::InitialDataGaussian{d}, 
         x::NTuple{d,Float64},t::Float64=0.0) where {d}
-        @unpack A, σ, x₀, N_eq = f
+        @unpack A, σ, x₀, N_c = f
         r² = sum((x[m] - x₀[m]).^2 for m in 1:d)
-        return fill(A*exp.(-r²/(2.0*σ^2)),N_eq)
+        return fill(A*exp.(-r²/(2.0*σ^2)),N_c)
     end
 
     function evaluate(f::InitialDataGassner, 
@@ -121,13 +121,13 @@ module GridFunctions
 
     function evaluate(f::GaussianNoise{d},
         x::NTuple{d,Float64},t::Float64=0.0) where {d}
-        return [f.σ*randn() for e in 1:f.N_eq]
+        return [f.σ*randn() for e in 1:f.N_c]
     end
 
     function evaluate(f::AbstractGridFunction{d},
         x::NTuple{d,Vector{Float64}}, t::Float64=0.0) where {d}
         N = length(x[1])
-        u0 = Matrix{Float64}(undef, N, f.N_eq)
+        u0 = Matrix{Float64}(undef, N, f.N_c)
         for i in 1:N
             u0[i,:] = evaluate(f, Tuple(x[m][i] for m in 1:d),t)
         end
@@ -136,9 +136,9 @@ module GridFunctions
 
     function evaluate(f::AbstractGridFunction{d},
         x::NTuple{d,Matrix{Float64}},t::Float64=0.0) where {d}
-        N, N_el = size(x[1])
-        u0 = Array{Float64}(undef, N, f.N_eq, N_el)
-        for k in 1:N_el
+        N, N_e = size(x[1])
+        u0 = Array{Float64}(undef, N, f.N_c, N_e)
+        for k in 1:N_e
             u0[:,:,k] = evaluate(f, Tuple(x[m][:,k] for m in 1:d),t)
         end
         return u0

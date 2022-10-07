@@ -5,8 +5,8 @@ Evaluate change in ∫udx
 """
 struct PrimaryConservationAnalysis <: ConservationAnalysis
     WJ::Vector{<:AbstractMatrix}
-    N_eq::Int
-    N_el::Int
+    N_c::Int
+    N_e::Int
     V::LinearMap
     results_path::String
     analysis_path::String
@@ -18,8 +18,8 @@ Evaluate change in  ∫½u²dx
 """
 struct EnergyConservationAnalysis <: ConservationAnalysis
     WJ::Vector{<:AbstractMatrix}
-    N_eq::Int
-    N_el::Int
+    N_c::Int
+    N_e::Int
     V::LinearMap
     results_path::String
     analysis_path::String
@@ -36,15 +36,15 @@ function PrimaryConservationAnalysis(results_path::String,
     spatial_discretization::SpatialDiscretization{d}, name="primary_conservation_analysis") where {d}
 
     analysis_path = new_path(string(results_path, name, "/"))
-    _, N_eq, N_el = get_dof(spatial_discretization, conservation_law)
+    _, N_c, N_e = get_dof(spatial_discretization, conservation_law)
   
     @unpack W, V =  spatial_discretization.reference_approximation
-    @unpack geometric_factors, mesh, N_el = spatial_discretization
+    @unpack geometric_factors, mesh, N_e = spatial_discretization
     
-    WJ = [Matrix(W) * Diagonal(geometric_factors.J_q[:,k]) for k in 1:N_el]
+    WJ = [Matrix(W) * Diagonal(geometric_factors.J_q[:,k]) for k in 1:N_e]
 
     return PrimaryConservationAnalysis(
-        WJ, N_eq, N_el, V, results_path, analysis_path, "conservation.jld2")
+        WJ, N_c, N_e, V, results_path, analysis_path, "conservation.jld2")
 end
 
 function EnergyConservationAnalysis(results_path::String,
@@ -53,33 +53,33 @@ function EnergyConservationAnalysis(results_path::String,
     name="energy_conservation_analysis") where {d}
 
     analysis_path = new_path(string(results_path, name, "/"))
-    _, N_eq, N_el = get_dof(spatial_discretization, conservation_law)
+    _, N_c, N_e = get_dof(spatial_discretization, conservation_law)
 
     @unpack W, V =  spatial_discretization.reference_approximation
-    @unpack geometric_factors, mesh, N_el = spatial_discretization
+    @unpack geometric_factors, mesh, N_e = spatial_discretization
     
-    WJ = [Matrix(W) * Diagonal(geometric_factors.J_q[:,k]) for k in 1:N_el]
+    WJ = [Matrix(W) * Diagonal(geometric_factors.J_q[:,k]) for k in 1:N_e]
 
     return EnergyConservationAnalysis(
-        WJ, N_eq, N_el, V ,results_path, analysis_path, "energy.jld2")
+        WJ, N_c, N_e, V ,results_path, analysis_path, "energy.jld2")
 end
 
 function evaluate_conservation(
     analysis::PrimaryConservationAnalysis, 
     sol::Array{Float64,3})
-    @unpack WJ, N_eq, N_el, V = analysis 
+    @unpack WJ, N_c, N_e, V = analysis 
 
     return [sum(sum(WJ[k]*V*sol[:,e,k]) 
-        for k in 1:N_el) for e in 1:N_eq]
+        for k in 1:N_e) for e in 1:N_c]
 end
 
 function evaluate_conservation(
     analysis::EnergyConservationAnalysis, 
     sol::Array{Float64,3})
-    @unpack WJ, N_eq, N_el, V = analysis 
+    @unpack WJ, N_c, N_e, V = analysis 
 
     return [0.5*sum(sol[:,e,k]'*V'*WJ[k]*V*sol[:,e,k] 
-        for k in 1:N_el) for e in 1:N_eq]
+        for k in 1:N_e) for e in 1:N_c]
 end
 
 function analyze(analysis::ConservationAnalysis, 
@@ -109,10 +109,10 @@ end
 function analyze(analysis::ConservationAnalysis,
     time_steps::Vector{Int})
 
-    @unpack results_path, N_eq, dict_name = analysis
+    @unpack results_path, N_c, dict_name = analysis
     N_t = length(time_steps)
     t = Vector{Float64}(undef,N_t)
-    E = Matrix{Float64}(undef,N_t, N_eq)
+    E = Matrix{Float64}(undef,N_t, N_c)
     for i in 1:N_t
         u, t[i] = load_solution(results_path, time_steps[i])
         E[i,:] = evaluate_conservation(analysis, u)
@@ -132,13 +132,13 @@ function analyze(analysis::ConservationAnalysis,
     time_steps::Vector{Int}, Δt::Float64, start::Int=1,
     resolution=100;  n=1, window_size=nothing, new_projection=false)
 
-    @unpack results_path, N_eq, dict_name = analysis
+    @unpack results_path, N_c, dict_name = analysis
     N_t = length(time_steps)
     t = Vector{Float64}(undef,N_t)
-    E = Matrix{Float64}(undef,N_t, N_eq)
+    E = Matrix{Float64}(undef,N_t, N_c)
     
     t_modeled = Vector{Float64}(undef,resolution+1)
-    E_modeled = Matrix{Float64}(undef,resolution+1, N_eq)
+    E_modeled = Matrix{Float64}(undef,resolution+1, N_c)
 
     u0, t0 = load_solution(results_path, time_steps[start])
     for i in 1:N_t
@@ -146,8 +146,8 @@ function analyze(analysis::ConservationAnalysis,
         E[i,:] = evaluate_conservation(analysis, u)
     end
 
-    (N_p,N_eq,N_el) = size(u0)
-    N = N_p*N_eq*N_el
+    (N_p,N_c,N_e) = size(u0)
+    N = N_p*N_c*N_e
 
     dt = Δt/resolution
     if new_projection
@@ -160,7 +160,7 @@ function analyze(analysis::ConservationAnalysis,
     end
 
     for i in 0:resolution
-        u = reshape(real.(forecast(model, dt*i, c)[1:N]),(N_p,N_eq,N_el))
+        u = reshape(real.(forecast(model, dt*i, c)[1:N]),(N_p,N_c,N_e))
         
         t_modeled[i+1] = t0+dt*i
         E_modeled[i+1,:] = evaluate_conservation(analysis, u)
