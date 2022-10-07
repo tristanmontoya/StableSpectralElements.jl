@@ -43,7 +43,7 @@ Discretizations in CLOUD.jl are constructed by first building a local approximat
 \begin{aligned}
 \hat{\Omega}_{\mathrm{line}} &= [-1,1],\\
 \hat{\Omega}_{\mathrm{quad}} &= [-1,1]^2,\\
-\hat{\Omega}_{\mathrm{tri}} &= \big\{ \bm{\xi} \in [-1,1]^2 : \xi_1 + \xi_2 \leq 1 \big\}.
+\hat{\Omega}_{\mathrm{tri}} &= \big\{ \bm{\xi} \in [-1,1]^2 : \xi_1 + \xi_2 \leq 0 \big\}.
 \end{aligned}
 ```
 These element types are used in the constructor for CLOUD.jl's `ReferenceApproximation` type, along with a subtype of `AbstractApproximationType` specifying the nature of the local approximation (and, optionally, the associated volume and facet quadrature rules). As an example, we can construct a collapsed-edge tensor-product spectral-element method of degree 4 on the reference triangle by first loading the CLOUD.jl package and then using the appropriate constructor:

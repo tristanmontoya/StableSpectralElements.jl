@@ -161,7 +161,7 @@ end
 
 function main(args)
     parsed_args = parse_commandline()
-    @unpack p,r,β,n_s,scheme,element_type,mapping_form,ode_algorithm,path,M0,λ,L,a,T,mesh_perturb, n_grids =  advection_driver_2d(parsed_args)
+    @unpack p,r,β,n_s,scheme,element_type,mapping_form,ode_algorithm,path,M0,λ,L,a,T,mesh_perturb, n_grids = advection_driver_2d(parsed_args)
 
     date_time = Dates.format(now(), "yyyymmdd_HHMMSS")
     path = new_path(string(path, "advection_", parsed_args["scheme"], "_p",
