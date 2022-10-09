@@ -159,12 +159,24 @@ function advection_driver_2d(parsed_args::Dict)
         mesh_perturb, n_grids)
 end
 
-function main(args)
-    parsed_args = parse_commandline()
-    @unpack p,r,β,n_s,scheme,element_type,mapping_form,ode_algorithm,path,M0,λ,L,a,T,mesh_perturb, n_grids = advection_driver_2d(parsed_args)
+function post_process_refinements(sequence_path::String, 
+    label::String, n_grids::Int)
+
+    (conservation_law, spatial_discretization, 
+    initial_data, form, tspan, strategy) = load_project(
+        string(sequence_path,"grid_1/"))
+    refinement_results = analyze(RefinementAnalysis(initial_data, sequence_path,
+        "./", label), n_grids)
+
+    return refinement_results
+end
+
+function run_driver(driver::AdvectionDriver{2})
+
+    @unpack p,r,β,n_s,scheme,element_type,mapping_form,ode_algorithm,path,M0,λ,L,a,T,mesh_perturb, n_grids = driver
 
     date_time = Dates.format(now(), "yyyymmdd_HHMMSS")
-    path = new_path(string(path, "advection_", parsed_args["scheme"], "_p",
+    path = new_path(string(path, "advection_", string(typeof(scheme)), "_p",
         string(p), "M", string(Int(M0)), "l", string(Int(λ)), "_",
         date_time, "/"))
 
@@ -200,7 +212,7 @@ function main(args)
             println(io, "Number of Julia threads: ", Threads.nthreads())
             println(io, "Number of BLAS threads: ", BLAS.get_num_threads(),"\n")
             println(io, "Results Path: ", "\"", results_path, "\"\n")
-            println(io, "Parameters: ", parsed_args, "\n")
+            #println(io, "Parameters: ", parsed_args, "\n")
         end
 
         dt = β*(L/M)/(norm(a)*(2*p+1))
@@ -231,6 +243,20 @@ function main(args)
                 analyze(energy_analysis)...)
         end
     end
+
+    refinement_results = post_process_refinements(
+        path, "refinement analysis", n_grids)
+    open(string(path,"screen.txt"), "a") do io
+        println(io, tabulate_analysis(refinement_results, e=1,
+            print_latex=false))
+    end
+    return refinement_results.eoc[end,1]
+end
+
+function main(args)
+    parsed_args = parse_commandline()
+    eoc = run_driver(advection_driver_2d(parsed_args))
+    println("order = ", eoc)
 end
 
 main(ARGS)

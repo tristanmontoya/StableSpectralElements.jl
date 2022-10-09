@@ -28,7 +28,11 @@ As this documentation is currently a work in progress, we recommend that users r
 More detailed tutorials will be added soon!
 ## Conservation Laws
 
-Wherever possible, CLOUD.jl separates the physical problem definition from the numerical discretization. The equations to be solved are defined by subtypes of `AbstractConservationLaw` on which functions such as `physical_flux` and `numerical_flux` are dispatched. Objects of type `AbstractConservationLaw` contain two type parameters, `d` and `PDEType`, the former denoting the spatial dimension of the problem, which is inherited by all subtypes, and the latter being a subtype of `AbstractPDEType` denoting the particular type of PDE being solved, which is either `FirstOrder` or `SecondOrder`. Second-order problems are treated by CLOUD.jl as first-order systems of the form 
+Wherever possible, CLOUD.jl separates the physical problem definition from the numerical discretization. The equations to be solved are defined by subtypes of `AbstractConservationLaw` on which functions such as `physical_flux` and `numerical_flux` are dispatched. Objects of type `AbstractConservationLaw` contain two type parameters, `d` and `PDEType`, the former denoting the spatial dimension of the problem, which is inherited by all subtypes, and the latter being a subtype of `AbstractPDEType` denoting the particular type of PDE being solved, which is either `FirstOrder` or `SecondOrder`. Whereas first-order problems remove the dependence of the flux tensor on the solution gradient in order to obtain systems of the form
+```math
+\frac{\partial \underline{U}(\bm{x},t)}{\partial t} + \bm{\nabla}_{\bm{x}} \cdot \underline{\bm{F}}(\underline{U}(\bm{x},t)) = \underline{0},
+```
+second-order problems are treated by CLOUD.jl as first-order systems of the form 
 ```math
 \begin{aligned}
 \underline{\bm{Q}}(\bm{x},t) - \bm{\nabla}_{\bm{x}} \underline{U}(\bm{x},t) &= \underline{0},\\
@@ -53,7 +57,7 @@ julia> using CLOUD
 
 julia> ref_tri = ReferenceApproximation(CollapsedSEM(4), Tri())
 ```
-Using CLOUD.jl's built-in plotting recipes, we can easily visualize such a discretization:
+Using CLOUD.jl's built-in plotting recipes, we can easily visualize the reference element for such a discretization:
 ```julia
 julia> using Plots
 

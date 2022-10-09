@@ -156,7 +156,7 @@ function tabulate_analysis(results::RefinementAnalysisResults; e=1,
         formatters = (ft_nomissing, ft_printf("%d", [1,]), 
             ft_printf("%.5e", [2,3,4,]),
         ft_printf("%1.5f", [5,])),
-        tf = tf_markdown)
+        tf = tf_unicode_rounded)
 end
     
 function tabulate_analysis_for_paper(results::NTuple{2,RefinementAnalysisResults}; e=1)
