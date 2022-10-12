@@ -37,9 +37,8 @@ module SpatialDiscretizations
         V::LinearMap
         Vf::LinearMap
         R::LinearMap
-        W::LinearMap
-        B::LinearMap
-        ADVw::NTuple{d, LinearMap}
+        W::Diagonal
+        B::Diagonal
         V_plot::LinearMap
         reference_mapping::AbstractReferenceMapping
     end
@@ -68,8 +67,8 @@ module SpatialDiscretizations
             N_e,
             reference_approximation,
             geometric_factors,
-            [convert(Matrix, reference_approximation.V' * W *
-                Diagonal(geometric_factors.J_q[:,k]) * 
+            [convert(Matrix, reference_approximation.V' *
+                Diagonal(W * geometric_factors.J_q[:,k]) * 
                 reference_approximation.V) for k in 1:N_e],
             Tuple(reference_element.Vp * mesh.xyz[m] for m in 1:d))
     end

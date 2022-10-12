@@ -1,6 +1,6 @@
 module MatrixFreeOperators
 
-    using LinearAlgebra, LinearMaps, MuladdMacro, UnPack, LoopVectorization
+    using LinearAlgebra, LinearMaps, MuladdMacro, UnPack
 
     export AbstractOperatorAlgorithm, BLASAlgorithm, GenericMatrixAlgorithm, DefaultOperatorAlgorithm, combine, make_operator
     

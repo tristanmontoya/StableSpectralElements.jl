@@ -210,11 +210,10 @@ function ReferenceApproximation(
     end
 
     N_p = size(V,2)
-    B = LinearMap(Diagonal(wf))
-    W = LinearMap(Diagonal(w_η))
+    B = Diagonal(wf)
+    W = Diagonal(w_η)
     Vf = R * V
-    ADVw = Tuple(V' * D[m]' * W for m in 1:2)
 
     return ReferenceApproximation(approx_type, N_p, N_q, N_f, 
-        reference_element, D, V, Vf, R, W, B, ADVw, V_plot, reference_mapping)
+        reference_element, D, V, Vf, R, W, B, V_plot, reference_mapping)
 end

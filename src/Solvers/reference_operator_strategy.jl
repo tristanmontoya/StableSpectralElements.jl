@@ -17,21 +17,30 @@ function apply_operators(
     ::ReferenceOperator,
     s::Matrix{Float64}) where {d}
 
-    @unpack VOL, FAC, SRC, M = operators
+    @unpack VOL, FAC, SRC, M, V = operators
+
+    N_q = size(f[1],1)
     N_c = size(f[1],2)
-    rhs = zeros(size(VOL[1],1), N_c)
+    N_p = size(M,1)
+
+    rhs_q = zeros(N_q, N_c)
+    rhs = Matrix{Float64}(undef, N_p, N_c)
 
     @inbounds for e in 1:N_c
         @timeit thread_timer() "volume terms" @inbounds for m in 1:d
-            rhs[:,e] = rhs[:,e] + VOL[m] * f[m][:,e]
+            rhs_q[:,e] = rhs_q[:,e] + VOL[m] * f[m][:,e]
         end
 
         @timeit thread_timer() "facet terms" begin
-            rhs[:,e] = rhs[:,e] + FAC * f_fac[:,e]
+            rhs_q[:,e] = rhs_q[:,e] + FAC * f_fac[:,e]
         end
 
         @timeit thread_timer() "source terms" begin
-            rhs[:,e] = rhs[:,e] + SRC * s[:,e]
+            rhs_q[:,e] = rhs_q[:,e] + SRC * s[:,e]
+        end
+
+        @timeit thread_timer() "mul test function" begin
+            rhs[:,e] = V' * rhs_q[:,e]
         end
     end
 
@@ -45,20 +54,27 @@ function apply_operators(
     ::ReferenceOperator,
     s::Nothing) where {d}
 
-    @unpack VOL, FAC, SRC, M = operators
+    @unpack VOL, FAC, M, V = operators
+    N_q = size(f[1],1)
     N_c = size(f[1],2)
-    rhs = zeros(size(VOL[1],1), N_c)
+    N_p = size(M,1)
+
+    rhs_q = zeros(N_q, N_c)
+    rhs = Matrix{Float64}(undef, N_p, N_c)
 
     @inbounds for e in 1:N_c
         @timeit thread_timer() "volume terms" @inbounds for m in 1:d
-            rhs[:,e] = rhs[:,e] + VOL[m] * f[m][:,e]
+            rhs_q[:,e] = rhs_q[:,e] + VOL[m] * f[m][:,e]
         end
 
         @timeit thread_timer() "facet terms" begin
-            rhs[:,e] = rhs[:,e] + FAC * f_fac[:,e]
+            rhs_q[:,e] = rhs_q[:,e] + FAC * f_fac[:,e]
+        end
+
+        @timeit thread_timer() "mul test function" begin
+            rhs[:,e] = V' * rhs_q[:,e]
         end
     end
-
     @timeit thread_timer() "mass matrix solve" return M \ rhs
 end
 
@@ -69,16 +85,24 @@ function auxiliary_variable(m::Int,
     ::ReferenceOperator) where {d}
 
     @unpack VOL, FAC, M = operators
-    N_c = size(u,2)
-    rhs = zeros(size(VOL[1],1), N_c)
+    N_q = size(f[1],1)
+    N_c = size(f[1],2)
+    N_p = size(M,1)
+
+    rhs_q = zeros(N_q, N_c)
+    rhs = Matrix{Float64}(undef, N_p, N_c)
 
     @inbounds for e in 1:N_c
         @timeit thread_timer() "volume terms" begin
-            rhs[:,e] = rhs[:,e] - VOL[m] * u[:,e]
+            rhs_q[:,e] = rhs_q[:,e] - VOL[m] * u[:,e]
         end
 
         @timeit thread_timer() "facet terms" begin
-            rhs[:,e] = rhs[:,e] - FAC * u_fac[:,e]
+            rhs_q[:,e] = rhs_q[:,e] - FAC * u_fac[:,e]
+        end
+
+        @timeit thread_timer() "mul test function" begin
+            rhs[:,e] = V' * rhs_q[:,e]
         end
     end
 

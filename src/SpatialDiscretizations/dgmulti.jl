@@ -38,16 +38,15 @@ function ReferenceApproximation(
 
     V_plot = LinearMap(vandermonde(Line(), p, rstp[1]))
     inv_M = LinearMap(inv(VDM' * Diagonal(wq) * VDM))
-    W = LinearMap(Diagonal(wq))
-    B = LinearMap(Diagonal(wf))
+    W = Diagonal(wq)
+    B = Diagonal(wf)
     P = inv_M * V' * W
 
     R = make_operator(Vf * P, operator_algorithm)
     D = (make_operator(∇V[1] * P, operator_algorithm),)
-    ADVw = (make_operator(∇V[1]' * Matrix(W), operator_algorithm),)
 
     return ReferenceApproximation(approx_type, N_p, N_q, N_f, 
-        reference_element, D, V, Vf, R, W, B, ADVw, V_plot, NoMapping())
+        reference_element, D, V, Vf, R, W, B, V_plot, NoMapping())
 end
 
 function ReferenceApproximation(
@@ -72,14 +71,12 @@ function ReferenceApproximation(
     N_q = length(wq)
     N_f = length(wf)
     inv_M = LinearMap(inv(VDM' * Diagonal(wq) * VDM))
-    W = LinearMap(Diagonal(wq))
-    B = LinearMap(Diagonal(wf))
+    W = Diagonal(wq)
+    B = Diagonal(wf)
     P = inv_M * V' * W
 
     R = make_operator(Vf * P, operator_algorithm)
     D = Tuple(make_operator(∇V[m] * P, operator_algorithm) for m in 1:2)
-    ADVw = Tuple(make_operator(∇V[m]' * Matrix(W), operator_algorithm) 
-        for m in 1:2)
 
     return ReferenceApproximation(approx_type, N_p, N_q, N_f, 
         reference_element, D, V, Vf, R, W, B, ADVw, V_plot, NoMapping())

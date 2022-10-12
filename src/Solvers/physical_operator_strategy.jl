@@ -19,9 +19,9 @@ function precompute(operators::DiscretizationOperators{d}) where {d}
     inv_M = inv(M)
 
     return DiscretizationOperators{d}(
-        Tuple(combine(inv_M*VOL[n]) for n in 1:d),
-        combine(inv_M*FAC), 
-        combine(inv_M*SRC),
+        Tuple(combine(inv_M * V' * VOL[n]) for n in 1:d),
+        combine(inv_M * V' * FAC), 
+        combine(inv_M * V' * SRC),
         M, V, Vf, scaled_normal)
 end
 
