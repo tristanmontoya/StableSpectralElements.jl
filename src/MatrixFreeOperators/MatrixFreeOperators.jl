@@ -24,6 +24,12 @@ module MatrixFreeOperators
     function combine(map::LinearMap)
         return LinearMap(convert(Matrix,map))
     end
+    
+    function LinearAlgebra.mul!(y::AbstractVector, 
+        A::Diagonal, x::AbstractVector)
+        y[:] = A.diag .* x
+        return y
+    end
 
     export TensorProductMap
     include("tensor_product.jl")

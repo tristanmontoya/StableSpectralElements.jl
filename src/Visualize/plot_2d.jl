@@ -44,6 +44,7 @@ end
     stride = nothing,
     node_color = 1,
     grid_line_width = 2.0,
+    edge_line_width = 3.0,
     X=nothing)
 
     @unpack element_type, rq, sq, rf, sf = reference_approximation.reference_element
@@ -75,68 +76,67 @@ end
     
     for edge ∈ edges
         @series begin
-            linewidth --> 3.0
+            linewidth --> edge_line_width
             linecolor --> :black
             X(ref_edge_nodes[1][edge][1:end-1], ref_edge_nodes[2][edge][1:end-1])
         end
     end
 
-    if grid_connect && 
-        (reference_approximation.approx_type isa Union{DGSEM, CollapsedModal, CollapsedSEM})
-
-        if isnothing(stride)
-            stride = Int(sqrt(reference_approximation.N_q))
-        end
-
-        N1 = stride
-        N2 = reference_approximation.N_q ÷ stride
-
-        if element_type isa Tri
-            
-            for i in 1:N1
-                @series begin
-                    color --> node_color
-                    linewidth --> grid_line_width
-                    X(rq[i:N2:(N2*(N1-1) + i)], sq[i:N2:(N2*(N1-1) + i)])
-                end
-            end
-
-            for i in 1:N2
-                @series begin
-                    color --> node_color
-                    linewidth --> grid_line_width
-                    X(rq[(i-1)*N1+1:i*N1], sq[(i-1)*N1+1:i*N1])
-                end
-            end
-
-        elseif element_type isa Quad
-
-            for i in 1:N1
-                @series begin
-                    color --> node_color
-                    linewidth --> grid_line_width
-                    X(rq[i:N2:(N2*(N1-1) + i)], sq[i:N2:(N2*(N1-1) + i)])
-                end
-            end
-
-            for i in 1:N2
-                @series begin
-                    color --> node_color
-                    linewidth --> grid_line_width
-                    X(rq[(i-1)*N1+1:i*N1], sq[(i-1)*N1+1:i*N1])
-                end
-            end
-        end
-        volume_quadrature = false
-    end
-
     if volume_quadrature
-        @series begin 
-            seriestype --> :scatter
-            markerstrokewidth --> 0.0
-            markersize --> 5
-            color --> node_color
-            X(rq, sq)
+        if grid_connect &&
+            (reference_approximation.approx_type isa Union{DGSEM, CollapsedModal, CollapsedSEM})
+
+            if isnothing(stride)
+                stride = Int(sqrt(reference_approximation.N_q))
+            end
+
+            N1 = stride
+            N2 = reference_approximation.N_q ÷ stride
+
+            if element_type isa Tri
+                
+                for i in 1:N1
+                    @series begin
+                        color --> node_color
+                        linewidth --> grid_line_width
+                        X(rq[i:N2:(N2*(N1-1) + i)], sq[i:N2:(N2*(N1-1) + i)])
+                    end
+                end
+
+                for i in 1:N2
+                    @series begin
+                        color --> node_color
+                        linewidth --> grid_line_width
+                        X(rq[(i-1)*N1+1:i*N1], sq[(i-1)*N1+1:i*N1])
+                    end
+                end
+
+            elseif element_type isa Quad
+
+                for i in 1:N1
+                    @series begin
+                        color --> node_color
+                        linewidth --> grid_line_width
+                        X(rq[i:N2:(N2*(N1-1) + i)], sq[i:N2:(N2*(N1-1) + i)])
+                    end
+                end
+
+                for i in 1:N2
+                    @series begin
+                        color --> node_color
+                        linewidth --> grid_line_width
+                        X(rq[(i-1)*N1+1:i*N1], sq[(i-1)*N1+1:i*N1])
+                    end
+                end
+            end
+        else
+            @series begin 
+                seriestype --> :scatter
+                markerstrokewidth --> 0.0
+                markersize --> 5
+                color --> node_color
+                X(rq, sq)
+            end
         end
     end
 

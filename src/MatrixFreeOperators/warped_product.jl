@@ -27,23 +27,21 @@ function LinearAlgebra.mul!(y::AbstractVector,
     
     LinearMaps.check_dim_mul(y, C, x)
     @unpack A, B, σᵢ, σₒ = C
-    (M1,M2) = size(σₒ)
-    N1 = size(σᵢ,1)
-    N2 = [count(a -> a>0, σᵢ[β1,:]) for β1 in 1:N1]
 
-    Z = Matrix{Float64}(undef, M2, N1)
-    @inbounds for α2 in 1:M2, β1 in 1:N1
+    Z = Matrix{Float64}(undef, size(σₒ,2), size(σᵢ,1))
+    @inbounds for α2 in axes(σₒ,2), β1 in axes(σᵢ,1)
+        N2 = count(a -> a>0, σᵢ[β1,:])
         temp = 0.0
-        @turbo for β2 in 1:N2[β1]
-            @muladd temp = temp + B[β1][α2,β2]*x[σᵢ[β1,β2]]
+        @inbounds @simd for β2 in 1:N2
+            @muladd temp = temp + B[β1][α2,β2] * x[σᵢ[β1,β2]]
         end
         Z[α2,β1] = temp
     end
 
-    @turbo for α1 in 1:M1, α2 in 1:M2
+    @inbounds for α1 in axes(σₒ,1), α2 in axes(σₒ,2)
         temp = 0.0
-        for β1 in 1:N1
-            @muladd temp = temp + A[α1,β1]*Z[α2,β1]
+        @inbounds @simd for β1 in axes(σᵢ,1)
+            @muladd temp = temp + A[α1,β1] * Z[α2,β1]
         end
         y[σₒ[α1,α2]] = temp
     end
@@ -58,23 +56,20 @@ function LinearMaps._unsafe_mul!(y::AbstractVector,
     LinearMaps.check_dim_mul(y, transC, x)
     @unpack A, B, σᵢ, σₒ = transC.lmap
 
-    (N1,N2) = size(σₒ)
-    M1 = size(σᵢ,1)
-    M2 = [count(a -> a>0, σᵢ[α1,:]) for α1 in 1:M1]
-
-    Z = Matrix{Float64}(undef, M1, N2)
-    @turbo for α1 in 1:M1, β2 in 1:N2
+    Z = Matrix{Float64}(undef, size(σᵢ,1), size(σₒ,2))
+    @inbounds for α1 in axes(σᵢ,1), β2 in axes(σₒ,2)
         temp = 0.0
-        for β1 in 1:N1
+        @inbounds @simd for β1 in axes(σₒ,1)
             @muladd temp = temp + A[β1,α1]*x[σₒ[β1,β2]]
         end
         Z[α1,β2] = temp
     end
 
-    @inbounds for α1 in 1:M1
-        @turbo for α2 in 1:M2[α1]
+    @inbounds for α1 in axes(σᵢ,1)
+        M2 = count(a -> a>0, σᵢ[α1,:])
+        @inbounds for α2 in 1:M2
             temp = 0.0
-            for β2 in 1:N2
+            @inbounds @simd for β2 in axes(σₒ,2)
                 @muladd temp = temp + B[α1][β2,α2]*Z[α1,β2]
             end
             y[σᵢ[α1,α2]] = temp
