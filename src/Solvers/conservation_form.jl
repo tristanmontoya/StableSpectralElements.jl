@@ -73,7 +73,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     @unpack N_e, M, reference_approximation = spatial_discretization
     @unpack V, Vf, R, W, B, D = reference_approximation
     @unpack nrstJ = reference_approximation.reference_element
-    @unpack J_q, Λ_q, nJf = spatial_discretization.reference_geometric_factors
+    @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
 
     operators = Array{DiscretizationOperators}(undef, N_e)
     Threads.@threads for k in 1:N_e

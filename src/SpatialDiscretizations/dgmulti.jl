@@ -79,5 +79,5 @@ function ReferenceApproximation(
     D = Tuple(make_operator(∇V[m] * P, operator_algorithm) for m in 1:2)
 
     return ReferenceApproximation(approx_type, N_p, N_q, N_f, 
-        reference_element, D, V, Vf, R, W, B, ADVw, V_plot, NoMapping())
+        reference_element, D, V, Vf, R, W, B, V_plot, NoMapping())
 end

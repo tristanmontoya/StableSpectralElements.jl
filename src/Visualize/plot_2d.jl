@@ -39,15 +39,19 @@ end
     reference_approximation::ReferenceApproximation{2,<:AbstractElemShape,<:AbstractApproximationType}; 
     volume_quadrature=true,
     facet_quadrature=true,
+    mapping_nodes=true,
     grid_connect=false,
+    volume_quadrature_connect = false,
+    mapping_nodes_connect = nothing,
     sketch=false,
     stride = nothing,
     node_color = 1,
+    facet_node_color=2,
     grid_line_width = 2.0,
     edge_line_width = 3.0,
     X=nothing)
 
-    @unpack element_type, rq, sq, rf, sf = reference_approximation.reference_element
+    @unpack element_type, r, s, rq, sq, rf, sf = reference_approximation.reference_element
 
     if isnothing(X)
         xlims --> [-1.1, 1.1]
@@ -70,15 +74,62 @@ end
         ylabel --> "\$\\xi_2\$"
     end
 
-    ref_edge_nodes = map_face_nodes(element_type,
-        collect(LinRange(-1.0,1.0, 40)))
-    edges = find_face_nodes(element_type, ref_edge_nodes...)
+    if element_type isa Tri
+        ref_edge_nodes = map_face_nodes(element_type,
+            collect(LinRange(-1.0,1.0, 40)))
+        edges = find_face_nodes(element_type, ref_edge_nodes...)
     
-    for edge ∈ edges
+        for edge ∈ edges
+            @series begin
+                linewidth --> edge_line_width
+                linecolor --> :black
+                X(ref_edge_nodes[1][edge][1:end-1], ref_edge_nodes[2][edge][1:end-1])
+            end
+        end
+    elseif element_type isa Quad
+        N = 40
+        range = collect(LinRange(-1.0,1.0, N))
         @series begin
             linewidth --> edge_line_width
             linecolor --> :black
-            X(ref_edge_nodes[1][edge][1:end-1], ref_edge_nodes[2][edge][1:end-1])
+            X(fill(-1.0,N),range)
+        end
+        @series begin
+            linewidth --> edge_line_width
+            linecolor --> :black
+            X(fill(1.0,N),range)
+        end
+        @series begin
+            linewidth --> edge_line_width
+            linecolor --> :black
+            X(range,fill(-1.0,N))
+        end
+        @series begin
+            linewidth --> edge_line_width
+            linecolor --> :black
+            X(range,fill(1.0,N))
+        end
+    end
+
+    if mapping_nodes
+        @series begin 
+            seriestype --> :scatter
+            markerstrokewidth --> 0.0
+            markersize --> 5
+            color --> node_color
+            X(r, s)
+        end
+
+        if !isnothing(mapping_nodes_connect)
+            N_p = length(r)
+            for i in 1:N_p
+                @series begin 
+                    linewidth --> grid_line_width
+                    linecolor --> node_color
+                    x,y = [r[mapping_nodes_connect], r[i]], [s[mapping_nodes_connect],s[i]]
+                    X(x,y)
+                end
+            end
         end
     end
 
@@ -137,6 +188,18 @@ end
                 color --> node_color
                 X(rq, sq)
             end
+            if volume_quadrature_connect
+                j = argmin([sqrt((rq[i] + 1.0/3.0)^2 + (sq[i] + 1.0/3.0)^2)
+                    for i in 1:reference_approximation.N_q])
+                for i in 1:reference_approximation.N_q
+                    @series begin 
+                        linewidth --> grid_line_width
+                        linecolor --> node_color
+                        x,y = [rq[j], rq[i]], [sq[j],sq[i]]
+                        X(x,y)
+                    end
+                end
+            end
         end
     end
 
@@ -144,7 +207,7 @@ end
         @series begin 
             seriestype --> :scatter
             markershape --> :circle
-            markercolor --> node_color
+            markercolor --> facet_node_color
             markerstrokewidth --> 0.0
             markersize --> 4
             X(rf, sf)

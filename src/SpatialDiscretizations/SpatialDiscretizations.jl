@@ -141,7 +141,7 @@ module SpatialDiscretizations
     function check_sbp_property(
         spatial_discretization::SpatialDiscretization{d}, k::Int=1) where {d}
 
-        @unpack ADVw, V, Vf, D, B = spatial_discretization.reference_approximation
+        @unpack V, Vf, D, B = spatial_discretization.reference_approximation
         @unpack Λ_q, nJf = spatial_discretization.geometric_factors
 
         S = Tuple((sum(0.5 * D[m]' * W * Diagonal(Λ_q[:,m,n,k]) * V -
