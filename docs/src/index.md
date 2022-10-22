@@ -16,7 +16,7 @@ To install CLOUD.jl, open a `julia` session and enter:
 ```julia
 julia> import Pkg
 
-julia> Pkg.add("https://github.com/tristanmontoya/CLOUD.jl.git")
+julia> Pkg.add(url="https://github.com/tristanmontoya/CLOUD.jl.git")
 ```
 
 ## Basic Usage
@@ -55,7 +55,7 @@ These element types are used in the constructor for CLOUD.jl's `ReferenceApproxi
 ```julia
 julia> using CLOUD
 
-julia> ref_tri = ReferenceApproximation(CollapsedSEM(4), Tri())
+julia> ref_elem_tri = ReferenceApproximation(CollapsedSEM(4), Tri())
 ```
 Using CLOUD.jl's built-in plotting recipes, we can easily visualize the reference element for such a discretization:
 ```julia
