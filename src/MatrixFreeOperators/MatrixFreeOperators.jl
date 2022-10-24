@@ -1,6 +1,6 @@
 module MatrixFreeOperators
 
-    using LinearAlgebra, LinearMaps, MuladdMacro, UnPack
+    using LinearAlgebra, LinearMaps, MuladdMacro, UnPack, GFlops
 
     export AbstractOperatorAlgorithm, BLASAlgorithm, GenericMatrixAlgorithm, DefaultOperatorAlgorithm, combine, make_operator, count_ops
     
@@ -34,7 +34,7 @@ module MatrixFreeOperators
 
     ```
     Remove unnecessary add operations in diagonal matrix multiplication
-    See Julia issue 47312 at https://github.com/JuliaLang/julia/issues/47312
+    This was resolved in Julia PR no. 44651, so not needed for v1.8.2
     ```
     function LinearAlgebra.mul!(y::AbstractVector, 
         A::Diagonal, x::AbstractVector)

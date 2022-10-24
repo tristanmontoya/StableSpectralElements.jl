@@ -46,4 +46,7 @@ module Analysis
 
     export RefinementAnalysis, RefinementAnalysisResults, run_refinement, get_tickslogscale
     include("refinement.jl")
+
+    export FlopsAnalysis, FlopsAnalysisResults
+    include("flops.jl")
 end
