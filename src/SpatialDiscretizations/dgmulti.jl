@@ -50,24 +50,25 @@ function ReferenceApproximation(
 end
 
 function ReferenceApproximation(
-    approx_type::DGMulti, ::Tri;
+    approx_type::DGMulti, element_type::AbstractElemShape;
     mapping_degree::Int=1, N_plot::Int=10, 
     operator_algorithm::AbstractOperatorAlgorithm=BLASAlgorithm())
 
     @unpack p,q,q_f = approx_type
-    N_p = binomial(p+2, 2)
-    reference_element = RefElemData(Tri(), 
-        mapping_degree, quad_rule_vol=quad_nodes(Tri(), q),
-        quad_rule_face=quad_nodes(face_type(Tri()), q_f), Nplot=N_plot)
+    d = dim(element_type)
+    N_p = binomial(p+d, d)
+    reference_element = RefElemData(element_type, 
+        mapping_degree, quad_rule_vol=quad_nodes(element_type, q),
+        quad_rule_face=quad_nodes(face_type(element_type), q_f), Nplot=N_plot)
     @unpack rstp, rstq, rstf, wq, wf = reference_element
 
-    VDM, ∇VDM... = basis(Tri(), p, rstq...) 
-    ∇V = Tuple(LinearMap(∇VDM[m]) for m in 1:2)
+    VDM, ∇VDM... = basis(element_type, p, rstq...) 
+    ∇V = Tuple(LinearMap(∇VDM[m]) for m in 1:d)
 
     V = make_operator(LinearMap(VDM), operator_algorithm)
-    Vf = make_operator(LinearMap(vandermonde(Tri(),p,rstf...)), operator_algorithm)
+    Vf = make_operator(LinearMap(vandermonde(element_type,p,rstf...)), operator_algorithm)
 
-    V_plot = LinearMap(vandermonde(Tri(), p, rstp...))
+    V_plot = LinearMap(vandermonde(element_type, p, rstp...))
     N_q = length(wq)
     N_f = length(wf)
     inv_M = LinearMap(inv(VDM' * Diagonal(wq) * VDM))
@@ -76,7 +77,7 @@ function ReferenceApproximation(
     P = inv_M * V' * W
 
     R = make_operator(Vf * P, operator_algorithm)
-    D = Tuple(make_operator(∇V[m] * P, operator_algorithm) for m in 1:2)
+    D = Tuple(make_operator(∇V[m] * P, operator_algorithm) for m in 1:d)
 
     return ReferenceApproximation(approx_type, N_p, N_q, N_f, 
         reference_element, D, V, Vf, R, W, B, V_plot, NoMapping())

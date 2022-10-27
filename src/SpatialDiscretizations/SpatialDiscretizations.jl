@@ -14,7 +14,7 @@ module SpatialDiscretizations
     using Reexport
     @reexport using StartUpDG: AbstractElemShape, Line, Quad, Tri, Tet, Hex, Pyr
 
-    export AbstractApproximationType, AbstractReferenceMapping, NoMapping, CollapsedMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, make_sbp_operator, χ, warped_product
+    export AbstractApproximationType, AbstractReferenceMapping, NoMapping, CollapsedMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, dim, make_sbp_operator, χ, warped_product
     
     abstract type AbstractApproximationType end
 
@@ -166,6 +166,10 @@ module SpatialDiscretizations
         return [Tuple(sum(xyz[m][:,k])/length(xyz[m][:,k]) 
             for m in 1:d) for k in 1:spatial_discretization.N_e]
     end
+
+    dim(::Line) = 1
+    dim(::Union{Tri,Quad}) = 2
+    dim(::Union{Tet,Hex}) = 3
 
     export AbstractQuadratureRule, LGLQuadrature, LGQuadrature, LGRQuadrature, JGLQuadrature, JGRQuadrature, JGQuadrature, JacobiQuadrature, LegendreQuadrature, quadrature, facet_node_ids
     include("quadrature.jl")
