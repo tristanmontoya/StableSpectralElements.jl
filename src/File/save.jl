@@ -53,7 +53,7 @@ function save_solution(integrator::ODEIntegrator, results_path::String)
         println(io, "writing time step ", integrator.iter,
              "  t = ", integrator.t)
     end
-    save(string(results_path, "res_", integrator.iter, ".jld2"),
+    save(string(results_path, "sol_", integrator.iter, ".jld2"),
         Dict("u" => integrator.u, "t" => integrator.t, 
             "du" => get_du(integrator)))
     time_steps=load_object(string(results_path, "time_steps.jld2"))
@@ -62,7 +62,7 @@ function save_solution(integrator::ODEIntegrator, results_path::String)
 end
 
 function save_solution(u::Array{Float64,3}, t::Float64, results_path::String, time_step::Union{Int,String}=0)
-    save(string(results_path, "res_", time_step, ".jld2"), 
+    save(string(results_path, "sol_", time_step, ".jld2"), 
         Dict("u" => u, "t" => t))
     if time_step isa Int
         time_steps=load_object(string(results_path, "time_steps.jld2"))

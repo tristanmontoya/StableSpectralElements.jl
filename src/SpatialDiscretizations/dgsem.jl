@@ -33,7 +33,7 @@ function ReferenceApproximation(
     W = Diagonal(wq)
     B = Diagonal(wf)
 
-    return ReferenceApproximation{1}(approx_type, N_p, N_q, N_f, 
+    return ReferenceApproximation(approx_type, N_p, N_q, N_f, 
         reference_element, D, V, Vf, R, W, B, V_plot, NoMapping())
 end
 

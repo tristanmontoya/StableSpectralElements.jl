@@ -32,6 +32,16 @@ module Mesh
         
         return MeshData(reference_element, mesh, x, y)
     end
+
+    function warp_mesh(mesh::MeshData{3}, reference_element::RefElemData{3}, 
+        factor::Float64=0.2)
+        @unpack x, y, z = mesh
+
+        x = x .+ factor*sin.(π*x).*sin.(π*y)
+        y = y .+ factor*exp.(1.0.-y).*sin.(π*x).*sin.(π*y)
+        z = z .+ 0.25*factor*(sin.(2π*x).+sin.(2π*y))
+        return MeshData(reference_element, mesh, x, y, z)
+    end
   
     function uniform_periodic_mesh(reference_element::RefElemData{1}, 
         limits::NTuple{2,Float64}, M::Int)
@@ -90,14 +100,14 @@ module Mesh
                 bot_mid = j*(M[2]+1) + i
                 bot_right = (j+1)*(M[2]+1) + i
                 EtoV =vcat(EtoV,[
-                    bot_left+1 bot_left bot_mid ;
-                    bot_mid bot_mid+1 bot_left+1 ;
-                     bot_mid bot_right bot_right+1;
-                    bot_right+1 bot_mid+1 bot_mid ;
-                    bot_left+1 bot_mid+1 bot_mid+2 ;
-                    bot_mid+2 bot_left+2 bot_left+1 ;
-                    bot_mid+2 bot_mid+1 bot_right+1;
-                    bot_right+1 bot_right+2 bot_mid+2][:,end:-1:1])
+                    bot_mid bot_left bot_left+1 ;
+                    bot_left+1 bot_mid+1 bot_mid ;
+                    bot_right+1 bot_right bot_mid ;
+                    bot_mid bot_mid+1 bot_right+1 ;
+                    bot_mid+2 bot_mid+1 bot_left+1 ;
+                    bot_left+1 bot_left+2 bot_mid+2 ;
+                    bot_right+1 bot_mid+1 bot_mid+2  ;
+                    bot_mid+2 bot_right+2 bot_right+1])
             end
         end
         return (VX, VY), EtoV

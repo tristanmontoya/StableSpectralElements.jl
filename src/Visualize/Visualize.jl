@@ -9,6 +9,7 @@ module Visualize
     using UnPack
     using RecipesBase
     using Triangulate
+    using TetGen
 
     using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation, AbstractApproximationType, DGSEM, DGMulti, CollapsedSEM, CollapsedModal
     using ..GridFunctions: AbstractGridFunction, evaluate
@@ -17,4 +18,5 @@ module Visualize
 
     export low_order_subdivision, postprocess_vtk, outline_element
     include("plot_2d.jl")
+    include("plot_3d.jl")
 end

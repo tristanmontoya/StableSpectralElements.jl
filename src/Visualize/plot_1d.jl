@@ -1,4 +1,3 @@
-# TODO: remove all uses of Plotter
 struct Plotter{d}
     x_plot::NTuple{d,Matrix{Float64}}
     V_plot::LinearMap

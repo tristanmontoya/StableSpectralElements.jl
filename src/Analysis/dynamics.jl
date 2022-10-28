@@ -358,7 +358,7 @@ function forecast(analysis::KoopmanAnalysis, Δt::Float64,
             push!(u,reshape(real.(forecast(last(model), Δt, last(model).c[:,end]))[1:N_p*N_c*N_e], (N_p,N_c,N_e)))
         end
         push!(t, t0 + Δt)
-        save(string(forecast_path, "res_", time_steps[i], ".jld2"),
+        save(string(forecast_path, "sol_", time_steps[i], ".jld2"),
             Dict("u" => last(u), "t" => last(t)))
     end
     return forecast_path, model

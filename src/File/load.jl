@@ -8,11 +8,11 @@ function load_solution(results_path::String, time_step::Union{Int,String}=0;
             dict["spatial_discretization"]), dict["tspan"][1]
     else
     
-        dict = load(string(results_path, "res_", time_step, ".jld2"))
+        dict = load(string(results_path, "sol_", time_step, ".jld2"))
         return dict["u"], dict["t"]
     end
     =#
-    dict = load(string(results_path, "res_", time_step, ".jld2"))
+    dict = load(string(results_path, "sol_", time_step, ".jld2"))
     if load_du
         return dict["u"], dict["du"], dict["t"]
     else
