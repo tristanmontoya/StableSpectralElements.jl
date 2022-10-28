@@ -67,13 +67,15 @@ julia> plot(ref_elem_tri, grid_connect=true)
 ```
 ![CollapsedSEM](./assets/ref_tri.svg)
 
-## Spatial Discretizations
+## Spatial Discretization
 All the information used to define the spatial discretization on the physical domain $\Omega$ is contained within a `SpatialDiscretization` structure, which is constructed using a `ReferenceApproximation` and a `MeshData` from StartUpDG.jl, which are stored as the fields `reference_approximation` and `mesh`. When the constructor for a `SpatialDiscretization` is called, the grid metrics are computed and stored `GeometricFactors` structure, with the field being `geometric_factors`. CLOUD.jl provides utilities to easily generate uniform periodic meshes on line segments, rectangles, or rectangular prisms; using such a mesh and `ref_elem_tri` defined previously, we can construct a spatial discretization on the domain $\Omega = [0,1] \times [0,1]$ with four edges in each direction (a total of $N_e = 32$ elements) as shown below:
 
 ```julia
-julia> mesh = uniform_periodic_mesh(ref_elem_tri, ((0.0, 1.0),(0.0,1.0), (4,4)))
+julia> mesh = uniform_periodic_mesh(ref_elem_tri.reference_element, 
+    ((0.0, 1.0),(0.0,1.0), (4,4)))
 
-julia> spatial_discretization = SpatialDiscretization(mesh, ref_elem_tri)
+julia> spatial_discretization = SpatialDiscretization(mesh, 
+    ref_elem_tri.reference_element)
 ```
 
 ## License
