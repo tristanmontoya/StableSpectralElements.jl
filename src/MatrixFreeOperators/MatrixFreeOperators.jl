@@ -42,11 +42,12 @@ module MatrixFreeOperators
         return y
     end
 
-    export TensorProductMap
-    include("tensor_product.jl")
+    export TensorProductMap2D, TensorProductMap3D
+    include("tensor_product_2d.jl")
+    include("tensor_product_3d.jl")
 
-    export WarpedTensorProductMap
-    include("warped_product.jl")
+    export WarpedTensorProductMap2D
+    include("warped_product_2d.jl")
 
     export SelectionMap
     include("selection.jl")

@@ -78,10 +78,10 @@ function ReferenceApproximation(approx_type::DGSEM,
         Vf = SelectionMap(facet_node_ids(Quad(),(p+1,p+1)),N_p)
     elseif typeof(volume_quadrature_rule) == typeof(facet_quadrature_rule)
         Vf = make_operator([
-            TensorProductMap(R_L, I, sigma, [j for i in 1:1, j in 1:p+1]) ; #L
-            TensorProductMap(R_R, I, sigma, [j for i in 1:1, j in 1:p+1]) ; #R
-            TensorProductMap(I, R_L, sigma, [i for i in 1:p+1, j in 1:1]) ; #B
-            TensorProductMap(I, R_R ,sigma, [i for i in 1:p+1, j in 1:1])], #T
+            TensorProductMap2D(R_L, I, sigma, [j for i in 1:1, j in 1:p+1]) ; #L
+            TensorProductMap2D(R_R, I, sigma, [j for i in 1:1, j in 1:p+1]) ; #R
+            TensorProductMap2D(I, R_L, sigma, [i for i in 1:p+1, j in 1:1]) ; #B
+            TensorProductMap2D(I, R_R ,sigma, [i for i in 1:p+1, j in 1:1])], #T
             operator_algorithm)
     else
         Vf = make_operator(LinearMap(vandermonde(element_type,p,rstf...) / 
@@ -91,9 +91,9 @@ function ReferenceApproximation(approx_type::DGSEM,
     V_plot = LinearMap(vandermonde(element_type, p, rstp...) / 
         vandermonde(element_type, p, rstq...))
     
-    D = (make_operator(TensorProductMap(D_1D, I, sigma, sigma),             
+    D = (make_operator(TensorProductMap2D(D_1D, I, sigma, sigma),             
             operator_algorithm),
-        make_operator(TensorProductMap(I, D_1D, sigma, sigma),
+        make_operator(TensorProductMap2D(I, D_1D, sigma, sigma),
             operator_algorithm))
 
     V = LinearMap(I, N_q)

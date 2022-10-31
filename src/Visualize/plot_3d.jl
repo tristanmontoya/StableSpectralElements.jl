@@ -65,7 +65,7 @@ function postprocess_vtk(
     variable_name="u")
 
     @unpack reference_element, V, V_plot = spatial_discretization.reference_approximation
-    @unpack mesh = spatial_discretization
+    @unpack mesh, x_plot = spatial_discretization
     @unpack rstp = reference_element
 
     if isnothing(p_vis) || isnothing(p_map)

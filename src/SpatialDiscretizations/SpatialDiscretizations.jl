@@ -9,7 +9,7 @@ module SpatialDiscretizations
     import StartUpDG: face_type, init_face_data
 
     using ..Mesh: GeometricFactors
-    using ..MatrixFreeOperators: TensorProductMap, WarpedTensorProductMap, SelectionMap, AbstractOperatorAlgorithm, GenericMatrixMap, BLASAlgorithm, GenericMatrixAlgorithm, DefaultOperatorAlgorithm, make_operator
+    using ..MatrixFreeOperators: TensorProductMap2D, WarpedTensorProductMap2D, SelectionMap, AbstractOperatorAlgorithm, GenericMatrixMap, BLASAlgorithm, GenericMatrixAlgorithm, DefaultOperatorAlgorithm, make_operator
 
     using Reexport
     @reexport using StartUpDG: AbstractElemShape, Line, Quad, Tri, Tet, Hex, Pyr

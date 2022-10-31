@@ -79,7 +79,7 @@ function warped_product(::Tri, p, η1D::NTuple{2,Vector{Float64}})
         end
     end
 
-    return WarpedTensorProductMap(A,B,σᵢ,σₒ)
+    return WarpedTensorProductMap2D(A,B,σᵢ,σₒ)
 end
 
 function ReferenceApproximation(
@@ -152,17 +152,17 @@ function ReferenceApproximation(
         if volume_quadrature_rule[2] isa LGRQuadrature
             R = make_operator([SelectionMap( # bottom, left to right
                 [(p+1)*(i-1)+1 for i in 1:p+1], N_q); 
-            TensorProductMap( # right, upwards
+            TensorProductMap2D( # right, upwards
                 R_1[2:2,:], I, sigma, [j for i in 1:1, j in 1:p+1]); 
-            TensorProductMap( # left, downwards
+            TensorProductMap2D( # left, downwards
                 R_1[1:1,:], I, sigma, [j for i in 1:1, j in p+1:-1:1])],
                 operator_algorithm)
         else
-            R = make_operator([TensorProductMap( # bottom, left to right
+            R = make_operator([TensorProductMap2D( # bottom, left to right
                 I, R_2[1:1,:], sigma, [i for i in 1:p+1, j in 1:1]); 
-            TensorProductMap( # right, upwards
+            TensorProductMap2D( # right, upwards
                 R_1[2:2,:], I, sigma, [j for i in 1:1, j in 1:p+1]); 
-            TensorProductMap( # left, downwards
+            TensorProductMap2D( # left, downwards
                 R_1[1:1,:], I, sigma, [j for i in 1:1, j in p+1:-1:1])],
                 operator_algorithm)
         end
@@ -175,21 +175,21 @@ function ReferenceApproximation(
             facet_quadrature_rule[2], p+1)
             
         R = make_operator([LinearMap(vandermonde(Line(),p,r_1d_1)/rd_1.VDM) *
-                TensorProductMap( # bottom, left to right
+                TensorProductMap2D( # bottom, left to right
                     I, R_2[1:1,:], sigma, [i for i in 1:p+1, j in 1:1]); 
             LinearMap(vandermonde(Line(),p,r_1d_2)/rd_2.VDM) * 
-                TensorProductMap( # right, upwards
+                TensorProductMap2D( # right, upwards
                     R_1[2:2,:], I, sigma, [j for i in 1:1, j in 1:p+1]); 
             LinearMap((vandermonde(Line(),p,r_1d_2)/rd_1.VDM)[end:-1:1,:]) *   
-                TensorProductMap( # left, downwards
+                TensorProductMap2D( # left, downwards
                     R_1[1:1,:], I, sigma, [j for i in 1:1, j in p+1:-1:1])],
                     operator_algorithm)
     end
 
     # differentiation on the square
-    D = (make_operator(TensorProductMap(D_1, I, sigma, sigma),
+    D = (make_operator(TensorProductMap2D(D_1, I, sigma, sigma),
             operator_algorithm), 
-        make_operator(TensorProductMap(I, D_2, sigma, sigma),
+        make_operator(TensorProductMap2D(I, D_2, sigma, sigma),
             operator_algorithm))
 
     # construct mapping to triangle
