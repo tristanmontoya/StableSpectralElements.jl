@@ -38,6 +38,29 @@ function postprocess_vtk(
     end
 end
 
+function postprocess_vtk_high_order(
+    spatial_discretization::SpatialDiscretization{2},
+    filename::String, u::Array{Float64,3}; e=1, variable_name="u")
+
+    @unpack V_plot, reference_element = spatial_discretization.reference_approximation
+    @unpack x_plot, N_e = spatial_discretization
+    @unpack rstp = reference_element
+
+
+    points = permutedims(hcat(vec(x_plot[1]), vec(x_plot[2])))
+    N_plot = size(V_plot,1)
+    
+
+    cells = [MeshCell(VTKCellTypes.VTK_LAGRANGE_TRIANGLE, 
+        collect((k-1)*N_plot+1:k*N_plot)) for k in 1:N_e]
+
+    u_nodal = vec(Matrix(V_plot * u[:,e,:]))
+
+    vtk_grid(filename, points, cells) do vtk
+        vtk[variable_name] = u_nodal
+    end
+end
+
 @recipe function plot(
     reference_approximation::ReferenceApproximation{2,<:AbstractElemShape,<:AbstractApproximationType}; 
     volume_quadrature=true,

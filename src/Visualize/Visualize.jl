@@ -3,9 +3,10 @@ module Visualize
 
     using LaTeXStrings: latexstring
     using Plots: plot, plot!, savefig
-    using StartUpDG: AbstractElemShape, Line, Tri, Quad, map_face_nodes, find_face_nodes
+    using StartUpDG: RefElemData, MeshData, AbstractElemShape, Line, Tri, Quad, map_face_nodes, find_face_nodes, nodes, vandermonde
     using WriteVTK
     using LinearMaps: LinearMap
+    using LinearAlgebra: diagm
     using UnPack
     using RecipesBase
     using Triangulate

@@ -47,8 +47,8 @@ Discretizations in CLOUD.jl are constructed by first building a local approximat
 \begin{aligned}
 \hat{\Omega}_{\mathrm{line}} &= [-1,1],\\
 \hat{\Omega}_{\mathrm{quad}} &= [-1,1]^2,\\
-\hat{\Omega}_{\mathrm{hex}} & = [-1,1]^3 \\
-\hat{\Omega}_{\mathrm{tri}} &= \big\{ \bm{\xi} \in [-1,1]^2 : \xi_1 + \xi_2 \leq 0 \big\}.\\
+\hat{\Omega}_{\mathrm{hex}} & = [-1,1]^3, \\
+\hat{\Omega}_{\mathrm{tri}} &= \big\{ \bm{\xi} \in [-1,1]^2 : \xi_1 + \xi_2 \leq 0 \big\},\\
 \hat{\Omega}_{\mathrm{tet}} &= \big\{ \bm{\xi} \in [-1,1]^3 : \xi_1 + \xi_2 + \xi_3 \leq 0 \big\}.
 \end{aligned}
 ```
@@ -68,7 +68,7 @@ julia> plot(ref_elem_tri, grid_connect=true)
 ![CollapsedSEM](./assets/ref_tri.svg)
 
 ## Spatial Discretization
-All the information used to define the spatial discretization on the physical domain $\Omega$ is contained within a `SpatialDiscretization` structure, which is constructed using a `ReferenceApproximation` and a `MeshData` from StartUpDG.jl, which are stored as the fields `reference_approximation` and `mesh`. When the constructor for a `SpatialDiscretization` is called, the grid metrics are computed and stored `GeometricFactors` structure, with the field being `geometric_factors`. CLOUD.jl provides utilities to easily generate uniform periodic meshes on line segments, rectangles, or rectangular prisms; using such a mesh and `ref_elem_tri` defined previously, we can construct a spatial discretization on the domain $\Omega = [0,1] \times [0,1]$ with four edges in each direction (a total of $N_e = 32$ elements) as shown below:
+All the information used to define the spatial discretization on the physical domain $\Omega$ is contained within a `SpatialDiscretization` structure, which is constructed using a `ReferenceApproximation` and a `MeshData` from StartUpDG.jl, which are stored as the fields `reference_approximation` and `mesh`. When the constructor for a `SpatialDiscretization` is called, the grid metrics are computed and stored `GeometricFactors` structure, with the field being `geometric_factors`. CLOUD.jl provides utilities to easily generate uniform periodic meshes on line segments, rectangles, or rectangular prisms; using such a mesh and `ref_elem_tri` defined previously, we can construct a spatial discretization on the domain $\Omega = [0,1] \times [0,1]$ with four edges in each direction (a total of $N_e = 32$ triangular elements) as shown below:
 
 ```julia
 julia> mesh = uniform_periodic_mesh(ref_elem_tri.reference_element, 

@@ -60,7 +60,9 @@ function ReferenceApproximation(
     reference_element = RefElemData(element_type, 
         mapping_degree, quad_rule_vol=quad_nodes(element_type, q),
         quad_rule_face=quad_nodes(face_type(element_type), q_f), Nplot=N_plot)
-    @unpack rstp, rstq, rstf, wq, wf = reference_element
+
+        
+    @unpack rstq, rstf, rstp, wq, wf = reference_element
 
     VDM, ∇VDM... = basis(element_type, p, rstq...) 
     ∇V = Tuple(LinearMap(∇VDM[m]) for m in 1:d)

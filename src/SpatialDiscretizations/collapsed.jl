@@ -105,7 +105,7 @@ function ReferenceApproximation(
     r,s = nodes(Tri(), mapping_degree)  
     VDM, Vr, Vs = basis(Tri(), mapping_degree, r, s)
 
-    # transformation from mapping  nodes to vol/fac quadrature nodes
+    # transformation from mapping nodes to vol/fac quadrature nodes
     Vq_map = vandermonde(Tri(), mapping_degree, rq, sq) / VDM
     Vf_map = vandermonde(Tri(), mapping_degree, rf, sf) / VDM
 

@@ -2,7 +2,7 @@ module GridFunctions
 
     using UnPack
     
-    export AbstractGridFunction, SumOfFunctions, ConstantFunction, InitialDataSine, InitialDataGaussian, InitialDataGassner, BurgersSolution, SourceTermGassner, GaussianNoise, NoSourceTerm, evaluate
+    export AbstractGridFunction, SumOfFunctions, ConstantFunction, InitialDataSine, InitialDataCosine, InitialDataGaussian, InitialDataGassner, BurgersSolution, SourceTermGassner, GaussianNoise, NoSourceTerm, evaluate
     
     abstract type AbstractGridFunction{d} end
 
@@ -32,6 +32,17 @@ module GridFunctions
         N_c::Int
 
         function InitialDataSine(A::Float64,
+            k::NTuple{d,Float64}) where {d} 
+            return new{d}(A,k,1)
+        end
+    end
+
+    struct InitialDataCosine{d} <: AbstractGridFunction{d}
+        A::Float64  # amplitude
+        k::NTuple{d,Float64}  # wave number in each direction
+        N_c::Int
+
+        function InitialDataCosine(A::Float64,
             k::NTuple{d,Float64}) where {d} 
             return new{d}(A,k,1)
         end
@@ -83,6 +94,10 @@ module GridFunctions
         return InitialDataSine(A,(k,))
     end
 
+    function InitialDataCosine(A::Float64, k::Float64)
+        return InitialDataCosine(A,(k,))
+    end
+
     function InitialDataGaussian(A::Float64, σ::Float64, x₀::Float64)
         return InitialDataGaussian(A,σ,(x₀,))
     end
@@ -100,6 +115,11 @@ module GridFunctions
     function evaluate(f::InitialDataSine{d}, 
         x::NTuple{d,Float64},t::Float64=0.0) where {d}
         return fill(f.A*prod(Tuple(sin(f.k[m]*x[m]) for m in 1:d)), f.N_c)
+    end
+
+    function evaluate(f::InitialDataCosine{d}, 
+        x::NTuple{d,Float64},t::Float64=0.0) where {d}
+        return fill(f.A*prod(Tuple(cos(f.k[m]*x[m]) for m in 1:d)), f.N_c)
     end
 
     function evaluate(f::InitialDataGaussian{d}, 
