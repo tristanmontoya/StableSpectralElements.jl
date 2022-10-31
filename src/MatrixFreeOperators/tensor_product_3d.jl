@@ -1,3 +1,4 @@
+# In progress...
 struct TensorProductMap3D{A_type,B_type,C_type} <: LinearMaps.LinearMap{Float64}
     A::A_type
     B::B_type
