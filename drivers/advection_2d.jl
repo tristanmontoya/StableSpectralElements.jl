@@ -1,7 +1,7 @@
 # Driver script - grid refinement studies for the linear advection equation
 push!(LOAD_PATH,"../")
 
-using OrdinaryDiffEq: solve, DP8, RK4, CarpenterKennedy2N54, OrdinaryDiffEqAlgorithm
+using OrdinaryDiffEq
 using LinearAlgebra
 using TimerOutputs
 using UnPack
@@ -30,10 +30,14 @@ function parse_commandline()
             help = "number of writes to file"
             arg_type = Int
             default = 10
+        "--element_type", "-e"
+            help = "element type"
+            arg_type = String
+            default = "Tri"
         "--scheme", "-s"
             help = "spatial_discretization scheme"
             arg_type = String
-            default = "DGMulti"
+            default = "ModalMulti"
         "--mapping_form", "-f"
             help = "mapping form"
             arg_type = String
@@ -93,7 +97,6 @@ struct AdvectionDriver{d}
     mapping_form::AbstractMappingForm
     ode_algorithm::OrdinaryDiffEqAlgorithm
     path::String
-
     M0::Int
     λ::Float64
     L::Float64
@@ -109,48 +112,17 @@ function advection_driver_2d(parsed_args::Dict)
     r = parsed_args["r"]
     β = parsed_args["beta"]
     n_s = parsed_args["n"]
-    
-    if parsed_args["scheme"] == "DGMulti"
-        scheme = DGMulti(p)
-        element_type = Tri()
-    elseif parsed_args["scheme"] == "DGSEM"
-        scheme = DGSEM(p)
-        element_type = Quad()
-    elseif parsed_args["scheme"] == "CollapsedSEM"
-        scheme = CollapsedSEM(p)
-        element_type = Tri()
-    elseif parsed_args["scheme"] == "CollapsedModal"
-        scheme = CollapsedModal(p)
-        element_type = Tri()
-    else
-        error("Invalid discretization scheme")
-    end
-
-    if parsed_args["mapping_form"] == "StandardMapping"
-        mapping_form = StandardMapping()
-    elseif parsed_args["mapping_form"] == "SkewSymmetricMapping"
-        mapping_form = SkewSymmetricMapping()
-    else
-        error("Invalid discretization form")
-    end
-
-    if parsed_args["ode_algorithm"] == "RK4"
-        ode_algorithm = RK4()
-    elseif parsed_args["ode_algorithm"] == "CarpenterKennedy2N54"
-        ode_algorithm = CarpenterKennedy2N54()
-    elseif parsed_args["ode_algorithm"] == "DP8"
-        ode_algorithm = DP8()
-    else
-        error("Unsupported time ode_algorithm")
-    end
-
+    element_type = eval(Symbol(parsed_args["element_type"]))()
+    scheme = eval(Symbol(parsed_args["scheme"]))(p)
+    mapping_form = eval(Symbol(parsed_args["mapping_form"]))()
+    ode_algorithm = eval(Symbol(parsed_args["ode_algorithm"]))()
     path = parsed_args["path"]
     M0 = parsed_args["M"]
     λ = parsed_args["lambda"]
     L = parsed_args["L"]
     a = parsed_args["a"]
     θ = parsed_args["theta"]
-    T = parsed_args["n_periods"]/(a*max(abs(cos(θ)),abs(cos(θ))))
+    T = parsed_args["n_periods"]/(a*max(abs(cos(θ)),abs(sin(θ))))
     mesh_perturb = parsed_args["mesh_perturb"]
     n_grids = parsed_args["n_grids"]
 
@@ -176,7 +148,8 @@ function run_driver(driver::AdvectionDriver{2})
     @unpack p,r,β,n_s,scheme,element_type,mapping_form,ode_algorithm,path,M0,λ,L,a,T,mesh_perturb, n_grids = driver
 
     date_time = Dates.format(now(), "yyyymmdd_HHMMSS")
-    path = new_path(string(path, "advection_", string(typeof(scheme)), "_p",
+    path = new_path(string(path, "advection_", string(typeof(element_type)),
+        "_", string(typeof(scheme)), "_p",
         string(p), "M", string(Int(M0)), "l", string(Int(λ)), "_",
         date_time, "/"))
 

@@ -1,9 +1,5 @@
-struct DGSEM <:AbstractApproximationType
-    p::Int  # polynomial degree
-end
-
 function ReferenceApproximation(
-    approx_type::DGSEM, element_type::Line; 
+    approx_type::NodalTensor, element_type::Line; 
     volume_quadrature_rule::AbstractQuadratureRule=LGLQuadrature(),
     mapping_degree::Int=1, N_plot::Int=10,
     operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm())
@@ -37,7 +33,7 @@ function ReferenceApproximation(
         reference_element, D, V, Vf, R, W, B, V_plot, NoMapping())
 end
 
-function ReferenceApproximation(approx_type::DGSEM, 
+function ReferenceApproximation(approx_type::NodalTensor, 
     element_type::Quad;
     volume_quadrature_rule::AbstractQuadratureRule=LGLQuadrature(),
     facet_quadrature_rule::AbstractQuadratureRule=LGLQuadrature(),

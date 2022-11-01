@@ -1,13 +1,3 @@
-"""Nodal spectral element method in collapsed coordinates"""
-struct CollapsedSEM <:AbstractApproximationType
-    p::Int  # polynomial degree
-end
-
-"""Nodal spectral element method projected onto modal basis"""
-struct CollapsedModal <:AbstractApproximationType
-    p::Int  # polynomial degree
-end
-
 """Duffy transform from the square to triangle"""
 function χ(::Tri, 
     η::Union{NTuple{2,Float64},NTuple{2,Vector{Float64}}})
@@ -83,7 +73,7 @@ function warped_product(::Tri, p, η1D::NTuple{2,Vector{Float64}})
 end
 
 function ReferenceApproximation(
-    approx_type::Union{CollapsedSEM,CollapsedModal}, 
+    approx_type::Union{NodalTensor,ModalTensor}, 
     element_type::Tri;
     volume_quadrature_rule::NTuple{2,AbstractQuadratureRule}=(
         LGQuadrature(),LGRQuadrature()),
@@ -199,7 +189,7 @@ function ReferenceApproximation(
 
     # construct modal or nodal scheme
     @unpack rstp, rstq = reference_element
-    if approx_type isa CollapsedModal
+    if approx_type isa ModalTensor
         V = make_operator(warped_product(Tri(),p, (rd_1.rq,rd_2.rq)),
             operator_algorithm)
         V_plot = LinearMap(vandermonde(Tri(), p, rstp...))

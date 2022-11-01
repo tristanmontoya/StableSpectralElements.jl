@@ -12,7 +12,7 @@ module Visualize
     using Triangulate
     using TetGen
 
-    using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation, AbstractApproximationType, DGSEM, DGMulti, CollapsedSEM, CollapsedModal
+    using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation, AbstractApproximationType, NodalTensor, ModalMulti, NodalTensor, ModalTensor
     using ..GridFunctions: AbstractGridFunction, evaluate
     export visualize, plotter
     include("plot_1d.jl")

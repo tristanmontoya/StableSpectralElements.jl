@@ -14,9 +14,33 @@ module SpatialDiscretizations
     using Reexport
     @reexport using StartUpDG: AbstractElemShape, Line, Quad, Tri, Tet, Hex, Pyr
 
-    export AbstractApproximationType, AbstractReferenceMapping, NoMapping, CollapsedMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, dim, make_sbp_operator, χ, warped_product
+    export AbstractApproximationType, NodalTensor, ModalTensor, ModalMulti, AbstractReferenceMapping, NoMapping, CollapsedMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, dim, χ, warped_product
     
     abstract type AbstractApproximationType end
+    struct NodalTensor <: AbstractApproximationType
+        p::Int  # polynomial degree
+    end
+
+    struct ModalTensor <: AbstractApproximationType
+        p::Int  # polynomial degree
+    end
+
+    struct ModalMulti <: AbstractApproximationType
+        p::Int  # polynomial degree
+        q::Int # volume quadrature parameter 
+        q_f::Int # facet quadrature parameter 
+    end
+    
+    function ModalMulti(p::Int; q=nothing, q_f=nothing)
+        if isnothing(q)
+            q = p
+        end
+        if isnothing(q_f)
+            q_f = p
+        end
+        return ModalMulti(p,q,q_f)
+    end
+    
 
     """Collapsed coordinate mapping χ: [-1,1]ᵈ → Ωᵣ"""
     abstract type AbstractReferenceMapping end
@@ -172,15 +196,12 @@ module SpatialDiscretizations
     dim(::Union{Tet,Hex}) = 3
 
     export AbstractQuadratureRule, LGLQuadrature, LGQuadrature, LGRQuadrature, JGLQuadrature, JGRQuadrature, JGQuadrature, JacobiQuadrature, LegendreQuadrature, quadrature, facet_node_ids
-    include("quadrature.jl")
+    include("quadrature_rules.jl")
 
-    export DGSEM
-    include("dgsem.jl")
+    include("multidimensional.jl")
+    include("tensor_cartesian.jl")
 
-    export DGMulti, QuadratureDG
-    include("dgmulti.jl")
-
-    export CollapsedSEM, CollapsedModal, reference_geometric_factors
-    include("collapsed.jl")
+    export reference_geometric_factors
+    include("tensor_simplex.jl")
 
 end

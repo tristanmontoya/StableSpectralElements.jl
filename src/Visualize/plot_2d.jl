@@ -161,7 +161,7 @@ end
 
     if volume_quadrature
         if grid_connect &&
-            (reference_approximation.approx_type isa Union{DGSEM, CollapsedModal, CollapsedSEM})
+            (reference_approximation.approx_type isa Union{NodalTensor, ModalTensor, NodalTensor})
 
             if isnothing(stride)
                 stride = Int(sqrt(reference_approximation.N_q))

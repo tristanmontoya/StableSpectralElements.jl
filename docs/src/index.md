@@ -58,7 +58,7 @@ These element types are used in the constructor for CLOUD.jl's `ReferenceApproxi
 ```julia
 julia> using CLOUD
 
-julia> ref_elem_tri = ReferenceApproximation(CollapsedSEM(4), Tri())
+julia> ref_elem_tri = ReferenceApproximation(NodalTensor(4), Tri())
 ```
 Using CLOUD.jl's built-in plotting recipes, we can easily visualize the reference element for such a discretization:
 ```julia
@@ -66,7 +66,7 @@ julia> using Plots
 
 julia> plot(ref_elem_tri, grid_connect=true)
 ```
-![CollapsedSEM](./assets/ref_tri.svg)
+![NodalTensor](./assets/ref_tri.svg)
 
 ## Spatial Discretization
 All the information used to define the spatial discretization on the physical domain $\Omega$ is contained within a `SpatialDiscretization` structure, which is constructed using a `ReferenceApproximation` and a `MeshData` from StartUpDG.jl, which are stored as the fields `reference_approximation` and `mesh`. When the constructor for a `SpatialDiscretization` is called, the grid metrics are computed and stored `GeometricFactors` structure, with the field being `geometric_factors`. CLOUD.jl provides utilities to easily generate uniform periodic meshes on line segments, rectangles, or rectangular prisms; using such a mesh and `ref_elem_tri` defined previously, we can construct a spatial discretization on the domain $\Omega = [0,1] \times [0,1]$ with four edges in each direction (a total of $N_e = 32$ triangular elements) as shown below:
@@ -78,7 +78,7 @@ julia> mesh = uniform_periodic_mesh(ref_elem_tri.reference_element,
 julia> spatial_discretization = SpatialDiscretization(mesh, 
     ref_elem_tri.reference_element)
 ```
-
+Note that the field `reference_element` is of type `RefElemData` from StartUpDG, and is used to store geometric information about the reference element and to define the operators used in constructing the polynomial mapping; the operators used for the discretizations are defined separately according to the specific scheme (e.g. `NodalTensor` in this case).
 ## License
 
 This software is released under the [GPLv3 license](https://www.gnu.org/licenses/gpl-3.0.en.html).

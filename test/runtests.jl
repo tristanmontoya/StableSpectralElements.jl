@@ -9,9 +9,9 @@ include("test_1d.jl")
 include("test_2d.jl")
 
 # integration tests
-@testset "Advection-Diffusion 1D DGMulti" begin
+@testset "Advection-Diffusion 1D ModalMulti" begin
     (l2, conservation, energy) = test_1d(
-        DGMulti(4),Line(), 
+        ModalMulti(4),Line(), 
         LinearAdvectionDiffusionEquation(1.0,5.0e-2),
         InitialDataSine(1.0,2π),
         WeakConservationForm(
@@ -26,9 +26,9 @@ include("test_2d.jl")
     @test energy ≈ -0.24517593114338798 atol=tol
 end
 
-@testset "Advection 2D Energy-Conservative CollapsedModal" begin
+@testset "Advection 2D Energy-Conservative ModalTensor" begin
     (l2, conservation, energy) = test_2d(
-        CollapsedModal(4),Tri(), 
+        ModalTensor(4),Tri(), 
         LinearAdvectionEquation((1.0,1.0)),
         InitialDataSine(1.0,(2*π, 2*π)),
         WeakConservationForm(
@@ -42,9 +42,9 @@ end
     @test energy ≈ 0.0 atol=tol
 end
 
-@testset "Advection 2D Standard DGSEM" begin
+@testset "Advection 2D Standard NodalTensor" begin
     (l2, conservation, energy) = test_2d(
-        DGSEM(4),Quad(),
+        NodalTensor(4),Quad(),
         LinearAdvectionEquation((1.0,1.0)), 
         InitialDataSine(1.0,(2*π, 2*π)),
         StrongConservationForm(

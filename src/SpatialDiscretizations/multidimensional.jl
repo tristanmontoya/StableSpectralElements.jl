@@ -1,21 +1,5 @@
-struct DGMulti <: AbstractApproximationType
-    p::Int  # polynomial degree
-    q::Int # volume quadrature parameter 
-    q_f::Int # facet quadrature parameter 
-end
-
-function DGMulti(p::Int; q=nothing, q_f=nothing)
-    if isnothing(q)
-        q = p
-    end
-    if isnothing(q_f)
-        q_f = p
-    end
-    return DGMulti(p,q,q_f)
-end
-
 function ReferenceApproximation(
-    approx_type::DGMulti, ::Line; 
+    approx_type::ModalMulti, ::Line; 
     mapping_degree::Int=1, N_plot::Int=10, 
     operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm())
 
@@ -46,7 +30,7 @@ function ReferenceApproximation(
 end
 
 function ReferenceApproximation(
-    approx_type::DGMulti, element_type::AbstractElemShape;
+    approx_type::ModalMulti, element_type::AbstractElemShape;
     mapping_degree::Int=1, N_plot::Int=10, 
     operator_algorithm::AbstractOperatorAlgorithm=BLASAlgorithm())
 
