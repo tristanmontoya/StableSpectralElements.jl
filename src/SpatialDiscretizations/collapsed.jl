@@ -17,7 +17,6 @@ end
 """Geometric factors of the Duffy transform"""
 function reference_geometric_factors(::Tri, 
     η::NTuple{2,Vector{Float64}})
-
     N = size(η[1],1)
     J_ref = (x->0.5*(1.0-x)).(η[2])
     Λ_ref = Array{Float64, 3}(undef, N, 2, 2)
@@ -41,6 +40,7 @@ function init_face_data(::Tri, p,
         [-ones(size(r_1d_1)); r_1d_2; r_1d_2[end:-1:1]])
     nrJ = [zeros(size(r_1d_1)); ones(size(r_1d_2)); -ones(size(r_1d_2))]
     nsJ = [-ones(size(r_1d_1)); ones(size(r_1d_2)); zeros(size(r_1d_2))]
+    
     return rf,sf,wf,nrJ,nsJ
 end
 
