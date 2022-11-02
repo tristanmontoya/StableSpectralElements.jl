@@ -18,7 +18,6 @@ function load_solution(results_path::String, time_step::Union{Int,String}=0;
     else
        return dict["u"], dict["t"]
     end
-
 end
 
 function load_project(results_path::String)

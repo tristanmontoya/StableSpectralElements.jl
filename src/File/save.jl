@@ -55,7 +55,8 @@ function save_solution(integrator::ODEIntegrator, results_path::String)
     end
     save(string(results_path, "sol_", integrator.iter, ".jld2"),
         Dict("u" => integrator.u, "t" => integrator.t, 
-            "du" => get_du(integrator)))
+            "du" => rhs!(similar(integrator.u),
+                integrator.u, integrator.p, integrator.t)))
     time_steps=load_object(string(results_path, "time_steps.jld2"))
     save_object(string(results_path, "time_steps.jld2"),
         push!(time_steps, integrator.iter))
@@ -66,13 +67,18 @@ function save_solution(u::Array{Float64,3}, t::Float64, results_path::String, ti
         Dict("u" => u, "t" => t))
     if time_step isa Int
         time_steps=load_object(string(results_path, "time_steps.jld2"))
-        save_object(string(results_path, "time_steps.jld2"), 
-            push!(time_steps, time_step))
+        #save_object(string(results_path, "time_steps.jld2"), 
+        #    push!(time_steps, time_step))
     end
 end
 
-function save_callback(results_path::String, interval::Int=0) 
+function save_callback(results_path::String, 
+    tspan::NTuple{2,Float64}, interval::Int=1)
     condition(u,t,integrator) = integrator.iter % interval == 0
     affect!(integrator) = save_solution(integrator, results_path)
-    return DiscreteCallback(condition, affect!, save_positions=(true,false))
+    return CallbackSet(
+        DiscreteCallback(condition, affect!, save_positions=(true,false)), 
+        PresetTimeCallback([tspan[1],tspan[2]],affect!, 
+            save_positions = (true,false)))
+
 end

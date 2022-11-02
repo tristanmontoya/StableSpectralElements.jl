@@ -185,7 +185,6 @@ function run_driver(driver::AdvectionDriver{2})
             println(io, "Number of Julia threads: ", Threads.nthreads())
             println(io, "Number of BLAS threads: ", BLAS.get_num_threads(),"\n")
             println(io, "Results Path: ", "\"", results_path, "\"\n")
-            #println(io, "Parameters: ", parsed_args, "\n")
         end
 
         dt = β*(L/M)/(norm(a)*(2*p+1))
@@ -193,11 +192,9 @@ function run_driver(driver::AdvectionDriver{2})
             conservation_law, spatial_discretization), (0.0, T))
 
         CLOUD_reset_timer!()
-        save_solution(ode_problem.u0, 0.0, results_path, 0)
         sol = solve(ode_problem, ode_algorithm, adaptive=false,
             dt=dt, save_everystep=false, callback=save_callback(
-                results_path, ceil(Int, T/(dt*n_s))))
-        save_solution(last(sol.u), last(sol.t), results_path, "final")
+                results_path, (0.0,T), ceil(Int, T/(dt*n_s))))
 
         open(string(results_path,"screen.txt"), "a") do io
             println(io, "Solver finished!\n")
@@ -208,12 +205,13 @@ function run_driver(driver::AdvectionDriver{2})
                 conservation_law, spatial_discretization)
             energy_analysis = EnergyConservationAnalysis(results_path, 
                 conservation_law, spatial_discretization)
+            N_t = last(load_time_steps(results_path))
             println(io,"L2 error:\n", 
                 analyze(error_analysis, last(sol.u), initial_data))
             println(io,"Conservation (initial/final/diff):\n", 
-                analyze(conservation_analysis)...)
+                analyze(conservation_analysis, 0, N_t)...)
             println(io,"Energy (initial/final/diff):\n",
-                analyze(energy_analysis)...)
+                analyze(energy_analysis, 0, N_t)...)
         end
     end
 
@@ -229,7 +227,6 @@ end
 function main(args)
     parsed_args = parse_commandline()
     eoc = run_driver(advection_driver_2d(parsed_args))
-    println("order = ", eoc)
 end
 
 main(ARGS)

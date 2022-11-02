@@ -1,4 +1,5 @@
 abstract type ConservationAnalysis <: AbstractAnalysis end
+abstract type AbstractConservationAnalysisResults <: AbstractAnalysisResults end
 
 """
 Evaluate change in ∫udx  
@@ -26,9 +27,15 @@ struct EnergyConservationAnalysis <: ConservationAnalysis
     dict_name::String
 end
 
-struct ConservationAnalysisResults <:AbstractAnalysisResults
+struct ConservationAnalysisResults <:AbstractConservationAnalysisResults
     t::Vector{Float64}
     E::Matrix{Float64}
+end
+
+struct ConservationAnalysisResultsWithDerivative <:AbstractConservationAnalysisResults
+    t::Vector{Float64}
+    E::Matrix{Float64}
+    dEdt::Matrix{Float64}
 end
 
 function PrimaryConservationAnalysis(results_path::String,
@@ -66,21 +73,42 @@ end
 
 function evaluate_conservation(
     analysis::PrimaryConservationAnalysis, 
-    sol::Array{Float64,3})
+    u::Array{Float64,3})
     @unpack WJ, N_c, N_e, V = analysis 
 
-    return [sum(sum(WJ[k]*V*sol[:,e,k]) 
+    return [sum(sum(WJ[k]*V*u[:,e,k]) 
         for k in 1:N_e) for e in 1:N_c]
 end
 
 function evaluate_conservation(
     analysis::EnergyConservationAnalysis, 
-    sol::Array{Float64,3})
+    u::Array{Float64,3})
     @unpack WJ, N_c, N_e, V = analysis 
 
-    return [0.5*sum(sol[:,e,k]'*V'*WJ[k]*V*sol[:,e,k] 
+    return [0.5*sum(u[:,e,k]'*V'*WJ[k]*V*u[:,e,k] 
         for k in 1:N_e) for e in 1:N_c]
 end
+
+function evaluate_conservation_residual(
+    analysis::PrimaryConservationAnalysis, 
+    ::Array{Float64,3},
+    dudt::Array{Float64,3})
+    @unpack WJ, N_c, N_e, V = analysis 
+
+    return [sum(sum(V'*WJ[k]*V*dudt[:,e,k]) 
+        for k in 1:N_e) for e in 1:N_c]
+end
+
+function evaluate_conservation_residual(
+    analysis::EnergyConservationAnalysis, 
+    u::Array{Float64,3},
+    dudt::Array{Float64,3})
+    @unpack WJ, N_c, N_e, V = analysis 
+
+    return [sum(u[:,e,k]'*V'*WJ[k]*V*dudt[:,e,k] 
+        for k in 1:N_e) for e in 1:N_c]
+end
+
 
 function analyze(analysis::ConservationAnalysis, 
     initial_time_step::Union{Int,String}=0, 
@@ -113,9 +141,12 @@ function analyze(analysis::ConservationAnalysis,
     N_t = length(time_steps)
     t = Vector{Float64}(undef,N_t)
     E = Matrix{Float64}(undef,N_t, N_c)
+    dEdt = Matrix{Float64}(undef,N_t, N_c)
+
     for i in 1:N_t
-        u, t[i] = load_solution(results_path, time_steps[i])
+        u, dudt, t[i] = load_solution(results_path, time_steps[i], load_du=true)
         E[i,:] = evaluate_conservation(analysis, u)
+        dEdt[i,:] = evaluate_conservation_residual(analysis, u, dudt)
     end
 
     results = ConservationAnalysisResults(t,E)
@@ -124,7 +155,7 @@ function analyze(analysis::ConservationAnalysis,
     Dict("conservation_analysis" => analysis,
         "conservation_results" => results))
 
-    return ConservationAnalysisResults(t,E)
+    return ConservationAnalysisResultsWithDerivative(t,E, dEdt)
 end
 
 function analyze(analysis::ConservationAnalysis,    
@@ -161,7 +192,6 @@ function analyze(analysis::ConservationAnalysis,
 
     for i in 0:resolution
         u = reshape(real.(forecast(model, dt*i, c)[1:N]),(N_p,N_c,N_e))
-        
         t_modeled[i+1] = t0+dt*i
         E_modeled[i+1,:] = evaluate_conservation(analysis, u)
     end
@@ -177,18 +207,35 @@ function analyze(analysis::ConservationAnalysis,
     return results, modeled_results
 end
 
-    
-function plot_evolution(analysis::ConservationAnalysis, 
-    results::ConservationAnalysisResults, title::String; legend::Bool=false,
-    ylabel::String="Energy", e::Int=1)
-    p = plot(results.t, results.E[:,e], 
-        legend=legend, xlabel="\$t\$", ylabel=ylabel)
-    savefig(p, string(analysis.analysis_path, title))
-    return p
+@recipe function plot(results::ConservationAnalysisResults, e::Int=1)
+
+    xlabel --> "t"
+    ylabel --> "Energy"
+    legend --> false
+
+    results.t, results.E[:,e]
+end
+
+@recipe function plot(results::ConservationAnalysisResultsWithDerivative, e::Int=1)
+
+    xlabel --> "t"
+    labels = ["Net change", "Time derivative"]
+
+    @series begin
+        linestyle --> :solid
+        label --> labels[1]
+        results.t, results.E[:,e] .- first(results.E[:,e])
+    end
+    @series begin
+        linestyle --> :dash
+        label --> labels[2]
+        results.t, results.dEdt[:,e]
+    end
+   
 end
 
 function plot_evolution(analysis::ConservationAnalysis, 
-    results::Vector{ConservationAnalysisResults}, title::String; 
+    results::Vector{<:AbstractConservationAnalysisResults}, title::String; 
     labels::Vector{String}=["Actual", "Predicted"],
     ylabel::String="Energy", e::Int=1, t=nothing, xlims=nothing, ylims=nothing)
 

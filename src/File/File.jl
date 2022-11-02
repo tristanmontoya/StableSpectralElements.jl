@@ -1,13 +1,15 @@
 module File
 
     using JLD2: save, load, save_object, load_object
-    using OrdinaryDiffEq: ODEIntegrator, ODEProblem, ODESolution, DiscreteCallback, get_du
+    using OrdinaryDiffEq: ODEIntegrator, ODEProblem, ODESolution,  DiscreteCallback, CallbackSet, get_du
+
+    using DiffEqCallbacks: PresetTimeCallback
     using UnPack
 
     using ..ConservationLaws: AbstractConservationLaw
     using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation
     using ..GridFunctions: AbstractGridFunction, evaluate
-    using ..Solvers: AbstractResidualForm, AbstractStrategy, Solver, initialize, get_dof
+    using ..Solvers: AbstractResidualForm, AbstractStrategy, Solver, initialize, get_dof, rhs!
 
     export new_path, save_callback, save_project, save_solution
     include("save.jl")

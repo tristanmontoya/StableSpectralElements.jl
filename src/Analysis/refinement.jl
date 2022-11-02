@@ -22,13 +22,14 @@ function analyze(analysis::RefinementAnalysis{d}, n_grids=100) where {d}
     conservation_law, spatial_discretization = load_project(results_path) 
     (N_p, N_c, N_e) = get_dof(spatial_discretization, conservation_law)
     dof = [N_p N_e]
-    u, _ = load_solution(results_path, "final")
+    N_t = last(load_time_steps(results_path))
+    u, _ = load_solution(results_path, N_t)
     error = transpose(analyze(ErrorAnalysis(results_path, conservation_law,  
         spatial_discretization), u, exact_solution))
     conservation = transpose(analyze(PrimaryConservationAnalysis(results_path, 
-        conservation_law, spatial_discretization))[3])
+        conservation_law, spatial_discretization), 0, N_t)[3])
     energy = transpose(analyze(EnergyConservationAnalysis(results_path, 
-        conservation_law, spatial_discretization))[3])
+        conservation_law, spatial_discretization), 0, N_t)[3])
 
     eoc = fill!(Array{Union{Float64, Missing}}(undef,1,N_c), missing)
 
@@ -39,7 +40,8 @@ function analyze(analysis::RefinementAnalysis{d}, n_grids=100) where {d}
         conservation_law, spatial_discretization = load_project(results_path) 
         (N_p, N_c, N_e) = get_dof(spatial_discretization, conservation_law)
         dof = [dof; [N_p N_e]]
-        u, _ = load_solution(results_path, "final")
+        N_t = last(load_time_steps(results_path))
+        u, _ = load_solution(results_path, N_t)
         error = [error; transpose(analyze(ErrorAnalysis(results_path,       
             conservation_law, spatial_discretization), u, exact_solution))]
         eoc = [eoc; transpose([ 
@@ -49,10 +51,10 @@ function analyze(analysis::RefinementAnalysis{d}, n_grids=100) where {d}
             for e in 1:N_c])]
         conservation = [conservation; 
             transpose(analyze(PrimaryConservationAnalysis(results_path, 
-                conservation_law, spatial_discretization))[3])]
+                conservation_law, spatial_discretization), 0, N_t)[3])]
         energy = [energy;
             transpose(analyze(EnergyConservationAnalysis(results_path, 
-            conservation_law, spatial_discretization))[3])]
+            conservation_law, spatial_discretization),0, N_t)[3])]
 
         if !isdir(string(sequence_path, "grid_", i+1, "/"))
             grid_exists = false
@@ -118,7 +120,7 @@ function plot_analysis(analysis::Vector{RefinementAnalysis{d}},
             linecolor=colors[i], markercolor=colors[i],  markersize=5)
     end
     if !isnothing(reference_line)
-        for i in 1:length(reference_line)
+        for i in eachindex(reference_line)
             plot!(p, 
                 (results[1].dof[end-1:end,1].*results[1].dof[end-1:end,2]).^(1.0/d),
                 reference_line[i][2]./((results[1].dof[end-1:end,1].*results[1].dof[end-1:end,2]).^(1.0/d)).^reference_line[i][1], linecolor=:black, linestyle=:solid, label="")
