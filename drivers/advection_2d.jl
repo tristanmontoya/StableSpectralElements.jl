@@ -131,18 +131,6 @@ function advection_driver_2d(parsed_args::Dict)
         mesh_perturb, n_grids)
 end
 
-function post_process_refinements(sequence_path::String, 
-    label::String, n_grids::Int)
-
-    (conservation_law, spatial_discretization, 
-    initial_data, form, tspan, strategy) = load_project(
-        string(sequence_path,"grid_1/"))
-    refinement_results = analyze(RefinementAnalysis(initial_data, sequence_path,
-        "./", label), n_grids)
-
-    return refinement_results
-end
-
 function run_driver(driver::AdvectionDriver{2})
 
     @unpack p,r,β,n_s,scheme,element_type,mapping_form,ode_algorithm,path,M0,λ,L,a,T,mesh_perturb, n_grids = driver
@@ -215,8 +203,8 @@ function run_driver(driver::AdvectionDriver{2})
         end
     end
 
-    refinement_results = post_process_refinements(
-        path, "refinement analysis", n_grids)
+    refinement_results = analyze(RefinementAnalysis(initial_data, path,
+        "./", "2D advection test"), n_grids, max_derivs=true)
     open(string(path,"screen.txt"), "a") do io
         println(io, tabulate_analysis(refinement_results, e=1,
             print_latex=false))

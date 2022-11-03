@@ -14,7 +14,8 @@ struct RefinementAnalysisResults <: AbstractAnalysisResults
     energy::Matrix{Float64}
 end
 
-function analyze(analysis::RefinementAnalysis{d}, n_grids=100) where {d}
+function analyze(analysis::RefinementAnalysis{d}, n_grids=100;
+    max_derivs::Bool=false) where {d}
 
     @unpack sequence_path, exact_solution = analysis
 
@@ -22,15 +23,29 @@ function analyze(analysis::RefinementAnalysis{d}, n_grids=100) where {d}
     conservation_law, spatial_discretization = load_project(results_path) 
     (N_p, N_c, N_e) = get_dof(spatial_discretization, conservation_law)
     dof = [N_p N_e]
-    N_t = last(load_time_steps(results_path))
+    time_steps = load_time_steps(results_path)
+    N_t = last(time_steps)
     u, _ = load_solution(results_path, N_t)
     error = transpose(analyze(ErrorAnalysis(results_path, conservation_law,  
         spatial_discretization), u, exact_solution))
-    conservation = transpose(analyze(PrimaryConservationAnalysis(results_path, 
-        conservation_law, spatial_discretization), 0, N_t)[3])
-    energy = transpose(analyze(EnergyConservationAnalysis(results_path, 
-        conservation_law, spatial_discretization), 0, N_t)[3])
-
+    if max_derivs
+        conservation_results = analyze(
+            PrimaryConservationAnalysis(results_path, 
+            conservation_law, spatial_discretization), time_steps)
+        energy_results = analyze(
+                EnergyConservationAnalysis(results_path, 
+                conservation_law, spatial_discretization), time_steps)
+        conservation = [maximum(abs.(conservation_results.dEdt[:,e])) 
+            for e in 1:N_c]'
+        energy = [maximum((energy_results.dEdt[:,e])) 
+            for e in 1:N_c]'
+    else
+        conservation = transpose(
+            analyze(PrimaryConservationAnalysis(results_path, 
+            conservation_law, spatial_discretization), 0, N_t)[3])
+        energy = transpose(analyze(EnergyConservationAnalysis(results_path, 
+            conservation_law, spatial_discretization), 0, N_t)[3])
+    end
     eoc = fill!(Array{Union{Float64, Missing}}(undef,1,N_c), missing)
 
     i = 2
@@ -40,7 +55,8 @@ function analyze(analysis::RefinementAnalysis{d}, n_grids=100) where {d}
         conservation_law, spatial_discretization = load_project(results_path) 
         (N_p, N_c, N_e) = get_dof(spatial_discretization, conservation_law)
         dof = [dof; [N_p N_e]]
-        N_t = last(load_time_steps(results_path))
+        time_steps = load_time_steps(results_path)
+        N_t = last(time_steps)
         u, _ = load_solution(results_path, N_t)
         error = [error; transpose(analyze(ErrorAnalysis(results_path,       
             conservation_law, spatial_discretization), u, exact_solution))]
@@ -49,12 +65,26 @@ function analyze(analysis::RefinementAnalysis{d}, n_grids=100) where {d}
                 (log((dof[i,1]*dof[i,2])^(-1.0/d) ) - 
                 log((dof[i-1,1]*dof[i-1,2])^(-1.0/d)))
             for e in 1:N_c])]
-        conservation = [conservation; 
-            transpose(analyze(PrimaryConservationAnalysis(results_path, 
+
+        if max_derivs
+            conservation_results = analyze(
+                PrimaryConservationAnalysis(results_path, 
+                conservation_law, spatial_discretization), time_steps)
+            energy_results = analyze(
+                    EnergyConservationAnalysis(results_path, 
+                    conservation_law, spatial_discretization), time_steps)
+            conservation = [conservation; 
+                [maximum(abs.(conservation_results.dEdt[:,e])) for e in 1:N_c]']
+            energy = [energy;
+                [maximum((energy_results.dEdt[:,e])) for e in 1:N_c]']
+        else
+            conservation = [conservation; transpose(
+                analyze(PrimaryConservationAnalysis(results_path, 
                 conservation_law, spatial_discretization), 0, N_t)[3])]
-        energy = [energy;
-            transpose(analyze(EnergyConservationAnalysis(results_path, 
-            conservation_law, spatial_discretization),0, N_t)[3])]
+            energy = [energy; 
+                transpose(analyze(EnergyConservationAnalysis(results_path, 
+                conservation_law, spatial_discretization), 0, N_t)[3])]
+        end
 
         if !isdir(string(sequence_path, "grid_", i+1, "/"))
             grid_exists = false
@@ -119,6 +149,7 @@ function plot_analysis(analysis::Vector{RefinementAnalysis{d}},
             markerstrokewidth=0.0, markershape=shape,
             linecolor=colors[i], markercolor=colors[i],  markersize=5)
     end
+
     if !isnothing(reference_line)
         for i in eachindex(reference_line)
             plot!(p, 
