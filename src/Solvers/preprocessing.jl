@@ -35,5 +35,6 @@ end
 
 function semidiscretize(solver::Solver, u0::Array{Float64,3},
     tspan::NTuple{2,Float64})
+    println("tspan = ", tspan)
     return ODEProblem(rhs!, u0, tspan, solver)
 end

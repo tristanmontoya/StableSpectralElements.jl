@@ -1,17 +1,5 @@
 function load_solution(results_path::String, time_step::Union{Int,String}=0;
     load_du=false)
-
-    #= TODO: check if this is necessary to keep
-    if time_step == 0
-        dict = load(string(results_path, "project.jld2"))
-        return initialize(dict["initial_data"], dict["conservation_law"],
-            dict["spatial_discretization"]), dict["tspan"][1]
-    else
-    
-        dict = load(string(results_path, "sol_", time_step, ".jld2"))
-        return dict["u"], dict["t"]
-    end
-    =#
     dict = load(string(results_path, "sol_", time_step, ".jld2"))
     if load_du
         return dict["u"], dict["du"], dict["t"]

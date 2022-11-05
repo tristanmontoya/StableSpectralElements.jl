@@ -49,7 +49,7 @@ function parse_commandline()
         "--path"
             help = "results path"
             arg_type = String
-            default = "../results/"
+            default = "../results/advection_test/"
         "-M"
             help = "number of intervals"
             arg_type = Int
@@ -82,6 +82,9 @@ function parse_commandline()
             help = "number of periods"
             arg_type = Float64
             default = 1.0
+        "--load_from_file"
+            help = "load_from_file"
+            action = :store_true
     end
 
     return parse_args(s)
@@ -104,6 +107,7 @@ struct AdvectionDriver{d}
     T::Float64
     mesh_perturb::Float64
     n_grids::Int
+    load_from_file::Bool
 end
 
 function advection_driver_2d(parsed_args::Dict)
@@ -125,36 +129,49 @@ function advection_driver_2d(parsed_args::Dict)
     T = parsed_args["n_periods"]/(a*max(abs(cos(θ)),abs(sin(θ))))
     mesh_perturb = parsed_args["mesh_perturb"]
     n_grids = parsed_args["n_grids"]
+    load_from_file = parsed_args["load_from_file"]
 
     return AdvectionDriver(p,r,β,n_s,scheme,element_type,
         mapping_form,ode_algorithm,path,M0,λ,L,(a*cos(θ), a*sin(θ)), T,
-        mesh_perturb, n_grids)
+        mesh_perturb, n_grids, load_from_file)
 end
 
 function run_driver(driver::AdvectionDriver{2})
 
-    @unpack p,r,β,n_s,scheme,element_type,mapping_form,ode_algorithm,path,M0,λ,L,a,T,mesh_perturb, n_grids = driver
+    @unpack p,r,β,n_s,scheme,element_type,mapping_form,ode_algorithm,path,M0,λ,L,a,T,mesh_perturb, n_grids, load_from_file = driver
 
-    date_time = Dates.format(now(), "yyyymmdd_HHMMSS")
-    path = new_path(string(path, "advection_", string(typeof(element_type)),
-        "_", string(typeof(scheme)), "_p",
-        string(p), "M", string(Int(M0)), "l", string(Int(λ)), "_",
-        date_time, "/"))
+    if !load_from_file || !isdir(path)
+        path = new_path(path)
+    end
+    if !isdir(string(path, "grid_1/"))
+        n_start = 1
+    else
+        for i in 1:n_grids
+            if !isdir(string(path, "grid_", i + 1, "/"))
+                n_start = i
+                break
+            end
+        end
+    end
+    open(string(path,"screen.txt"), "a") do io
+        println(io, "Starting refinement from grid level ", n_start)
+    end
 
     initial_data = InitialDataSine(1.0,(2*π/L, 2*π/L))
+    
     conservation_law = LinearAdvectionEquation(a)
     form = WeakConservationForm(mapping_form=mapping_form, 
             inviscid_numerical_flux=LaxFriedrichsNumericalFlux(λ))
     strategy = ReferenceOperator()
+    eoc = -1.0
 
-    for n in 1:n_grids
+    for n in n_start:n_grids
 
         M = M0*2^(n-1)
 
         reference_approximation =ReferenceApproximation(
             scheme, element_type, mapping_degree=r, N_plot=ceil(Int,20/M))
         
-        results_path = new_path(string(path, "grid_", n, "/"))
         mesh = warp_mesh(uniform_periodic_mesh(
             reference_approximation.reference_element, ((0.0,L),(0.0,L)), 
             (M,M)), reference_approximation.reference_element, mesh_perturb)
@@ -164,25 +181,40 @@ function run_driver(driver::AdvectionDriver{2})
 
         solver = Solver(conservation_law, spatial_discretization,
             form, strategy)
-
-        save_project(conservation_law,
-            spatial_discretization, initial_data, form, 
-            (0.0, T), strategy, results_path, overwrite=true, clear=true)
-
-        open(string(results_path,"screen.txt"), "a") do io
-            println(io, "Number of Julia threads: ", Threads.nthreads())
-            println(io, "Number of BLAS threads: ", BLAS.get_num_threads(),"\n")
-            println(io, "Results Path: ", "\"", results_path, "\"\n")
+        
+        results_path = string(path, "grid_", n, "/")
+        if !isdir(results_path)
+            save_project(conservation_law,
+                spatial_discretization, initial_data, form, 
+                (0.0, T), strategy, results_path, overwrite=true, clear=true)
+            open(string(results_path,"screen.txt"), "a") do io
+                println(io, "Number of Julia threads: ", Threads.nthreads())
+                println(io, "Number of BLAS threads: ", 
+                    BLAS.get_num_threads(),"\n")
+                println(io, "Results Path: ", "\"", results_path, "\"\n")
+            end
         end
 
-        dt = β*(L/M)/(norm(a)*(2*p+1))
-        ode_problem = semidiscretize(solver, initialize(initial_data, 
-            conservation_law, spatial_discretization), (0.0, T))
+        time_steps = load_time_steps(results_path)
+        if !isempty(time_steps)
+            restart_step = last(time_steps)
+            u0, t0 = load_solution(results_path, restart_step)
+            open(string(results_path,"screen.txt"), "a") do io
+                println(io, "\nRestarting from time step ", restart_step,
+                     "  t = ", t0)
+            end
+        else
+            restart_step = 0
+            u0, t0 = initialize(initial_data, conservation_law,
+                spatial_discretization), 0.0
+        end
+        ode_problem = semidiscretize(solver, u0, (t0, T))
 
+        dt = β*(L/M)/(norm(a)*(2*p+1))   
         CLOUD_reset_timer!()
         sol = solve(ode_problem, ode_algorithm, adaptive=false,
             dt=dt, save_everystep=false, callback=save_callback(
-                results_path, (0.0,T), ceil(Int, T/(dt*n_s))))
+                results_path, (t0,T), ceil(Int, T/(dt*n_s)), restart_step))
 
         open(string(results_path,"screen.txt"), "a") do io
             println(io, "Solver finished!\n")
@@ -201,15 +233,17 @@ function run_driver(driver::AdvectionDriver{2})
             println(io,"Energy (initial/final/diff):\n",
                 analyze(energy_analysis, 0, N_t)...)
         end
+        if n > 1
+            refinement_results = analyze(RefinementAnalysis(initial_data, path,
+            "./", "2D advection test"), n, max_derivs=true)
+            open(string(path,"screen.txt"), "a") do io
+                println(io, tabulate_analysis(refinement_results, e=1,
+                    print_latex=false))
+            end
+            eoc = refinement_results.eoc[end,1]
+        end
     end
-
-    refinement_results = analyze(RefinementAnalysis(initial_data, path,
-        "./", "2D advection test"), n_grids, max_derivs=true)
-    open(string(path,"screen.txt"), "a") do io
-        println(io, tabulate_analysis(refinement_results, e=1,
-            print_latex=false))
-    end
-    return refinement_results.eoc[end,1]
+    return eoc
 end
 
 function main(args)
