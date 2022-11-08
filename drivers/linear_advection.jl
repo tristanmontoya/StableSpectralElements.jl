@@ -65,11 +65,15 @@ function parse_commandline()
         "-a"
             help = "advection wave speed"
             arg_type = Float64
-            default = sqrt(2)
+            default = sqrt(2.0)
         "--theta", "-t"
-            help = "advection wave angle"
+            help = "advection azimuthal angle"
             arg_type = Float64
             default = π/4.0
+        "--phi"
+            help = "advection polar angle"
+            arg_type = Float64
+            default = π/2.0
         "--mesh_perturb", "-m"
             help = "mesh perturbation"
             arg_type = Float64
@@ -78,8 +82,8 @@ function parse_commandline()
             help = "number of grids"
             arg_type = Int
             default = 1
-        "--n_periods"
-            help = "number of periods"
+        "--final_time"
+            help = "final time"
             arg_type = Float64
             default = 1.0
         "--load_from_file"
@@ -110,7 +114,7 @@ struct AdvectionDriver{d}
     load_from_file::Bool
 end
 
-function advection_driver_2d(parsed_args::Dict)
+function AdvectionDriver(parsed_args::Dict)
 
     p = parsed_args["p"]
     r = parsed_args["r"]
@@ -126,17 +130,21 @@ function advection_driver_2d(parsed_args::Dict)
     L = parsed_args["L"]
     a = parsed_args["a"]
     θ = parsed_args["theta"]
-    T = parsed_args["n_periods"]/(a*max(abs(cos(θ)),abs(sin(θ))))
+    ϕ = parsed_args["phi"]
+    T = parsed_args["final_time"]
     mesh_perturb = parsed_args["mesh_perturb"]
     n_grids = parsed_args["n_grids"]
     load_from_file = parsed_args["load_from_file"]
 
+    a_vec = (a*cos(θ)*sin(ϕ), a*sin(θ)*sin(ϕ), a*cos(ϕ))
+
     return AdvectionDriver(p,r,β,n_s,scheme,element_type,
-        mapping_form,ode_algorithm,path,M0,λ,L,(a*cos(θ), a*sin(θ)), T,
+        mapping_form,ode_algorithm,path,M0,λ,L,
+        Tuple(a_vec[m] for m in 1:dim(element_type)), T,
         mesh_perturb, n_grids, load_from_file)
 end
 
-function run_driver(driver::AdvectionDriver{2})
+function run_driver(driver::AdvectionDriver{d}) where {d}
 
     @unpack p,r,β,n_s,scheme,element_type,mapping_form,ode_algorithm,path,M0,λ,L,a,T,mesh_perturb, n_grids, load_from_file = driver
 
@@ -157,8 +165,12 @@ function run_driver(driver::AdvectionDriver{2})
         println(io, "Starting refinement from grid level ", n_start)
     end
 
-    initial_data = InitialDataSine(1.0,(2*π/L, 2*π/L))
-    
+    if d == 3
+        initial_data = InitialDataCosine(1.0,Tuple(2*π/L for m in 1:d))
+    else
+        initial_data = InitialDataSine(1.0,Tuple(2*π/L for m in 1:d))
+    end
+
     conservation_law = LinearAdvectionEquation(a)
     form = WeakConservationForm(mapping_form=mapping_form, 
             inviscid_numerical_flux=LaxFriedrichsNumericalFlux(λ))
@@ -170,11 +182,12 @@ function run_driver(driver::AdvectionDriver{2})
         M = M0*2^(n-1)
 
         reference_approximation =ReferenceApproximation(
-            scheme, element_type, mapping_degree=r, N_plot=ceil(Int,20/M))
+            scheme, element_type, mapping_degree=r)
         
         mesh = warp_mesh(uniform_periodic_mesh(
-            reference_approximation.reference_element, ((0.0,L),(0.0,L)), 
-            (M,M)), reference_approximation.reference_element, mesh_perturb)
+            reference_approximation.reference_element, 
+                Tuple((0.0,L) for m in 1:d), Tuple(M for m in 1:d)), 
+                reference_approximation.reference_element, mesh_perturb)
 
         spatial_discretization = SpatialDiscretization(mesh, 
             reference_approximation)
@@ -235,7 +248,7 @@ function run_driver(driver::AdvectionDriver{2})
         end
         if n > 1
             refinement_results = analyze(RefinementAnalysis(initial_data, path,
-            "./", "2D advection test"), n, max_derivs=true)
+            "./", "advection test"), n, max_derivs=true)
             open(string(path,"screen.txt"), "a") do io
                 println(io, tabulate_analysis(refinement_results, e=1,
                     print_latex=false))
@@ -248,7 +261,8 @@ end
 
 function main(args)
     parsed_args = parse_commandline()
-    eoc = run_driver(advection_driver_2d(parsed_args))
+    eoc = run_driver(AdvectionDriver(parsed_args))
+    println("order on finest two grids: ", eoc)
 end
 
 main(ARGS)
