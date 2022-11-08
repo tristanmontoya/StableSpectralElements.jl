@@ -63,7 +63,7 @@ end
 
 """Lax-Friedrichs/Rusanov flux for the Euler equations"""
 @inline function numerical_flux(
-    conservation_law::AbstractConservationLaw{d},
+    conservation_law::EulerType{d},
     numerical_flux::LaxFriedrichsNumericalFlux, 
     u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
     n::NTuple{d, Vector{Float64}}) where {d}

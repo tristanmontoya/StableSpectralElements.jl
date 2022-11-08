@@ -27,7 +27,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
 
     operators = Array{DiscretizationOperators}(undef, N_e)
-    Threads.@threads for k in 1:N_e
+    for k in 1:N_e
         if d == 1
             VOL = (-V' * W * D[1] + Diagonal(nrstJ[1]) * R,)
         else
@@ -37,8 +37,8 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
         end
         FAC = -Vf' * B
         SRC = V' * W * Diagonal(J_q[:,k])
-        operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC, M[k], V, Vf,
-            Tuple(nJf[m][:,k] for m in 1:d))
+        operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC, 
+            factorize(M[k]), V, Vf, Tuple(nJf[m][:,k] for m in 1:d))
     end
     return operators
 end
@@ -55,14 +55,14 @@ function make_operators(spatial_discretization::SpatialDiscretization{1},
     @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
 
     operators = Array{DiscretizationOperators}(undef, N_e)
-    Threads.@threads for k in 1:N_e
+    for k in 1:N_e
 
         VOL = (D[1]' * W,)
         FAC = -R' * B
         SRC = Diagonal(W * J_q[:,k])
 
-        operators[k] = DiscretizationOperators{1}(VOL, FAC, SRC, M[k], V, Vf,
-            (nJf[1][:,k],))
+        operators[k] = DiscretizationOperators{1}(VOL, FAC, SRC, 
+            factorize(M[k]), V, Vf, (nJf[1][:,k],))
     end
     return operators
 end
@@ -76,13 +76,14 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
 
     operators = Array{DiscretizationOperators}(undef, N_e)
-    Threads.@threads for k in 1:N_e
+    for k in 1:N_e
         VOL = Tuple(sum(D[m]' * Diagonal(W * Λ_q[:,m,n,k]) for m in 1:d)
                     for n in 1:d)
         FAC = -R' * B
         SRC = Diagonal(W * J_q[:,k])
-        operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC, M[k], V, Vf,
-            Tuple(nJf[m][:,k] for m in 1:d))
+        operators[k] = DiscretizationOperators{d}(
+            VOL, FAC, SRC, factorize(M[k]), V, Vf, Tuple(nJf[m][:,k] 
+            for m in 1:d))
     end
     return operators
 end
@@ -96,7 +97,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
 
     operators = Array{DiscretizationOperators}(undef, N_e)
-    Threads.@threads for k in 1:N_e
+    for k in 1:N_e
         VOL = Tuple(
                 0.5*(sum(D[m]' * Diagonal(W * Λ_q[:,m,n,k]) -
                         Diagonal(W * Λ_q[:,m,n,k]) * D[m] for m in 1:d) +
@@ -104,7 +105,8 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
                 for n in 1:d)
         FAC = -R' * B
         SRC = Diagonal(W * J_q[:,k])
-        operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC, M[k], V, Vf,
+        operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC,
+            factorize(M[k]), V, Vf,
             Tuple(nJf[m][:,k] for m in 1:d))
     end
     return operators
@@ -117,68 +119,55 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
     solver::Solver{d, <:AbstractResidualForm, FirstOrder},
     t::Float64) where {d}
 
-    @timeit thread_timer() "unpack/allocations" begin
-        @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
-        @unpack inviscid_numerical_flux = form
-        @unpack source_term, N_c = conservation_law
+    @unpack conservation_law, operators, connectivity, form = solver
+    @unpack inviscid_numerical_flux = form
+    @unpack source_term, N_c = conservation_law
 
-        N_e = size(operators,1)
-        N_q = size(operators[1].V,1)
-        N_f = size(operators[1].Vf,1)
+    N_e = size(operators,1)
+    (N_q, N_p) = size(operators[1].V)
+    N_f = size(operators[1].Vf,1)
+    facet_states = Array{Float64}(undef, N_f, N_e, N_c)
+    u_q = Matrix{Float64}(undef,N_q,N_c)
+    u_in = Matrix{Float64}(undef,N_f,N_c)
+    local_rhs =  Matrix{Float64}(undef,N_p,N_c)
+    CI = CartesianIndices((N_f,N_e))
 
-        u_in = Array{Float64}(undef, N_f, N_c, N_e)
-    end
-
-    # get all internal facet state values
-    Threads.@threads for k in 1:N_e
-        @unpack Vf = operators[k]
-        for e in 1:N_c
-            @timeit thread_timer() "extrap solution" begin
-                u_in[:,e,k] = Vf * u[:,e,k]
-            end
+    # get facet states through extrapolation
+    @views @inbounds for k in 1:N_e
+        @timeit thread_timer() "get facet states" begin
+            mul!(u_in,  operators[k].Vf, u[:,:,k])
+            facet_states[:,k,:] = u_in
         end
     end
 
     # evaluate all local residuals
-    Threads.@threads for k in 1:N_e
+    @views @inbounds for k in 1:N_e
         @timeit thread_timer() "local residual" begin
 
-            @unpack V, scaled_normal = operators[k]
-            
-            u_nodal = Matrix{Float64}(undef,N_q,N_c)
-            u_out = Matrix{Float64}(undef,N_f,N_c)
-            
-            @inbounds for e in 1:N_c
-                @timeit thread_timer() "gather ext state" begin
-                    u_out[:,e] = u_in[:,e,:][connectivity[:,k]]
-                end
-                @timeit thread_timer() "eval nodal solution" begin
-                    u_nodal[:,e] = V * u[:,e,k]
-                end
-            end
+            @timeit thread_timer() "eval nodal solution" mul!(
+                u_q, operators[k].V, u[:,:,k])
 
             @timeit thread_timer() "eval flux" begin
-                f = physical_flux(conservation_law, u_nodal)
+                f = physical_flux(conservation_law, u_q)
             end
 
             @timeit thread_timer() "eval num flux" begin
                 f_star = numerical_flux(
                     conservation_law, inviscid_numerical_flux,
-                    u_in[:,:,k], u_out, scaled_normal)
+                    facet_states[:,k,:], 
+                    facet_states[CI[connectivity[:,k]],:], 
+                    operators[k].scaled_normal)
             end
 
-            if source_term isa NoSourceTerm
-                s = nothing
-            else
+            if source_term isa NoSourceTerm s = nothing else
                 @timeit thread_timer() "eval src term" begin
                     s = evaluate(source_term, Tuple(x_q[m][:,k] for m in 1:d),t)
                 end
             end
 
-            @timeit thread_timer() "apply operators" begin
-                dudt[:,:,k] = apply_operators(operators[k], f, f_star,
-                    strategy, s)
-            end
+            @timeit thread_timer() "apply operators" apply_operators!(
+                local_rhs, u_q, operators[k], f, f_star, s)
+            dudt[:,:,k] = local_rhs
         end
     end
 
@@ -192,24 +181,21 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
     solver::Solver{d, <:AbstractResidualForm, SecondOrder},
     t::Float64) where {d}
 
-    @timeit thread_timer() "unpack/allocations" begin
-
-        @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
-        @unpack inviscid_numerical_flux, viscous_numerical_flux = form
-        @unpack source_term, N_c = conservation_law
-        
-        N_e = size(operators,1)
-        N_f, N_p = size(operators[1].Vf)
-        N_q = size(operators[1].V,1)
-        
-        q = Tuple(Array{Float64}(undef, N_p, N_c, N_e) for m in 1:d) 
-        u_in = Array{Float64}(undef, N_f, N_c, N_e)
-        q_in = Tuple(Array{Float64}(undef, N_f, N_c, N_e) for m in 1:d)
-        
-    end
+    @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
+    @unpack inviscid_numerical_flux, viscous_numerical_flux = form
+    @unpack source_term, N_c = conservation_law
     
+    N_e = size(operators,1)
+    N_f, N_p = size(operators[1].Vf)
+    N_q = size(operators[1].V,1)
+    
+    local_rhs =  Matrix{Float64}(undef,N_p,N_c)
+    q = Tuple(Array{Float64}(undef, N_p, N_c, N_e) for m in 1:d) 
+    u_in = Array{Float64}(undef, N_f, N_c, N_e)
+    q_in = Tuple(Array{Float64}(undef, N_f, N_c, N_e) for m in 1:d)
+        
     # get all internal facet state values
-    Threads.@threads for k in 1:N_e
+    for k in 1:N_e
         @unpack Vf = operators[k]
         @inbounds for e in 1:N_c
             @timeit thread_timer() "extrap solution" begin
@@ -219,7 +205,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
     end
 
     # evaluate auxiliary variable 
-    Threads.@threads for k in 1:N_e
+    for k in 1:N_e
 
         @timeit thread_timer() "auxiliary variable" begin
 
@@ -246,7 +232,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             
             @timeit thread_timer() "apply operators" @inbounds for m in 1:d
                 q[m][:,:,k] = auxiliary_variable(
-                    m, operators[k], u_nodal, u_star[m], strategy)
+                    m, operators[k], u_nodal, u_star[m])
             end
         end
         
@@ -258,7 +244,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
     end
 
     # evaluate all local residuals
-    Threads.@threads for k in 1:N_e
+    for k in 1:N_e
 
         @timeit thread_timer() "local residual" begin
 
@@ -316,9 +302,9 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             end
 
             @timeit thread_timer() "apply operators" begin
-                dudt[:,:,k] = apply_operators(
-                    operators[k], f, f_star, strategy, s)
+                apply_operators!(local_rhs, u_nodal, operators[k], f, f_star, s)
             end
+            dudt[:,:,k] = local_rhs
         end
     end
 

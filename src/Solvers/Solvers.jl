@@ -2,7 +2,7 @@ module Solvers
 
     using UnPack
     import LinearAlgebra
-    using LinearAlgebra: Diagonal, inv, mul!
+    using LinearAlgebra: Diagonal, inv, mul!, factorize, ldiv!, Factorization
     using TimerOutputs
     using LinearMaps: LinearMap
     using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
@@ -12,7 +12,7 @@ module Solvers
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization
     using ..GridFunctions: AbstractGridFunction, AbstractGridFunction, NoSourceTerm, evaluate    
     
-    export AbstractResidualForm, AbstractMappingForm, AbstractStrategy, DiscretizationOperators, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, apply_operators, auxiliary_variable, get_dof, CLOUD_print_timer, CLOUD_reset_timer!, thread_timer, rhs!
+    export AbstractResidualForm, AbstractMappingForm, AbstractStrategy, DiscretizationOperators, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, get_dof, CLOUD_print_timer, CLOUD_reset_timer!, thread_timer, rhs!
 
     abstract type AbstractResidualForm{MappingForm, TwoPointFlux} end
     abstract type AbstractMappingForm end
@@ -27,7 +27,7 @@ module Solvers
         VOL::NTuple{d,LinearMap}
         FAC::LinearMap
         SRC::LinearMap
-        M::AbstractMatrix
+        M::Union{Factorization, AbstractMatrix}
         V::LinearMap
         Vf::LinearMap
         scaled_normal::NTuple{d, Vector{Float64}}
@@ -62,17 +62,15 @@ module Solvers
         end
     end
 
-    @inline function thread_timer()
+    function thread_timer()
         return get_timer(string("thread_timer_", Threads.threadid()))
     end
         
-    include("reference_operator_strategy.jl")
-
-    export combine, precompute
-    include("physical_operator_strategy.jl")
-
-    export initialize, semidiscretize
+    export initialize, semidiscretize, precompute
     include("preprocessing.jl")
+
+    export apply_operators!, auxiliary_variable
+    include("apply_operators.jl")
 
     export StrongConservationForm, WeakConservationForm
     include("conservation_form.jl")

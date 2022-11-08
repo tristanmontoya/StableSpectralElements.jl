@@ -131,7 +131,7 @@ module Mesh
         Λ_q = Array{Float64, 4}(undef, N_q, d, d, N_e)
         dxdr_f = Array{Float64, 4}(undef, N_f, d, d, N_e)        
 
-        Threads.@threads for k in 1:N_e
+        for k in 1:N_e
             @inbounds for m in 1:d, n in 1:d
                 # evaluate metric at mapping nodes
                 dxdr = reference_element.Drst[n]*mesh.xyz[m][:,k]

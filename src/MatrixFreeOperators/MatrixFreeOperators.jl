@@ -32,16 +32,6 @@ module MatrixFreeOperators
         return cnt.muladd64 + cnt.add64 + cnt.mul64
     end
 
-    ```
-    Remove unnecessary add operations in diagonal matrix multiplication
-    This was resolved in Julia PR no. 44651, so not needed for v1.8.2
-    ```
-    function LinearAlgebra.mul!(y::AbstractVector, 
-        A::Diagonal, x::AbstractVector)
-        y[:] = A.diag .* x
-        return y
-    end
-
     export TensorProductMap2D, TensorProductMap3D
     include("tensor_product_2d.jl")
     include("tensor_product_3d.jl")

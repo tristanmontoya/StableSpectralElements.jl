@@ -39,7 +39,7 @@ Evaluate the flux for the inviscid Burgers' equation
 `F(u) = a ½u^2`
 """
 @inline function physical_flux(conservation_law::BurgersType{d}, 
-    u::Matrix{Float64}) where {d}
+    u::AbstractMatrix{Float64}) where {d}
     return Tuple(conservation_law.a[m] * 0.5.*u.^2 for m in 1:d)
 end
 
@@ -49,7 +49,7 @@ Evaluate the flux for the viscous Burgers' equation
 `F(u,q) = a ½u^2 - bq`
 """
 @inline function physical_flux(conservation_law::ViscousBurgersEquation{d},
-    u::Matrix{Float64}, q::NTuple{d,Matrix{Float64}}) where {d}
+    u::AbstractMatrix{Float64}, q::NTuple{d,AbstractMatrix{Float64}}) where {d}
     return Tuple(conservation_law.a[m]*0.5.*u.^2 - 
         conservation_law.b*q[m] for m in 1:d)
 end
@@ -60,7 +60,7 @@ Evaluate the Lax-Friedrichs flux for Burgers' equation
 """
 @inline function numerical_flux(
     conservation_law::BurgersType{d}, numerical_flux::LaxFriedrichsNumericalFlux, 
-    u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
+    u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
     n::NTuple{d, Vector{Float64}}) where {d}
 
     a_n = sum(conservation_law.a[m].*n[m] for m in 1:d)
@@ -74,7 +74,7 @@ Evaluate the interface normal solution for the viscous Burgers' equation using t
 `U*(u⁻, u⁺, n) = ½(u⁻ + u⁺)n`
 """
 @inline function numerical_flux(::ViscousBurgersEquation{d},
-    ::BR1,u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
+    ::BR1,u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
     n::NTuple{d, Vector{Float64}}) where {d}
 
     # average both sides
@@ -89,8 +89,8 @@ Evaluate the numerical flux for the viscous Burgers' equation using the BR1 appr
 F*(u⁻, u⁺, q⁻, q⁺, n) = ½(F²(u⁻,q⁻) + F²(u⁺, q⁺))⋅n
 """
 @inline function numerical_flux(conservation_law::ViscousBurgersEquation{d},
-    ::BR1, u_in::Matrix{Float64}, u_out::Matrix{Float64}, 
-    q_in::NTuple{d,Matrix{Float64}}, q_out::NTuple{d,Matrix{Float64}}, 
+    ::BR1, u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
+    q_in::NTuple{d,AbstractMatrix{Float64}}, q_out::NTuple{d,AbstractMatrix{Float64}}, 
     n::NTuple{d, Vector{Float64}}) where {d}
 
     # average both sides
