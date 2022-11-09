@@ -20,36 +20,46 @@ end
 function Solver(conservation_law::AbstractConservationLaw,     
     spatial_discretization::SpatialDiscretization,
     form::AbstractResidualForm,
-    strategy::ReferenceOperator)
+    ::ReferenceOperator,
+    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm())
 
-    operators = make_operators(spatial_discretization, form)
+    operators = make_operators(spatial_discretization, form, operator_algorithm)
     return Solver(conservation_law, 
         operators,
         spatial_discretization.mesh.xyzq,
-        spatial_discretization.mesh.mapP, form, strategy)
+        spatial_discretization.mesh.mapP, form)
 end
 
 function Solver(conservation_law::AbstractConservationLaw,     
     spatial_discretization::SpatialDiscretization,
     form::AbstractResidualForm,
-    strategy::PhysicalOperator)
+    ::PhysicalOperator,
+    operator_algorithm::AbstractOperatorAlgorithm=BLASAlgorithm())
 
     operators = make_operators(spatial_discretization, form)
 
+    # make sure physical operator matrices are being formed
+    if !(operator_algorithm isa GenericMatrixAlgorithm || 
+        operator_algorithm isa BLASAlgorithm)
+        operator_algorithm = BLASAlgorithm()
+    end
+
     return Solver(conservation_law, 
-            [precompute(operators[k]) 
+            [precompute(operators[k], operator_algorithm) 
                 for k in 1:spatial_discretization.N_e],
             spatial_discretization.mesh.xyzq,
-            spatial_discretization.mesh.mapP, form, strategy)
+            spatial_discretization.mesh.mapP, form)
 end
 
-function precompute(operators::DiscretizationOperators{d}) where {d}
-    @unpack VOL, FAC, SRC, M, V, Vf, scaled_normal = operators
+function precompute(operators::DiscretizationOperators{d}, 
+    operator_algorithm::AbstractOperatorAlgorithm=BLASAlgorithm()) where {d}
+    @unpack VOL, FAC, SRC, M, V, Vf, scaled_normal, N_p, N_q, N_f = operators
 
     return DiscretizationOperators{d}(
-        Tuple(combine(VOL[n]) for n in 1:d),
-        combine(FAC), combine(SRC),
-        M, V, Vf, scaled_normal)
+        Tuple(make_operator(VOL[n], operator_algorithm) for n in 1:d),
+        make_operator(FAC, operator_algorithm), 
+        make_operator(SRC, operator_algorithm),
+        M, V, Vf, scaled_normal, N_p, N_q, N_f)
 end
 
 function semidiscretize(
@@ -57,7 +67,8 @@ function semidiscretize(
     initial_data::AbstractGridFunction, 
     form::AbstractResidualForm,
     tspan::NTuple{2,Float64}, 
-    strategy::AbstractStrategy)
+    strategy::AbstractStrategy=ReferenceOperator(),
+    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm())
 
     u0 = initialize(
         initial_data,
@@ -65,7 +76,7 @@ function semidiscretize(
         spatial_discretization)
 
     return semidiscretize(Solver(conservation_law,spatial_discretization,
-        form,strategy),u0, tspan)
+        form,strategy,operator_algorithm),u0, tspan)
 end
 
 function semidiscretize(solver::Solver, u0::Array{Float64,3},

@@ -16,8 +16,8 @@ function test_2d(
     exact_solution = ExactSolution(conservation_law,initial_data)
 
     reference_approximation = ReferenceApproximation(
-        approx_type, element_type, mapping_degree=approx_type.p,
-        N_plot=10, operator_algorithm=operator_algorithm)
+        approx_type, element_type, 
+        mapping_degree=approx_type.p)
 
     mesh = warp_mesh(uniform_periodic_mesh(
         reference_approximation.reference_element, 
@@ -28,15 +28,16 @@ function test_2d(
         reference_approximation)
 
     results_path = save_project(conservation_law,
-        spatial_discretization, initial_data, form, (0.0, 1.0), strategy,
-        string("results/", test_name,"/"),  overwrite=true, clear=true)
+        spatial_discretization, initial_data, form, (0.0, 1.0),
+        string("results/", test_name,"/"), overwrite=true, clear=true)
 
     ode_problem = semidiscretize(conservation_law,
         spatial_discretization,
         initial_data, 
         form,
         (0.0, 1.0),
-        strategy)
+        strategy,
+        operator_algorithm)
     
     save_solution(ode_problem.u0, 0.0, results_path, 0)
     sol = solve(ode_problem, CarpenterKennedy2N54(),

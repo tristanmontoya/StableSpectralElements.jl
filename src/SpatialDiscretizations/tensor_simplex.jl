@@ -79,8 +79,7 @@ function ReferenceApproximation(
         LGQuadrature(),LGRQuadrature()),
     facet_quadrature_rule::NTuple{2,AbstractQuadratureRule}=(
         LGQuadrature(),LGRQuadrature()),
-    mapping_degree::Int=1, N_plot::Int=10,
-    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm())
+    mapping_degree::Int=1, N_plot::Int=10)
 
     @unpack p = approx_type
     N_q = (p+1)*(p+1)
@@ -140,21 +139,19 @@ function ReferenceApproximation(
 
         # if bottom node is included, just pick out that node
         if volume_quadrature_rule[2] isa LGRQuadrature
-            R = make_operator([SelectionMap( # bottom, left to right
-                [(p+1)*(i-1)+1 for i in 1:p+1], N_q); 
-            TensorProductMap2D( # right, upwards
-                R_1[2:2,:], I, sigma, [j for i in 1:1, j in 1:p+1]); 
-            TensorProductMap2D( # left, downwards
-                R_1[1:1,:], I, sigma, [j for i in 1:1, j in p+1:-1:1])],
-                operator_algorithm)
+            R = [SelectionMap( # bottom, left to right
+                    [(p+1)*(i-1)+1 for i in 1:p+1], N_q); 
+                TensorProductMap2D( # right, upwards
+                    R_1[2:2,:], I, sigma, [j for i in 1:1, j in 1:p+1]); 
+                TensorProductMap2D( # left, downwards
+                    R_1[1:1,:], I, sigma, [j for i in 1:1, j in p+1:-1:1])]
         else
-            R = make_operator([TensorProductMap2D( # bottom, left to right
+            R = [TensorProductMap2D( # bottom, left to right
                 I, R_2[1:1,:], sigma, [i for i in 1:p+1, j in 1:1]); 
-            TensorProductMap2D( # right, upwards
-                R_1[2:2,:], I, sigma, [j for i in 1:1, j in 1:p+1]); 
-            TensorProductMap2D( # left, downwards
-                R_1[1:1,:], I, sigma, [j for i in 1:1, j in p+1:-1:1])],
-                operator_algorithm)
+                TensorProductMap2D( # right, upwards
+                    R_1[2:2,:], I, sigma, [j for i in 1:1, j in 1:p+1]); 
+                TensorProductMap2D( # left, downwards
+                    R_1[1:1,:], I, sigma, [j for i in 1:1, j in p+1:-1:1])]
         end
 
     # otherwise use successive 1D extrapolations
@@ -164,7 +161,7 @@ function ReferenceApproximation(
         r_1d_2, _ = quadrature(face_type(Tri()), 
             facet_quadrature_rule[2], p+1)
             
-        R = make_operator([LinearMap(vandermonde(Line(),p,r_1d_1)/rd_1.VDM) *
+        R = [LinearMap(vandermonde(Line(),p,r_1d_1)/rd_1.VDM) *
                 TensorProductMap2D( # bottom, left to right
                     I, R_2[1:1,:], sigma, [i for i in 1:p+1, j in 1:1]); 
             LinearMap(vandermonde(Line(),p,r_1d_2)/rd_2.VDM) * 
@@ -172,15 +169,12 @@ function ReferenceApproximation(
                     R_1[2:2,:], I, sigma, [j for i in 1:1, j in 1:p+1]); 
             LinearMap((vandermonde(Line(),p,r_1d_2)/rd_1.VDM)[end:-1:1,:]) *   
                 TensorProductMap2D( # left, downwards
-                    R_1[1:1,:], I, sigma, [j for i in 1:1, j in p+1:-1:1])],
-                    operator_algorithm)
+                    R_1[1:1,:], I, sigma, [j for i in 1:1, j in p+1:-1:1])]
     end
 
     # differentiation on the square
-    D = (make_operator(TensorProductMap2D(D_1, I, sigma, sigma),
-            operator_algorithm), 
-        make_operator(TensorProductMap2D(I, D_2, sigma, sigma),
-            operator_algorithm))
+    D = (TensorProductMap2D(D_1, I, sigma, sigma), 
+            TensorProductMap2D(I, D_2, sigma, sigma))
 
     # construct mapping to triangle
     η1, η2, w_η = quadrature(Quad(), volume_quadrature_rule, (p+1, p+1))
@@ -190,8 +184,7 @@ function ReferenceApproximation(
     # construct modal or nodal scheme
     @unpack rstp, rstq = reference_element
     if approx_type isa ModalTensor
-        V = make_operator(warped_product(Tri(),p, (rd_1.rq,rd_2.rq)),
-            operator_algorithm)
+        V = warped_product(Tri(),p, (rd_1.rq,rd_2.rq))
         V_plot = LinearMap(vandermonde(Tri(), p, rstp...))
     else
         V = LinearMap(I, N_q)

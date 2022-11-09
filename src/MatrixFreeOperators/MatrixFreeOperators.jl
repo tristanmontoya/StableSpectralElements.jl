@@ -2,7 +2,7 @@ module MatrixFreeOperators
 
     using LinearAlgebra, LinearMaps, MuladdMacro, UnPack, GFlops
 
-    export AbstractOperatorAlgorithm, BLASAlgorithm, GenericMatrixAlgorithm, DefaultOperatorAlgorithm, combine, make_operator, count_ops
+    export AbstractOperatorAlgorithm, BLASAlgorithm, GenericMatrixAlgorithm, DefaultOperatorAlgorithm, make_operator, count_ops
     
     abstract type AbstractOperatorAlgorithm end
     struct BLASAlgorithm <: AbstractOperatorAlgorithm end
@@ -21,10 +21,6 @@ module MatrixFreeOperators
         return GenericMatrixMap(map)
     end
 
-    function combine(map::LinearMap)
-        return LinearMap(convert(Matrix,map))
-    end
-    
     function count_ops(map::LinearMap)
         x = rand(size(map,2))
         y = rand(size(map,1))

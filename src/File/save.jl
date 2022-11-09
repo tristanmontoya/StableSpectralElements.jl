@@ -26,7 +26,6 @@ function save_project(
     initial_data::AbstractGridFunction, 
     form::AbstractResidualForm,
     tspan::NTuple{2,Float64}, 
-    strategy::AbstractStrategy, 
     results_path::String; 
     overwrite::Bool=false,
     clear::Bool=false)
@@ -38,8 +37,7 @@ function save_project(
             "spatial_discretization" => spatial_discretization,
             "initial_data" => initial_data,
             "form" => form,
-            "tspan" => tspan,
-            "strategy" => strategy))
+            "tspan" => tspan))
     
     save_object(string(results_path, "time_steps.jld2"), Int64[])
 
@@ -69,7 +67,8 @@ function save_solution(integrator::ODEIntegrator,
     end
 end
 
-function save_solution(u::Array{Float64,3}, t::Float64, results_path::String, time_step::Union{Int,String}=0)
+function save_solution(u::Array{Float64,3}, t::Float64, results_path::String,
+    time_step::Union{Int,String}=0)
     save(string(results_path, "sol_", time_step, ".jld2"), 
         Dict("u" => u, "t" => t))
     if time_step isa Int

@@ -199,7 +199,7 @@ function run_driver(driver::AdvectionDriver{d}) where {d}
         if !isdir(results_path)
             save_project(conservation_law,
                 spatial_discretization, initial_data, form, 
-                (0.0, T), strategy, results_path, overwrite=true, clear=true)
+                (0.0, T), results_path, overwrite=true, clear=true)
             open(string(results_path,"screen.txt"), "a") do io
                 println(io, "Number of Julia threads: ", Threads.nthreads())
                 println(io, "Number of BLAS threads: ", 

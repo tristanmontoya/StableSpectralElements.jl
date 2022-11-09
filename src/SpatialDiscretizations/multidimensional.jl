@@ -1,7 +1,6 @@
 function ReferenceApproximation(
     approx_type::ModalMulti, ::Line; 
-    mapping_degree::Int=1, N_plot::Int=10, 
-    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm())
+    mapping_degree::Int=1, N_plot::Int=10)
 
     @unpack p, q = approx_type
     N_p = p+1
@@ -15,15 +14,14 @@ function ReferenceApproximation(
 
     VDM, ∇VDM = basis(Line(), p, rstq[1])     
     ∇V = (LinearMap(∇VDM),)
-    Vf = make_operator(LinearMap(vandermonde(Line(),p,rstf[1])),
-        operator_algorithm)
-    V = make_operator(LinearMap(VDM), operator_algorithm)
+    Vf = LinearMap(vandermonde(Line(),p,rstf[1]))
+    V = LinearMap(VDM)
     V_plot = LinearMap(vandermonde(Line(), p, rstp[1]))
     W = Diagonal(wq)
     B = Diagonal(wf)
     P = inv(VDM' * Diagonal(wq) * VDM) * V' * W
-    R = make_operator(Vf * P, operator_algorithm)
-    D = (make_operator(∇V[1] * P, operator_algorithm),)
+    R = Vf * P
+    D = (∇V[1] * P,)
 
     return ReferenceApproximation(approx_type, N_p, N_q, N_f, 
         reference_element, D, V, Vf, R, W, B, V_plot, NoMapping())
@@ -31,8 +29,7 @@ end
 
 function ReferenceApproximation(
     approx_type::ModalMulti, element_type::AbstractElemShape;
-    mapping_degree::Int=1, N_plot::Int=10, 
-    operator_algorithm::AbstractOperatorAlgorithm=BLASAlgorithm())
+    mapping_degree::Int=1, N_plot::Int=10)
 
     @unpack p,q,q_f = approx_type
     d = dim(element_type)
@@ -48,14 +45,14 @@ function ReferenceApproximation(
     
     VDM, ∇VDM... = basis(element_type, p, rstq...) 
     ∇V = Tuple(LinearMap(∇VDM[m]) for m in 1:d)
-    V = make_operator(LinearMap(VDM), operator_algorithm)
-    Vf = make_operator(LinearMap(vandermonde(element_type,p,rstf...)), operator_algorithm)
+    V = LinearMap(VDM)
+    Vf = LinearMap(vandermonde(element_type,p,rstf...))
     V_plot = LinearMap(vandermonde(element_type, p, rstp...))
     W = Diagonal(wq)
     B = Diagonal(wf)
     P = inv(VDM' * Diagonal(wq) * VDM) * V' * W
-    R = make_operator(Vf * P, operator_algorithm)
-    D = Tuple(make_operator(∇V[m] * P, operator_algorithm) for m in 1:d)
+    R = Vf * P
+    D = Tuple(∇V[m] * P for m in 1:d)
 
     return ReferenceApproximation(approx_type, N_p, N_q, N_f, 
         reference_element, D, V, Vf, R, W, B, V_plot, NoMapping())

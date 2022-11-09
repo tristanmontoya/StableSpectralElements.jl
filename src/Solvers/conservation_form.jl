@@ -18,27 +18,29 @@ end
 Make operators for strong conservation form
 """
 function make_operators(spatial_discretization::SpatialDiscretization{d}, 
-    ::StrongConservationForm{StandardMapping,<:AbstractTwoPointFlux}) where {d}
+    ::StrongConservationForm{StandardMapping,<:AbstractTwoPointFlux},
+    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm()) where {d}
 
     @unpack N_e, M = spatial_discretization
-    @unpack D, V, Vf, R, W, B = spatial_discretization.reference_approximation
+    @unpack D, V, Vf, R, W, B, N_p, N_q, N_f = spatial_discretization.reference_approximation
     @unpack nrstJ = 
         spatial_discretization.reference_approximation.reference_element
     @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
+    op(A::LinearMap) = make_operator(A, operator_algorithm)
 
     operators = Array{DiscretizationOperators}(undef, N_e)
     for k in 1:N_e
         if d == 1
-            VOL = (-V' * W * D[1] + Diagonal(nrstJ[1]) * R,)
+            VOL = (op(-W * D[1] +  R' * Diagonal(nrstJ[1]) * R),)
         else
-            VOL = Tuple(sum(-V' * W * D[m] * Diagonal(Λ_q[:,m,n,k]) + 
-                Vf' * B * Diagonal(nrstJ[m]) * R * Diagonal(Λ_q[:,m,n,k]) 
-                    for m in 1:d) for n in 1:d)
+            VOL = Tuple(sum(op(-W * D[m] + R' * B * Diagonal(nrstJ[m]) * R) * 
+                    Diagonal(Λ_q[:,m,n,k]) for m in 1:d) for n in 1:d)
         end
-        FAC = -Vf' * B
-        SRC = V' * W * Diagonal(J_q[:,k])
+        FAC = op(-R' * B)
+        SRC = Diagonal(W * J_q[:,k])
         operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC, 
-            factorize(M[k]), V, Vf, Tuple(nJf[m][:,k] for m in 1:d))
+            factorize(M[k]), op(V), op(Vf), Tuple(nJf[m][:,k] for m in 1:d), 
+            N_p, N_q, N_f)
     end
     return operators
 end
@@ -47,67 +49,74 @@ end
 Make operators for weak conservation form
 """
 function make_operators(spatial_discretization::SpatialDiscretization{1}, 
-    ::WeakConservationForm{StandardMapping,<:AbstractTwoPointFlux})
+    ::WeakConservationForm{StandardMapping,<:AbstractTwoPointFlux},
+    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm())
 
     @unpack N_e, M, reference_approximation = spatial_discretization
-    @unpack D, V, Vf, R, W, B = reference_approximation
+    @unpack D, V, Vf, R, W, B, N_p, N_q, N_f = reference_approximation
     @unpack nrstJ = reference_approximation.reference_element
     @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
+    op(A::LinearMap) = make_operator(A, operator_algorithm)
 
     operators = Array{DiscretizationOperators}(undef, N_e)
-    for k in 1:N_e
-
-        VOL = (D[1]' * W,)
-        FAC = -R' * B
+    @inbounds for k in 1:N_e
+        VOL = (op(D[1]' * W),)
+        FAC = op(-R' * B)
         SRC = Diagonal(W * J_q[:,k])
 
         operators[k] = DiscretizationOperators{1}(VOL, FAC, SRC, 
-            factorize(M[k]), V, Vf, (nJf[1][:,k],))
+            factorize(M[k]), op(V), op(Vf), (nJf[1][:,k],), N_p, N_q, N_f)
     end
     return operators
 end
 
 function make_operators(spatial_discretization::SpatialDiscretization{d}, 
-    ::WeakConservationForm{StandardMapping,<:AbstractTwoPointFlux}) where {d}
+    ::WeakConservationForm{StandardMapping,<:AbstractTwoPointFlux},
+    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm())where {d}
 
     @unpack N_e, M, reference_approximation = spatial_discretization
-    @unpack V, Vf, R, W, B, D = reference_approximation
+    @unpack V, Vf, R, W, B, D, N_p, N_q, N_f = reference_approximation
     @unpack nrstJ = reference_approximation.reference_element
     @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
+    op(A::LinearMap) = make_operator(A, operator_algorithm)
 
     operators = Array{DiscretizationOperators}(undef, N_e)
-    for k in 1:N_e
-        VOL = Tuple(sum(D[m]' * Diagonal(W * Λ_q[:,m,n,k]) for m in 1:d)
+    @inbounds for k in 1:N_e
+        VOL = Tuple(sum(op(D[m]') * Diagonal(W * Λ_q[:,m,n,k]) for m in 1:d)
                     for n in 1:d)
-        FAC = -R' * B
+        FAC = op(-R' * B)
         SRC = Diagonal(W * J_q[:,k])
         operators[k] = DiscretizationOperators{d}(
-            VOL, FAC, SRC, factorize(M[k]), V, Vf, Tuple(nJf[m][:,k] 
-            for m in 1:d))
+            VOL, FAC, SRC, factorize(M[k]), op(V), op(Vf), Tuple(nJf[m][:,k] 
+            for m in 1:d), N_p, N_q, N_f)
     end
     return operators
 end
 
 function make_operators(spatial_discretization::SpatialDiscretization{d}, 
-    ::WeakConservationForm{<:SkewSymmetricMapping,<:AbstractTwoPointFlux}) where {d}
+    ::WeakConservationForm{<:SkewSymmetricMapping,<:AbstractTwoPointFlux},
+    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm())where {d}
 
     @unpack N_e, M, reference_approximation = spatial_discretization
-    @unpack V, Vf, R, W, B, D = reference_approximation
+    @unpack V, Vf, R, W, B, D, N_p, N_q, N_f = reference_approximation
     @unpack nrstJ = reference_approximation.reference_element
     @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
+    op(A::LinearMap) = make_operator(A, operator_algorithm)
 
     operators = Array{DiscretizationOperators}(undef, N_e)
-    for k in 1:N_e
-        VOL = Tuple(
-                0.5*(sum(D[m]' * Diagonal(W * Λ_q[:,m,n,k]) -
-                        Diagonal(W * Λ_q[:,m,n,k]) * D[m] for m in 1:d) +
-                    R' * Diagonal(B * nJf[n][:,k]) * R)
-                for n in 1:d)
-        FAC = -R' * B
+    @inbounds for k in 1:N_e
+        VOL = Tuple(sum(
+            op(D[m]') * Diagonal(0.5 * W * Λ_q[:,m,n,k]) -
+                        Diagonal(0.5 * W * Λ_q[:,m,n,k]) * op(D[m]) 
+                    for m in 1:d) +
+                op(R') * Diagonal(0.5 * B * nJf[n][:,k]) * op(R)
+                    for n in 1:d)
+        FAC = op(-R' * B)
         SRC = Diagonal(W * J_q[:,k])
+        
         operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC,
-            factorize(M[k]), V, Vf,
-            Tuple(nJf[m][:,k] for m in 1:d))
+            factorize(M[k]), op(V), op(Vf),
+            Tuple(nJf[m][:,k] for m in 1:d), N_p, N_q, N_f)
     end
     return operators
 end
@@ -119,13 +128,11 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
     solver::Solver{d, <:AbstractResidualForm, FirstOrder},
     t::Float64) where {d}
 
-    @unpack conservation_law, operators, connectivity, form = solver
+    @unpack conservation_law, operators, connectivity, form, N_e = solver
     @unpack inviscid_numerical_flux = form
     @unpack source_term, N_c = conservation_law
+    @unpack N_p, N_q, N_f = operators[1] # assume all operators same size
 
-    N_e = size(operators,1)
-    (N_q, N_p) = size(operators[1].V)
-    N_f = size(operators[1].Vf,1)
     facet_states = Array{Float64}(undef, N_f, N_e, N_c)
     u_q = Matrix{Float64}(undef,N_q,N_c)
     u_in = Matrix{Float64}(undef,N_f,N_c)
@@ -181,13 +188,10 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
     solver::Solver{d, <:AbstractResidualForm, SecondOrder},
     t::Float64) where {d}
 
-    @unpack conservation_law, operators, x_q, connectivity, form, strategy = solver
+    @unpack conservation_law, operators, x_q, connectivity, form, N_e = solver
     @unpack inviscid_numerical_flux, viscous_numerical_flux = form
     @unpack source_term, N_c = conservation_law
-    
-    N_e = size(operators,1)
-    N_f, N_p = size(operators[1].Vf)
-    N_q = size(operators[1].V,1)
+    @unpack N_p, N_q, N_f = operators[1] # assume all operators same size
     
     local_rhs =  Matrix{Float64}(undef,N_p,N_c)
     q = Tuple(Array{Float64}(undef, N_p, N_c, N_e) for m in 1:d) 

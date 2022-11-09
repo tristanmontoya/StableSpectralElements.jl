@@ -7,7 +7,7 @@ module Solvers
     using LinearMaps: LinearMap
     using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
     
-    using ..MatrixFreeOperators: combine
+    using ..MatrixFreeOperators: AbstractOperatorAlgorithm, BLASAlgorithm, GenericMatrixAlgorithm, DefaultOperatorAlgorithm, make_operator
     using ..ConservationLaws: AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, AbstractTwoPointFlux, NoInviscidFlux, NoViscousFlux, NoTwoPointFlux, NoSourceTerm, physical_flux, numerical_flux, LaxFriedrichsNumericalFlux, BR1
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization
     using ..GridFunctions: AbstractGridFunction, AbstractGridFunction, NoSourceTerm, evaluate    
@@ -31,6 +31,9 @@ module Solvers
         V::LinearMap
         Vf::LinearMap
         scaled_normal::NTuple{d, Vector{Float64}}
+        N_p::Int
+        N_q::Int
+        N_f::Int
     end
 
     struct Solver{d,ResidualForm,PDEType}
@@ -39,7 +42,16 @@ module Solvers
         x_q::NTuple{d,Matrix{Float64}}
         connectivity::Matrix{Int}
         form::ResidualForm
-        strategy::AbstractStrategy
+        N_e::Int
+        
+        function Solver(conservation_law::AbstractConservationLaw{d,PDEType},
+            operators::Vector{<:DiscretizationOperators},
+            x_q::NTuple{d,Matrix{Float64}},
+            connectivity::Matrix{Int},
+            form::ResidualForm) where {d,ResidualForm,PDEType}
+            return new{d,ResidualForm,PDEType}(conservation_law, operators,
+                x_q, connectivity, form, length(operators))
+        end
     end
 
     function get_dof(spatial_discretization::SpatialDiscretization{d}, 

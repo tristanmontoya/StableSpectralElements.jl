@@ -14,8 +14,7 @@ function load_project(results_path::String)
         dict["spatial_discretization"], 
         dict["initial_data"],
         dict["form"],
-        dict["tspan"],
-        dict["strategy"])
+        dict["tspan"])
 end
 
 function load_solver(results_path::String)
