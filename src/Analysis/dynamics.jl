@@ -137,9 +137,10 @@ function analyze(analysis::LinearAnalysis)
         # project data onto eigenvectors to determine coeffients
         c = (Z'*M*Z) \ Z'*M*X
 
+        N_s = size(c,2)
         # calculate energy in each mode
         E = real([dot(c[i,j]*Z[:,i], M * (c[i,j]*Z[:,i]))
-            for i in 1:r, j in 1:size(c,2)])
+            for i in 1:r, j in 1:N_s])
         
         # sort modes by decreasing energy in initial data
         inds_no_cutoff = sortperm(-E[:,1])
@@ -220,7 +221,8 @@ function analyze(analysis::KoopmanAnalysis,
     # set up data matrices
     U, t_s = load_snapshots(results_path, time_steps)
     X = vcat([ψ.(U) for ψ ∈ basis]...)
-    dUdt = hcat([f(U[:,i]) for i in 1:size(X,2)]...)
+    N_s = size(X,2)
+    dUdt = hcat([f(U[:,i]) for i in 1:N_s]...)
     Y = vcat([dψdu.(U) .* dUdt for dψdu ∈ basis_derivatives]...)
 
     # perform (standard) DMD    
@@ -228,7 +230,7 @@ function analyze(analysis::KoopmanAnalysis,
 
     # calculate energy
     E = real([dot(c[i,j]*Z[:,i], M * (c[i,j]*Z[:,i]))
-    for i in 1:r, j in 1:size(X,2)])
+    for i in 1:r, j in 1:N_s])
 
     # sort modes by decreasing energy in initial data
     inds_no_cutoff = sortperm(-E[:,1])

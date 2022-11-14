@@ -3,7 +3,7 @@ module SpatialDiscretizations
     using UnPack
     using LinearAlgebra: I, inv, Diagonal, diagm, kron
     using LinearMaps: LinearMap
-    using StartUpDG: MeshData, RefElemData, basis, vandermonde, quad_nodes, gauss_quad, gauss_lobatto_quad, face_vertices, nodes, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial, jacobiP
+    using StartUpDG: MeshData, basis, vandermonde, grad_vandermonde, quad_nodes, gauss_quad, gauss_lobatto_quad, face_vertices, nodes, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial, jacobiP
 
     using Jacobi: zgrjm, wgrjm, zgj, wgj
     import StartUpDG: face_type, init_face_data
@@ -12,7 +12,7 @@ module SpatialDiscretizations
     using ..MatrixFreeOperators: TensorProductMap2D, WarpedTensorProductMap2D, SelectionMap
 
     using Reexport
-    @reexport using StartUpDG: AbstractElemShape, Line, Quad, Tri, Tet, Hex, Pyr
+    @reexport using StartUpDG: RefElemData, AbstractElemShape, Line, Quad, Tri, Tet, Hex, Pyr
 
     export AbstractApproximationType, NodalTensor, ModalTensor, ModalMulti, AbstractReferenceMapping, NoMapping, CollapsedMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, dim, χ, warped_product
     
@@ -195,8 +195,11 @@ module SpatialDiscretizations
     dim(::Union{Tri,Quad}) = 2
     dim(::Union{Tet,Hex}) = 3
 
-    export AbstractQuadratureRule, LGLQuadrature, LGQuadrature, LGRQuadrature, JGLQuadrature, JGRQuadrature, JGQuadrature, JacobiQuadrature, LegendreQuadrature, quadrature, facet_node_ids
+    export AbstractQuadratureRule, LGLQuadrature, LGQuadrature, LGRQuadrature, JGLQuadrature, JGRQuadrature, JGQuadrature, quadrature, facet_node_ids
     include("quadrature_rules.jl")
+
+    # new constructors for RefElemData from StartUpDG
+    include("ref_elem_data.jl")
 
     include("multidimensional.jl")
     include("tensor_cartesian.jl")

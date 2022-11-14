@@ -6,9 +6,6 @@ struct JGLQuadrature <: AbstractQuadratureRule{1} end
 struct JGQuadrature <: AbstractQuadratureRule{1} end
 struct JGRQuadrature <: AbstractQuadratureRule{1} end
 
-const JacobiQuadrature = Union{JGLQuadrature,JGQuadrature,JGRQuadrature}
-const LegendreQuadrature = Union{LGLQuadrature,LGQuadrature,LGRQuadrature}
-
 function meshgrid(x::Vector{Float64}, y::Vector{Float64})
     return ([x[j] for i in 1:length(y), j in 1:length(x)],
         [y[i] for i in 1:length(y), j in 1:length(x)])
@@ -29,12 +26,12 @@ end
 
 function quadrature(::Line, quadrature_rule::JGQuadrature, N::Int)
     z = zgj(N, 1.0, 0.0)
-    return z, 0.5*wgj(z, 1.0, 0.0)
+    return z, wgj(z, 1.0, 0.0)
 end
 
 function quadrature(::Line, quadrature_rule::JGRQuadrature, N::Int)
     z = zgrjm(N, 1.0, 0.0)
-    return z, 0.5*wgrjm(z, 1.0, 0.0)
+    return z, wgrjm(z, 1.0, 0.0)
 end
 
 function quadrature(::Quad, quadrature_rule::AbstractQuadratureRule{1}, N::Int)
@@ -58,7 +55,7 @@ function quadrature(::Quad,
 end
 
 function quadrature(::Tri,
-    quadrature_rule::NTuple{2,LegendreQuadrature}, N::NTuple{2,Int})
+    quadrature_rule::NTuple{2,AbstractQuadratureRule{1}}, N::NTuple{2,Int})
     r1d_1, w1d_1 = quadrature(Line(), 
         quadrature_rule[1], N[1])
     r1d_2, w1d_2 = quadrature(Line(), 
@@ -68,19 +65,6 @@ function quadrature(::Tri,
     w2d = @. mgw[1] * mgw[2] 
     return χ(Tri(), (mgr[1][:], mgr[2][:]))..., 
         (η -> 0.5*(1-η)).(mgr[2][:]) .* w2d[:]
-end
-
-function quadrature(::Tri,
-    quadrature_rule::Tuple{LegendreQuadrature,JacobiQuadrature},
-    N::NTuple{2,Int})
-    r1d_1, w1d_1 = quadrature(Line(), 
-        quadrature_rule[1], N[1])
-    r1d_2, w1d_2 = quadrature(Line(), 
-        quadrature_rule[2], N[2])
-    mgw = meshgrid(w1d_1, w1d_2)
-    mgr = meshgrid(r1d_1,r1d_2)
-    w2d = @. mgw[1] * mgw[2] 
-    return χ(Tri(), (mgr[1][:], mgr[2][:]))..., w2d[:]
 end
 
 function facet_node_ids(::Line, N::Int)

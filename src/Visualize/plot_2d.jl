@@ -73,6 +73,7 @@ end
     stride = nothing,
     node_color = 1,
     facet_node_color=2,
+    mapping_node_color=3,
     grid_line_width = 2.0,
     edge_line_width = 3.0,
     X=nothing)
@@ -142,7 +143,7 @@ end
             seriestype --> :scatter
             markerstrokewidth --> 0.0
             markersize --> 5
-            color --> node_color
+            color --> mapping_node_color
             X(r, s)
         end
 

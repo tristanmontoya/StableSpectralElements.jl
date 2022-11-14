@@ -37,7 +37,7 @@ end
         DefaultOperatorAlgorithm(),
         ReferenceOperator(), 2, "test_advection_2d_collapsed_econ")
         
-    @test l2 ≈ 0.07948096258647905 atol=tol
+    @test l2 ≈ 0.0793011361997203 atol=tol
     @test conservation ≈ 0.0 atol=tol
     @test energy ≈ 0.0 atol=tol
 end

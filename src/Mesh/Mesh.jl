@@ -142,14 +142,14 @@ module Mesh
             end
 
             # loops over slower indices
-            for i in 1:N_q
+            @inbounds for i in 1:N_q
                 J_q[i,k] = det(dxdr_q[i,:,:,k])
                 Λ_q[i,:,:,k] = J_q[i,k]*inv(dxdr_q[i,:,:,k])
             end
         
             # get scaled normal vectors - this includes scaling for ref. quadrature weights on long side of right-angled triangle.
             # don't need actual facet Jacobian for now, probably will at some point.
-            for i in 1:N_f
+            @inbounds for i in 1:N_f
                 Jdrdx_f = det(dxdr_f[i,:,:,k]) *
                     inv(dxdr_f[i,:,:,k])
                 @inbounds for m in 1:d

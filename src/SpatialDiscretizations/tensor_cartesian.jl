@@ -4,31 +4,24 @@ function ReferenceApproximation(
     mapping_degree::Int=1, N_plot::Int=10)
 
     @unpack p = approx_type
-    N_p = p+1
-    N_q = p+1
-    N_f = 2
 
     reference_element = RefElemData(Line(), mapping_degree,
         quad_rule_vol=quadrature(Line(), 
         volume_quadrature_rule, p+1), Nplot=N_plot)
+
     @unpack rstp, rstq, rstf, wq, wf = reference_element
+
     VDM, ∇VDM = basis(Line(), p, rstq[1])
-    D = (LinearMap(∇VDM / VDM),)
 
     if volume_quadrature_rule isa LGLQuadrature
-        Vf = SelectionMap(facet_node_ids(Line(),p+1),p+1)
-    else
-        Vf = LinearMap(vandermonde(element_type,p,rstf[1]) / VDM)
-    end
+        R = SelectionMap(facet_node_ids(Line(),p+1),p+1)
+    else R = LinearMap(vandermonde(element_type,p,rstf[1]) / VDM) end
 
     V_plot = LinearMap(vandermonde(element_type, p, rstp[1]) / VDM)
-    V = LinearMap(I, N_q)
-    R = Vf
-    W = Diagonal(wq)
-    B = Diagonal(wf)
 
-    return ReferenceApproximation(approx_type, N_p, N_q, N_f, 
-        reference_element, D, V, Vf, R, W, B, V_plot, NoMapping())
+    return ReferenceApproximation(approx_type, p+1, p+1, 2, reference_element,
+    (LinearMap(∇VDM / VDM),), LinearMap(I, (p+1)), R, R, Diagonal(wq),
+        Diagonal(wf), V_plot, NoMapping())
 end
 
 function ReferenceApproximation(approx_type::NodalTensor, 
@@ -39,57 +32,41 @@ function ReferenceApproximation(approx_type::NodalTensor,
 
     @unpack p = approx_type
 
-    # dimensions of operators
-    N_p = (p+1)^2
-    N_q = (p+1)^2
-    N_f = 4*(p+1)
+    # one-dimensional operators
+    nodes_1D = quadrature(Line(),volume_quadrature_rule,p+1)[1]
+    VDM_1D, ∇VDM_1D = basis(Line(), p, nodes_1D)
+    R_L = vandermonde(Line(),p, [-1.0]) / VDM_1D
+    R_R = vandermonde(Line(),p, [1.0]) / VDM_1D
+
+    # differentiation matrix
+    σ = [(p+1)*(i-1) + j for i in 1:p+1, j in 1:p+1]
+    D = (TensorProductMap2D(∇VDM_1D / VDM_1D, I, σ, σ),
+            TensorProductMap2D(I, ∇VDM_1D / VDM_1D, σ, σ))
 
     reference_element = RefElemData(element_type, mapping_degree,
         quad_rule_vol=quadrature(element_type, volume_quadrature_rule, p+1),
         quad_rule_face=quadrature(face_type(element_type), 
-            facet_quadrature_rule, p+1), 
-        Nplot=N_plot)
-
+            facet_quadrature_rule, p+1), Nplot=N_plot)
     @unpack rstp, rstq, rstf, wq, wf = reference_element
-
-    # one-dimensional operators
-    ref_elem_1D = RefElemData(Line(), mapping_degree,
-        quad_rule_vol=quadrature(Line(), 
-            volume_quadrature_rule, p+1), Nplot=N_plot)
-    VDM_1D, ∇VDM_1D = basis(Line(), p, ref_elem_1D.rstq[1])
-    D_1D = ∇VDM_1D / VDM_1D
-    R_1D = vandermonde(Line(),p, ref_elem_1D.rstf[1]) / VDM_1D
-    R_L = R_1D[1:1,:]
-    R_R = R_1D[2:2,:]
-
-    # scalar ordering of multi-indices
-    sigma = [(p+1)*(i-1) + j for i in 1:p+1, j in 1:p+1]
 
     # extrapolation operators
     if (volume_quadrature_rule isa LGLQuadrature && 
             facet_quadrature_rule isa LGLQuadrature)
-        Vf = SelectionMap(facet_node_ids(Quad(),(p+1,p+1)),N_p)
+        R = SelectionMap(facet_node_ids(Quad(),(p+1,p+1)),(p+1)^2)
     elseif typeof(volume_quadrature_rule) == typeof(facet_quadrature_rule)
-        Vf =[TensorProductMap2D(R_L, I, sigma, [j for i in 1:1, j in 1:p+1]); #L
-            TensorProductMap2D(R_R, I, sigma, [j for i in 1:1, j in 1:p+1]); #R
-            TensorProductMap2D(I, R_L, sigma, [i for i in 1:p+1, j in 1:1]); #B
-            TensorProductMap2D(I, R_R ,sigma, [i for i in 1:p+1, j in 1:1])] #T
+        R =[TensorProductMap2D(R_L, I, σ, [j for i in 1:1, j in 1:p+1]); #L
+            TensorProductMap2D(R_R, I, σ, [j for i in 1:1, j in 1:p+1]); #R
+            TensorProductMap2D(I, R_L, σ, [i for i in 1:p+1, j in 1:1]); #B
+            TensorProductMap2D(I, R_R ,σ, [i for i in 1:p+1, j in 1:1])] #T
     else
-        Vf = LinearMap(vandermonde(element_type,p,rstf...) / 
+        R = LinearMap(vandermonde(element_type,p,rstf...) / 
             vandermonde(element_type,p,rstq...))
     end
-
+    
     V_plot = LinearMap(vandermonde(element_type, p, rstp...) / 
         vandermonde(element_type, p, rstq...))
 
-    D = (TensorProductMap2D(D_1D, I, sigma, sigma),
-            TensorProductMap2D(I, D_1D, sigma, sigma))
-
-    V = LinearMap(I, N_q)
-    R = Vf
-    W =Diagonal(wq)
-    B = Diagonal(wf)
-
-    return ReferenceApproximation(approx_type, N_p, N_q, N_f, 
-        reference_element, D, V, Vf, R, W, B, V_plot, NoMapping())
+    return ReferenceApproximation(approx_type, (p+1)^2, (p+1)^2, 4*(p+1), 
+        reference_element, D, LinearMap(I, (p+1)^2), R, R,
+        Diagonal(wq), Diagonal(wf), V_plot, NoMapping())
 end

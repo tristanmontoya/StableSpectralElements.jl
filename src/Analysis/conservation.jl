@@ -91,7 +91,7 @@ function evaluate_conservation_residual(
     dudt::Array{Float64,3})
     @unpack WJ, N_c, N_e, V = analysis 
 
-    return [sum(sum(V'*WJ[k]*V*dudt[:,e,k]) 
+    return [sum(ones(size(WJ[k],1))'*WJ[k]*V*dudt[:,e,k]
         for k in 1:N_e) for e in 1:N_c]
 end
 
@@ -227,8 +227,9 @@ function plot_evolution(analysis::ConservationAnalysis,
     labels::Vector{String}=["Actual", "Predicted"],
     ylabel::String="Energy", e::Int=1, t=nothing, xlims=nothing, ylims=nothing)
 
-    p = plot(results[1].t, results[1].E[:,e], xlabel="\$t\$",   
-    ylabel=ylabel, labels=labels[1], xlims=xlims, ylims=ylims, linewidth=2.0)
+    p = plot(results[1].t, results[1].E[:,e], xlabel="\$t\$",
+        ylabel=ylabel, labels=labels[1], xlims=xlims, ylims=ylims, 
+        linewidth=2.0)
     N = length(results)
     for i in 2:N
         plot!(p, results[i].t, results[i].E[:,e], labels=labels[i], linestyle=:dash, linewidth=3.0, legend=:topright)

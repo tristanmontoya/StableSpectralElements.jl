@@ -86,6 +86,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
                     for n in 1:d)
         FAC = op(-R' * B)
         SRC = Diagonal(W * J_q[:,k])
+        
         operators[k] = DiscretizationOperators{d}(
             VOL, FAC, SRC, factorize(M[k]), op(V), op(Vf), Tuple(nJf[m][:,k] 
             for m in 1:d), N_p, N_q, N_f)
@@ -107,9 +108,9 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     @inbounds for k in 1:N_e
         VOL = Tuple(sum(
             op(D[m]') * Diagonal(0.5 * W * Λ_q[:,m,n,k]) -
-                        Diagonal(0.5 * W * Λ_q[:,m,n,k]) * op(D[m]) 
+                        Diagonal(0.5 * W * Λ_q[:,m,n,k]) * op(D[m])  # skew part
                     for m in 1:d) +
-                op(R') * Diagonal(0.5 * B * nJf[n][:,k]) * op(R)
+                op(R') * Diagonal(0.5 * B * nJf[n][:,k]) * op(R)  # sym part
                     for n in 1:d)
         FAC = op(-R' * B)
         SRC = Diagonal(W * J_q[:,k])
