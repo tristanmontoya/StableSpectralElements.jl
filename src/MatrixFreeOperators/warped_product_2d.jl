@@ -8,25 +8,25 @@ struct WarpedTensorProductMap2D{A_type, B_type} <: LinearMaps.LinearMap{Float64}
     σₒ::Matrix{Int}
 end
 
-@inline Base.size(C::WarpedTensorProductMap2D) = (count(a->a>0,C.σₒ), 
-    count(a->a>0,C.σᵢ))
+@inline Base.size(L::WarpedTensorProductMap2D) = (count(a->a>0,L.σₒ), 
+    count(a->a>0,L.σᵢ))
 
 """
 Multiply a vector of length Σ_{β1}N2[β1] by the M1*M2 x Σ_{β1}N2[β1] matrix
 
-C[σₒ[α1,α2], σᵢ[β1,β2]] = A[α1,β1] B[β1][α2,β2].
+L[σₒ[α1,α2], σᵢ[β1,β2]] = A[α1,β1] B[β1][α2,β2].
 
 The action of this matrix on a vector x is 
 
-(Cx)[σₒ[α1,α2]] = ∑_{β1,β2} A[α1,β1] B[β1][α2,β2] x[σᵢ[β1,β2]] 
+(Lx)[σₒ[α1,α2]] = ∑_{β1,β2} A[α1,β1] B[β1][α2,β2] x[σᵢ[β1,β2]] 
                 = ∑_{β1} A[α1,β1] (∑_{β2} B[β1][α2,β2] x[σᵢ[β1,β2]]) 
                 = ∑_{β1} A[α1,β1] Z[α2,β1] 
 """
 function LinearAlgebra.mul!(y::AbstractVector, 
-    C::WarpedTensorProductMap2D, x::AbstractVector)
+    L::WarpedTensorProductMap2D, x::AbstractVector)
     
-    LinearMaps.check_dim_mul(y, C, x)
-    @unpack A, B, σᵢ, σₒ = C
+    LinearMaps.check_dim_mul(y, L, x)
+    @unpack A, B, σᵢ, σₒ = L
 
     Z = Matrix{Float64}(undef, size(σₒ,2), size(σᵢ,1))
     @inbounds for α2 in axes(σₒ,2), β1 in axes(σᵢ,1)
@@ -50,11 +50,11 @@ function LinearAlgebra.mul!(y::AbstractVector,
 end
 
 function LinearMaps._unsafe_mul!(y::AbstractVector, 
-    transC::LinearMaps.TransposeMap{Float64, <:WarpedTensorProductMap2D},
+    L::LinearMaps.TransposeMap{Float64, <:WarpedTensorProductMap2D},
     x::AbstractVector)
 
-    LinearMaps.check_dim_mul(y, transC, x)
-    @unpack A, B, σᵢ, σₒ = transC.lmap
+    LinearMaps.check_dim_mul(y, L, x)
+    @unpack A, B, σᵢ, σₒ = L.lmap
 
     Z = Matrix{Float64}(undef, size(σᵢ,1), size(σₒ,2))
     @inbounds for α1 in axes(σᵢ,1), β2 in axes(σₒ,2)

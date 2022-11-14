@@ -1,7 +1,11 @@
-"""
-Linear advection equation
+@doc raw"""
+    LinearAdvectionEquation(a::NTuple{d,Float64}) where {d}
 
-`∂ₜu + ∇⋅(au) = s`
+Define a linear advection equation of the form
+```math
+\partial_t U(\bm{x},t) + \bm{\nabla} \cdot \big( \bm{a} U(\bm{x},t) \big) = 0,
+```
+with a constant advection velocity $\bm{a} \in \R^d$.
 """
 struct LinearAdvectionEquation{d} <: AbstractConservationLaw{d,FirstOrder}
     a::NTuple{d,Float64} 
@@ -14,10 +18,14 @@ struct LinearAdvectionEquation{d} <: AbstractConservationLaw{d,FirstOrder}
     end
 end
 
-"""
-Linear advection-diffusion equation
+@doc raw"""
+    LinearAdvectionDiffusionEquation(a::NTuple{d,Float64}, b::Float64) where {d}
 
-`∂ₜu + ∇⋅(au - b∇u) = s`
+Define a linear advection-diffusion equation of the form
+```math
+\partial_t U(\bm{x},t) + \bm{\nabla} \cdot \big( \bm{a} U(\bm{x},t) - b \bm{\nabla} U(\bm{x},t)\big) = 0,
+```
+with a constant advection velocity $\bm{a} \in \R^d$ and diffusion coefficient $b \in \R^+$.
 """
 struct LinearAdvectionDiffusionEquation{d} <: AbstractConservationLaw{d,SecondOrder}
     a::NTuple{d,Float64}

@@ -5,34 +5,35 @@ struct TensorProductMap2D{A_type,B_type} <: LinearMaps.LinearMap{Float64}
     σₒ::Matrix{Int}
 end
 
-@inline Base.size(C::TensorProductMap2D) = (size(C.σₒ,1)*size(C.σₒ,2), 
-    size(C.σᵢ,1)*size(C.σᵢ,2))
+@inline Base.size(L::TensorProductMap2D) = (size(L.σₒ,1)*size(L.σₒ,2), 
+    size(L.σᵢ,1)*size(L.σᵢ,2))
 
 """
-Compute transpose using
+Return the transpose using
+
 (A ⊗ B)ᵀ = Aᵀ ⊗ Bᵀ 
 """
-function LinearAlgebra.transpose(C::TensorProductMap2D)
-    return TensorProductMap2D(transpose(C.A), transpose(C.B), C.σₒ, C.σᵢ)
+function LinearAlgebra.transpose(L::TensorProductMap2D)
+    return TensorProductMap2D(transpose(L.A), transpose(L.B), L.σₒ, L.σᵢ)
 end
 
 """
 Multiply a vector of length N1*N2 by the M1*M2 x N1*N2 matrix
 
-C[σₒ[α1,α2], σᵢ[β1,β2]] = A[α1,β1] B[α2,β2]
+L[σₒ[α1,α2], σᵢ[β1,β2]] = A[α1,β1] B[α2,β2]
 
-or C = A ⊗ B. The action of this matrix on a vector x is 
+or L = A ⊗ B. The action of this matrix on a vector x is 
 
-(Cx)[σₒ[α1,α2]] = ∑_{β1,β2} A[α1,β1] B[α2,β2] x[σᵢ[β1,β2]] 
+(Lx)[σₒ[α1,α2]] = ∑_{β1,β2} A[α1,β1] B[α2,β2] x[σᵢ[β1,β2]] 
                 = ∑_{β1} A[α1,β1] (∑_{β2} B[α2,β2] x[σᵢ[β1,β2]]) 
                 = ∑_{β1} A[α1,β1] Z[α2,β1] 
 """
 function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
-    C::TensorProductMap2D{<:AbstractMatrix{Float64},<:AbstractMatrix{Float64}},
+    L::TensorProductMap2D{<:AbstractMatrix{Float64},<:AbstractMatrix{Float64}},
     x::AbstractVector{Float64})
     
-    LinearMaps.check_dim_mul(y, C, x)
-    @unpack A, B, σᵢ, σₒ = C
+    LinearMaps.check_dim_mul(y, L, x)
+    @unpack A, B, σᵢ, σₒ = L
 
     Z = Matrix{Float64}(undef, size(σₒ,2), size(σᵢ,1))
     @inbounds for α2 in axes(σₒ,2), β1 in axes(σᵢ,1)
@@ -57,19 +58,19 @@ end
 """
 Multiply a vector of length N1*N2 by the M1*M2 x N1*M2 matrix
 
-C[σₒ[α1,α2], σᵢ[β1,β2]] = A[α1,β1] δ_{α2,β2}
+L[σₒ[α1,α2], σᵢ[β1,β2]] = A[α1,β1] δ_{α2,β2}
 
-or C = A ⊗ I_{M2}. The action of this matrix on a vector x is 
+or L = A ⊗ I_{M2}. The action of this matrix on a vector x is 
 
-(Cx)[σₒ[α1,α2]] = ∑_{β1,β2} A[α1,β1] δ_{α2,β2} x[σᵢ[β1,β2]] 
+(Lx)[σₒ[α1,α2]] = ∑_{β1,β2} A[α1,β1] δ_{α2,β2} x[σᵢ[β1,β2]] 
                 = ∑_{β1} A[α1,β1] x[σᵢ[β1,α2]] 
 """
 function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
-    C::TensorProductMap2D{<:AbstractMatrix{Float64},<:UniformScaling},
+    L::TensorProductMap2D{<:AbstractMatrix{Float64},<:UniformScaling},
     x::AbstractVector{Float64})
     
-    LinearMaps.check_dim_mul(y, C, x)
-    @unpack A, B, σᵢ, σₒ = C
+    LinearMaps.check_dim_mul(y, L, x)
+    @unpack A, B, σᵢ, σₒ = L
     @inbounds for α1 in axes(σₒ,1), α2 in axes(σₒ,2)
         temp = 0.0
         @inbounds @simd for β1 in axes(σᵢ,1)
@@ -84,19 +85,19 @@ end
 
 """
 Multiply a vector of length N1*N2 by the M1*M2 x M1*N2 matrix
-C[σₒ[α1,α2], σᵢ[β1,β2]] = δ_{α1,β1} B[α2,β2]
+L[σₒ[α1,α2], σᵢ[β1,β2]] = δ_{α1,β1} B[α2,β2]
 
-or C = I_{M1} ⊗ B. The action of this matrix on a vector x is 
+or L = I_{M1} ⊗ B. The action of this matrix on a vector x is 
 
-(Cx)[σₒ[α1,α2]] = ∑_{β1,β2} δ_{α1,β1} B[α2,β2] x[σᵢ[β1,β2]] 
+(Lx)[σₒ[α1,α2]] = ∑_{β1,β2} δ_{α1,β1} B[α2,β2] x[σᵢ[β1,β2]] 
                 = ∑_{β2} B[α2,β2] x[σᵢ[α1,β2]]) 
 """
 function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
-    C::TensorProductMap2D{<:UniformScaling,<:AbstractMatrix{Float64}},
+    L::TensorProductMap2D{<:UniformScaling,<:AbstractMatrix{Float64}},
     x::AbstractVector{Float64})
 
-    LinearMaps.check_dim_mul(y, C, x)
-    @unpack A, B, σᵢ, σₒ = C
+    LinearMaps.check_dim_mul(y, L, x)
+    @unpack A, B, σᵢ, σₒ = L
 
     @inbounds for α1 in axes(σₒ,1), α2 in axes(σₒ,2)
         temp = 0.0

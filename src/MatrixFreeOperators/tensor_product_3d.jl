@@ -7,15 +7,15 @@ struct TensorProductMap3D{A_type,B_type,C_type} <: LinearMaps.LinearMap{Float64}
     σₒ::Array{Int,3}
 end
 
-@inline Base.size(map::TensorProductMap3D) = (
-    size(map.σₒ,1)*size(map.σₒ,2)*size(map.σₒ,3), 
-    size(map.σᵢ,1)*size(map.σᵢ,2)*size(map.σᵢ,3))
+@inline Base.size(L::TensorProductMap3D) = (
+    size(L.σₒ,1)*size(L.σₒ,2)*size(L.σₒ,3), 
+    size(L.σᵢ,1)*size(L.σᵢ,2)*size(L.σᵢ,3))
 
 """
 Compute transpose using
 (A ⊗ B ⊗ C)ᵀ = Aᵀ ⊗ Bᵀ ⊗ Cᵀ
 """
-function LinearAlgebra.transpose(map::TensorProductMap3D)
-    return TensorProductMap3D(transpose(map.A), transpose(map.B), 
-        transpose(map.C), map.σₒ, map.σᵢ)
+function LinearAlgebra.transpose(L::TensorProductMap3D)
+    return TensorProductMap3D(transpose(L.A), transpose(L.B), 
+        transpose(L.C), L.σₒ, L.σᵢ)
 end
