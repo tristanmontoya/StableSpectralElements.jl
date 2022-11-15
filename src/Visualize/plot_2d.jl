@@ -138,28 +138,6 @@ end
         end
     end
 
-    if mapping_nodes
-        @series begin 
-            seriestype --> :scatter
-            markerstrokewidth --> 0.0
-            markersize --> 5
-            color --> mapping_node_color
-            X(r, s)
-        end
-
-        if !isnothing(mapping_nodes_connect)
-            N_p = length(r)
-            for i in 1:N_p
-                @series begin 
-                    linewidth --> grid_line_width
-                    linecolor --> node_color
-                    x,y = [r[mapping_nodes_connect], r[i]], [s[mapping_nodes_connect],s[i]]
-                    X(x,y)
-                end
-            end
-        end
-    end
-
     if volume_quadrature
         if grid_connect &&
             (reference_approximation.approx_type isa Union{NodalTensor, ModalTensor, NodalTensor})
@@ -233,11 +211,32 @@ end
     if facet_quadrature
         @series begin 
             seriestype --> :scatter
-            markershape --> :circle
+            markershape --> :square
             markercolor --> facet_node_color
             markerstrokewidth --> 0.0
             markersize --> 4
             X(rf, sf)
+        end
+    end
+    if mapping_nodes
+        @series begin 
+            seriestype --> :scatter
+            markerstrokewidth --> 0.0
+            markersize --> 4
+            color --> mapping_node_color
+            X(r, s)
+        end
+
+        if !isnothing(mapping_nodes_connect)
+            N_p = length(r)
+            for i in 1:N_p
+                @series begin 
+                    linewidth --> grid_line_width
+                    linecolor --> node_color
+                    x,y = [r[mapping_nodes_connect], r[i]], [s[mapping_nodes_connect],s[i]]
+                    X(x,y)
+                end
+            end
         end
     end
 end

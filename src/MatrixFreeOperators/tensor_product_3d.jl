@@ -19,3 +19,39 @@ function LinearAlgebra.transpose(L::TensorProductMap3D)
     return TensorProductMap3D(transpose(L.A), transpose(L.B), 
         transpose(L.C), L.σₒ, L.σᵢ)
 end
+
+function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
+    L::TensorProductMap3D{<:AbstractMatrix{Float64},<:AbstractMatrix{Float64},<:AbstractMatrix{Float64}},
+    x::AbstractVector{Float64})
+    
+    LinearMaps.check_dim_mul(y, L, x)
+    @unpack A, B, C, σᵢ, σₒ = L
+
+    Z_3 = Matrix{Float64}(undef, size(σᵢ,1), size(σᵢ,2), size(σₒ,3))
+    @inbounds for α3 in axes(σₒ,3), β2 in axes(σᵢ,2), β1 in axes(σᵢ,1)
+        temp = 0.0
+        @inbounds @simd for β3 in axes(σᵢ,3)
+            @muladd temp = temp + C[α3,β3] * x[σᵢ[β1,β2,β3]]
+        end
+        Z_3[β1,β2,α3] = temp
+    end
+
+    Z_2 = Matrix{Float64}(undef, size(σᵢ,1), size(σₒ,2), size(σₒ,3))
+    @inbounds for α3 in axes(σₒ,3), α2 in axes(σₒ,2), β1 in axes(σᵢ,1)
+        temp = 0.0
+        @inbounds @simd for β2 in axes(σᵢ,2)
+            @muladd temp = temp + B[α2,β2] * Z_3[β1,β2,α3]
+        end
+        Z_2[β1,α2,α3] = temp
+    end
+
+    @inbounds for α3 in axes(σₒ,3), α2 in axes(σₒ,2), α1 in axes(σₒ,1)
+        temp = 0.0
+        @inbounds @simd for β1 in axes(σᵢ,1)
+            @muladd temp = temp + A[α1,β1] * Z_2[β1,α2,α3]
+        end
+        y[σₒ[α1,α2,α3]] = temp
+    end
+
+    return y
+end

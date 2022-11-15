@@ -5,7 +5,7 @@ Define a linear advection equation of the form
 ```math
 \partial_t U(\bm{x},t) + \bm{\nabla} \cdot \big( \bm{a} U(\bm{x},t) \big) = 0,
 ```
-with a constant advection velocity $\bm{a} \in \R^d$.
+with a constant advection velocity $\bm{a} \in \R^d$. A specialized constructor `LinearAdvectionEquation(a::Float64)` is provided for the one-dimensional case.
 """
 struct LinearAdvectionEquation{d} <: AbstractConservationLaw{d,FirstOrder}
     a::NTuple{d,Float64} 
@@ -25,7 +25,7 @@ Define a linear advection-diffusion equation of the form
 ```math
 \partial_t U(\bm{x},t) + \bm{\nabla} \cdot \big( \bm{a} U(\bm{x},t) - b \bm{\nabla} U(\bm{x},t)\big) = 0,
 ```
-with a constant advection velocity $\bm{a} \in \R^d$ and diffusion coefficient $b \in \R^+$.
+with a constant advection velocity $\bm{a} \in \R^d$ and diffusion coefficient $b \in \R^+$. A specialized constructor `LinearAdvectionEquation(a::Float64, b::Float64)` is provided for the one-dimensional case.
 """
 struct LinearAdvectionDiffusionEquation{d} <: AbstractConservationLaw{d,SecondOrder}
     a::NTuple{d,Float64}
