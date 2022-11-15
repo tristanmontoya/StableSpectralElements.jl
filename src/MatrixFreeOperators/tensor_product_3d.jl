@@ -55,3 +55,60 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
 
     return y
 end
+
+function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
+    L::TensorProductMap3D{<:AbstractMatrix{Float64},<:UniformScaling,<:UniformScaling},
+    x::AbstractVector{Float64})
+
+    LinearMaps.check_dim_mul(y, L, x)
+    @unpack A, B, C, σᵢ, σₒ = L
+
+    @inbounds for α1 in axes(σₒ,1), α2 in axes(σₒ,2), α3 in axes(σₒ,3)
+        temp = 0.0
+        @inbounds @simd for β1 in axes(σᵢ,1)
+            @muladd temp = temp + A[α1,β1] * x[σᵢ[β1,α2,α3]]
+        end
+        y[σₒ[α1,α2,α3]] = temp
+    end
+
+    y = B * C * y
+    return y
+end
+
+function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
+    L::TensorProductMap3D{<:UniformScaling,<:AbstractMatrix{Float64},<:UniformScaling},
+    x::AbstractVector{Float64})
+
+    LinearMaps.check_dim_mul(y, L, x)
+    @unpack A, B, C, σᵢ, σₒ = L
+
+    @inbounds for α1 in axes(σₒ,1), α2 in axes(σₒ,2), α3 in axes(σₒ,3)
+        temp = 0.0
+        @inbounds @simd for β2 in axes(σᵢ,2)
+            @muladd temp = temp + B[α2,β2] * x[σᵢ[α1,β2,α3]]
+        end
+        y[σₒ[α1,α2,α3]] = temp
+    end
+
+    y = A * C * y
+    return y
+end
+
+function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
+    L::TensorProductMap3D{<:UniformScaling,<:UniformScaling,<:AbstractMatrix{Float64}},
+    x::AbstractVector{Float64})
+
+    LinearMaps.check_dim_mul(y, L, x)
+    @unpack A, B, C, σᵢ, σₒ = L
+
+    @inbounds for α1 in axes(σₒ,1), α2 in axes(σₒ,2), α3 in axes(σₒ,3)
+        temp = 0.0
+        @inbounds @simd for β3 in axes(σᵢ,3)
+            @muladd temp = temp + C[α3,β3] * x[σᵢ[α1,α2,β3]]
+        end
+        y[σₒ[α1,α2,α3]] = temp
+    end
+
+    y = A * B * y
+    return y
+end
