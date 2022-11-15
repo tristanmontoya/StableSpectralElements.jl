@@ -8,7 +8,6 @@ push!(LOAD_PATH,"../src/")
 makedocs(
     sitename = "CLOUD.jl",
     authors = "Tristan Montoya",
-    repo="github.com/tristanmontoya/CLOUD.jl.git",
     pages = [
         "Home" => "index.md",
         "Modules" => "modules.md"
