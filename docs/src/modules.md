@@ -39,14 +39,14 @@ These element types are used in the constructor for CLOUD.jl's `ReferenceApproxi
 ```julia
 julia> using CLOUD
 
-julia> ref_elem_tri = ReferenceApproximation(NodalTensor(4), Tri(), 
+julia> reference_approximation = ReferenceApproximation(NodalTensor(4), Tri(), 
     mapping_degree=4, quadrature_rule=(LGQuadrature(), LGQuadrature()))
 ```
 Note that we have used the optional keyword argument `mapping_degree` to define a degree $l = 4$ multidimensional Lagrange basis to represent the geometric transformation $\bm{X}^{(\kappa)} \in [\mathbb{P}_l(\hat{\Omega})]^d$, where by default an affine mapping is used, corresponding to $l = 1$. Moreover, the keyword argument `quadrature_rule` has been used to specify a Legendre-Gauss quadrature rule with $p+1$ nodes in each direction. Using CLOUD.jl's built-in plotting recipes, we can easily visualize the reference element for such a discretization:
 ```julia
 julia> using Plots
 
-julia> plot(ref_elem_tri, grid_connect=true, markersize=6, linewidth=3)
+julia> plot(reference_approximation, grid_connect=true, markersize=6, linewidth=3)
 ```
 ![NodalTensor](./assets/ref_tri.svg)
 

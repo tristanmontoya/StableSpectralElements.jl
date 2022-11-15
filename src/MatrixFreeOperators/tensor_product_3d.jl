@@ -27,7 +27,7 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
     LinearMaps.check_dim_mul(y, L, x)
     @unpack A, B, C, σᵢ, σₒ = L
 
-    Z_3 = Matrix{Float64}(undef, size(σᵢ,1), size(σᵢ,2), size(σₒ,3))
+    Z_3 = Array{Float64}(undef, size(σᵢ,1), size(σᵢ,2), size(σₒ,3))
     @inbounds for α3 in axes(σₒ,3), β2 in axes(σᵢ,2), β1 in axes(σᵢ,1)
         temp = 0.0
         @inbounds @simd for β3 in axes(σᵢ,3)
@@ -36,7 +36,7 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
         Z_3[β1,β2,α3] = temp
     end
 
-    Z_2 = Matrix{Float64}(undef, size(σᵢ,1), size(σₒ,2), size(σₒ,3))
+    Z_2 = Array{Float64}(undef, size(σᵢ,1), size(σₒ,2), size(σₒ,3))
     @inbounds for α3 in axes(σₒ,3), α2 in axes(σₒ,2), β1 in axes(σᵢ,1)
         temp = 0.0
         @inbounds @simd for β2 in axes(σᵢ,2)
