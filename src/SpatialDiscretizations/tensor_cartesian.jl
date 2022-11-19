@@ -52,7 +52,8 @@ function ReferenceApproximation(approx_type::NodalTensor,
     # extrapolation operators
     if (volume_quadrature_rule isa LGLQuadrature && 
             facet_quadrature_rule isa LGLQuadrature)
-        R = SelectionMap(facet_node_ids(Quad(),(p+1,p+1)),(p+1)^2)
+        R = SelectionMap(match_coordinate_vectors(rstf, rstq), (p+1)^2)
+
     elseif typeof(volume_quadrature_rule) == typeof(facet_quadrature_rule)
         R =[TensorProductMap2D(R_L, I, σ, [j for i in 1:1, j in 1:p+1]); #L
             TensorProductMap2D(R_R, I, σ, [j for i in 1:1, j in 1:p+1]); #R
@@ -68,5 +69,47 @@ function ReferenceApproximation(approx_type::NodalTensor,
 
     return ReferenceApproximation(approx_type, (p+1)^2, (p+1)^2, 4*(p+1), 
         reference_element, D, LinearMap(I, (p+1)^2), R, R,
+        Diagonal(wq), Diagonal(wf), V_plot, NoMapping())
+end
+
+function ReferenceApproximation(approx_type::NodalTensor, ::Hex;
+    volume_quadrature_rule::AbstractQuadratureRule=LGLQuadrature(),
+    facet_quadrature_rule::AbstractQuadratureRule=LGLQuadrature(),
+    mapping_degree::Int=1, N_plot::Int=10)
+
+    @unpack p = approx_type
+
+    # one-dimensional operators
+    nodes_1D = quadrature(Line(),volume_quadrature_rule,p+1)[1]
+    VDM_1D, ∇VDM_1D = basis(Line(), p, nodes_1D)
+    D_1D = ∇VDM_1D / VDM_1D
+
+    # differentiation matrix
+    σ = permutedims(reshape(collect(1:(p+1)^3),p+1,p+1,p+1), [3,2,1])
+    D = (TensorProductMap3D(D_1D, I, I, σ, σ),
+            TensorProductMap3D(I, D_1D, I, σ, σ),
+            TensorProductMap3D(I, I, D_1D, σ, σ))
+
+    reference_element = RefElemData(Hex(), mapping_degree,
+        quad_rule_vol=quadrature(Hex(), volume_quadrature_rule, p+1),
+        quad_rule_face=quadrature(Quad(), facet_quadrature_rule, p+1),
+        Nplot=N_plot)
+
+    @unpack rstp, rstq, rstf, wq, wf = reference_element
+
+    # extrapolation operators
+    if (volume_quadrature_rule isa LGLQuadrature && 
+            facet_quadrature_rule isa LGLQuadrature)
+        R = SelectionMap(match_coordinate_vectors(rstf,rstq),(p+1)^3)
+    else
+        R = LinearMap(vandermonde(Hex(),p,rstf...) / 
+            vandermonde(Hex(),p,rstq...))
+    end
+    
+    V_plot = LinearMap(vandermonde(Hex(), p, rstp...) / 
+        vandermonde(Hex(), p, rstq...))
+
+    return ReferenceApproximation(approx_type, (p+1)^3, (p+1)^3, 6*(p+1)^2, 
+        reference_element, D, LinearMap(I, (p+1)^3), R, R,
         Diagonal(wq), Diagonal(wf), V_plot, NoMapping())
 end

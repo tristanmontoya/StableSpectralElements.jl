@@ -3,13 +3,13 @@ module SpatialDiscretizations
     using UnPack
     using LinearAlgebra: I, inv, Diagonal, diagm, kron
     using LinearMaps: LinearMap
-    using StartUpDG: MeshData, basis, vandermonde, grad_vandermonde, quad_nodes, gauss_quad, gauss_lobatto_quad, face_vertices, nodes, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial, jacobiP
+    using StartUpDG: MeshData, basis, vandermonde, grad_vandermonde, quad_nodes, gauss_quad, gauss_lobatto_quad, face_vertices, nodes, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial, jacobiP, match_coordinate_vectors
 
     using Jacobi: zgrjm, wgrjm, zgj, wgj
     import StartUpDG: face_type, init_face_data
 
     using ..Mesh: GeometricFactors
-    using ..MatrixFreeOperators: TensorProductMap2D, WarpedTensorProductMap2D, SelectionMap
+    using ..MatrixFreeOperators: TensorProductMap2D, TensorProductMap3D, WarpedTensorProductMap2D, SelectionMap
 
     using Reexport
     @reexport using StartUpDG: RefElemData, AbstractElemShape, Line, Quad, Tri, Tet, Hex, Pyr
