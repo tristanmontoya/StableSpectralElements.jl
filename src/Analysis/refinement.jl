@@ -20,6 +20,8 @@ function analyze(analysis::RefinementAnalysis{d}, n_grids=100;
     @unpack sequence_path, exact_solution = analysis
 
     results_path = string(sequence_path, "grid_1/")
+    if !isfile(string(results_path,"error.jld2")) error("File not found!") end
+
     conservation_law, spatial_discretization = load_project(results_path) 
     (N_p, N_c, N_e) = get_dof(spatial_discretization, conservation_law)
     dof = [N_p N_e]
@@ -28,6 +30,7 @@ function analyze(analysis::RefinementAnalysis{d}, n_grids=100;
     u, _ = load_solution(results_path, N_t)
     error = transpose(analyze(ErrorAnalysis(results_path, conservation_law,  
         spatial_discretization), u, exact_solution))
+
     if max_derivs
         conservation_results = analyze(
             PrimaryConservationAnalysis(results_path, 
@@ -46,51 +49,63 @@ function analyze(analysis::RefinementAnalysis{d}, n_grids=100;
         energy = transpose(analyze(EnergyConservationAnalysis(results_path, 
             conservation_law, spatial_discretization), 0, N_t)[3])
     end
+
     eoc = fill!(Array{Union{Float64, Missing}}(undef,1,N_c), missing)
 
     i = 2
     grid_exists = true
-    while grid_exists && i <= n_grids
+    
+    while isdir(string(sequence_path, "grid_", i, "/")) && i <= n_grids
         results_path = string(sequence_path, "grid_", i, "/")
+        
         conservation_law, spatial_discretization = load_project(results_path) 
         (N_p, N_c, N_e) = get_dof(spatial_discretization, conservation_law)
         dof = [dof; [N_p N_e]]
-        time_steps = load_time_steps(results_path)
-        N_t = last(time_steps)
-        u, _ = load_solution(results_path, N_t)
-        error = [error; transpose(analyze(ErrorAnalysis(results_path,       
-            conservation_law, spatial_discretization), u, exact_solution))]
-        eoc = [eoc; transpose([ 
-            (log(error[i,e]) - log(error[i-1,e])) /
-                (log((dof[i,1]*dof[i,2])^(-1.0/d) ) - 
-                log((dof[i-1,1]*dof[i-1,2])^(-1.0/d)))
-            for e in 1:N_c])]
 
-        if max_derivs
-            conservation_results = analyze(
-                PrimaryConservationAnalysis(results_path, 
-                conservation_law, spatial_discretization), time_steps)
-            energy_results = analyze(
-                    EnergyConservationAnalysis(results_path, 
-                    conservation_law, spatial_discretization), time_steps)
-            conservation = [conservation; 
-                [maximum(abs.(conservation_results.dEdt[:,e])) for e in 1:N_c]']
-            energy = [energy;
-                [maximum((energy_results.dEdt[:,e])) for e in 1:N_c]']
+        if !isfile(string(results_path), "error.jld2")  
+            error = [error; fill(NaN, 1, N_c)]
+            eoc = [eoc; fill(NaN, 1, N_c)]
+            conservation = [conservation; fill(NaN, 1, N_c)]
+            energy = [energy; fill(NaN, 1, N_c)]
         else
-            conservation = [conservation; transpose(
-                analyze(PrimaryConservationAnalysis(results_path, 
-                conservation_law, spatial_discretization), 0, N_t)[3])]
-            energy = [energy; 
-                transpose(analyze(EnergyConservationAnalysis(results_path, 
-                conservation_law, spatial_discretization), 0, N_t)[3])]
+            time_steps = load_time_steps(results_path)
+            N_t = last(time_steps)
+            u, _ = load_solution(results_path, N_t)
+            error = [error; transpose(analyze(ErrorAnalysis(results_path,       
+                conservation_law, spatial_discretization), u, exact_solution))]
+            eoc = [eoc; transpose([ 
+                (log(error[i,e]) - log(error[i-1,e])) /
+                    (log((dof[i,1]*dof[i,2])^(-1.0/d) ) - 
+                    log((dof[i-1,1]*dof[i-1,2])^(-1.0/d)))
+                for e in 1:N_c])]
+
+            if max_derivs
+                conservation_results = analyze(
+                    PrimaryConservationAnalysis(results_path, 
+                    conservation_law, spatial_discretization), time_steps)
+                energy_results = analyze(
+                        EnergyConservationAnalysis(results_path, 
+                        conservation_law, spatial_discretization), time_steps)
+                conservation = [conservation; 
+                    [maximum(abs.(conservation_results.dEdt[:,e])) for e in 1:N_c]']
+                energy = [energy;
+                    [maximum((energy_results.dEdt[:,e])) for e in 1:N_c]']
+            else
+                conservation = [conservation; transpose(
+                    analyze(PrimaryConservationAnalysis(results_path, 
+                    conservation_law, spatial_discretization), 0, N_t)[3])]
+                energy = [energy; 
+                    transpose(analyze(EnergyConservationAnalysis(results_path, 
+                    conservation_law, spatial_discretization), 0, N_t)[3])]
+            end
         end
 
-        if !isdir(string(sequence_path, "grid_", i+1, "/"))
+        if !isfile(string(sequence_path, "grid_", i+1, "/error.jld2"))
             grid_exists = false
         end
         i = i+1
     end
+    
     return RefinementAnalysisResults(error, eoc, dof, conservation, energy)
 end
 
@@ -115,62 +130,52 @@ function plot_analysis(analysis::RefinementAnalysis{d},
     return p
 end
 
-function plot_analysis(analysis::Vector{RefinementAnalysis{d}},
-    results::Vector{RefinementAnalysisResults}; ylabel=LaTeXString("\$L^2\$ Error"), ylims=nothing, xlims=nothing, pairs=true, 
-    filename="refinement.pdf",
-    reference_line=nothing, e=1, plots_path=nothing) where {d}
+@recipe function plot(analysis::Vector{RefinementAnalysis},
+    results::Vector{RefinementAnalysisResults}; pairs=true, xlims=nothing, reference_line=nothing, d=1, e=1)
 
-    if isnothing(plots_path)
-        plots_path = analysis[1].analysis_path
-    end
+    if d == 1 xlabel --> latexstring("\\mathrm{DOF}")
+    elseif d == 2 xlabel --> latexstring("\\sqrt{\\mathrm{DOF}}")
+    else xlabel --> latexstring(string("\\sqrt"),"[", d, "]{\\mathrm{DOF}}") end
+    if !isnothing(xlims) xticks --> get_tickslogscale(xlims) end
 
-    if d == 1
-        xlabel = latexstring("\\mathrm{DOF}")
-    elseif d == 2
-        xlabel = latexstring("\\sqrt{\\mathrm{DOF}}")
-    else
-        xlabel = latexstring(string("\\sqrt"),"[", d, "]{\\mathrm{DOF}}")
-    end
+    ylabel --> LaTeXString("Error Metric")
+    xaxis --> :log10
+    yaxis --> :log10
+    markerstrokewidth --> 0.0
+    markersize --> 5
+    windowsize --> (400,400)
+    legend --> :bottomleft
+    legendfontsize --> 10
+    xlims --> xlims
+    fontfamily --> "Computer Modern"
+    for i in eachindex(analysis)
+        @series begin
+            if pairs && iseven(i)
+                linestyle --> :solid
+                markershape --> :square
+            else
+                linestyle --> :dash
+                markershape --> :circle
+            end
+            label --> analysis[i].label
+            linecolor --> (i-1) ÷ 2 + 1
+            markercolor --> (i-1) ÷ 2 + 1
 
-    n = length(analysis)
-    colors = [(i-1) ÷ 2 + 1 for i in 1:n]
-    p = plot()
-    for i in 1:n
-        if pairs && iseven(i)
-            style = :dash
-            shape = :circle
-        else
-            style = :solid
-            shape = :square
+            (results[i].dof[:,1].*results[i].dof[:,2]).^(1.0/d), results[i].error[:,e]
         end
-        plot!((results[i].dof[:,1].*results[i].dof[:,2]).^(1.0/d), 
-            results[i].error[:,e], label=analysis[i].label,
-            xaxis=:log10, yaxis=:log10, linestyle=style,
-            markerstrokewidth=0.0, markershape=shape,
-            linecolor=colors[i], markercolor=colors[i],  markersize=5)
     end
 
     if !isnothing(reference_line)
         for i in eachindex(reference_line)
-            plot!(p, 
-                (results[1].dof[end-1:end,1].*results[1].dof[end-1:end,2]).^(1.0/d),
-                reference_line[i][2]./((results[1].dof[end-1:end,1].*results[1].dof[end-1:end,2]).^(1.0/d)).^reference_line[i][1], linecolor=:black, linestyle=:solid, label="")
+            @series begin
+                linecolor --> :black
+                linestyle --> :solid
+                label --> ""
+                (results[1].dof[end-1:end,1].*results[1].dof[end-1:end,2]).^(1.0/d), reference_line[i][2]./((results[1].dof[end-1:end,1].*results[1].dof[end-1:end,2]).^(1.0/d)).^reference_line[i][1]
+            end
         end
     end
-
-    plot!(p, windowsize=(400,400), legend=:bottomleft, legendfontsize=10,
-    xlabel=xlabel, ylabel=ylabel)
-    if !isnothing(xlims)
-        plot!(p, xlims=xlims, xticks=get_tickslogscale(xlims))
-    end
-    if !isnothing(ylims)
-        plot!(p, ylims=ylims)
-    end
-
-    savefig(p, string(plots_path, filename))
-    return p
 end
-
 
 function tabulate_analysis(results::RefinementAnalysisResults; e=1, 
     print_latex=true)
@@ -200,9 +205,12 @@ function tabulate_analysis_for_paper(results::NTuple{2,RefinementAnalysisResults
 
     tab = hcat(results[1].dof[:,2], cons..., ener..., err..., eoc...)
 
-    latex_header = vcat(["\$N_e\$", "Conservation Metric", "", "Energy Metric", "", "\$L^2\$ Error","", "Order",""])
+    latex_header = vcat(["\$N_e\$", "Conservation Metric", "", "Energy Metric", "", "Error Metric","", "Order",""])
     pretty_table(tab, header=latex_header, backend = Val(:latex),
-        formatters = (ft_nomissing, ft_printf("& %d", [1,]), ft_printf("%.3e", [2,3,4,5,6,7]), ft_printf("%1.2f", [8,9])), tf = tf_latex_booktabs)
+        formatters = (ft_nomissing, ft_printf("& %d", [1,]), ft_printf("%.3e", [2,3,4,5,6,7]), ft_printf("%1.2f", [8,9]),
+        (v, i, j) -> (v == "NaN") ? "---" : v),
+        
+        tf = tf_latex_booktabs)
 end
 
 """

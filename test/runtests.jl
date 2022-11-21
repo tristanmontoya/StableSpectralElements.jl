@@ -68,7 +68,7 @@ end
             mapping_form=StandardMapping(),
             inviscid_numerical_flux=LaxFriedrichsNumericalFlux(),
             viscous_numerical_flux=BR1()),
-        BLASAlgorithm(),
+        GenericMatrixAlgorithm(),
         PhysicalOperator(), 1.0, 4, 1.0, 1.0/100.0, 
         "test_advection_diffusion_1d_dgmulti")
 
@@ -102,7 +102,7 @@ end
         WeakConservationForm(
             mapping_form=StandardMapping(),
             inviscid_numerical_flux=LaxFriedrichsNumericalFlux(1.0)),
-        DefaultOperatorAlgorithm(),
+        BLASAlgorithm(),
         ReferenceOperator(), 1.0, 2, 1.0, 1.0/100.0,
         "test_advection_2d_dgsem_standard")
     

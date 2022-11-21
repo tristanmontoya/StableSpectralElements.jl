@@ -197,8 +197,8 @@ end
 
 @recipe function plot(results::ConservationAnalysisResults, e::Int=1)
 
-    xlabel --> "t"
-    ylabel --> "Energy"
+    xlabel --> latexstring("t")
+    ylabel --> LaTeXString("Energy")
     legend --> false
 
     results.t, results.E[:,e]
@@ -206,8 +206,8 @@ end
 
 @recipe function plot(results::ConservationAnalysisResultsWithDerivative, e::Int=1)
 
-    xlabel --> "t"
-    labels = ["Net change", "Time derivative"]
+    xlabel --> latexstring("t")
+    labels = [LaTeXString("Net change"), LaTeXString("Time derivative")]
 
     @series begin
         linestyle --> :solid

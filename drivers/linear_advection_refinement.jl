@@ -124,7 +124,10 @@ function AdvectionDriver(parsed_args::Dict)
     scheme = eval(Symbol(parsed_args["scheme"]))(p)
     mapping_form = eval(Symbol(parsed_args["mapping_form"]))()
     ode_algorithm = eval(Symbol(parsed_args["ode_algorithm"]))()
-    path = parsed_args["path"]
+    path = string(parsed_args["path"], parsed_args["scheme"], "_",
+        parsed_args["element_type"], "_", parsed_args["mapping_form"], "_p",
+        string(parsed_args["p"]), "_lambda", string(Int(parsed_args["lambda"])),
+        "/")
     M0 = parsed_args["M"]
     λ = parsed_args["lambda"]
     L = parsed_args["L"]
@@ -148,12 +151,8 @@ function run_driver(driver::AdvectionDriver{d}) where {d}
 
     @unpack p,r,β,n_s,scheme,element_type,mapping_form,ode_algorithm,path,M0,λ,L,a,T,mesh_perturb, n_grids, load_from_file = driver
 
-    if !load_from_file || !isdir(path)
-        path = new_path(path)
-    end
-    if !isdir(string(path, "grid_1/"))
-        n_start = 1
-    else
+    if (!load_from_file || !isdir(path)) path = new_path(path) end
+    if !isdir(string(path, "grid_1/")) n_start = 1 else
         for i in 1:n_grids
             if !isdir(string(path, "grid_", i + 1, "/"))
                 n_start = i
@@ -165,11 +164,8 @@ function run_driver(driver::AdvectionDriver{d}) where {d}
         println(io, "Starting refinement from grid level ", n_start)
     end
 
-    if d == 3
-        initial_data = InitialDataCosine(1.0,Tuple(2*π/L for m in 1:d))
-    else
-        initial_data = InitialDataSine(1.0,Tuple(2*π/L for m in 1:d))
-    end
+    if d == 3 initial_data = InitialDataCosine(1.0,Tuple(2*π/L for m in 1:d))
+    else initial_data = InitialDataSine(1.0,Tuple(2*π/L for m in 1:d)) end
 
     conservation_law = LinearAdvectionEquation(a)
     form = WeakConservationForm(mapping_form=mapping_form, 
@@ -229,8 +225,15 @@ function run_driver(driver::AdvectionDriver{d}) where {d}
             dt=dt, save_everystep=false, callback=save_callback(
                 results_path, (t0,T), ceil(Int, T/(dt*n_s)), restart_step))
 
+        if sol.retcode != :Success
+            open(string(results_path,"screen.txt"), "a") do io
+                println(io, "Solver failed! Retcode: ", string(sol.retcode))
+            end
+            continue
+        end
+
         open(string(results_path,"screen.txt"), "a") do io
-            println(io, "Solver finished!\n")
+            println(io, "Solver successfully finished!\n")
             println(io, @capture_out CLOUD_print_timer(), "\n")
             error_analysis = ErrorAnalysis(results_path, conservation_law, 
                 spatial_discretization)

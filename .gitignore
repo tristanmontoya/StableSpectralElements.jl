@@ -37,6 +37,6 @@ results/
 plots/
 scripts/
 notebooks/
-ICCFD11/
 docs/build/
 src/PyPlotTools
+drivers/gr-temp/
