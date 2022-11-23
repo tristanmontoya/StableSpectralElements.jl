@@ -1,4 +1,3 @@
-# Driver script - grid refinement studies for the linear advection equation
 push!(LOAD_PATH,"../")
 
 using OrdinaryDiffEq
@@ -8,17 +7,18 @@ using UnPack
 using ArgParse
 using Dates
 using Suppressor
+using Plots; gr()
 using CLOUD
 
 function parse_commandline()
     s = ArgParseSettings()
 
     @add_arg_table s begin
-        "-p"
+        "-p", "--poly_degree"
             help = "polynomial degree"
             arg_type = Int
             default = 4
-        "-r"
+        "-l", "--mapping_degree"
             help = "degree of mapping"
             arg_type = Int
             default = 1
@@ -54,7 +54,7 @@ function parse_commandline()
             help = "number of intervals"
             arg_type = Int
             default = 2
-        "--lambda", "-l"
+        "--lambda"
             help = "upwinding parameter (0 for central, 1 for upwind)"
             arg_type = Float64
             default = 1.0
@@ -89,6 +89,9 @@ function parse_commandline()
         "--load_from_file"
             help = "load_from_file"
             action = :store_true
+        "--overwrite" "-o"
+            help = "load_from_file"
+            action = :store_true
     end
 
     return parse_args(s)
@@ -96,7 +99,7 @@ end
 
 struct AdvectionDriver{d}
     p::Int
-    r::Int
+    l::Int
     β::Float64
     n_s::Int
     scheme::AbstractApproximationType
@@ -112,22 +115,35 @@ struct AdvectionDriver{d}
     mesh_perturb::Float64
     n_grids::Int
     load_from_file::Bool
+    overwrite::Bool
 end
 
 function AdvectionDriver(parsed_args::Dict)
 
-    p = parsed_args["p"]
-    r = parsed_args["r"]
+    p = parsed_args["poly_degree"]
+    l = parsed_args["mapping_degree"]
     β = parsed_args["beta"]
     n_s = parsed_args["n"]
     element_type = eval(Symbol(parsed_args["element_type"]))()
     scheme = eval(Symbol(parsed_args["scheme"]))(p)
     mapping_form = eval(Symbol(parsed_args["mapping_form"]))()
     ode_algorithm = eval(Symbol(parsed_args["ode_algorithm"]))()
-    path = string(parsed_args["path"], parsed_args["scheme"], "_",
+
+    if Int(parsed_args["lambda"]) == 0
+        path = string(parsed_args["path"], parsed_args["scheme"], "_",
         parsed_args["element_type"], "_", parsed_args["mapping_form"], "_p",
-        string(parsed_args["p"]), "_lambda", string(Int(parsed_args["lambda"])),
-        "/")
+        string(parsed_args["poly_degree"]), "/central/")
+    elseif Int(parsed_args["lambda"]) == 1
+        path = string(parsed_args["path"], parsed_args["scheme"], "_",
+            parsed_args["element_type"], "_", parsed_args["mapping_form"], "_p",
+            string(parsed_args["poly_degree"]), "/upwind/")
+    else
+        path = string(parsed_args["path"], parsed_args["scheme"], "_",
+            parsed_args["element_type"], "_", parsed_args["mapping_form"], "_p",
+            string(parsed_args["poly_degree"]), "_lambda", string(Int(parsed_args["lambda"])),
+            "/")
+    end
+
     M0 = parsed_args["M"]
     λ = parsed_args["lambda"]
     L = parsed_args["L"]
@@ -138,20 +154,22 @@ function AdvectionDriver(parsed_args::Dict)
     mesh_perturb = parsed_args["mesh_perturb"]
     n_grids = parsed_args["n_grids"]
     load_from_file = parsed_args["load_from_file"]
+    overwrite = parsed_args["overwrite"]
 
     a_vec = (a*cos(θ)*sin(ϕ), a*sin(θ)*sin(ϕ), a*cos(ϕ))
 
-    return AdvectionDriver(p,r,β,n_s,scheme,element_type,
+    return AdvectionDriver(p,l,β,n_s,scheme,element_type,
         mapping_form,ode_algorithm,path,M0,λ,L,
         Tuple(a_vec[m] for m in 1:dim(element_type)), T,
-        mesh_perturb, n_grids, load_from_file)
+        mesh_perturb, n_grids, load_from_file, overwrite)
 end
 
 function run_driver(driver::AdvectionDriver{d}) where {d}
 
-    @unpack p,r,β,n_s,scheme,element_type,mapping_form,ode_algorithm,path,M0,λ,L,a,T,mesh_perturb, n_grids, load_from_file = driver
+    @unpack p,l,β,n_s,scheme,element_type,mapping_form,ode_algorithm,path,M0,λ,L,a,T,mesh_perturb, n_grids, load_from_file, overwrite = driver
 
-    if (!load_from_file || !isdir(path)) path = new_path(path) end
+    if (!load_from_file || !isdir(path)) path = new_path(
+        path,overwrite,overwrite) end
     if !isdir(string(path, "grid_1/")) n_start = 1 else
         for i in 1:n_grids
             if !isdir(string(path, "grid_", i + 1, "/"))
@@ -178,7 +196,7 @@ function run_driver(driver::AdvectionDriver{d}) where {d}
         M = M0*2^(n-1)
 
         reference_approximation =ReferenceApproximation(
-            scheme, element_type, mapping_degree=r)
+            scheme, element_type, mapping_degree=l)
         
         mesh = warp_mesh(uniform_periodic_mesh(
             reference_approximation.reference_element, 
@@ -232,23 +250,16 @@ function run_driver(driver::AdvectionDriver{d}) where {d}
             continue
         end
 
+        error_analysis = ErrorAnalysis(results_path, conservation_law, 
+            spatial_discretization)
+
         open(string(results_path,"screen.txt"), "a") do io
             println(io, "Solver successfully finished!\n")
             println(io, @capture_out CLOUD_print_timer(), "\n")
-            error_analysis = ErrorAnalysis(results_path, conservation_law, 
-                spatial_discretization)
-            conservation_analysis = PrimaryConservationAnalysis(results_path, 
-                conservation_law, spatial_discretization)
-            energy_analysis = EnergyConservationAnalysis(results_path, 
-                conservation_law, spatial_discretization)
-            N_t = last(load_time_steps(results_path))
             println(io,"L2 error:\n", 
                 analyze(error_analysis, last(sol.u), initial_data))
-            println(io,"Conservation (initial/final/diff):\n", 
-                analyze(conservation_analysis, 0, N_t)...)
-            println(io,"Energy (initial/final/diff):\n",
-                analyze(energy_analysis, 0, N_t)...)
         end
+
         if n > 1
             refinement_results = analyze(RefinementAnalysis(initial_data, path,
             "./", "advection test"), n, max_derivs=true)

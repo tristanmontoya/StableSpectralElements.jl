@@ -208,6 +208,7 @@ end
 
     xlabel --> latexstring("t")
     labels = [LaTeXString("Net change"), LaTeXString("Time derivative")]
+    fontfamily --> "Computer Modern"
 
     @series begin
         linestyle --> :solid
@@ -231,6 +232,7 @@ function plot_evolution(analysis::ConservationAnalysis,
         ylabel=ylabel, labels=labels[1], xlims=xlims, ylims=ylims, 
         linewidth=2.0)
     N = length(results)
+    
     for i in 2:N
         plot!(p, results[i].t, results[i].E[:,e], labels=labels[i], linestyle=:dash, linewidth=3.0, legend=:topright)
     end

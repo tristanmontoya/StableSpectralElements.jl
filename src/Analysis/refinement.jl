@@ -141,7 +141,6 @@ end
     ylabel --> LaTeXString("Error Metric")
     xaxis --> :log10
     yaxis --> :log10
-    markerstrokewidth --> 0.0
     markersize --> 5
     windowsize --> (400,400)
     legend --> :bottomleft
@@ -151,11 +150,16 @@ end
     for i in eachindex(analysis)
         @series begin
             if pairs && iseven(i)
-                linestyle --> :solid
                 markershape --> :square
+                markerstrokewidth --> 2.0
+            else
+                markershape --> :circle
+                markerstrokewidth --> 2.0
+            end
+            if pairs && (i % 4 == 1 || i % 4 == 2)
+                linestyle --> :solid
             else
                 linestyle --> :dash
-                markershape --> :circle
             end
             label --> analysis[i].label
             linecolor --> (i-1) ÷ 2 + 1
