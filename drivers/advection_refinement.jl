@@ -129,19 +129,17 @@ function AdvectionDriver(parsed_args::Dict)
     mapping_form = eval(Symbol(parsed_args["mapping_form"]))()
     ode_algorithm = eval(Symbol(parsed_args["ode_algorithm"]))()
 
-    if Int(parsed_args["lambda"]) == 0
-        path = string(parsed_args["path"], parsed_args["scheme"], "_",
-        parsed_args["element_type"], "_", parsed_args["mapping_form"], "_p",
-        string(parsed_args["poly_degree"]), "/central/")
-    elseif Int(parsed_args["lambda"]) == 1
-        path = string(parsed_args["path"], parsed_args["scheme"], "_",
+    if Int(parsed_args["lambda"]) == 0 path = string(parsed_args["path"],   
+        parsed_args["scheme"], "_", parsed_args["element_type"], "_", parsed_args["mapping_form"], "_p", string(parsed_args["poly_degree"]),
+         "/central/")
+    elseif Int(parsed_args["lambda"]) == 1 path = string(parsed_args["path"],
+        parsed_args["scheme"], "_", parsed_args["element_type"], "_", 
+        parsed_args["mapping_form"], "_p", string(parsed_args["poly_degree"]),
+        "/upwind/")
+    else path = string(parsed_args["path"], parsed_args["scheme"], "_",
             parsed_args["element_type"], "_", parsed_args["mapping_form"], "_p",
-            string(parsed_args["poly_degree"]), "/upwind/")
-    else
-        path = string(parsed_args["path"], parsed_args["scheme"], "_",
-            parsed_args["element_type"], "_", parsed_args["mapping_form"], "_p",
-            string(parsed_args["poly_degree"]), "_lambda", string(Int(parsed_args["lambda"])),
-            "/")
+            string(parsed_args["poly_degree"]), "/lambda", 
+            replace(string(parsed_args["lambda"]), "." => "_"), "/")
     end
 
     M0 = parsed_args["M"]
@@ -188,7 +186,6 @@ function run_driver(driver::AdvectionDriver{d}) where {d}
     conservation_law = LinearAdvectionEquation(a)
     form = WeakConservationForm(mapping_form=mapping_form, 
             inviscid_numerical_flux=LaxFriedrichsNumericalFlux(λ))
-    strategy = ReferenceOperator()
     eoc = -1.0
 
     for n in n_start:n_grids
@@ -206,8 +203,7 @@ function run_driver(driver::AdvectionDriver{d}) where {d}
         spatial_discretization = SpatialDiscretization(mesh, 
             reference_approximation)
 
-        solver = Solver(conservation_law, spatial_discretization,
-            form, strategy)
+        solver = Solver(conservation_law, spatial_discretization, form)
         
         results_path = string(path, "grid_", n, "/")
         if !isdir(results_path)
@@ -243,7 +239,7 @@ function run_driver(driver::AdvectionDriver{d}) where {d}
             dt=dt, save_everystep=false, callback=save_callback(
                 results_path, (t0,T), ceil(Int, T/(dt*n_s)), restart_step))
 
-        if sol.retcode != :Success
+        if sol.retcode != :Success 
             open(string(results_path,"screen.txt"), "a") do io
                 println(io, "Solver failed! Retcode: ", string(sol.retcode))
             end

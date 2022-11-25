@@ -16,7 +16,6 @@ end
 
 struct LinearAnalysis{d} <: AbstractDynamicalAnalysis{d}
     results_path::String
-    analysis_path::String
     r::Int
     tol::Float64
     N_p::Int
@@ -30,7 +29,6 @@ end
 
 struct KoopmanAnalysis{d} <: AbstractDynamicalAnalysis{d}
     results_path::String
-    analysis_path::String
     r::Int
     svd_tol::Float64
     proj_tol::Float64
@@ -82,15 +80,14 @@ function LinearAnalysis(results_path::String,
     r=4, tol=1.0e-12, name="linear_analysis", 
     use_data=true)
 
-    analysis_path = new_path(string(results_path, name, "/"))
     N_p, N_c, N_e = get_dof(spatial_discretization, conservation_law)
 
     # define mass matrix for the state space as a Hilbert space 
     M = blockdiag((kron(Diagonal(ones(N_c)),
         sparse(spatial_discretization.M[k])) for k in 1:N_e)...)
             
-    return LinearAnalysis(results_path, analysis_path, 
-        r, tol, N_p, N_c, N_e, M, Plotter(spatial_discretization, analysis_path), L, use_data)
+    return LinearAnalysis(results_path, r, tol, N_p, N_c, N_e, M, 
+        Plotter(spatial_discretization, results_path), L, use_data)
 end
 
 """Koopman analysis"""
@@ -99,18 +96,16 @@ function KoopmanAnalysis(results_path::String,
     r=4, svd_tol=1.0e-12, proj_tol=1.0e-12, 
     name="koopman_analysis")
     
-    # create path and get discretization information
-    analysis_path = new_path(string(results_path, name, "/"))
-
+    # get discretization information
     N_p, N_c, N_e = get_dof(spatial_discretization, conservation_law)
 
     # define mass matrix for the state space as a Hilbert space 
     M = blockdiag((kron(Diagonal(ones(N_c)),
         sparse(spatial_discretization.M[k])) for k in 1:N_e)...)
 
-    return KoopmanAnalysis(results_path, analysis_path, 
+    return KoopmanAnalysis(results_path, 
         r, svd_tol, proj_tol, N_p, N_c, N_e, M, 
-        Plotter(spatial_discretization, analysis_path))
+        Plotter(spatial_discretization, results_path))
 end
 
 """Default constructors"""
@@ -124,7 +119,7 @@ KernelDMD(k::Function) = KernelDMD(k, 0.0)
 function analyze(analysis::LinearAnalysis)
 
     @unpack M, L, r, tol, use_data, results_path = analysis
-    eigenvalues, eigenvectors = eigs(L, nev=r, which=:SI)
+    eigenvalues, eigenvectors = eigs(L, nev=r, which=:LM)
 
     # normalize eigenvectors
     Z = eigenvectors/Diagonal([eigenvectors[:,i]'*M*eigenvectors[:,i] 
@@ -152,8 +147,8 @@ function analyze(analysis::LinearAnalysis)
             c[inds,:], Z*c, E[inds,:]) 
     else 
         dt = 1.0
-        return DynamicalAnalysisResults(exp.(dt.*values), values, Z,    
-            find_conjugate_pairs(values), nothing, nothing, nothing)
+        return DynamicalAnalysisResults(exp.(dt.*eigenvalues), 
+            eigenvalues, Z, find_conjugate_pairs(eigenvalues), nothing, nothing, nothing)
     end
 
 end
@@ -265,7 +260,7 @@ function analyze_running(analysis::KoopmanAnalysis,
     sampling_strategy=nothing,
     window_size=nothing)
 
-    @unpack analysis_path, results_path, N_p, N_c, N_e = analysis
+    @unpack results_path, N_p, N_c, N_e = analysis
 
     n_s = range[2]-range[1] + 1
     model = Vector{DynamicalAnalysisResults}(undef, n_s - 1)
@@ -285,7 +280,7 @@ function analyze_running(analysis::KoopmanAnalysis,
     
     for i in (range[1]+1):range[2]
         
-        open(string(analysis_path,"screen.txt"), "a") do io
+        open(string(results_path,"screen.txt"), "a") do io
             println(io, "Koopman analysis of time step", time_steps[i], " of ", time_steps[end])
         end
 
@@ -317,7 +312,7 @@ function analyze_running(analysis::KoopmanAnalysis,
         model[i-range[1]] = analyze(analysis, 
             algorithm, (i-window_size_new,i), samples)
 
-        save_object(string(analysis_path, "model_", i, ".jld2"), 
+        save_object(string(results_path, "model_", i, ".jld2"), 
             model[i-range[1]])
     end
 
@@ -327,9 +322,9 @@ end
 function forecast(analysis::KoopmanAnalysis, Δt::Float64, 
     range::NTuple{2,Int64}, forecast_name::String="forecast"; window_size=nothing, algorithm::AbstractKoopmanAlgorithm=StandardDMD(), new_projection=false)
     
-    @unpack analysis_path, results_path, N_p, N_c, N_e = analysis
+    @unpack results_path, N_p, N_c, N_e = analysis
     time_steps = load_time_steps(results_path)
-    forecast_path = new_path(string(analysis_path, forecast_name, "/"),
+    forecast_path = new_path(string(results_path, forecast_name, "/"),
         true,true)
     save_object(string(forecast_path, "time_steps.jld2"), time_steps)
     if koopman_generator
@@ -420,8 +415,8 @@ function dmd(X::Matrix{Float64},Y::Matrix{Float64}, algorithm::StandardDMD,
 
     @unpack basis = algorithm
 
-    Φ_X= vcat([ϕ.(X) for ϕ ∈ basis]...)
-    Φ_Y= vcat([ϕ.(Y) for ϕ ∈ basis]...)
+    Φ_X = vcat([ϕ.(X) for ϕ ∈ basis]...)
+    Φ_Y = vcat([ϕ.(Y) for ϕ ∈ basis]...)
     
     if r > 0
         # SVD (i.e. POD) of initial states
@@ -613,7 +608,7 @@ function plot_analysis(analysis::AbstractDynamicalAnalysis,
             coeffs=coeffs[modes], conjugate_pairs=conjugate_pairs),
             layout=l, framestyle=:box)
     
-    savefig(p, string(analysis.analysis_path, title))
+    savefig(p, string(analysis.results_path, title))
     return p
 end
 
@@ -665,7 +660,7 @@ function plot_spectrum(analysis::AbstractDynamicalAnalysis,
         annotate!(real(eigs).-0.1, imag(eigs),
             text.(1:length(eigs), :right, 8))
     end
-    savefig(p, string(analysis.analysis_path, title))
+    savefig(p, string(analysis.results_path, title))
 
     return p
 end
@@ -725,6 +720,33 @@ function plot_modes(analysis::AbstractDynamicalAnalysis,
             linestyle=:dash, linecolor="black")
     end
 
-    savefig(p, string(analysis.analysis_path, "modes.pdf")) 
+    savefig(p, string(analysis.results_path, "modes.pdf")) 
     return p
+end
+
+@recipe function plot(eigs::Vector{Vector{ComplexF64}};
+    symbol="\\lambda", labels=["Central", "Upwind"])
+
+    legendfontsize --> 10
+    xlabelfontsize --> 13
+    ylabelfontsize --> 13
+    xtickfontsize --> 10
+    ytickfontsize --> 10
+    markersize --> 5
+    markerstrokewidth --> 0
+    legend --> :topleft
+    fontfamily --> "Computer Modern"
+
+    for i in 1:length(eigs)
+        @series begin
+            #max_real = @sprintf "%.2e" maximum(real.(eigs[i]))
+            #sr = @sprintf "%.2f" maximum(abs.(eigs[i]))
+            seriestype --> :scatter
+            markershape --> :star
+            label --> labels[i]
+            xlabel --> latexstring(string("\\mathrm{Re}\\,(", symbol, ")"))
+            ylabel --> latexstring(string("\\mathrm{Im}\\,(", symbol, ")"))
+            eigs[i]
+        end
+    end
 end

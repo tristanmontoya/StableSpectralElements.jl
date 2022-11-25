@@ -14,6 +14,8 @@ module Visualize
 
     using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation, AbstractApproximationType, NodalTensor, ModalMulti, NodalTensor, ModalTensor
     using ..GridFunctions: AbstractGridFunction, evaluate
+    using ..File: new_path
+    
     export visualize, plotter
     include("plot_1d.jl")
 

@@ -51,6 +51,13 @@ function Solver(conservation_law::AbstractConservationLaw,
             spatial_discretization.mesh.mapP, form)
 end
 
+function Solver(conservation_law::AbstractConservationLaw,     
+    spatial_discretization::SpatialDiscretization,
+    form::AbstractResidualForm)
+    return Solver(conservation_law,spatial_discretization,
+        form, ReferenceOperator())
+end
+
 function precompute(operators::DiscretizationOperators{d}, 
     operator_algorithm::AbstractOperatorAlgorithm=BLASAlgorithm()) where {d}
     @unpack VOL, FAC, SRC, M, V, Vf, scaled_normal, N_p, N_q, N_f = operators

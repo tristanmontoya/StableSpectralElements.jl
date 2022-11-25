@@ -11,7 +11,7 @@ Base.size(L::LinearResidual) = (L.N_p*L.N_c*L.N_e, L.N_p*L.N_c*L.N_e)
 function LinearResidual(
     solver::Solver{ResidualForm,DiscretizationOperators,d}) where {ResidualForm,DiscretizationOperators,d}
 
-    return LinearResidual(solver,size(solver.operators[1].VOL[1],1),
+    return LinearResidual(solver,solver.operators[1].N_p,
         solver.conservation_law.N_c,length(solver.operators))
 end
 

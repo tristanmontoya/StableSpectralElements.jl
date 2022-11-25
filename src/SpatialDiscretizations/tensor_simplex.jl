@@ -33,8 +33,7 @@ function init_face_data(::Tri, p,
 end
 
 function warped_product(::Tri, p, η1D::NTuple{2,Vector{Float64}})
-    M1 = length(η1D[1])
-    M2 = length(η1D[2])
+    (M1, M2) = (length(η1D[1]), length(η1D[2]))
     σₒ = [M2*(i-1) + j for i in 1:M1, j in 1:M2]
     σᵢ = zeros(Int,p+1,p+1)
 
@@ -102,8 +101,7 @@ function ReferenceApproximation(
     end
 
     # ordering of facet nodes
-    σ_1 = [i for i in 1:p+1, j in 1:1]
-    σ_2 = [j for i in 1:1, j in 1:p+1]
+    (σ_1, σ_2) = ([i for i in 1:p+1, j in 1:1], [j for i in 1:1, j in 1:p+1])
 
     # interpolation/extrapolation operators
     if quadrature_rule[2] isa LGRQuadrature
