@@ -14,10 +14,10 @@ module SpatialDiscretizations
     using Reexport
     @reexport using StartUpDG: RefElemData, AbstractElemShape, Line, Quad, Tri, Tet, Hex, Pyr
 
-    export AbstractApproximationType, NodalTensor, ModalTensor, ModalMulti, AbstractReferenceMapping, NoMapping, CollapsedMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, dim, χ, warped_product
+    export AbstractApproximationType, NodalTensor, ModalTensor, ModalMulti, AbstractReferenceMapping, NoMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, dim, χ, warped_product
     
     abstract type AbstractApproximationType end
-    struct NodalTensor <: AbstractApproximationType
+    struct NodalTensor <: AbstractApproximationType 
         p::Int  # polynomial degree
     end
 
@@ -32,12 +32,8 @@ module SpatialDiscretizations
     end
     
     function ModalMulti(p::Int; q=nothing, q_f=nothing)
-        if isnothing(q)
-            q = p
-        end
-        if isnothing(q_f)
-            q_f = p
-        end
+        if isnothing(q) q = p end
+        if isnothing(q_f) q_f = p end
         return ModalMulti(p,q,q_f)
     end
     

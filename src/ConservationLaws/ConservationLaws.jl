@@ -59,10 +59,7 @@ module ConservationLaws
             periodic::Bool=false) where {d, PDEType}
 
             return new{d,typeof(conservation_law),typeof(initial_data),typeof(conservation_law.source_term)}(
-                conservation_law,
-                initial_data,
-                periodic,
-                conservation_law.N_c)
+                conservation_law, initial_data,periodic,conservation_law.N_c)
         end
     end
 

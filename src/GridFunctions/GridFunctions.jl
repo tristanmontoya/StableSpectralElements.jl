@@ -82,7 +82,7 @@ module GridFunctions
         σ::Float64
         N_c::Int
     end
-
+    
     struct NoSourceTerm{d} <: AbstractGridFunction{d} end
 
     function Base.:+(f::AbstractGridFunction{d},

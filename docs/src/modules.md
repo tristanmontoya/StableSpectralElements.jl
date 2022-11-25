@@ -20,11 +20,16 @@ CurrentModule = ConservationLaws
 ```@docs
     LinearAdvectionEquation
     LinearAdvectionDiffusionEquation
+    EulerEquations
 ```
 
 ## `SpatialDiscretizations`
 
-Discretizations in CLOUD.jl are constructed by first building a local approximation on a canonical reference element, denoted generically as $\hat{\Omega} \subset \mathbb{R}^d$, and using a bijective transformation $\bm{X}^{(\kappa)} : \hat{\Omega} \rightarrow \Omega^{(\kappa)}$ to construct the approximation on each physical element of the mesh $\mathcal{T}^h = \{ \Omega^{(\kappa)}\}_{\kappa \in \{1:N_e\}}$ in terms of the associated operators on the reference element. In order to define the different geometric reference elements, existing subtypes of `AbstractElemShape` from StartUpDG.jl (e.g. `Line`, `Quad`, `Hex`, `Tri`, and `Tet`) are used and re-exported by CLOUD.jl. For example, we have 
+Discretizations in CLOUD.jl are constructed by first building a local approximation on a canonical reference element, denoted generically as $\hat{\Omega} \subset \mathbb{R}^d$, and using a bijective transformation $\bm{X}^{(\kappa)} : \hat{\Omega} \rightarrow \Omega^{(\kappa)}$ to construct the approximation on each physical element of the mesh $\mathcal{T}^h = \{ \Omega^{(\kappa)}\}_{\kappa \in \{1:N_e\}}$ in terms of the associated operators on the reference element. An example of such a mapping is shown below.
+
+![Mesh mapping](./assets/meshmap.svg)
+
+In order to define the different geometric reference elements, existing subtypes of `AbstractElemShape` from StartUpDG.jl (e.g. `Line`, `Quad`, `Hex`, `Tri`, and `Tet`) are used and re-exported by CLOUD.jl. For example, we have 
 ```math
 \begin{aligned}
 \hat{\Omega}_{\mathrm{line}} &= [-1,1],\\
@@ -42,7 +47,7 @@ julia> using CLOUD
 julia> reference_approximation = ReferenceApproximation(NodalTensor(4), Tri(), 
     mapping_degree=4, quadrature_rule=(LGQuadrature(), LGQuadrature()))
 ```
-Note that we have used the optional keyword argument `mapping_degree` to define a degree $l = 4$ multidimensional Lagrange basis to represent the geometric transformation $\bm{X}^{(\kappa)} \in [\mathbb{P}_l(\hat{\Omega})]^d$, where by default an affine mapping is used, corresponding to $l = 1$. Moreover, the keyword argument `quadrature_rule` has been used to specify a Legendre-Gauss quadrature rule with $p+1$ nodes in each direction. Using CLOUD.jl's built-in plotting recipes, we can easily visualize the reference element for such a discretization:
+Note that we have used the optional keyword argument `mapping_degree` to define a degree $l = 4$ multidimensional Lagrange basis to represent the geometric transformation $\bm{X}^{(\kappa)} \in [\mathbb{P}_l(\hat{\Omega})]^d$, where by default an affine mapping is used, corresponding to $l = 1$. Moreover, the keyword argument `quadrature_rule` has been used to specify a Legendre-Gauss quadrature rule with $p+1$ nodes in each direction. Using the [Plots.jl recipes](https://docs.juliaplots.org/latest/recipes/) defined in CLOUD.jl, we can easily visualize the reference element for such a discretization:
 ```julia
 julia> using Plots
 
