@@ -152,13 +152,12 @@ end
 function evaluate(
     exact_solution::ExactSolution{d,LinearAdvectionEquation{d}, <:AbstractGridFunction{d},NoSourceTerm{d}},
     x::NTuple{d,Float64},t::Float64=0.0) where {d}
+
     @unpack initial_data, conservation_law = exact_solution
     
-    if !exact_solution.periodic
+    if !exact_solution.periodic 
         z = Tuple(x[m] - conservation_law.a[m]*t for m in 1:d)
-    else
-        z = x
-    end
+    else z = x end
 
     return evaluate(initial_data,z)
 end
@@ -166,14 +165,12 @@ end
 function evaluate(
     exact_solution::ExactSolution{d,LinearAdvectionDiffusionEquation{d}, InitialDataGaussian{d},NoSourceTerm{d}},
     x::NTuple{d,Float64},t::Float64=0.0) where {d}
+
     @unpack A, σ, x₀ = exact_solution.initial_data
     @unpack a, b = exact_solution.conservation_law
 
-    if !exact_solution.periodic
-        z = Tuple(x[m] - a[m]*t for m in 1:d)
-    else
-        z = x
-    end
+    if !exact_solution.periodic z = Tuple(x[m] - a[m]*t for m in 1:d)
+    else z = x end
 
     r² = sum((z[m] - x₀[m]).^2 for m in 1:d)
     t₀ = σ^2/(2.0*b)
@@ -183,14 +180,12 @@ end
 function evaluate(
     exact_solution::ExactSolution{d,LinearAdvectionDiffusionEquation{d}, InitialDataSine{d},NoSourceTerm{d}},
     x::NTuple{d,Float64},t::Float64=0.0) where {d}
+    
     @unpack A, k = exact_solution.initial_data
     @unpack a, b = exact_solution.conservation_law
 
-    if !exact_solution.periodic
-        z = Tuple(x[m] - a[m]*t for m in 1:d)
-    else
-        z = x
-    end
+    if !exact_solution.periodic z = Tuple(x[m] - a[m]*t for m in 1:d)
+    else z = x end
 
     return evaluate(exact_solution.initial_data,z) * 
         exp(-b*sum(k[m]^2 for m in 1:d)*t)

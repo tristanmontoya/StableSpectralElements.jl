@@ -197,9 +197,9 @@ function run_driver(driver::AdvectionAnalysisDriver{d}) where {d}
 
     spectral_radius_plot = plot(p,spectral_radius_central, windowsize=(400,400),
         fontfamily="Computer Modern", legend=:topleft, xlabel=latexstring("p"),
-        ylabel=LaTeXString("Spectral Radius"), label=LaTeXString("Central"))
+        ylabel=LaTeXString("Spectral Radius"), label=LaTeXString(string(typeof(scheme[1]), " (central)")))
     plot!(spectral_radius_plot, p, spectral_radius_upwind, 
-        label=LaTeXString("Upwind"))
+    label=LaTeXString(string(typeof(scheme[1]), " (upwind)")))
     savefig(spectral_radius_plot, string(path, "spectral_radius.pdf"))
 end
 

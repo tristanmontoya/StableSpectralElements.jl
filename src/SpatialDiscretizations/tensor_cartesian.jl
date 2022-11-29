@@ -20,7 +20,7 @@ function ReferenceApproximation(
     V_plot = LinearMap(vandermonde(element_type, p, rstp[1]) / VDM)
 
     return ReferenceApproximation(approx_type, p+1, p+1, 2, reference_element,
-    (LinearMap(∇VDM / VDM),), LinearMap(I, (p+1)), R, R, Diagonal(wq),
+    (LinearMap(∇VDM / VDM),), LinearMap(I, p+1), R, R, Diagonal(wq),
         Diagonal(wf), V_plot, NoMapping())
 end
 

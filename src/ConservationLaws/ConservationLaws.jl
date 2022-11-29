@@ -6,8 +6,7 @@ module ConservationLaws
 
     import ..GridFunctions: AbstractGridFunction, NoSourceTerm, InitialDataSine, InitialDataGaussian, InitialDataGassner, SourceTermGassner, evaluate
 
-
-    export AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, NoInviscidFlux, NoViscousFlux, LaxFriedrichsNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, EntropyConservativeFlux, NoTwoPointFlux, ExactSolution
+    export AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, NoInviscidFlux, NoViscousFlux, LaxFriedrichsNumericalFlux, RoeNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, EntropyConservativeFlux, NoTwoPointFlux, ExactSolution
 
     abstract type AbstractConservationLaw{d, PDEType} end
     abstract type AbstractPDEType end
@@ -33,6 +32,7 @@ module ConservationLaws
         λ::Float64
     end
     struct EntropyConservativeNumericalFlux <: AbstractInviscidNumericalFlux end
+    struct RoeNumericalFlux <: AbstractInviscidNumericalFlux end
     LaxFriedrichsNumericalFlux() = LaxFriedrichsNumericalFlux(1.0)
     
     """Second-order numerical fluxes"""
@@ -69,7 +69,7 @@ module ConservationLaws
     export InviscidBurgersEquation, ViscousBurgersEquation
     include("burgers.jl")
 
-    export EulerEquations, NavierStokesEquations, EntropyWave1D
+    export EulerEquations, NavierStokesEquations, EulerPeriodicTest, TaylorGreenVortex, IsentropicVortex
     include("euler_navierstokes.jl")
 
 end

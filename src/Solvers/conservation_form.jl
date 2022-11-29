@@ -25,21 +25,19 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     @unpack D, V, Vf, R, W, B, N_p, N_q, N_f = spatial_discretization.reference_approximation
     @unpack nrstJ = 
         spatial_discretization.reference_approximation.reference_element
-    @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
+    @unpack J_q, Λ_q, J_f, nJf = spatial_discretization.geometric_factors
     op(A::LinearMap) = make_operator(A, operator_algorithm)
 
     operators = Array{DiscretizationOperators}(undef, N_e)
     for k in 1:N_e
-        if d == 1
-            VOL = (op(-W * D[1] +  R' * Diagonal(nrstJ[1]) * R),)
-        else
-            VOL = Tuple(sum(op(-W * D[m] + R' * B * Diagonal(nrstJ[m]) * R) * 
-                    Diagonal(Λ_q[:,m,n,k]) for m in 1:d) for n in 1:d)
-        end
-        FAC = op(-R' * B)
+        VOL = Tuple(sum(op(-W * D[m] + R' * B * Diagonal(nrstJ[m]) * R) * 
+                Diagonal(Λ_q[:,m,n,k]) for m in 1:d) for n in 1:d)
+        FAC = op(-R' * B) * Diagonal(J_f[:,k])
         SRC = Diagonal(W * J_q[:,k])
+
         operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC, 
-            factorize(M[k]), op(V), op(Vf), Tuple(nJf[m][:,k] for m in 1:d), 
+            factorize(M[k]), op(V), op(Vf), 
+            Tuple(nJf[m][:,k]./J_f[:,k] for m in 1:d), 
             N_p, N_q, N_f)
     end
     return operators
@@ -77,19 +75,19 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     @unpack N_e, M, reference_approximation = spatial_discretization
     @unpack V, Vf, R, W, B, D, N_p, N_q, N_f = reference_approximation
     @unpack nrstJ = reference_approximation.reference_element
-    @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
+    @unpack J_q, Λ_q, J_f, nJf = spatial_discretization.geometric_factors
     op(A::LinearMap) = make_operator(A, operator_algorithm)
 
     operators = Array{DiscretizationOperators}(undef, N_e)
     @inbounds for k in 1:N_e
         VOL = Tuple(sum(op(D[m]') * Diagonal(W * Λ_q[:,m,n,k]) for m in 1:d)
                     for n in 1:d)
-        FAC = op(-R' * B)
+        FAC = op(-R' * B) * Diagonal(J_f[:,k])
         SRC = Diagonal(W * J_q[:,k])
         
-        operators[k] = DiscretizationOperators{d}(
-            VOL, FAC, SRC, factorize(M[k]), op(V), op(Vf), Tuple(nJf[m][:,k] 
-            for m in 1:d), N_p, N_q, N_f)
+        operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC,
+            factorize(M[k]), op(V), op(Vf),
+            Tuple(nJf[m][:,k]./J_f[:,k] for m in 1:d), N_p, N_q, N_f)
     end
     return operators
 end
@@ -101,7 +99,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     @unpack N_e, M, reference_approximation = spatial_discretization
     @unpack V, Vf, R, W, B, D, N_p, N_q, N_f = reference_approximation
     @unpack nrstJ = reference_approximation.reference_element
-    @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
+    @unpack J_q, Λ_q, J_f, nJf = spatial_discretization.geometric_factors
     op(A::LinearMap) = make_operator(A, operator_algorithm)
 
     operators = Array{DiscretizationOperators}(undef, N_e)
@@ -112,12 +110,12 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
                     for m in 1:d) +
                 op(R') * Diagonal(0.5 * B * nJf[n][:,k]) * op(R)  # sym part
                     for n in 1:d)
-        FAC = op(-R' * B)
+        FAC = op(-R' * B) * Diagonal(J_f[:,k])
         SRC = Diagonal(W * J_q[:,k])
         
         operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC,
             factorize(M[k]), op(V), op(Vf),
-            Tuple(nJf[m][:,k] for m in 1:d), N_p, N_q, N_f)
+            Tuple(nJf[m][:,k]./J_f[:,k] for m in 1:d), N_p, N_q, N_f)
     end
     return operators
 end
@@ -164,7 +162,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
                     conservation_law, inviscid_numerical_flux,
                     facet_states[:,k,:], 
                     facet_states[CI[connectivity[:,k]],:], 
-                    operators[k].scaled_normal)
+                    operators[k].n_f)
             end
 
             if source_term isa NoSourceTerm s = nothing else
@@ -214,7 +212,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
 
         @timeit thread_timer() "auxiliary variable" begin
 
-            @unpack V, scaled_normal = operators[k]
+            @unpack V, n_f = operators[k]
 
             u_nodal = Matrix{Float64}(undef,N_q,N_c)
             u_out = Matrix{Float64}(undef,N_f,N_c)
@@ -232,7 +230,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             @timeit thread_timer() "eval num trace" begin
                 u_star =  numerical_flux(
                     conservation_law, viscous_numerical_flux,
-                    u_in[:,:,k], u_out, operators[k].scaled_normal)
+                    u_in[:,:,k], u_out, operators[k].n_f)
             end
             
             @timeit thread_timer() "apply operators" @inbounds for m in 1:d
@@ -253,7 +251,7 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
 
         @timeit thread_timer() "local residual" begin
 
-            @unpack V, scaled_normal = operators[k]
+            @unpack V, n_f = operators[k]
 
             u_nodal = Matrix{Float64}(undef,N_q,N_c)
             u_out = Matrix{Float64}(undef,N_f,N_c)
@@ -287,14 +285,14 @@ function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
             @timeit thread_timer() "eval inv num flux" begin
                 f_star = numerical_flux(
                     conservation_law, inviscid_numerical_flux,
-                    u_in[:,:,k], u_out, operators[k].scaled_normal)
+                    u_in[:,:,k], u_out, operators[k].n_f)
             end
                 
             @timeit thread_timer() "eval visc num flux" begin
                 f_star = f_star + numerical_flux(conservation_law,
                     viscous_numerical_flux, u_in[:,:,k], u_out, 
                         Tuple(q_in[m][:,:,k] for m in 1:d), 
-                        q_out, operators[k].scaled_normal)
+                        q_out, operators[k].n_f)
             end
             
             if source_term isa NoSourceTerm

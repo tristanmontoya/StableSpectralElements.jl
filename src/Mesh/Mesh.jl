@@ -19,27 +19,30 @@ module Mesh
         # fourth is element
         Λ_q::Array{Float64,4}
 
-        # d-tuple of matrices, where first is element index,
+         # first dimension is node index, second is element
+        J_f::Matrix{Float64}
+
+        # d-tuple of matrices, where first is node index, second is element
         nJf::NTuple{d, Matrix{Float64}}
     end
 
     function warp_mesh(mesh::MeshData{2}, reference_element::RefElemData{2}, 
-        factor::Float64=0.2)
+        factor::Float64=0.2, L::Float64=1.0)
         @unpack x, y = mesh
 
-        x = x .+ factor*sin.(π*x).*sin.(π*y)
-        y = y .+ factor*exp.(1.0.-y).*sin.(π*x).*sin.(π*y)
+        x = x .+ factor*sin.(π*x./L).*sin.(π*y/L)
+        y = y .+ factor*exp.((1.0.-y)/L).*sin.(π*x/L).*sin.(π*y/L)
         
         return MeshData(reference_element, mesh, x, y)
     end
 
     function warp_mesh(mesh::MeshData{3}, reference_element::RefElemData{3}, 
-        factor::Float64=0.2)
+        factor::Float64=0.2, L::Float64=1.0)
         @unpack x, y, z = mesh
 
-        x = x .+ factor*sin.(π*x).*sin.(π*y)
-        y = y .+ factor*exp.(1.0.-y).*sin.(π*x).*sin.(π*y)
-        z = z .+ 0.25*factor*(sin.(2π*x).+sin.(2π*y))
+        x = x .+ factor*sin.(π*x/L).*sin.(π*y/L)
+        y = y .+ factor*exp.((1.0.-y)/L).*sin.(π*x/L).*sin.(π*y/L)
+        z = z .+ 0.25*factor*(sin.(2π*x/L).+sin.(2π*y/L))
         return MeshData(reference_element, mesh, x, y, z)
     end
   
@@ -122,6 +125,7 @@ module Mesh
         N_e = size(mesh.xyzq[1],2)
 
         J_q = Matrix{Float64}(undef, N_q, N_e)
+        J_f = Matrix{Float64}(undef, N_f, N_e)
         nJf = Tuple(Matrix{Float64}(undef, N_f, N_e) for m in 1:d)
 
         # first dimension is node index, 
@@ -157,8 +161,9 @@ module Mesh
                         Jdrdx_f[n,m]*reference_element.nrstJ[n][i] 
                             for n in 1:d)
                 end
+                J_f[i,k] = sqrt(sum(nJf[m][i,k]^2 for m in 1:d))
             end
         end
-        return GeometricFactors{d}(J_q, Λ_q, nJf)
+        return GeometricFactors{d}(J_q, Λ_q, J_f, nJf)
     end
 end

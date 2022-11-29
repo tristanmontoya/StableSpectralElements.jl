@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-analysis_path="../results/advection_analysis/"
-scheme="NodalTensor"
+analysis_path="../results/advection_analysis_221128/"
+scheme="ModalTensor"
 elem_type="Tri"
 mapping_form="SkewSymmetricMapping"
 nev=1

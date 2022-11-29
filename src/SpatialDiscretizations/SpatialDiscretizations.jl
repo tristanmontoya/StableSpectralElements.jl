@@ -14,7 +14,7 @@ module SpatialDiscretizations
     using Reexport
     @reexport using StartUpDG: RefElemData, AbstractElemShape, Line, Quad, Tri, Tet, Hex, Pyr
 
-    export AbstractApproximationType, NodalTensor, ModalTensor, ModalMulti, AbstractReferenceMapping, NoMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, dim, χ, warped_product
+    export AbstractApproximationType, NodalTensor, ModalTensor, ModalMulti, NodalMulti, AbstractReferenceMapping, NoMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, dim, χ, warped_product
     
     abstract type AbstractApproximationType end
     struct NodalTensor <: AbstractApproximationType 
@@ -30,6 +30,12 @@ module SpatialDiscretizations
         q::Int # volume quadrature parameter 
         q_f::Int # facet quadrature parameter 
     end
+
+    struct NodalMulti <: AbstractApproximationType
+        p::Int  # polynomial degree
+        q::Int # volume quadrature parameter 
+        q_f::Int # facet quadrature parameter 
+    end
     
     function ModalMulti(p::Int; q=nothing, q_f=nothing)
         if isnothing(q) q = p end
@@ -37,6 +43,11 @@ module SpatialDiscretizations
         return ModalMulti(p,q,q_f)
     end
     
+    function NodalMulti(p::Int; q=nothing, q_f=nothing)
+        if isnothing(q) q = p end
+        if isnothing(q_f) q_f = p end
+        return NodalMulti(p,q,q_f)
+    end
 
     """Collapsed coordinate mapping χ: [-1,1]ᵈ → Ωᵣ"""
     abstract type AbstractReferenceMapping end
@@ -99,7 +110,7 @@ module SpatialDiscretizations
     """Express all metric terms in terms of collapsed coordinates"""
     function apply_reference_mapping(geometric_factors::GeometricFactors,
         reference_mapping::ReferenceMapping)
-        @unpack J_q, Λ_q, nJf = geometric_factors
+        @unpack J_q, Λ_q, J_f, nJf = geometric_factors
         @unpack J_ref, Λ_ref = reference_mapping
 
         (N_q, N_e) = size(J_q)
@@ -117,7 +128,7 @@ module SpatialDiscretizations
             end
         end
         
-        return GeometricFactors{d}(J_η, Λ_η, nJf)
+        return GeometricFactors{d}(J_η, Λ_η, J_f, nJf)
     end
 
     """

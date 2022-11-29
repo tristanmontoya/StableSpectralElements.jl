@@ -30,7 +30,7 @@ module Solvers
         M::Union{Factorization, AbstractMatrix}
         V::LinearMap
         Vf::LinearMap
-        scaled_normal::NTuple{d, Vector{Float64}}
+        n_f::NTuple{d, Vector{Float64}}
         N_p::Int
         N_q::Int
         N_f::Int
