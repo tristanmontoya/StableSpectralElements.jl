@@ -60,7 +60,6 @@ function postprocess_vtk_high_order(
     end
 end
 
-
 @recipe function plot(
     obj::Union{SpatialDiscretization{2},ReferenceApproximation{2,<:AbstractElemShape,<:AbstractApproximationType}};
     volume_quadrature=true,
@@ -82,6 +81,7 @@ end
     grid --> false
     xlabelfontsize --> 15
     ylabelfontsize --> 15
+    windowsize --> (400,400)
 
     if obj isa SpatialDiscretization
         @unpack N_e = obj
@@ -158,7 +158,7 @@ end
 
         if volume_quadrature
             if grid_connect &&
-                (reference_approximation.approx_type isa Union{NodalTensor, ModalTensor, NodalTensor})
+                (reference_approximation.approx_type isa Union{NodalTensor, ModalTensor})
 
                 if isnothing(stride)
                     stride = Int(sqrt(reference_approximation.N_q))
