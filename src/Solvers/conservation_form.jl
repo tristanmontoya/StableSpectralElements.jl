@@ -35,10 +35,9 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
         FAC = op(-R' * B) * Diagonal(J_f[:,k])
         SRC = Diagonal(W * J_q[:,k])
 
-        operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC, 
-            factorize(M[k]), op(V), op(Vf), 
-            Tuple(nJf[m][:,k]./J_f[:,k] for m in 1:d), 
-            N_p, N_q, N_f)
+        operators[k] = DiscretizationOperators{d}(
+            VOL, FAC, SRC, factorize(M[k]), op(V), op(Vf), 
+            Tuple(nJf[m][:,k]./J_f[:,k] for m in 1:d), N_p, N_q, N_f)
     end
     return operators
 end
@@ -85,8 +84,8 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
         FAC = op(-R' * B) * Diagonal(J_f[:,k])
         SRC = Diagonal(W * J_q[:,k])
         
-        operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC,
-            factorize(M[k]), op(V), op(Vf),
+        operators[k] = DiscretizationOperators{d}(
+            VOL, FAC, SRC, factorize(M[k]), op(V), op(Vf),
             Tuple(nJf[m][:,k]./J_f[:,k] for m in 1:d), N_p, N_q, N_f)
     end
     return operators
@@ -113,8 +112,8 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
         FAC = op(-R' * B) * Diagonal(J_f[:,k])
         SRC = Diagonal(W * J_q[:,k])
         
-        operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC,
-            factorize(M[k]), op(V), op(Vf),
+        operators[k] = DiscretizationOperators{d}(
+            VOL, FAC, SRC, factorize(M[k]), op(V), op(Vf),
             Tuple(nJf[m][:,k]./J_f[:,k] for m in 1:d), N_p, N_q, N_f)
     end
     return operators

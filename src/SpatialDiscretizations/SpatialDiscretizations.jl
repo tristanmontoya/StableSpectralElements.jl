@@ -17,6 +17,7 @@ module SpatialDiscretizations
     export AbstractApproximationType, NodalTensor, ModalTensor, ModalMulti, NodalMulti, AbstractReferenceMapping, NoMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, dim, χ, warped_product
     
     abstract type AbstractApproximationType end
+
     struct NodalTensor <: AbstractApproximationType 
         p::Int  # polynomial degree
     end
@@ -87,7 +88,7 @@ module SpatialDiscretizations
     function SpatialDiscretization(mesh::MeshData{d},
         reference_approximation::ReferenceApproximation{d}) where {d}
 
-        @unpack reference_element, reference_mapping, W = reference_approximation
+        @unpack reference_element, reference_mapping, W, V = reference_approximation
 
         N_e = size(mesh.xyz[1])[2]
         geometric_factors = apply_reference_mapping(GeometricFactors(mesh,
@@ -98,9 +99,8 @@ module SpatialDiscretizations
             N_e,
             reference_approximation,
             geometric_factors,
-            [convert(Matrix, reference_approximation.V' *
-                Diagonal(W * geometric_factors.J_q[:,k]) * 
-                reference_approximation.V) for k in 1:N_e],
+            [Matrix(V' * Diagonal(W * geometric_factors.J_q[:,k]) * V)
+                for k in 1:N_e],
             Tuple(reference_element.Vp * mesh.xyz[m] for m in 1:d))
     end
 
@@ -118,14 +118,12 @@ module SpatialDiscretizations
         Λ_η = similar(Λ_q)
         J_η = similar(J_q)
 
-        for k in 1:N_e
-            for i in 1:N_q
-                for m in 1:d, n in 1:d
-                    Λ_η[i,m,n,k] = sum( Λ_ref[i,m,l] * Λ_q[i,l,n,k] 
-                        for l in 1:d)
-                end
-                J_η[i,k] = J_ref[i] * J_q[i,k]
+        for k in 1:N_e, i in 1:N_q
+            for m in 1:d, n in 1:d
+                Λ_η[i,m,n,k] = sum( Λ_ref[i,m,l] * Λ_q[i,l,n,k] 
+                    for l in 1:d)
             end
+            J_η[i,k] = J_ref[i] * J_q[i,k]
         end
         
         return GeometricFactors{d}(J_η, Λ_η, J_f, nJf)

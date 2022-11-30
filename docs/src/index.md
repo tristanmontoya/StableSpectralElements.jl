@@ -29,5 +29,13 @@ As this documentation is currently a work in progress, we recommend that users r
 * [Linear advection equation in 3D](https://nbviewer.org/github/tristanmontoya/CLOUD.jl/blob/main/examples/advection_3d.ipynb)
 Scripts for running grid refinement studies are provided in the `drivers` directory; an example is provided [here](https://github.com/tristanmontoya/CLOUD.jl/blob/main/drivers/advection_refinement.sh). More detailed tutorials will be added soon!
 
+## Modules
+CLOUD.jl is structured as several submodules, which are exported with the top-level module `CLOUD`; below is a list of those most important for new users to familiarize themselves with:
+* [`ConservationLaws`](ConservationLaws.md)
+* [`SpatialDiscretizations`](SpatialDiscretizations.md)
+* `Solvers`
+* `Visualize`
+* `Analysis`
+
 ## License
 This software is released under the [GPLv3 license](https://www.gnu.org/licenses/gpl-3.0.en.html).

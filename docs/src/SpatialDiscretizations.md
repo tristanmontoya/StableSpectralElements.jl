@@ -1,5 +1,6 @@
 # Module `SpatialDiscretizations`
 
+## Overview
 Discretizations in CLOUD.jl are constructed by first building a local approximation on a canonical reference element, denoted generically as $\hat{\Omega} \subset \mathbb{R}^d$, and using a bijective transformation $\bm{X}^{(\kappa)} : \hat{\Omega} \rightarrow \Omega^{(\kappa)}$ to construct the approximation on each physical element of the mesh $\mathcal{T}^h = \{ \Omega^{(\kappa)}\}_{\kappa \in \{1:N_e\}}$ in terms of the associated operators on the reference element. An example of such a mapping is shown below.
 
 ![Mesh mapping](./assets/meshmap.svg)
@@ -41,4 +42,5 @@ julia> mesh = uniform_periodic_mesh(reference_approximation.reference_element,
 julia> spatial_discretization = SpatialDiscretization(mesh, 
     reference_approximation.reference_element)
 ```
-Note that the field `reference_element` is of type `RefElemData` from StartUpDG, and is used to store geometric information about the reference element and to define the operators used in constructing the polynomial mapping; the operators used for the discretizations are defined separately according to the specific scheme (e.g. `NodalTensor` in this case).
+Note that the field `reference_element` is of type `RefElemData` from StartUpDG, and is used to store geometric information about the reference element and to define the operators used in constructing the polynomial mapping; the operators used for the discretizations are defined separately according to the specific scheme (e.g. `NodalTensor` in this case). We can now visualize the discretization on the mesh:
+![Example mesh](./assets/mesh.svg)

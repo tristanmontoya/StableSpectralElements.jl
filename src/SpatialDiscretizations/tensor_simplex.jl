@@ -1,7 +1,16 @@
 """Duffy transform from the square to triangle"""
-function χ(::Tri, 
+@inline function χ(::Tri, 
     η::Union{NTuple{2,Float64},NTuple{2,Vector{Float64}}})
     return (0.5.*(1.0 .+ η[1]).*(1.0 .- η[2]) .- 1.0, η[2])
+end
+
+"""Duffy transform from the cube to tetrahedron"""
+@inline function χ(::Tet, 
+    η::Union{NTuple{3,Float64},NTuple{3,Vector{Float64}}})
+
+    (η1bar, η3bar) = χ(Tri(),(η[1], η[3]))
+    (η2tilde, η3tilde) = χ(Tri(),(η[2], η3bar))
+    return χ(Tri(), η1bar, η2tilde)..., η3tilde
 end
 
 """Geometric factors of the Duffy transform"""
