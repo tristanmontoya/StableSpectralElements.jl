@@ -32,12 +32,12 @@ end
 
 function quadrature(::Line, quadrature_rule::JGQuadrature, N::Int)
     z = zgj(N, 1.0, 0.0)
-    return z, wgj(z, 1.0, 0.0)
+    return z, wgj(z, 1.0, 0.0) ./ (1 .- z)
 end
 
 function quadrature(::Line, quadrature_rule::JGRQuadrature, N::Int)
     z = zgrjm(N, 1.0, 0.0)
-    return z, wgrjm(z, 1.0, 0.0)
+    return z, wgrjm(z, 1.0, 0.0) ./ (1 .- z)
 end
 
 function quadrature(::Quad, quadrature_rule::AbstractQuadratureRule{1}, N::Int)
@@ -104,7 +104,6 @@ function facet_node_ids(::Quad, N::NTuple{2,Int})
         1:N[1]:(N[1]*(N[2]-1)+1);  # bottom
             N[1]:N[1]:(N[1]*N[2])]  # top
 end
-
 
 function facet_node_ids(::Hex, N::NTuple{3,Int})
     return [

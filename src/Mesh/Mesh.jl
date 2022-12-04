@@ -62,7 +62,7 @@ module Mesh
         random_rotate::Bool=false, 
         strategy::AbstractMeshGenStrategy=ZigZag()) where {d}
 
-        VXY, EtoV = cartesian_mesh(reference_element.elementType, 
+        VXY, EtoV = cartesian_mesh(reference_element.element_type, 
             M, strategy)
         N_e = size(EtoV,1)
         
@@ -73,10 +73,26 @@ module Mesh
                 row = EtoV[k,:]
                 EtoV[k,:] = vcat(row[end-step+1:end], row[1:end-step])
             end
+
+        elseif reference_element.element_type isa Tet
+            # Second algorithm from Warburton's PhD thesis
+            EtoV_new = Vector{Float64}(undef,4)
+            for k in 1:N_e
+                EtoV_new = sort(EtoV[k,:], rev=true)
+                X = hcat([[VXY[1][EtoV_new[m]] - VXY[1][EtoV_new[1]];
+                    VXY[2][EtoV_new[m]] - VXY[2][EtoV_new[1]];
+                    VXY[3][EtoV_new[m]] - VXY[3][EtoV_new[1]]] for m in 2:4]...)
+                
+                if det(X) < 0 
+                    EtoV[k,:] = [EtoV_new[2]; 
+                                EtoV_new[1]; EtoV_new[3]; EtoV_new[4]]
+                else EtoV[k,:] = EtoV_new end
+            end
         end
 
         return make_periodic(MeshData([limits[m][1] .+ 
-            0.5*(limits[m][2]-limits[m][1])*(VXY[m] .+ 1.0) for m in 1:d]..., EtoV, reference_element))
+            0.5*(limits[m][2]-limits[m][1])*(VXY[m] .+ 1.0) for m in 1:d]...,
+            EtoV, reference_element))
     end
 
     function cartesian_mesh(element_type::AbstractElemShape, 

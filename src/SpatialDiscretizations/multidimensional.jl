@@ -53,7 +53,6 @@ function ReferenceApproximation(
         length(wf), reference_element, D, V, Vf, R, W, B, V_plot, NoMapping())
 end
 
-
 function ReferenceApproximation(
     approx_type::NodalMulti, element_type::AbstractElemShape;
     mapping_degree::Int=1, N_plot::Int=10)

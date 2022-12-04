@@ -1,7 +1,7 @@
 @doc raw"""
     EulerEquations{d}(γ::Float64) where {d}
 
-Define an Euler system of the form
+Define an Euler system governing compressible, adiabatic fluid flow, taking the form
 ```math
 \frac{\partial}{\partial t}\left[\begin{array}{c}
 \rho(\bm{x}, t) \\

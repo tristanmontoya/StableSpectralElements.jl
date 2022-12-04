@@ -27,21 +27,8 @@ function reference_geometric_factors(::Tri,
     return J_ref, Λ_ref
 end
 
-function init_face_data(::Tri, p, 
-    facet_quadrature_rule::NTuple{2,AbstractQuadratureRule{1}})
-    r_1d_1, w_1d_1 = quadrature(face_type(Tri()), 
-    facet_quadrature_rule[1], p+1)
-    r_1d_2, w_1d_2 = quadrature(face_type(Tri()), 
-        facet_quadrature_rule[2], p+1)
-    wf = [w_1d_1; w_1d_2; w_1d_2[end:-1:1]]
-    (rf, sf) = ([r_1d_1; -r_1d_2; -ones(size(r_1d_2))], 
-        [-ones(size(r_1d_1)); r_1d_2; r_1d_2[end:-1:1]])
-    nrJ = [zeros(size(r_1d_1)); ones(size(r_1d_2)); -ones(size(r_1d_2))]
-    nsJ = [-ones(size(r_1d_1)); ones(size(r_1d_2)); zeros(size(r_1d_2))]
-    return rf,sf,wf,nrJ,nsJ
-end
-
 function warped_product(::Tri, p, η1D::NTuple{2,Vector{Float64}})
+
     (M1, M2) = (length(η1D[1]), length(η1D[2]))
     σₒ = [M2*(i-1) + j for i in 1:M1, j in 1:M2]
     σᵢ = zeros(Int,p+1,p+1)
@@ -135,4 +122,34 @@ function ReferenceApproximation(
     return ReferenceApproximation(approx_type, size(V,2), (p+1)*(p+1), 3*(p+1), 
         reference_element, D, V, R * V, R, Diagonal(w_η), 
         Diagonal(reference_element.wf), V_plot, reference_mapping)
+end
+
+function ReferenceApproximation(
+    approx_type::Union{NodalTensor,ModalTensor}, 
+    ::Tet; quadrature_rule::NTuple{3,AbstractQuadratureRule{1}}=(
+        LGQuadrature(),LGQuadrature(), LGQuadrature()),
+    mapping_degree::Int=1, N_plot::Int=10)
+
+    @unpack p = approx_type
+    d = 3
+    
+    reference_element = RefElemData(Tet(), approx_type, mapping_degree,
+        quadrature_rule=quadrature_rule, Nplot=N_plot)
+
+    @unpack rstq, rstf, rstp, wq, wf = reference_element
+    
+    VDM, ∇VDM... = basis(Tet(), p, rstq...) 
+    ∇V = Tuple(LinearMap(∇VDM[m]) for m in 1:d)
+    V = LinearMap(VDM)
+    Vf = LinearMap(vandermonde(Tet(),p,rstf...))
+    V_plot = LinearMap(vandermonde(Tet(), p, rstp...))
+    W = Diagonal(wq)
+    B = Diagonal(wf)
+    P = inv(VDM' * Diagonal(wq) * VDM) * V' * W
+    R = Vf * P
+    D = Tuple(∇V[m] * P for m in 1:d)
+
+    return ReferenceApproximation(approx_type, binomial(p+d, d), length(wq),
+        length(wf), reference_element, D, V, Vf, R, W, B, V_plot, NoMapping())
+
 end
