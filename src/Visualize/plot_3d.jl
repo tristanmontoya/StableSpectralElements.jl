@@ -111,7 +111,7 @@ end
         @unpack N_e = obj
         xlabel --> "\$x_1\$"
         ylabel --> "\$x_2\$"
-        zlabel --> "\$x_2\$"
+        zlabel --> "\$x_3\$"
         @unpack reference_approximation, mesh = obj
         @unpack reference_element = reference_approximation
     else
@@ -201,8 +201,7 @@ end
 
         if facet_quadrature
 
-            if grid_connect &&
-                (reference_approximation.approx_type isa Union{NodalTensor, ModalTensor}) && (element_type isa Tet)
+            if grid_connect && (element_type isa Tet)
 
                 nodes_per_facet = reference_approximation.N_f ÷ 4
 

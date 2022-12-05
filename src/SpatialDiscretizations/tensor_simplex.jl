@@ -51,6 +51,23 @@ function warped_product(::Tri, p, η1D::NTuple{2,Vector{Float64}})
     return WarpedTensorProductMap2D(A,B,σᵢ,σₒ)
 end
 
+function operators_1d(
+    quadrature_rule::NTuple{d,AbstractQuadratureRule}) where {d}
+
+    η_1D, q, V_1D, D_1D, R_L, R_R = fill((),6)
+
+    for m in 1:d
+        η_1D = (η_1D..., quadrature(Line(),quadrature_rule[m])[1])
+        q = (q..., length(η_1D[m]) - 1)
+        V_1D = (V_1D..., vandermonde(Line(),q[m],η_1D[m] ))
+        D_1D = (D_1D..., grad_vandermonde(Line(),q[m], η_1D[m]) / V_1D[m])
+        R_L = (R_L..., vandermonde(Line(),q[m],[-1.0]) / V_1D[m])
+        R_R = (R_R..., vandermonde(Line(),q[m],[1.0]) / V_1D[m])
+    end
+    
+    return η_1D, q, V_1D, D_1D, R_L, R_R
+end
+
 function ReferenceApproximation(
     approx_type::Union{NodalTensor,ModalTensor}, 
     ::Tri; mortar::Bool=true, mapping_degree::Int=1, 
@@ -59,15 +76,8 @@ function ReferenceApproximation(
     facet_quadrature_rule=LGQuadrature(approx_type.p))
 
     # one-dimensional operators
-    nodes_1D = Tuple(quadrature(Line(),volume_quadrature_rule[m])[1] 
-        for m in 1:2)
-    q = Tuple(length(nodes_1D[m])-1 for m in 1:2) 
-    V_1D = Tuple(vandermonde(Line(),q[m],nodes_1D[m]) for m in 1:2)
-    D_1D = Tuple(grad_vandermonde(Line(),q[m],nodes_1D[m]) / V_1D[m] 
-        for m in 1:2)
-    R_L = Tuple(vandermonde(Line(),q[m],[-1.0]) / V_1D[m] for m in 1:2)
-    R_R = Tuple(vandermonde(Line(),q[m],[1.0]) / V_1D[m] for m in 1:2)
-
+    η_1D, q, V_1D, D_1D, R_L, R_R = operators_1d(volume_quadrature_rule)
+    
     # nodes and weights on the square
     η1, η2, w_η = quadrature(Quad(), volume_quadrature_rule)
 
@@ -81,7 +91,7 @@ function ReferenceApproximation(
         reference_geometric_factors(Tri(),(η1,η2))...)
 
     if mortar 
-        mortar_nodes, mortar_weights = quad_nodes(Line(),approx_type.p)
+        mortar_nodes, mortar_weights = quadrature(Line(), facet_quadrature_rule)
 
         P = (LinearMap(vandermonde(Line(),q[1],mortar_nodes)/V_1D[1]), 
             LinearMap(vandermonde(Line(),q[2],mortar_nodes)/V_1D[2]),
@@ -115,8 +125,9 @@ function ReferenceApproximation(
     end
 
     if approx_type isa ModalTensor
-        V = warped_product(Tri(),approx_type.p, (nodes_1D[1],nodes_1D[2]))
-        V_plot = LinearMap(vandermonde(Tri(), approx_type.p, reference_element.rstp...))
+        V = warped_product(Tri(),approx_type.p, η_1D)
+        V_plot = LinearMap(vandermonde(Tri(), 
+            approx_type.p, reference_element.rstp...))
         new_approx_type = approx_type
     elseif approx_type isa NodalTensor
         V = LinearMap(I, (q[1]+1)*(q[2]+1))
@@ -139,7 +150,8 @@ function ReferenceApproximation(
     ::Tet;  mapping_degree::Int=1, N_plot::Int=10,
     volume_quadrature_rule=(LGQuadrature(approx_type.p),
         LGQuadrature(approx_type.p), LGQuadrature(approx_type.p)), 
-    facet_quadrature_rule=(LGQuadrature(approx_type.p), LGQuadrature(approx_type.p)))
+    facet_quadrature_rule=(LGQuadrature(approx_type.p), 
+        LGQuadrature(approx_type.p)))
 
     @unpack p = approx_type
     d = 3

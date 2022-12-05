@@ -184,7 +184,7 @@ module SpatialDiscretizations
     dim(::Union{Tri,Quad}) = 2
     dim(::Union{Tet,Hex}) = 3
 
-    export AbstractQuadratureRule, DefaultQuadrature, LGLQuadrature, LGQuadrature, LGRQuadrature, JGLQuadrature, JGRQuadrature, JGQuadrature, quadrature, facet_node_ids
+    export AbstractQuadratureRule, DefaultQuadrature, LGLQuadrature, LGQuadrature, LGRQuadrature, JGLQuadrature, JGRQuadrature, JGQuadrature, quadrature
     include("quadrature_rules.jl")
 
     # new constructors for RefElemData from StartUpDG
@@ -193,7 +193,7 @@ module SpatialDiscretizations
     include("multidimensional.jl")
     include("tensor_cartesian.jl")
 
-    export reference_geometric_factors
+    export reference_geometric_factors, operators_1d
     include("tensor_simplex.jl")
 
 end

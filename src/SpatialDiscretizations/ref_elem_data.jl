@@ -51,7 +51,7 @@ end
 
 function RefElemData(elem::Tet,  
     approx_type::Union{ModalTensor,NodalTensor}, N;
-    quadrature_rule=(LGQuadrature(approx_type.p),LGQuadrature(approx_type.p),
+    quadrature_rule=(LGQuadrature(approx_type.p), LGQuadrature(approx_type.p),
         JGRQuadrature(approx_type.p)), Nplot=10)
 
     @unpack p = approx_type

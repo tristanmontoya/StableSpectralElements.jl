@@ -1,10 +1,13 @@
 abstract type AbstractQuadratureRule end
+
 struct LGLQuadrature <: AbstractQuadratureRule
     q::Int
 end
+
 struct LGQuadrature <: AbstractQuadratureRule
     q::Int
 end
+
 struct LGRQuadrature <: AbstractQuadratureRule
     q::Int
 end
@@ -112,24 +115,4 @@ function quadrature(::Tri, quadrature_rule::NTuple{2,AbstractQuadratureRule})
     w2d = @. mgw[1] * mgw[2] 
     return χ(Tri(), (mgr[1][:], mgr[2][:]))..., 
         (η -> 0.5*(1-η)).(mgr[2][:]) .* w2d[:]
-end
-
-function facet_node_ids(::Line, N::Int)
-    return [1, N]
-end
-
-function facet_node_ids(::Quad, N::NTuple{2,Int})
-    return [
-        1:N[1];  # left
-        (N[1]*(N[2]-1)+1):(N[1]*N[2]); # right 
-        1:N[1]:(N[1]*(N[2]-1)+1);  # bottom
-            N[1]:N[1]:(N[1]*N[2])]  # top
-end
-
-function facet_node_ids(::Hex, N::NTuple{3,Int})
-    return [
-        1:N[1];  # η1(-)
-        (N[1]*(N[2]-1)+1):(N[1]*N[2]); # top 
-        1:N[1]:(N[1]*(N[2]-1)+1);  # left
-            N[1]:N[1]:(N[1]*N[2])]  # right
 end
