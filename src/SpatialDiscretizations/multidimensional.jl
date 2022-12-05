@@ -1,12 +1,12 @@
 function ReferenceApproximation(
     approx_type::ModalMulti, ::Line; 
-    mapping_degree::Int=1, N_plot::Int=10)
+    mapping_degree::Int=1, N_plot::Int=10,
+    volume_quadrature_rule=LGQuadrature(approx_type.p))
 
-    @unpack p, q = approx_type
+    @unpack p = approx_type
 
-    reference_element = RefElemData(Line(), 
-        mapping_degree, quad_rule_vol=quad_nodes(Line(), q), 
-        Nplot=N_plot)
+    reference_element = RefElemData(Line(), mapping_degree,
+        quad_rule_vol=quadrature(Line(),volume_quadrature_rule), Nplot=N_plot)
         
     @unpack rstp, rstq, rstf, wq, wf = reference_element    
 
@@ -21,20 +21,22 @@ function ReferenceApproximation(
     R = Vf * P
     D = (∇V[1] * P,)
 
-    return ReferenceApproximation(approx_type, p+1, q+1, 2, 
+    return ReferenceApproximation(approx_type, p+1, length(wq), 2, 
         reference_element, D, V, Vf, R, W, B, V_plot, NoMapping())
 end
 
 function ReferenceApproximation(
     approx_type::ModalMulti, element_type::AbstractElemShape;
-    mapping_degree::Int=1, N_plot::Int=10)
+    mapping_degree::Int=1, N_plot::Int=10, volume_quadrature_rule=DefaultQuadrature(2*approx_type.p),
+    facet_quadrature_rule=DefaultQuadrature(2*approx_type.p))
 
-    @unpack p,q,q_f = approx_type
+    @unpack p = approx_type
     d = dim(element_type)
     
-    reference_element = RefElemData(element_type, 
-        mapping_degree, quad_rule_vol=quad_nodes(element_type, q),
-        quad_rule_face=quad_nodes(face_type(element_type), q_f), Nplot=N_plot)
+    reference_element = RefElemData(element_type, mapping_degree, 
+        quad_rule_vol=quadrature(element_type, volume_quadrature_rule),
+        quad_rule_face=quadrature(face_type(element_type),
+            facet_quadrature_rule), Nplot=N_plot)
 
     @unpack rstq, rstf, rstp, wq, wf = reference_element
     
@@ -55,14 +57,16 @@ end
 
 function ReferenceApproximation(
     approx_type::NodalMulti, element_type::AbstractElemShape;
-    mapping_degree::Int=1, N_plot::Int=10)
+    mapping_degree::Int=1, N_plot::Int=10, volume_quadrature_rule=DefaultQuadrature(2*approx_type.p),
+    facet_quadrature_rule=DefaultQuadrature(2*approx_type.p))
 
-    @unpack p,q,q_f = approx_type
+    @unpack p = approx_type
     d = dim(element_type)
-    
-    reference_element = RefElemData(element_type, 
-        mapping_degree, quad_rule_vol=quad_nodes(element_type, q),
-        quad_rule_face=quad_nodes(face_type(element_type), q_f), Nplot=N_plot)
+
+    reference_element = RefElemData(element_type, mapping_degree, 
+        quad_rule_vol=quadrature(element_type, volume_quadrature_rule),
+        quad_rule_face=quadrature(face_type(element_type),
+            facet_quadrature_rule), Nplot=N_plot)
 
     @unpack rstq, rstf, rstp, wq, wf = reference_element
 

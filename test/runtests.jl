@@ -96,7 +96,8 @@ end
 
 @testset "Advection 2D Standard NodalTensor Quad" begin
     (l2, conservation, energy) = test_driver(
-        ReferenceApproximation(NodalTensor(p), Quad(), mapping_degree=p), 
+        ReferenceApproximation(NodalTensor(p), Quad(), mapping_degree=p,
+        volume_quadrature_rule=LGLQuadrature(p), facet_quadrature_rule=LGLQuadrature(p)), 
         LinearAdvectionEquation((1.0,1.0)),
         InitialDataSine(1.0,(2*π, 2*π)),
         WeakConservationForm(
@@ -113,7 +114,8 @@ end
 
 @testset "Advection 3D Energy-Conservative NodalTensor Hex" begin
     (l2, conservation, energy) = test_driver(
-        ReferenceApproximation(NodalTensor(p), Hex(), mapping_degree=p), 
+        ReferenceApproximation(NodalTensor(p), Hex(), mapping_degree=p,
+        volume_quadrature_rule=LGLQuadrature(p), facet_quadrature_rule=LGLQuadrature(p)), 
         LinearAdvectionEquation((1.0,1.0,1.0)),
         InitialDataSine(1.0,(2*π, 2*π, 2*π)),
         WeakConservationForm(

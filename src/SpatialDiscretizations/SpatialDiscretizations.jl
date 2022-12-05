@@ -3,7 +3,7 @@ module SpatialDiscretizations
     using UnPack
     using LinearAlgebra: I, inv, Diagonal, diagm, kron
     using LinearMaps: LinearMap
-    using StartUpDG: MeshData, basis, vandermonde, grad_vandermonde, quad_nodes, gauss_quad, gauss_lobatto_quad, face_vertices, nodes, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial, jacobiP, match_coordinate_vectors
+    using StartUpDG: MeshData, basis, vandermonde, grad_vandermonde, quad_nodes, NodesAndModes.quad_nodes_tri, NodesAndModes.quad_nodes_tet, gauss_quad, gauss_lobatto_quad, face_vertices, nodes, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial, jacobiP, match_coordinate_vectors
 
     using Jacobi: zgrjm, wgrjm, zgj, wgj
     import StartUpDG: face_type, init_face_data
@@ -12,42 +12,26 @@ module SpatialDiscretizations
     using ..MatrixFreeOperators: TensorProductMap2D, TensorProductMap3D, WarpedTensorProductMap2D, SelectionMap
 
     using Reexport
-    @reexport using StartUpDG: RefElemData, AbstractElemShape, Line, Quad, Tri, Tet, Hex, Pyr
+    @reexport using StartUpDG: RefElemData, AbstractElemShape, Line, Quad, Tri, Tet, Hex
 
     export AbstractApproximationType, NodalTensor, ModalTensor, ModalMulti, NodalMulti, AbstractReferenceMapping, NoMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, dim, χ, warped_product
     
     abstract type AbstractApproximationType end
 
     struct NodalTensor <: AbstractApproximationType 
-        p::Int  # polynomial degree
+        p::Int
     end
 
     struct ModalTensor <: AbstractApproximationType
-        p::Int  # polynomial degree
+        p::Int
     end
 
     struct ModalMulti <: AbstractApproximationType
-        p::Int  # polynomial degree
-        q::Int # volume quadrature parameter 
-        q_f::Int # facet quadrature parameter 
+        p::Int
     end
 
     struct NodalMulti <: AbstractApproximationType
-        p::Int  # polynomial degree
-        q::Int # volume quadrature parameter 
-        q_f::Int # facet quadrature parameter 
-    end
-    
-    function ModalMulti(p::Int; q=nothing, q_f=nothing)
-        if isnothing(q) q = p end
-        if isnothing(q_f) q_f = p end
-        return ModalMulti(p,q,q_f)
-    end
-    
-    function NodalMulti(p::Int; q=nothing, q_f=nothing)
-        if isnothing(q) q = p end
-        if isnothing(q_f) q_f = p end
-        return NodalMulti(p,q,q_f)
+        p::Int
     end
 
     """Collapsed coordinate mapping χ: [-1,1]ᵈ → Ωᵣ"""
@@ -200,7 +184,7 @@ module SpatialDiscretizations
     dim(::Union{Tri,Quad}) = 2
     dim(::Union{Tet,Hex}) = 3
 
-    export AbstractQuadratureRule, LGLQuadrature, LGQuadrature, LGRQuadrature, JGLQuadrature, JGRQuadrature, JGQuadrature, quadrature, facet_node_ids
+    export AbstractQuadratureRule, DefaultQuadrature, LGLQuadrature, LGQuadrature, LGRQuadrature, JGLQuadrature, JGRQuadrature, JGQuadrature, quadrature, facet_node_ids
     include("quadrature_rules.jl")
 
     # new constructors for RefElemData from StartUpDG

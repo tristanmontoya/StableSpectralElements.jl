@@ -1,7 +1,6 @@
 function RefElemData(elem::Tri,  
-    approx_type::Union{ModalTensor,NodalTensor}, N;
-    quadrature_rule::NTuple{2,AbstractQuadratureRule}=(
-        LGQuadrature(),LGRQuadrature()),
+    approx_type::Union{ModalTensor,NodalTensor}, N; quadrature_rule=(
+        LGQuadrature(approx_type.p),LGRQuadrature(approx_type.p)),
         Nplot=10)
 
     @unpack p = approx_type
@@ -20,8 +19,8 @@ function RefElemData(elem::Tri,
     r1, s1 = nodes(elem, 1)
     V1 = vandermonde(elem, 1, r, s) / vandermonde(elem, 1, r1, s1)
 
-    r_1d_1, w_1d_1 = quadrature(Line(), quadrature_rule[1], p+1)
-    r_1d_2, w_1d_2 = quadrature(Line(), quadrature_rule[2], p+1)
+    r_1d_1, w_1d_1 = quadrature(Line(), quadrature_rule[1])
+    r_1d_2, w_1d_2 = quadrature(Line(), quadrature_rule[2])
     
     wf = [w_1d_1; w_1d_2; w_1d_2[end:-1:1]]
     (rf, sf) = ([r_1d_1; -r_1d_2; -ones(size(r_1d_2))], 
@@ -29,7 +28,7 @@ function RefElemData(elem::Tri,
     nrJ = [zeros(size(r_1d_1)); ones(size(r_1d_2)); -ones(size(r_1d_2))]
     nsJ = [-ones(size(r_1d_1)); ones(size(r_1d_2)); zeros(size(r_1d_2))]
     
-    rq, sq, wq =  quadrature(elem, quadrature_rule, (p+1,p+1))
+    rq, sq, wq =  quadrature(elem, quadrature_rule)
 
     Vq = vandermonde(elem, N, rq, sq) / VDM
     M = Vq' * diagm(wq) * Vq
@@ -52,10 +51,9 @@ end
 
 function RefElemData(elem::Tet,  
     approx_type::Union{ModalTensor,NodalTensor}, N;
-    quadrature_rule::NTuple{3,AbstractQuadratureRule}=(
-        LGQuadrature(),LGQuadrature(), JGRQuadrature()),
-        Nplot=10)
-        
+    quadrature_rule=(LGQuadrature(approx_type.p),LGQuadrature(approx_type.p),
+        JGRQuadrature(approx_type.p)), Nplot=10)
+
     @unpack p = approx_type
 
     fv = face_vertices(elem) 
@@ -70,13 +68,10 @@ function RefElemData(elem::Tet,
     r1, s1, t1 = nodes(elem, 1)
     V1 = vandermonde(elem, 1, r, s, t) / vandermonde(elem, 1, r1, s1, t1)
 
-    r1, s1, w1 = quadrature(Tri(), 
-        (quadrature_rule[1], quadrature_rule[3]), (p+1,p+1))
-    r2, s2, w2 = quadrature(Tri(), 
-        (quadrature_rule[2], quadrature_rule[3]), (p+1,p+1))
+    r1, s1, w1 = quadrature(Tri(), (quadrature_rule[1], quadrature_rule[3]))
+    r2, s2, w2 = quadrature(Tri(),  (quadrature_rule[2], quadrature_rule[3]))
     r3, s3, w3 = r2, s2, w2
-    r4, s4, w4 = quadrature(Tri(), 
-        (quadrature_rule[1], quadrature_rule[2]), (p+1,p+1))
+    r4, s4, w4 = quadrature(Tri(), (quadrature_rule[1], quadrature_rule[2]))
 
     (e1, z1) = (ones(size(r1)), zeros(size(r1)))
     (e2, z2) = (ones(size(r2)), zeros(size(r2)))

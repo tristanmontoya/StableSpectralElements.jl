@@ -53,24 +53,26 @@ end
 
 function ReferenceApproximation(
     approx_type::Union{NodalTensor,ModalTensor}, 
-    ::Tri; quadrature_rule::NTuple{2,AbstractQuadratureRule{1}}=(
-        LGQuadrature(),LGRQuadrature()), mortar::Bool=true,
-    mapping_degree::Int=1, N_plot::Int=10)
-
-    @unpack p = approx_type
+    ::Tri; mortar::Bool=true, mapping_degree::Int=1, 
+    N_plot::Int=10, volume_quadrature_rule=(LGQuadrature(approx_type.p),
+    LGRQuadrature(approx_type.p)), 
+    facet_quadrature_rule=LGQuadrature(approx_type.p))
 
     # one-dimensional operators
-    nodes_1D = Tuple(quadrature(Line(),quadrature_rule[m],p+1)[1] for m in 1:2)
-    V_1D = Tuple(vandermonde(Line(),p,nodes_1D[m]) for m in 1:2)
-    D_1D = Tuple(grad_vandermonde(Line(),p,nodes_1D[m]) / V_1D[m] for m in 1:2)
-    R_L = Tuple(vandermonde(Line(),p,[-1.0]) / V_1D[m] for m in 1:2)
-    R_R = Tuple(vandermonde(Line(),p,[1.0]) / V_1D[m] for m in 1:2)
+    nodes_1D = Tuple(quadrature(Line(),volume_quadrature_rule[m])[1] 
+        for m in 1:2)
+    q = Tuple(length(nodes_1D[m])-1 for m in 1:2) 
+    V_1D = Tuple(vandermonde(Line(),q[m],nodes_1D[m]) for m in 1:2)
+    D_1D = Tuple(grad_vandermonde(Line(),q[m],nodes_1D[m]) / V_1D[m] 
+        for m in 1:2)
+    R_L = Tuple(vandermonde(Line(),q[m],[-1.0]) / V_1D[m] for m in 1:2)
+    R_R = Tuple(vandermonde(Line(),q[m],[1.0]) / V_1D[m] for m in 1:2)
 
     # nodes and weights on the square
-    η1, η2, w_η = quadrature(Quad(), quadrature_rule, (p+1, p+1))
+    η1, η2, w_η = quadrature(Quad(), volume_quadrature_rule)
 
     # differentiation operator on the square
-    σ = [(p+1)*(i-1) + j for i in 1:p+1, j in 1:p+1]
+    σ = [(q[2]+1)*(i-1) + j for i in 1:q[1]+1, j in 1:q[2]+1]
     D = (TensorProductMap2D(D_1D[1], I, σ, σ), 
         TensorProductMap2D(I, D_1D[2], σ, σ))
 
@@ -79,29 +81,31 @@ function ReferenceApproximation(
         reference_geometric_factors(Tri(),(η1,η2))...)
 
     if mortar 
-        mortar_nodes, mortar_weights = quad_nodes(Line(),p)
+        mortar_nodes, mortar_weights = quad_nodes(Line(),approx_type.p)
 
-        P = (LinearMap(vandermonde(Line(),p,mortar_nodes) / V_1D[1]), 
-            LinearMap(vandermonde(Line(),p,mortar_nodes) / V_1D[2]),
-            LinearMap(vandermonde(Line(),p,mortar_nodes[end:-1:1]) /  V_1D[2]))
+        P = (LinearMap(vandermonde(Line(),q[1],mortar_nodes)/V_1D[1]), 
+            LinearMap(vandermonde(Line(),q[2],mortar_nodes)/V_1D[2]),
+            LinearMap(vandermonde(Line(),q[2],mortar_nodes[end:-1:1])/V_1D[2]))
         
         reference_element = RefElemData(Tri(), Polynomial(), mapping_degree,
-            quad_rule_vol=quadrature(Tri(), quadrature_rule, (p+1, p+1)),
+            quad_rule_vol=quadrature(Tri(),volume_quadrature_rule),
             quad_rule_face=(mortar_nodes,mortar_weights), Nplot=N_plot)
     else 
-        P = (LinearMap(I, p+1), LinearMap(I, p+1),
-            SelectionMap([i for i in p+1:-1:1], p+1))
+        P = (LinearMap(I, q[1]+1), LinearMap(I, q[2]+1),
+            SelectionMap([i for i in q[2]+1:-1:1], q[2]+1))
 
         reference_element = RefElemData(Tri(), approx_type, mapping_degree;
-            quadrature_rule=quadrature_rule, Nplot=N_plot)
+            quadrature_rule=volume_quadrature_rule, Nplot=N_plot)
     end
 
     # ordering of facet nodes
-    (σ_1, σ_2) = ([i for i in 1:p+1, j in 1:1], [j for i in 1:1, j in 1:p+1])
+    σ_1 = [i for i in 1:q[1]+1, j in 1:1]
+    σ_2 = [j for i in 1:1, j in 1:q[2]+1]
 
     # interpolation/extrapolation operators
-    if quadrature_rule[2] isa LGRQuadrature
-        R = [P[1] * SelectionMap([(p+1)*(i-1)+1 for i in 1:p+1], (p+1)*(p+1));
+    if volume_quadrature_rule[2] isa LGRQuadrature
+        R = [P[1] * SelectionMap([(q[2]+1)*(i-1)+1 
+                for i in 1:q[1]+1], (q[1]+1)*(q[2]+1));
             P[2] * TensorProductMap2D(R_R[1], I, σ, σ_2); 
             P[3] * TensorProductMap2D(R_L[1], I, σ, σ_2)]
     else
@@ -111,30 +115,38 @@ function ReferenceApproximation(
     end
 
     if approx_type isa ModalTensor
-        V = warped_product(Tri(),p, (nodes_1D[1],nodes_1D[2]))
-        V_plot = LinearMap(vandermonde(Tri(), p, reference_element.rstp...))
+        V = warped_product(Tri(),approx_type.p, (nodes_1D[1],nodes_1D[2]))
+        V_plot = LinearMap(vandermonde(Tri(), approx_type.p, reference_element.rstp...))
+        new_approx_type = approx_type
+    elseif approx_type isa NodalTensor
+        V = LinearMap(I, (q[1]+1)*(q[2]+1))
+        VDM_plot_1D = (vandermonde(Line(), q[1], equi_nodes(Line(),N_plot)),
+            vandermonde(Line(), q[2], equi_nodes(Line(),N_plot)))
+        V_plot = kron(VDM_plot_1D[1]/V_1D[1], VDM_plot_1D[2]/V_1D[2])
+        new_approx_type = NodalTensor(min(q[1],q[2]))
     else
-        V = LinearMap(I, (p+1)*(p+1))
-        V_plot = LinearMap(vandermonde(Quad(), p, reference_element.rstp...) / 
-            kron(V_1D[1], V_1D[2]))
+        error("Invalid approximation type")
     end
 
-    return ReferenceApproximation(approx_type, size(V,2), (p+1)*(p+1), 3*(p+1), 
+    return ReferenceApproximation(new_approx_type, size(V,2), 
+        length(reference_element.wq), length(reference_element.wf),
         reference_element, D, V, R * V, R, Diagonal(w_η), 
         Diagonal(reference_element.wf), V_plot, reference_mapping)
 end
 
 function ReferenceApproximation(
     approx_type::Union{NodalTensor,ModalTensor}, 
-    ::Tet; quadrature_rule::NTuple{3,AbstractQuadratureRule{1}}=(
-        LGQuadrature(),LGQuadrature(), LGQuadrature()),
-    mapping_degree::Int=1, N_plot::Int=10)
+    ::Tet;  mapping_degree::Int=1, N_plot::Int=10,
+    volume_quadrature_rule=(LGQuadrature(approx_type.p),
+        LGQuadrature(approx_type.p), LGQuadrature(approx_type.p)), 
+    facet_quadrature_rule=(LGQuadrature(approx_type.p), LGQuadrature(approx_type.p)))
 
     @unpack p = approx_type
     d = 3
-    
+
     reference_element = RefElemData(Tet(), approx_type, mapping_degree,
-        quadrature_rule=quadrature_rule, Nplot=N_plot)
+        quadrature_rule=(LGQuadrature(p), LGQuadrature(p), LGQuadrature(p)), 
+        Nplot=N_plot)
 
     @unpack rstq, rstf, rstp, wq, wf = reference_element
     
