@@ -151,44 +151,6 @@ end
 
         @unpack element_type, r, s, t, rq, sq, tq, rf, sf, tf = reference_approximation.reference_element
 
-        if element_type isa Tet
-            up = collect(LinRange(-1.0,1.0, 40))
-            down = up[end:-1:1]
-            e = ones(40)
-
-            @series begin
-                linewidth --> edge_line_width
-                linecolor --> :black
-                X([up; down; -e],[-e; -e; -e], [-e; up; down])
-            end
-            @series begin
-                linewidth --> edge_line_width
-                linecolor --> :black
-                X([up; down; -e],[-e; up; down], [down; -e; up])
-            end
-            @series begin
-                linewidth --> edge_line_width
-                linecolor --> :black
-                X([-e; -e; -e],[up; down; -e], [-e; up; down])
-            end
-            @series begin
-                linewidth --> edge_line_width
-                linecolor --> :black
-                X([up; down; -e],[-e; up; down], [-e; -e; -e])
-            end
-
-            if mark_vertices
-                @series begin
-                    markersize --> 5
-                    markerstrokewidth --> 0.0
-                    color --> :red
-                    markershape --> :utriangle
-                    X([-0.9,-0.9],[-0.9,0.9],[0.9,-0.9])
-                end
-            end
-
-        end
-
         if volume_quadrature
             @series begin 
                 seriestype --> :scatter
@@ -255,6 +217,53 @@ end
                 color --> mapping_node_color
                 X(r, s, t)
             end
+        end
+        if element_type isa Tet
+            up = collect(LinRange(-1.0,1.0, 40))
+            down = up[end:-1:1]
+            e = ones(40)
+
+            @series begin
+                linewidth --> edge_line_width
+                linecolor --> :black
+                X([up; down; -e],[-e; -e; -e], [-e; up; down])
+            end
+            @series begin
+                linewidth --> edge_line_width
+                linecolor --> :black
+                X([up; down; -e],[-e; up; down], [down; -e; up])
+            end
+            @series begin
+                linewidth --> edge_line_width
+                linecolor --> :black
+                X([-e; -e; -e],[up; down; -e], [-e; up; down])
+            end
+            @series begin
+                linewidth --> edge_line_width
+                linecolor --> :black
+                X([up; down; -e],[-e; up; down], [-e; -e; -e])
+            end
+
+            if mark_vertices
+                @series begin
+                    seriestype--> :scatter
+                    markersize --> 5
+                    markerstrokewidth --> 0.0
+                    color --> :red
+                    markershape --> :utriangle
+                    X([-1.0],[-1.0],[1.0])
+                end
+
+                @series begin
+                    seriestype--> :scatter
+                    markersize --> 5
+                    markerstrokewidth --> 0.0
+                    color --> :green
+                    markershape --> :utriangle
+                    X([-1.0],[1.0],[-1.0])
+                end
+            end
+
         end
     end
 end

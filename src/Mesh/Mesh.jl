@@ -60,6 +60,7 @@ module Mesh
         limits::NTuple{d,NTuple{2,Float64}}, 
         M::NTuple{d,Int};
         random_rotate::Bool=false, 
+        collapsed_orientation::Bool=false,
         strategy::AbstractMeshGenStrategy=ZigZag()) where {d}
 
         VXY, EtoV = cartesian_mesh(reference_element.element_type, 
@@ -73,8 +74,8 @@ module Mesh
                 row = EtoV[k,:]
                 EtoV[k,:] = vcat(row[end-step+1:end], row[1:end-step])
             end
-
-        elseif reference_element.element_type isa Tet
+            
+        elseif reference_element.element_type isa Tet && collapsed_orientation
             # Second algorithm from Warburton's PhD thesis
             EtoV_new = Vector{Float64}(undef,4)
             for k in 1:N_e

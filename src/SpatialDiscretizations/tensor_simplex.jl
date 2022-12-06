@@ -10,7 +10,7 @@ end
 
     (η1bar, η3bar) = χ(Tri(),(η[1], η[3]))
     (η2tilde, η3tilde) = χ(Tri(),(η[2], η3bar))
-    return χ(Tri(), η1bar, η2tilde)..., η3tilde
+    return χ(Tri(), (η1bar, η2tilde))..., η3tilde
 end
 
 """Geometric factors of the Duffy transform"""
@@ -147,7 +147,7 @@ end
 
 function ReferenceApproximation(
     approx_type::Union{NodalTensor,ModalTensor}, 
-    ::Tet;  mapping_degree::Int=1, N_plot::Int=10,
+    ::Tet; mortar::Bool=true, mapping_degree::Int=1, N_plot::Int=10,
     volume_quadrature_rule=(LGQuadrature(approx_type.p),
         LGQuadrature(approx_type.p), LGQuadrature(approx_type.p)), 
     facet_quadrature_rule=(LGQuadrature(approx_type.p), 
@@ -155,10 +155,16 @@ function ReferenceApproximation(
 
     @unpack p = approx_type
     d = 3
-
-    reference_element = RefElemData(Tet(), approx_type, mapping_degree,
-        quadrature_rule=(LGQuadrature(p), LGQuadrature(p), LGQuadrature(p)), 
-        Nplot=N_plot)
+    
+    if mortar
+        reference_element = RefElemData(Tet(), mapping_degree,
+            quad_rule_vol=quadrature(Tet(), volume_quadrature_rule),
+            quad_rule_face=quadrature(Tri(), facet_quadrature_rule),
+            Nplot=N_plot)
+    else
+        reference_element = RefElemData(Tet(), approx_type, mapping_degree,
+            quadrature_rule=(LGQuadrature(p), LGQuadrature(p), LGQuadrature(p)),  Nplot=N_plot)
+    end
 
     @unpack rstq, rstf, rstp, wq, wf = reference_element
     

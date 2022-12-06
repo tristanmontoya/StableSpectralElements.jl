@@ -75,7 +75,18 @@ function semidiscretize(
     form::AbstractResidualForm,
     tspan::NTuple{2,Float64}, 
     strategy::AbstractStrategy=ReferenceOperator(),
-    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm())
+    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm();
+    periodic_connectivity_check::Bool=true,
+    tol::Float64=1e-12)
+
+    if periodic_connectivity_check
+        normal_error = check_normals(spatial_discretization)
+        for m in eachindex(normal_error)
+            if maximum(abs.(normal_error[m])) > tol
+                error("Connectivity Error: Facet normals not equal and opposite. If this is not a periodic problem, or if you're alright with a loss of conservation, run again with periodic_connectivity_check=false.")
+            end
+        end
+    end
 
     u0 = initialize(
         initial_data,

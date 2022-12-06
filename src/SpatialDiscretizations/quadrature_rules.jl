@@ -37,7 +37,6 @@ function meshgrid(x::Vector{Float64}, y::Vector{Float64}, z::Vector{Float64})
         [z[i] for i in 1:length(z), j in 1:length(y), k in 1:length(y)])
 end
 
-
 function quadrature(::Line, quadrature_rule::DefaultQuadrature)
     return quadrature(Line(), 
         LGQuadrature(ceil(Int, (quadrature_rule.degree-1)/2)))
@@ -115,4 +114,15 @@ function quadrature(::Tri, quadrature_rule::NTuple{2,AbstractQuadratureRule})
     w2d = @. mgw[1] * mgw[2] 
     return χ(Tri(), (mgr[1][:], mgr[2][:]))..., 
         (η -> 0.5*(1-η)).(mgr[2][:]) .* w2d[:]
+end
+
+function quadrature(::Tet, quadrature_rule::NTuple{3,AbstractQuadratureRule})
+    r1d_1, w1d_1 = quadrature(Line(), quadrature_rule[1])
+    r1d_2, w1d_2 = quadrature(Line(), quadrature_rule[2])
+    r1d_3, w1d_3 = quadrature(Line(), quadrature_rule[3])
+    mgw = meshgrid(w1d_1,w1d_2,w1d_3)
+    mgr = meshgrid(r1d_1,r1d_2,r1d_3)
+    w2d = @. mgw[1] * mgw[2] * mgw[3] 
+    return χ(Tet(), (mgr[1][:], mgr[2][:], mgr[3][:]))...,
+    (η -> 0.5*(1-η)).(mgr[2][:]) .* (η -> (0.5*(1-η))^2).(mgr[3][:]) .* w2d[:]
 end
