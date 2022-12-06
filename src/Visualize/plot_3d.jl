@@ -180,7 +180,7 @@ end
                     end
                     for i in 1:N1
                         @series begin
-                            color --> facet_node_color
+                            color --> z + 4
                             linewidth --> grid_line_width
                             start = i + nodes_per_facet*(z-1)
                             X(rf[start:N2:(N2*(N1-1) + start)], 
@@ -191,7 +191,7 @@ end
 
                     for i in 1:N2
                         @series begin
-                            color --> facet_node_color
+                            color --> z + 4
                             linewidth --> grid_line_width
                             X(rf[(i-1)*N1+1+nodes_per_facet*(z-1):i*N1+ nodes_per_facet*(z-1)], sf[(i-1)*N1+1+nodes_per_facet*(z-1):i*N1+ nodes_per_facet*(z-1)], tf[(i-1)*N1+1+nodes_per_facet*(z-1):i*N1+ nodes_per_facet*(z-1)])
                         end

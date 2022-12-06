@@ -1,3 +1,4 @@
+"""This assumes facet nodes aligned with volume nodes"""
 function RefElemData(elem::Tri,  
     approx_type::Union{ModalTensor,NodalTensor}, N; quadrature_rule=(
         LGQuadrature(approx_type.p),LGRQuadrature(approx_type.p)),
@@ -49,10 +50,13 @@ function RefElemData(elem::Tri,
                     M, Pq, (Dr, Ds), LIFT)
 end
 
+"""This assumes facet coordinate systems aligned with volume coordinate system, but not necessarily with volume nodes"""
 function RefElemData(elem::Tet,  
     approx_type::Union{ModalTensor,NodalTensor}, N;
-    quadrature_rule=(LGQuadrature(approx_type.p), LGQuadrature(approx_type.p),
-        JGRQuadrature(approx_type.p)), Nplot=10)
+    volume_quadrature_rule=(LGQuadrature(approx_type.p), 
+        LGQuadrature(approx_type.p), LGQuadrature(approx_type.p)),    
+    facet_quadrature_rule=(LGQuadrature(approx_type.p), 
+        LGQuadrature(approx_type.p)), Nplot=10)
 
     @unpack p = approx_type
 
@@ -68,26 +72,22 @@ function RefElemData(elem::Tet,
     r1, s1, t1 = nodes(elem, 1)
     V1 = vandermonde(elem, 1, r, s, t) / vandermonde(elem, 1, r1, s1, t1)
 
-    r1, s1, w1 = quadrature(Tri(), (quadrature_rule[1], quadrature_rule[3]))
-    r2, s2, w2 = quadrature(Tri(),  (quadrature_rule[2], quadrature_rule[3]))
-    r3, s3, w3 = r2, s2, w2
-    r4, s4, w4 = quadrature(Tri(), (quadrature_rule[1], quadrature_rule[2]))
+    r_2d, s_2d, w_2d = quadrature(Tri(), 
+        (facet_quadrature_rule[1], facet_quadrature_rule[2]))
 
-    (e1, z1) = (ones(size(r1)), zeros(size(r1)))
-    (e2, z2) = (ones(size(r2)), zeros(size(r2)))
-    (e3, z3) = (ones(size(r3)), zeros(size(r3)))
-    (e4, z4) = (ones(size(r4)), zeros(size(r4)))
+    (ee, zz) = (ones(size(r_2d)), zeros(size(r_2d)))
 
-    rf = [r1; -(e2 + r2 + s2); -e3; r4]
-    sf = [-e1; r2; r3; s4]
-    tf = [s1; s2; s3; -e4]
-    wf = [w1; w2; w3; w4]
-    nrJ = [z1; e2; -e3; z4]
-    nsJ = [-e1; e2; z3; z4]
-    ntJ = [z1; e2; z3; -e4]
+    rf = [r_2d; -(ee + r_2d + s_2d); -ee; r_2d]
+    sf = [-ee; r_2d; r_2d; s_2d]
+    tf = [s_2d; s_2d; s_2d; -ee]
+    
+    wf = [w_2d; w_2d; w_2d; w_2d]
+    nrJ = [zz; ee; -ee; zz]
+    nsJ = [-ee; ee; zz; zz]
+    ntJ = [zz; ee; zz; -ee]
 
     # quadrature nodes - build from 1D nodes.
-    rq, sq, tq, wq = quad_nodes(Tet(), N) #temporarily do this
+    rq, sq, tq, wq = quadrature(Tet(), volume_quadrature_rule)
     Vq = vandermonde(elem, N, rq, sq, tq) / VDM
     M = Vq' * diagm(wq) * Vq
     Pq = M \ (Vq' * diagm(wq))
