@@ -28,7 +28,7 @@ end
 function ReferenceApproximation(
     approx_type::ModalMulti, element_type::AbstractElemShape;
     mapping_degree::Int=1, N_plot::Int=10, volume_quadrature_rule=DefaultQuadrature(2*approx_type.p),
-    facet_quadrature_rule=DefaultQuadrature(2*approx_type.p+1))
+    facet_quadrature_rule=DefaultQuadrature(2*approx_type.p))
 
     @unpack p = approx_type
     d = dim(element_type)

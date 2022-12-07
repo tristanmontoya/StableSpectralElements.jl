@@ -107,6 +107,14 @@ end
     zlabelfontsize --> 15
     windowsize --> (400,400)
 
+    if sketch
+        xlabel --> ""
+        ylabel --> ""
+        zlabel --> ""
+        ticks --> false
+        showaxis --> false
+    end
+
     if obj isa SpatialDiscretization
         @unpack N_e = obj
         xlabel --> "\$x_1\$"
@@ -122,14 +130,6 @@ end
         ylabel --> "\$\\xi_2\$"
         zlabel --> "\$\\xi_3\$"
         reference_approximation = obj
-    end
-
-    if sketch
-        xlabel --> ""
-        ylabel --> ""
-        zlabel --> ""
-        ticks --> false
-        showaxis --> false
     end
 
     for k in 1:N_e
@@ -150,74 +150,6 @@ end
         end
 
         @unpack element_type, r, s, t, rq, sq, tq, rf, sf, tf = reference_approximation.reference_element
-
-        if volume_quadrature
-            @series begin 
-                seriestype --> :scatter
-                markerstrokewidth --> 0.0
-                markersize --> 5
-                color --> node_color
-                X(rq, sq, tq)
-            end
-        end
-
-        if facet_quadrature
-
-            if grid_connect && (element_type isa Tet)
-
-                nodes_per_facet = reference_approximation.N_f ÷ 4
-
-                if isnothing(stride)
-                    stride = Int(sqrt(nodes_per_facet))
-                end
-
-                N1 = stride
-                N2 = nodes_per_facet ÷ stride
-                
-                for z in 1:4
-                    if facet_inds isa Vector{Int}
-                        if !(z in facet_inds) continue end
-                    end
-                    for i in 1:N1
-                        @series begin
-                            color --> z + 4
-                            linewidth --> grid_line_width
-                            start = i + nodes_per_facet*(z-1)
-                            X(rf[start:N2:(N2*(N1-1) + start)], 
-                                sf[start:N2:(N2*(N1-1) + start)],
-                                tf[start:N2:(N2*(N1-1) + start)])
-                        end
-                    end
-
-                    for i in 1:N2
-                        @series begin
-                            color --> z + 4
-                            linewidth --> grid_line_width
-                            X(rf[(i-1)*N1+1+nodes_per_facet*(z-1):i*N1+ nodes_per_facet*(z-1)], sf[(i-1)*N1+1+nodes_per_facet*(z-1):i*N1+ nodes_per_facet*(z-1)], tf[(i-1)*N1+1+nodes_per_facet*(z-1):i*N1+ nodes_per_facet*(z-1)])
-                        end
-                    end
-                end
-            else
-                @series begin 
-                    seriestype --> :scatter
-                    markershape --> :square
-                    markercolor --> facet_node_color
-                    markerstrokewidth --> 0.0
-                    markersize --> 4
-                    X(rf, sf, tf)
-                end
-            end
-        end
-
-        if mapping_nodes
-            @series begin 
-                seriestype --> :scatter
-                markerstrokewidth --> 0.0
-                markersize --> 4
-                color --> mapping_node_color
-                X(r, s, t)
-            end
-        end
         if element_type isa Tet
             up = collect(LinRange(-1.0,1.0, 40))
             down = up[end:-1:1]
@@ -263,7 +195,73 @@ end
                     X([-1.0],[1.0],[-1.0])
                 end
             end
+        end
+        if facet_quadrature
 
+            if grid_connect && (element_type isa Tet)
+
+                nodes_per_facet = reference_approximation.N_f ÷ 4
+
+                if isnothing(stride)
+                    stride = Int(sqrt(nodes_per_facet))
+                end
+
+                N1 = stride
+                N2 = nodes_per_facet ÷ stride
+                
+                for z in 1:4
+                    if facet_inds isa Vector{Int}
+                        if !(z in facet_inds) continue end
+                    end
+                    for i in 1:N1
+                        @series begin
+                            color --> facet_node_color
+                            linewidth --> grid_line_width
+                            start = i + nodes_per_facet*(z-1)
+                            X(rf[start:N2:(N2*(N1-1) + start)], 
+                                sf[start:N2:(N2*(N1-1) + start)],
+                                tf[start:N2:(N2*(N1-1) + start)])
+                        end
+                    end
+
+                    for i in 1:N2
+                        @series begin
+                            color --> facet_node_color
+                            linewidth --> grid_line_width
+                            X(rf[(i-1)*N1+1+nodes_per_facet*(z-1):i*N1+ nodes_per_facet*(z-1)], sf[(i-1)*N1+1+nodes_per_facet*(z-1):i*N1+ nodes_per_facet*(z-1)], tf[(i-1)*N1+1+nodes_per_facet*(z-1):i*N1+ nodes_per_facet*(z-1)])
+                        end
+                    end
+                end
+            else
+                @series begin 
+                    seriestype --> :scatter
+                    markershape --> :square
+                    markercolor --> facet_node_color
+                    markerstrokewidth --> 0.0
+                    markersize --> 4
+                    X(rf, sf, tf)
+                end
+            end
+        end
+
+        if volume_quadrature
+            @series begin 
+                seriestype --> :scatter
+                markerstrokewidth --> 0.0
+                markersize --> 5
+                color --> node_color
+                X(rq, sq, tq)
+            end
+        end
+
+        if mapping_nodes
+            @series begin 
+                seriestype --> :scatter
+                markerstrokewidth --> 0.0
+                markersize --> 4
+                color --> mapping_node_color
+                X(r, s, t)
+            end
         end
     end
 end
