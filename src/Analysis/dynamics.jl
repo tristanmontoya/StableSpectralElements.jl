@@ -737,7 +737,7 @@ end
     legend --> :topleft
     fontfamily --> "Computer Modern"
 
-    for i in 1:length(eigs)
+    for i in eachindex(eigs)
         @series begin
             #max_real = @sprintf "%.2e" maximum(real.(eigs[i]))
             #sr = @sprintf "%.2f" maximum(abs.(eigs[i]))

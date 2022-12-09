@@ -37,20 +37,20 @@ function reference_geometric_factors(::Tet,
     Λ_ref[:,1,1] = (x->0.5*(1.0-x)).(η[3]) # Jdη1/dξ1
     Λ_ref[:,1,2] = (x->0.5*(1.0+x)).(η[1]) .* 
         (x->0.5*(1.0-x)).(η[3])  # Jdη1/dξ2
-    Λ_ref[:,1,2] = (x->0.5*(1.0+x)).(η[1]) .* 
+    Λ_ref[:,1,3] = (x->0.5*(1.0+x)).(η[1]) .* 
         (x->0.5*(1.0-x)).(η[3])  # Jdη1/dξ3
     
     Λ_ref[:,2,1] = zeros(N) # Jdη2/dξ1
     Λ_ref[:,2,2] = (x->0.5*(1.0-x)).(η[2]) .*
         (x->0.5*(1.0-x)).(η[3]) # Jdη2/dξ2
-    Λ_ref[:,2,3] = (x->0.5*(1.0+x)).(η[1]) .* 
+    Λ_ref[:,2,3] = (x->0.5*(1.0+x)).(η[2]) .* 
         (x->0.5*(1.0-x)).(η[2]) .*
         (x->0.5*(1.0-x)).(η[3]) # Jdη2/dξ3
 
     Λ_ref[:,3,1] = zeros(N) # Jdη3/dξ1
     Λ_ref[:,3,2] = zeros(N) # Jdη3/dξ2
     Λ_ref[:,3,3] = (x->0.5*(1.0-x)).(η[2]) .*
-        ((x->0.5*(1.0-x)).(η[3])).^2 # Jdη3/dξ3
+        (x->(0.5*(1.0-x))^2).(η[3])# Jdη3/dξ3
 
     return J_ref, Λ_ref
 end
@@ -154,7 +154,7 @@ function ReferenceApproximation(
         V = LinearMap(I, (q[1]+1)*(q[2]+1))
         VDM_plot_1D = (vandermonde(Line(), q[1], equi_nodes(Line(),N_plot)),
             vandermonde(Line(), q[2], equi_nodes(Line(),N_plot)))
-        V_plot = kron(VDM_plot_1D[1]/V_1D[1], VDM_plot_1D[2]/V_1D[2])
+        V_plot = LinearMap(kron(VDM_plot_1D[1]/V_1D[1], VDM_plot_1D[2]/V_1D[2]))
         new_approx_type = NodalTensor(min(q[1],q[2]))
     end
 
@@ -180,8 +180,8 @@ function ReferenceApproximation(
     η1, η2, η3, w_η = quadrature(Hex(), volume_quadrature_rule)
 
     # differentiation operator on the cube
-    σ = permutedims(reshape(collect(1:N_q),q[1]+1,q[2]+1,q[3]+1), [3,2,1])
-
+    σ =  [(i-1)*(q[2]+1)*(q[3]+1) + (j-1)*(q[3]+1) + k 
+        for i in 1:(q[1]+1), j in 1:(q[2]+1), k in 1:(q[3]+1)]
     D = (TensorProductMap3D(D_1D[1], I, I, σ, σ),
          TensorProductMap3D(I, D_1D[2], I, σ, σ),
          TensorProductMap3D(I, I, D_1D[3], σ, σ))
@@ -198,12 +198,9 @@ function ReferenceApproximation(
         volume_quadrature_rule=volume_quadrature_rule,
         facet_quadrature_rule=facet_quadrature_rule,  Nplot=N_plot)
 
-    σ_13 = permutedims(reshape(collect(1:nodes_per_facet),q[1]+1,1,q[3]+1),
-        [3,2,1])
-    σ_23 = permutedims(reshape(collect(1:nodes_per_facet),1,q[2]+1,q[3]+1),
-        [3,2,1])
-    σ_12 = permutedims(reshape(collect(1:nodes_per_facet),q[1]+1,q[2]+1,1),
-        [3,2,1])
+    σ_13 =  [(i-1)*(q[3]+1) + k  for i in 1:(q[1]+1), j in 1:1, k in 1:(q[3]+1)]
+    σ_23 =  [(j-1)*(q[3]+1) + k  for i in 1:1, j in 1:(q[2]+1), k in 1:(q[3]+1)]
+    σ_12 =  [(i-1)*(q[2]+1) + j  for i in 1:(q[1]+1), j in 1:(q[2]+1), k in 1:1]
 
     # interpolation/extrapolation operators
     R = [TensorProductMap3D(I, R_L[2], I, σ, σ_13);
@@ -223,14 +220,26 @@ function ReferenceApproximation(
         VDM_plot_1D = (vandermonde(Line(), q[1], equi_nodes(Line(),N_plot)),
             vandermonde(Line(), q[2], equi_nodes(Line(),N_plot)),
             vandermonde(Line(), q[3], equi_nodes(Line(),N_plot)) )
-        V_plot = kron(VDM_plot_1D[1]/V_1D[1], VDM_plot_1D[2]/V_1D[2],
-            VDM_plot_1D[3]/V_1D[3])
+        V_plot = LinearMap(kron(VDM_plot_1D[1]/V_1D[1], VDM_plot_1D[2]/V_1D[2],
+            VDM_plot_1D[3]/V_1D[3]))
         new_approx_type = NodalTensor(min(q[1],q[2],q[3]))
     end
 
+    ref_mapping = ReferenceMapping(ref_geo_facs...)
+    @unpack Λ_ref, J_ref = ref_mapping
+
+    Dξ = Tuple(sum(Diagonal(Λ_ref[:,m,n]./J_ref)*D[m] for m in 1:3) 
+        for n in 1:3)
+
+    return ReferenceApproximation(new_approx_type, size(V,2), 
+        length(reference_element.wq), length(reference_element.wf),
+        reference_element, Dξ, V, R * V, R, Diagonal(J_ref .* w_η), 
+        Diagonal(reference_element.wf), V_plot, NoMapping())
+    #=
     return ReferenceApproximation(new_approx_type, size(V,2), 
         length(reference_element.wq), length(reference_element.wf),
         reference_element, D, V, R * V, R, Diagonal(w_η), 
         Diagonal(reference_element.wf), V_plot, 
         ReferenceMapping(ref_geo_facs...))
+    =#
 end

@@ -81,7 +81,9 @@ function ReferenceApproximation(approx_type::NodalTensor, ::Hex;
     D_1D = ∇VDM_1D / VDM_1D
 
     # differentiation matrix
-    σ = permutedims(reshape(collect(1:(q+1)^3),q+1,q+1,q+1), [3,2,1])
+    σ =  [(i-1)*(q+1)^2 + (j-1)*(q+1) + k 
+        for i in 1:(q+1), j in 1:(q+1), k in 1:(q+1)]
+            
     D = (TensorProductMap3D(D_1D, I, I, σ, σ),
          TensorProductMap3D(I, D_1D, I, σ, σ),
          TensorProductMap3D(I, I, D_1D, σ, σ))
@@ -94,8 +96,8 @@ function ReferenceApproximation(approx_type::NodalTensor, ::Hex;
     @unpack rstp, rstq, rstf, wq, wf = reference_element
 
     # extrapolation operators
-    if (volume_quadrature_rule isa LGLQuadrature && 
-            facet_quadrature_rule isa LGLQuadrature)
+    if (volume_quadrature_rule == facet_quadrature_rule) &&
+        (volume_quadrature_rule isa LGLQuadrature)
         R = SelectionMap(match_coordinate_vectors(rstf,rstq),(q+1)^3)
     else 
         R = LinearMap(vandermonde(Hex(),q,rstf...) / 

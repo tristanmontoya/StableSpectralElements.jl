@@ -88,13 +88,15 @@ end
     facet_quadrature=true,
     mapping_nodes=true,
     sketch=false,
-    grid_connect=false,
+    volume_connect=false,
+    facet_connect=false,
     node_color = 1,
     facet_node_color=2,
     mapping_node_color=3,
     edge_line_width = 3.0,
     grid_line_width = 2.0,
-    stride=nothing,
+    qf=nothing,
+    q=nothing,
     facet_inds=nothing,
     element_inds=nothing,
     mark_vertices=false)
@@ -198,24 +200,20 @@ end
         end
         if facet_quadrature
 
-            if grid_connect && (element_type isa Tet)
+            if facet_connect && (element_type isa Tet)
 
                 nodes_per_facet = reference_approximation.N_f ÷ 4
 
-                if isnothing(stride)
-                    stride = Int(sqrt(nodes_per_facet))
+                if isnothing(qf)
+                    (N1,N2) = (Int(sqrt(nodes_per_facet)), Int(sqrt(nodes_per_facet)))
+                else
+                    (N1,N2) = qf
                 end
-
-                N1 = stride
-                N2 = nodes_per_facet ÷ stride
                 
-                for z in 1:4
-                    if facet_inds isa Vector{Int}
-                        if !(z in facet_inds) continue end
-                    end
+                for z in facet_inds
                     for i in 1:N1
                         @series begin
-                            color --> facet_node_color
+                            color --> z + 2
                             linewidth --> grid_line_width
                             start = i + nodes_per_facet*(z-1)
                             X(rf[start:N2:(N2*(N1-1) + start)], 
@@ -223,10 +221,10 @@ end
                                 tf[start:N2:(N2*(N1-1) + start)])
                         end
                     end
-
+                    
                     for i in 1:N2
                         @series begin
-                            color --> facet_node_color
+                            color --> z + 2
                             linewidth --> grid_line_width
                             X(rf[(i-1)*N1+1+nodes_per_facet*(z-1):i*N1+ nodes_per_facet*(z-1)], sf[(i-1)*N1+1+nodes_per_facet*(z-1):i*N1+ nodes_per_facet*(z-1)], tf[(i-1)*N1+1+nodes_per_facet*(z-1):i*N1+ nodes_per_facet*(z-1)])
                         end
@@ -243,14 +241,45 @@ end
                 end
             end
         end
+       
 
         if volume_quadrature
-            @series begin 
-                seriestype --> :scatter
-                markerstrokewidth --> 0.0
-                markersize --> 5
-                color --> node_color
-                X(rq, sq, tq)
+            if volume_connect && (element_type isa Tet)
+
+                if isnothing(q)
+                    q = (Int(reference_approximation.N_q^(1/3)),
+                        Int(reference_approximation.N_q^(1/3)),
+                        Int(reference_approximation.N_q^(1/3)))
+                else
+                    (N1, N2, N3) = q
+                end
+
+                for l in 1:N3
+                    for j in 1:N2
+                        @series begin
+                            color --> l + 2
+                            linewidth --> grid_line_width
+                            line = [(i-1)*N2*N3 + (j-1)*N3 + l for i in 1:N1]
+                            X(rq[line], sq[line],tq[line])
+                        end
+                    end
+                    for i in 1:N1
+                        @series begin
+                            color --> l + 2 
+                            linewidth --> grid_line_width
+                            line = [(i-1)*N2*N3 + (j-1)*N3 + l for j in 1:N1]
+                            X(rq[line], sq[line],tq[line])
+                        end
+                    end
+                end
+            else
+                @series begin 
+                    seriestype --> :scatter
+                    markerstrokewidth --> 0.0
+                    markersize --> 5
+                    color --> node_color
+                    X(rq, sq, tq)
+                end
             end
         end
 
@@ -264,4 +293,16 @@ end
             end
         end
     end
+end
+
+function plot_ref_elem(reference_approximation::ReferenceApproximation{3, Tet, <:Union{NodalTensor,ModalTensor}})
+    @unpack p = reference_approximation.approx_type
+    vol_nodes = plot(reference_approximation, volume_connect=true,
+        facet_connect=true, facet_quadrature=false,
+        volume_quadrature=true, mapping_nodes=false, markersize=4, 
+        camera=(115,30), sketch=true, facet_inds=[1,3,4,2], q=(p+1,p+1,p+1), linewidth=3, mapping_node_color=:red)
+    fac_nodes = plot(reference_approximation, volume_connect=true,  
+        facet_connect=true, facet_quadrature=true, volume_quadrature=false, mapping_nodes=false, markersize=4, camera=(115,30),
+        sketch=true, facet_inds=[1,3,4,2], q=(p+1,p+1,p+1), linewidth=3)
+    plot(vol_nodes, fac_nodes, size=(600,300))
 end

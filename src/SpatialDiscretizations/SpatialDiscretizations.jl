@@ -97,6 +97,7 @@ module SpatialDiscretizations
         @unpack J_q, Λ_q, J_f, nJf = geometric_factors
         @unpack J_ref, Λ_ref = reference_mapping
 
+        println("computing mapping")
         (N_q, N_e) = size(J_q)
         d = size(Λ_q, 2)
         Λ_η = similar(Λ_q)
@@ -104,8 +105,7 @@ module SpatialDiscretizations
 
         for k in 1:N_e, i in 1:N_q
             for m in 1:d, n in 1:d
-                Λ_η[i,m,n,k] = sum( Λ_ref[i,m,l] * Λ_q[i,l,n,k] 
-                    for l in 1:d)
+                Λ_η[i,m,n,k] = sum(Λ_ref[i,m,l] * Λ_q[i,l,n,k] for l in 1:d)
             end
             J_η[i,k] = J_ref[i] * J_q[i,k]
         end

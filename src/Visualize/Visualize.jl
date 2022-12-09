@@ -12,14 +12,14 @@ module Visualize
     using Triangulate
     using TetGen
 
-    using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation, AbstractApproximationType, NodalTensor, ModalMulti, NodalTensor, ModalTensor
+    using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation, AbstractApproximationType, NodalMulti, ModalMulti, NodalTensor, ModalTensor
     using ..GridFunctions: AbstractGridFunction, evaluate
     using ..File: new_path
-    
+
     export visualize, plotter
     include("plot_1d.jl")
 
-    export low_order_subdivision, postprocess_vtk, outline_element
+    export low_order_subdivision, postprocess_vtk, outline_element, plot_ref_elem
     include("plot_2d.jl")
     include("plot_3d.jl")
 end
