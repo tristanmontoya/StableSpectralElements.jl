@@ -1,4 +1,3 @@
-# In progress...
 struct TensorProductMap3D{A_type,B_type,C_type} <: LinearMaps.LinearMap{Float64}
     A::A_type
     B::B_type
@@ -30,7 +29,7 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
     Z_3 = Array{Float64}(undef, size(σᵢ,1), size(σᵢ,2), size(σₒ,3))
     for α3 in axes(σₒ,3), β2 in axes(σᵢ,2), β1 in axes(σᵢ,1)
         temp = 0.0
-        @simd for β3 in axes(σᵢ,3)
+       @simd for β3 in axes(σᵢ,3)
             @muladd temp = temp + C[α3,β3] * x[σᵢ[β1,β2,β3]]
         end
         Z_3[β1,β2,α3] = temp

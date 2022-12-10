@@ -1,7 +1,8 @@
 """This assumes facet nodes aligned with volume nodes"""
 function RefElemData(elem::Tri,  
-    approx_type::Union{ModalTensor,NodalTensor}, N; quadrature_rule=(
+    approx_type::Union{ModalTensor,NodalTensor}, N; volume_quadrature_rule=(
         LGQuadrature(approx_type.p),LGRQuadrature(approx_type.p)),
+        facet_quadrature_rule=LGQuadrature(approx_type.p),
         Nplot=10)
 
     @unpack p = approx_type
@@ -20,16 +21,15 @@ function RefElemData(elem::Tri,
     r1, s1 = nodes(elem, 1)
     V1 = vandermonde(elem, 1, r, s) / vandermonde(elem, 1, r1, s1)
 
-    r_1d_1, w_1d_1 = quadrature(Line(), quadrature_rule[1])
-    r_1d_2, w_1d_2 = quadrature(Line(), quadrature_rule[2])
+    r_1d, w_1d = quadrature(Line(), facet_quadrature_rule)
     
-    wf = [w_1d_1; w_1d_2; w_1d_2[end:-1:1]]
-    (rf, sf) = ([r_1d_1; -r_1d_2; -ones(size(r_1d_2))], 
-        [-ones(size(r_1d_1)); r_1d_2; r_1d_2[end:-1:1]])
-    nrJ = [zeros(size(r_1d_1)); ones(size(r_1d_2)); -ones(size(r_1d_2))]
-    nsJ = [-ones(size(r_1d_1)); ones(size(r_1d_2)); zeros(size(r_1d_2))]
+    wf = [w_1d; w_1d; w_1d]
+    (rf, sf) = ([r_1d; -r_1d; -ones(size(r_1d))], 
+        [-ones(size(r_1d)); r_1d; r_1d])
+    nrJ = [zeros(size(r_1d)); ones(size(r_1d)); -ones(size(r_1d))]
+    nsJ = [-ones(size(r_1d)); ones(size(r_1d)); zeros(size(r_1d))]
     
-    rq, sq, wq =  quadrature(elem, quadrature_rule)
+    rq, sq, wq =  quadrature(elem, volume_quadrature_rule)
 
     Vq = vandermonde(elem, N, rq, sq) / VDM
     M = Vq' * diagm(wq) * Vq
@@ -86,7 +86,6 @@ function RefElemData(elem::Tet,
     nsJ = [-ee; ee; zz; zz]
     ntJ = [zz; ee; zz; -ee]
 
-    # quadrature nodes - build from 1D nodes.
     rq, sq, tq, wq = quadrature(Tet(), volume_quadrature_rule)
     Vq = vandermonde(elem, N, rq, sq, tq) / VDM
     M = Vq' * diagm(wq) * Vq

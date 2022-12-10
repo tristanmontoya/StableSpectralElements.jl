@@ -97,7 +97,6 @@ module SpatialDiscretizations
         @unpack J_q, Λ_q, J_f, nJf = geometric_factors
         @unpack J_ref, Λ_ref = reference_mapping
 
-        println("computing mapping")
         (N_q, N_e) = size(J_q)
         d = size(Λ_q, 2)
         Λ_η = similar(Λ_q)

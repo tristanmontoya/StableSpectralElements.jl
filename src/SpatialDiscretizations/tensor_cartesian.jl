@@ -83,7 +83,7 @@ function ReferenceApproximation(approx_type::NodalTensor, ::Hex;
     # differentiation matrix
     σ =  [(i-1)*(q+1)^2 + (j-1)*(q+1) + k 
         for i in 1:(q+1), j in 1:(q+1), k in 1:(q+1)]
-            
+
     D = (TensorProductMap3D(D_1D, I, I, σ, σ),
          TensorProductMap3D(I, D_1D, I, σ, σ),
          TensorProductMap3D(I, I, D_1D, σ, σ))

@@ -241,7 +241,6 @@ end
                 end
             end
         end
-       
 
         if volume_quadrature
             if volume_connect && (element_type isa Tet)
