@@ -19,7 +19,8 @@ Make operators for strong conservation form
 """
 function make_operators(spatial_discretization::SpatialDiscretization{d}, 
     ::StrongConservationForm{StandardMapping,<:AbstractTwoPointFlux},
-    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm()) where {d}
+    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm(),
+    mass_matrix_solver::AbstractMassMatrixSolver=CholeskySolver()) where {d}
 
     @unpack N_e, M = spatial_discretization
     @unpack D, V, Vf, R, W, B, N_p, N_q, N_f = spatial_discretization.reference_approximation
@@ -35,9 +36,10 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
         FAC = op(-R' * B) * Diagonal(J_f[:,k])
         SRC = Diagonal(W * J_q[:,k])
 
-        operators[k] = DiscretizationOperators{d}(
-            VOL, FAC, SRC, factorize(M[k]), op(V), op(Vf), 
-            Tuple(nJf[m][:,k]./J_f[:,k] for m in 1:d), N_p, N_q, N_f)
+        operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC, 
+            mass_matrix(V,W,Diagonal(J_q[:,k]), mass_matrix_solver), 
+            op(V), op(Vf), Tuple(nJf[m][:,k]./J_f[:,k] for m in 1:d), 
+            N_p, N_q, N_f)
     end
     return operators
 end
@@ -47,7 +49,8 @@ Make operators for weak conservation form
 """
 function make_operators(spatial_discretization::SpatialDiscretization{1}, 
     ::WeakConservationForm{StandardMapping,<:AbstractTwoPointFlux},
-    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm())
+    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm(),
+    mass_matrix_solver::AbstractMassMatrixSolver=CholeskySolver())
 
     @unpack N_e, M, reference_approximation = spatial_discretization
     @unpack D, V, Vf, R, W, B, N_p, N_q, N_f = reference_approximation
@@ -61,15 +64,17 @@ function make_operators(spatial_discretization::SpatialDiscretization{1},
         FAC = op(-R' * B)
         SRC = Diagonal(W * J_q[:,k])
 
-        operators[k] = DiscretizationOperators{1}(VOL, FAC, SRC, 
-            factorize(M[k]), op(V), op(Vf), (nJf[1][:,k],), N_p, N_q, N_f)
+        operators[k] = DiscretizationOperators{1}(VOL, FAC, SRC,
+            mass_matrix(V,W,Diagonal(J_q[:,k]), mass_matrix_solver),
+            op(V), op(Vf), (nJf[1][:,k],), N_p, N_q, N_f)
     end
     return operators
 end
 
 function make_operators(spatial_discretization::SpatialDiscretization{d}, 
     ::WeakConservationForm{StandardMapping,<:AbstractTwoPointFlux},
-    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm())where {d}
+    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm(),
+    mass_matrix_solver::AbstractMassMatrixSolver=CholeskySolver()) where {d}
 
     @unpack N_e, M, reference_approximation = spatial_discretization
     @unpack V, Vf, R, W, B, D, N_p, N_q, N_f = reference_approximation
@@ -83,17 +88,19 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
                     for n in 1:d)
         FAC = op(-R' * B) * Diagonal(J_f[:,k])
         SRC = Diagonal(W * J_q[:,k])
-        
-        operators[k] = DiscretizationOperators{d}(
-            VOL, FAC, SRC, factorize(M[k]), op(V), op(Vf),
-            Tuple(nJf[m][:,k]./J_f[:,k] for m in 1:d), N_p, N_q, N_f)
+
+        operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC, 
+            mass_matrix(V,W,Diagonal(J_q[:,k]), mass_matrix_solver), 
+            op(V), op(Vf), Tuple(nJf[m][:,k]./J_f[:,k] for m in 1:d), 
+            N_p, N_q, N_f)
     end
     return operators
 end
 
 function make_operators(spatial_discretization::SpatialDiscretization{d}, 
     ::WeakConservationForm{<:SkewSymmetricMapping,<:AbstractTwoPointFlux},
-    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm())where {d}
+    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm(),
+    mass_matrix_solver::AbstractMassMatrixSolver=CholeskySolver()) where {d}
 
     @unpack N_e, M, reference_approximation = spatial_discretization
     @unpack V, Vf, R, W, B, D, N_p, N_q, N_f = reference_approximation
@@ -111,10 +118,11 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
                     for n in 1:d)
         FAC = op(-R' * B) * Diagonal(J_f[:,k])
         SRC = Diagonal(W * J_q[:,k])
-        
-        operators[k] = DiscretizationOperators{d}(
-            VOL, FAC, SRC, factorize(M[k]), op(V), op(Vf),
-            Tuple(nJf[m][:,k]./J_f[:,k] for m in 1:d), N_p, N_q, N_f)
+
+        operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC, 
+            mass_matrix(V,W,Diagonal(J_q[:,k]), mass_matrix_solver), 
+            op(V), op(Vf), Tuple(nJf[m][:,k]./J_f[:,k] for m in 1:d), 
+            N_p, N_q, N_f)
     end
     return operators
 end

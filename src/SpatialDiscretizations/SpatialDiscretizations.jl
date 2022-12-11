@@ -100,16 +100,15 @@ module SpatialDiscretizations
         (N_q, N_e) = size(J_q)
         d = size(Λ_q, 2)
         Λ_η = similar(Λ_q)
-        J_η = similar(J_q)
 
         for k in 1:N_e, i in 1:N_q
             for m in 1:d, n in 1:d
-                Λ_η[i,m,n,k] = sum(Λ_ref[i,m,l] * Λ_q[i,l,n,k] for l in 1:d)
+                Λ_η[i,m,n,k] = sum(Λ_ref[i,m,l] * Λ_q[i,l,n,k] ./ J_ref[i] 
+                    for l in 1:d)
             end
-            J_η[i,k] = J_ref[i] * J_q[i,k]
         end
         
-        return GeometricFactors{d}(J_η, Λ_η, J_f, nJf)
+        return GeometricFactors{d}(J_q, Λ_η, J_f, nJf)
     end
 
     """

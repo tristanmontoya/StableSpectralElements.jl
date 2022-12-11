@@ -2,12 +2,12 @@ module Solvers
 
     using UnPack
     import LinearAlgebra
-    using LinearAlgebra: Diagonal, inv, mul!, factorize, ldiv!, Factorization
+    using LinearAlgebra: Diagonal, inv, mul!, factorize, cholesky, ldiv!, Factorization, Cholesky, Symmetric
     using TimerOutputs
     using LinearMaps: LinearMap
     using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
     
-    using ..MatrixFreeOperators: AbstractOperatorAlgorithm, BLASAlgorithm, GenericMatrixAlgorithm, DefaultOperatorAlgorithm, make_operator
+    using ..MatrixFreeOperators: AbstractOperatorAlgorithm, BLASAlgorithm, GenericMatrixAlgorithm, DefaultOperatorAlgorithm, WeightAdjustedMap, make_operator
     using ..ConservationLaws: AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, AbstractTwoPointFlux, NoInviscidFlux, NoViscousFlux, NoTwoPointFlux, NoSourceTerm, physical_flux, numerical_flux, LaxFriedrichsNumericalFlux, BR1
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization, check_facet_nodes, check_normals
     using ..GridFunctions: AbstractGridFunction, AbstractGridFunction, NoSourceTerm, evaluate    
@@ -18,16 +18,16 @@ module Solvers
     abstract type AbstractMappingForm end
     abstract type AbstractStrategy end
 
-    struct PhysicalOperator <: AbstractStrategy end
-    struct ReferenceOperator <: AbstractStrategy end
     struct StandardMapping <: AbstractMappingForm end
     struct SkewSymmetricMapping <: AbstractMappingForm end
+    struct PhysicalOperator <: AbstractStrategy end
+    struct ReferenceOperator <: AbstractStrategy end
 
     struct DiscretizationOperators{d}
         VOL::NTuple{d,LinearMap}
         FAC::LinearMap
         SRC::LinearMap
-        M::Union{Factorization, AbstractMatrix}
+        M::Union{Cholesky, AbstractMatrix, WeightAdjustedMap}
         V::LinearMap
         Vf::LinearMap
         n_f::NTuple{d, Vector{Float64}}
@@ -77,7 +77,11 @@ module Solvers
     function thread_timer()
         return get_timer(string("thread_timer_", Threads.threadid()))
     end
-        
+    
+    
+    export AbstractMassMatrixSolver, CholeskySolver, WeightAdjustedSolver, mass_matrix
+    include("mass_matrix.jl") 
+
     export initialize, semidiscretize, precompute
     include("preprocessing.jl")
 
@@ -89,5 +93,4 @@ module Solvers
 
     export LinearResidual
     include("linear.jl")
-
 end

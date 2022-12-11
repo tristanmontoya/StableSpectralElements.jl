@@ -21,9 +21,12 @@ function Solver(conservation_law::AbstractConservationLaw,
     spatial_discretization::SpatialDiscretization,
     form::AbstractResidualForm,
     ::ReferenceOperator,
-    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm())
+    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm(),
+    mass_matrix_solver::AbstractMassMatrixSolver=CholeskySolver())
 
-    operators = make_operators(spatial_discretization, form, operator_algorithm)
+    operators = make_operators(spatial_discretization, form,
+        operator_algorithm, mass_matrix_solver)
+        
     return Solver(conservation_law, 
         operators,
         spatial_discretization.mesh.xyzq,
@@ -34,9 +37,10 @@ function Solver(conservation_law::AbstractConservationLaw,
     spatial_discretization::SpatialDiscretization,
     form::AbstractResidualForm,
     ::PhysicalOperator,
-    operator_algorithm::AbstractOperatorAlgorithm=BLASAlgorithm())
+    operator_algorithm::AbstractOperatorAlgorithm=BLASAlgorithm(),    mass_matrix_solver::AbstractMassMatrixSolver=CholeskySolver())
 
-    operators = make_operators(spatial_discretization, form)
+    operators = make_operators(spatial_discretization, form,
+        operator_algorithm, mass_matrix_solver)
 
     # make sure physical operator matrices are being formed
     if !(operator_algorithm isa GenericMatrixAlgorithm || 
@@ -76,6 +80,7 @@ function semidiscretize(
     tspan::NTuple{2,Float64}, 
     strategy::AbstractStrategy=ReferenceOperator(),
     operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm();
+    mass_matrix_solver::AbstractMassMatrixSolver=CholeskySolver(),
     periodic_connectivity_check::Bool=true,
     tol::Float64=1e-12)
 
@@ -94,7 +99,7 @@ function semidiscretize(
         spatial_discretization)
 
     return semidiscretize(Solver(conservation_law,spatial_discretization,
-        form,strategy,operator_algorithm),u0, tspan)
+        form,strategy,operator_algorithm,mass_matrix_solver),u0, tspan)
 end
 
 function semidiscretize(solver::Solver, u0::Array{Float64,3},

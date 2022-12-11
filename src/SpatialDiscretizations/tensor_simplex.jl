@@ -117,7 +117,7 @@ function ReferenceApproximation(
     D = (TensorProductMap2D(D_1D[1], I, σ, σ), 
         TensorProductMap2D(I, D_1D[2], σ, σ))
 
-    ref_geo_facs = reference_geometric_factors(Tri(),(η1,η2))
+    J_ref, Λ_ref = reference_geometric_factors(Tri(),(η1,η2))
 
     reference_element = RefElemData(Tri(), approx_type, mapping_degree,
         volume_quadrature_rule=volume_quadrature_rule,
@@ -177,9 +177,9 @@ function ReferenceApproximation(
 
     return ReferenceApproximation(new_approx_type, size(V,2), 
         length(reference_element.wq), length(reference_element.wf),
-        reference_element, D, V, R * V, R, Diagonal(w_η), 
+        reference_element, D, V, R * V, R, Diagonal(J_ref .* w_η), 
         Diagonal(reference_element.wf), V_plot, 
-        ReferenceMapping(ref_geo_facs...))
+        ReferenceMapping(J_ref, Λ_ref))
 end
 
 function ReferenceApproximation(
@@ -205,7 +205,7 @@ function ReferenceApproximation(
          TensorProductMap3D(I, I, D_1D[3], σ, σ))
 
     # reference geometric factors for cube-to-tetrahedron mapping
-    ref_geo_facs = reference_geometric_factors(Tet(),(η1, η2, η3))
+    J_ref, Λ_ref = reference_geometric_factors(Tet(),(η1, η2, η3))
 
     # reference element data
     reference_element = RefElemData(Tet(), approx_type, mapping_degree,
@@ -240,7 +240,7 @@ function ReferenceApproximation(
         P_2 = TensorProductMap2D(vandermonde(Line(),q[2],η_2d_1) / V_1D[2],
             vandermonde(Line(),q[3],η_2d_2) / V_1D[3], σ_23[1,:,:], σ_f)
     end
-    R_2 = TensorProductMap3D(R_L[1], I, I, σ, σ_23)
+    R_2 = TensorProductMap3D(R_R[1], I, I, σ, σ_23)
 
     # left (η1 = -1)
     if (volume_quadrature_rule[2] == facet_quadrature_rule[1]) &&
@@ -281,22 +281,10 @@ function ReferenceApproximation(
             VDM_plot_1D[3]/V_1D[3]))
         new_approx_type = NodalTensor(min(q[1],q[2],q[3]))
     end
-
-    ref_mapping = ReferenceMapping(ref_geo_facs...)
-    @unpack Λ_ref, J_ref = ref_mapping
-
-    Dξ = Tuple(sum(Diagonal(Λ_ref[:,m,n]./J_ref)*D[m] for m in 1:3) 
-        for n in 1:3)
-
+    
     return ReferenceApproximation(new_approx_type, size(V,2), 
         length(reference_element.wq), length(reference_element.wf),
-        reference_element, Dξ, V, R * V, R, Diagonal(J_ref .* w_η), 
-        Diagonal(reference_element.wf), V_plot, NoMapping())
-    #=
-    return ReferenceApproximation(new_approx_type, size(V,2), 
-        length(reference_element.wq), length(reference_element.wf),
-        reference_element, D, V, R * V, R, Diagonal(w_η), 
+        reference_element, D, V, R * V, R, Diagonal(J_ref .* w_η), 
         Diagonal(reference_element.wf), V_plot, 
-        ReferenceMapping(ref_geo_facs...))
-    =#
+        ReferenceMapping(J_ref, Λ_ref))
 end
