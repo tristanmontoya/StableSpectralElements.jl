@@ -70,21 +70,24 @@ module SpatialDiscretizations
     end
 
     function SpatialDiscretization(mesh::MeshData{d},
-        reference_approximation::ReferenceApproximation{d}) where {d}
+        reference_approximation::ReferenceApproximation{d};
+        project_jacobian::Bool=false) where {d}
 
         @unpack reference_element, reference_mapping, W, V = reference_approximation
 
         N_e = size(mesh.xyz[1])[2]
         geometric_factors = apply_reference_mapping(GeometricFactors(mesh,
             reference_element), reference_mapping)
+        @unpack J_q, Λ_q, J_f, nJf = geometric_factors
 
-        return SpatialDiscretization{d}(
-            mesh,
-            N_e,
-            reference_approximation,
-            geometric_factors,
-            [Matrix(V' * Diagonal(W * geometric_factors.J_q[:,k]) * V)
-                for k in 1:N_e],
+        if project_jacobian
+            J_proj = similar(J_q)
+            for k in 1:N_e J_proj[:,k] = V * (V'*W*V) * V' * W * J_q[:,k] end
+        else J_proj = J_q end
+
+        return SpatialDiscretization{d}(mesh, N_e, reference_approximation, 
+            GeometricFactors(J_proj, Λ_q, J_f, nJf),
+            [Matrix(V' * Diagonal(W * J_proj[:,k]) * V) for k in 1:N_e],
             Tuple(reference_element.Vp * mesh.xyz[m] for m in 1:d))
     end
 

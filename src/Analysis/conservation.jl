@@ -53,15 +53,22 @@ end
 
 function EnergyConservationAnalysis(results_path::String,
     conservation_law::AbstractConservationLaw,
-    spatial_discretization::SpatialDiscretization{d},
+    spatial_discretization::SpatialDiscretization{d};
+    weight_adjusted::Bool=false,
     name="energy_conservation_analysis") where {d}
 
     _, N_c, N_e = get_dof(spatial_discretization, conservation_law)
 
     @unpack W, V =  spatial_discretization.reference_approximation
-    @unpack geometric_factors, mesh, N_e = spatial_discretization
-    
-    WJ = [Matrix(W) * Diagonal(geometric_factors.J_q[:,k]) for k in 1:N_e]
+    @unpack mesh, N_e = spatial_discretization
+    @unpack J_q = spatial_discretization.geometric_factors
+
+    if weight_adjusted
+        WJ = [Matrix(W * V * inv(Matrix(V' * W * inv(Diagonal(J_q[:,k])) * V)) *
+            V' * W) for k in 1:N_e]
+    else
+        WJ = [Matrix(W) * Diagonal(J_q[:,k]) for k in 1:N_e]
+    end
 
     return EnergyConservationAnalysis(
         WJ, N_c, N_e, V ,results_path, "energy.jld2")
