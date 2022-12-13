@@ -294,7 +294,7 @@ end
     end
 end
 
-function plot_ref_elem(reference_approximation::ReferenceApproximation{3, Tet, <:Union{NodalTensor,ModalTensor}})
+function plot_ref_elem(reference_approximation::ReferenceApproximation{3, Tet, <:Union{NodalTensor,ModalTensor}}, title::String)
     @unpack p = reference_approximation.approx_type
     vol_nodes = plot(reference_approximation, volume_connect=true,
         facet_connect=true, facet_quadrature=false,
@@ -303,5 +303,7 @@ function plot_ref_elem(reference_approximation::ReferenceApproximation{3, Tet, <
     fac_nodes = plot(reference_approximation, volume_connect=true,  
         facet_connect=true, facet_quadrature=true, volume_quadrature=false, mapping_nodes=false, markersize=4, camera=(115,30),
         sketch=true, facet_inds=[1,3,4,2], q=(p+1,p+1,p+1), linewidth=3)
-    plot(vol_nodes, fac_nodes, size=(600,300))
+    plt = plot(vol_nodes, fac_nodes, size=(600,300))
+    savefig(plt, title)
+    run(`pdfcrop $title $title`)
 end

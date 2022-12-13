@@ -169,7 +169,6 @@ module Mesh
             end
         
             # get scaled normal vectors - this includes scaling for ref. quadrature weights on long side of right-angled triangle.
-            # don't need actual facet Jacobian for now, probably will at some point.
             @inbounds for i in 1:N_f
                 Jdrdx_f = det(dxdr_f[i,:,:,k]) *
                     inv(dxdr_f[i,:,:,k])

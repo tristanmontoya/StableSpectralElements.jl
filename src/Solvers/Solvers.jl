@@ -2,9 +2,9 @@ module Solvers
 
     using UnPack
     import LinearAlgebra
-    using LinearAlgebra: Diagonal, inv, mul!, factorize, cholesky, ldiv!, Factorization, Cholesky, Symmetric
+    using LinearAlgebra: Diagonal, eigvals, inv, mul!, factorize, cholesky,ldiv!, Factorization, Cholesky, Symmetric
     using TimerOutputs
-    using LinearMaps: LinearMap
+    using LinearMaps: LinearMap, UniformScalingMap
     using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
     
     using ..MatrixFreeOperators: AbstractOperatorAlgorithm, BLASAlgorithm, GenericMatrixAlgorithm, DefaultOperatorAlgorithm, WeightAdjustedMap, make_operator

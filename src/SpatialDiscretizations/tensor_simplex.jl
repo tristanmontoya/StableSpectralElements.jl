@@ -122,7 +122,7 @@ function ReferenceApproximation(
     reference_element = RefElemData(Tri(), approx_type, mapping_degree,
         volume_quadrature_rule=volume_quadrature_rule,
         facet_quadrature_rule=facet_quadrature_rule,  Nplot=N_plot)
-
+        
     mortar_nodes, _ = quadrature(Line(), facet_quadrature_rule)
 
     # bottom
