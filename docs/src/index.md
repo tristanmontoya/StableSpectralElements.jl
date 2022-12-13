@@ -9,7 +9,7 @@ These equations are spatially discretized on curvilinear unstructured grids usin
 
 The functionality provided by [StartUpDG.jl](https://github.com/jlchan/StartUpDG.jl) for the handling of mesh data structures, polynomial basis functions, and quadrature nodes is employed throughout this package. Moreover, CLOUD.jl implements dynamically dispatched strategies for semi-discrete operator evaluation using [LinearMaps.jl](https://github.com/JuliaLinearAlgebra/LinearMaps.jl), allowing for the efficient matrix-free application of tensor-product operators, including those associated with [collapsed-coordinate formulations on triangles](https://tjbmontoya.com/papers/MontoyaZinggICCFD22.pdf) as well as tetrahedra (paper to come soon).
 
-Discretizations employing nodal as well as modal bases are implemented, with the latter allowing for efficient and low-storage inversion of the dense elemental mass matrices arising from curvilinear meshse through the use of [weight-adjusted approximations](https://arxiv.org/abs/1608.03836).
+Discretizations employing nodal as well as modal bases are implemented, with the latter allowing for efficient and low-storage inversion of the dense elemental mass matrices arising from curvilinear meshes through the use of [weight-adjusted approximations](https://arxiv.org/abs/1608.03836).
 
 ## Installation
 
@@ -29,7 +29,8 @@ As this documentation is currently a work in progress, we recommend that users r
 * [Linear advection-diffusion equation in 1D](https://nbviewer.org/github/tristanmontoya/CLOUD.jl/blob/main/examples/advection_diffusion_1d.ipynb)
 * [Linear advection equation in 2D](https://nbviewer.org/github/tristanmontoya/CLOUD.jl/blob/main/examples/advection_2d.ipynb)
 * [Linear advection equation in 3D](https://nbviewer.org/github/tristanmontoya/CLOUD.jl/blob/main/examples/advection_3d.ipynb)
-Scripts for running grid refinement studies are provided in the `drivers` directory; an example is provided [here](https://github.com/tristanmontoya/CLOUD.jl/blob/main/drivers/advection_refinement.sh). More detailed tutorials will be added soon!
+
+Scripts for running grid refinement studies are provided in the `drivers` directory; an example is provided [here](https://github.com/tristanmontoya/CLOUD.jl/blob/main/drivers/advection_refinement.sh).
 
 ## Modules
 CLOUD.jl is structured as several submodules, which are exported with the top-level module `CLOUD`; below is a list of those most important for new users to familiarize themselves with:
