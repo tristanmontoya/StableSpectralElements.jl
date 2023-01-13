@@ -7,7 +7,6 @@ end
 """Duffy transform from the cube to tetrahedron"""
 @inline function χ(::Tet, 
     η::Union{NTuple{3,Float64},NTuple{3,Vector{Float64}}})
-
     ξ_pri = (0.5.*(1.0 .+ η[1]).*(1.0 .- η[3]) .- 1.0, η[2], η[3])
     ξ_pyr = (ξ_pri[1], 0.5.*(1.0 .+ η[2]).*(1.0 .- η[3]) .- 1.0, ξ_pri[3])
     return (0.5.*(1.0 .+ ξ_pri[1]).*(1.0 .- η[2]) .- 1.0, ξ_pyr[2] , ξ_pyr[3])
@@ -270,7 +269,7 @@ function ReferenceApproximation(
     if approx_type isa ModalTensor
         V = LinearMap(vandermonde(Tet(),approx_type.p, rstq...))
         V_plot = LinearMap(vandermonde(Tet(), 
-            approx_type.p, reference_element.rstp...))
+            approx_type.p, rstp...))
         new_approx_type = approx_type
     else
         V = LinearMap(I, (q[1]+1)*(q[2]+1)*(q[3]+1))
@@ -283,8 +282,7 @@ function ReferenceApproximation(
     end
     
     return ReferenceApproximation(new_approx_type, size(V,2), 
-        length(reference_element.wq), length(reference_element.wf),
-        reference_element, D, V, R * V, R, Diagonal(J_ref .* w_η), 
-        Diagonal(reference_element.wf), V_plot, 
+        length(wq), length(wf),reference_element, D, V, R * V, R, 
+        Diagonal(J_ref .* w_η),  Diagonal(wf), V_plot, 
         ReferenceMapping(J_ref, Λ_ref))
 end

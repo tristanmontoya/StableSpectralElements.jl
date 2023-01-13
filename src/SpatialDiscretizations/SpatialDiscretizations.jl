@@ -141,12 +141,20 @@ module SpatialDiscretizations
     """
     function check_sbp_property(
         reference_approximation::ReferenceApproximation{d}) where {d}       
-        @unpack W, V, D, Vf, B = reference_approximation
+        @unpack W, D, R, B = reference_approximation
+        @unpack reference_mapping = reference_approximation
         @unpack nrstJ = reference_approximation.reference_element
-        
-        return Tuple(maximum(abs.(convert(Matrix,
-            V'*W*D[m]*V + V' * D[m]'*W*V - Vf'*B*Diagonal(nrstJ[m])*Vf  
-            ))) for m in 1:d)
+
+        if reference_mapping isa NoMapping
+            return Tuple(maximum(abs.(Matrix(W*D[m] + D[m]'*W - 
+                R'*B*Diagonal(nrstJ[m])*R))) for m in 1:d)
+        else
+            @unpack Λ_ref, J_ref = reference_mapping
+            D_ξ = Tuple(sum(Diagonal(Λ_ref[:,l,m]./J_ref) * D[l]
+                for l in 1:d) for m in 1:d)
+            return Tuple(maximum(abs.(Matrix(W*D_ξ[m] + D_ξ[m]'*W - 
+                R'*B*Diagonal(nrstJ[m])*R))) for m in 1:d)
+        end
     end
 
     """
@@ -158,12 +166,11 @@ module SpatialDiscretizations
         @unpack V, Vf, D, B = spatial_discretization.reference_approximation
         @unpack Λ_q, nJf = spatial_discretization.geometric_factors
 
-        S = Tuple((sum(0.5 * D[m]' * W * Diagonal(Λ_q[:,m,n,k]) * V -
-                0.5 * V' * Diagonal(Λ_q[:,m,n,k]) * W * D[m] * V
-                for m in 1:d) + 
-                0.5 * Vf' * B * Diagonal(nJf[n][:,k]) * Vf) for n in 1:d)
+        S = Tuple((sum( 0.5 * D[m]' * W * Diagonal(Λ_q[:,m,n,k]) -
+                        0.5 * Diagonal(Λ_q[:,m,n,k]) * W * D[m] for m in 1:d) + 
+                0.5 * R' * B * Diagonal(nJf[n][:,k]) * R) for n in 1:d)
 
-        E = Tuple(Vf' * B * Diagonal(nJf[n][:,k]) * Vf for n in 1:d)
+        E = Tuple(R' * B * Diagonal(nJf[n][:,k]) * R for n in 1:d)
             
         return Tuple(maximum(abs.(convert(Matrix,
             S[n] + S[n]' - E[n]))) for n in 1:d)

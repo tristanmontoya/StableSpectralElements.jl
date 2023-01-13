@@ -99,7 +99,8 @@ end
     q=nothing,
     facet_inds=nothing,
     element_inds=nothing,
-    mark_vertices=false)
+    mark_vertices=false,
+    outline_facets=false)
 
     aspect_ratio --> :equal
     legend --> false
@@ -176,6 +177,29 @@ end
                 linewidth --> edge_line_width
                 linecolor --> :black
                 X([up; down; -e],[-e; up; down], [-e; -e; -e])
+            end
+
+            if outline_facets
+                @series begin
+                    linewidth --> edge_line_width*1.25
+                    linecolor --> 1
+                    X(0.97*[up; down; -e],[-e; -e; -e], 0.97*[-e; up; down])          end
+                @series begin
+                    linewidth --> edge_line_width*1.25
+                    linecolor --> 3
+                    X([-e; -e; -e],0.97*[up; down; -e],0.97*[-e; up; down])
+                end
+                @series begin
+                    linewidth --> edge_line_width*1.25
+                    linecolor --> 4
+                    X(0.97*[up; down; -e],0.97*[-e; up; down],[-e; -e; -e])
+                end
+                @series begin
+                    linewidth --> edge_line_width*1.25
+                    linecolor --> 2
+                    X(0.97*[up; down; -e],0.97*[-e; up; down],0.97*[down; -e; up])
+                end
+    
             end
 
             if mark_vertices

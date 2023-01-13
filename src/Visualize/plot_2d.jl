@@ -131,6 +131,7 @@ end
                     X(ref_edge_nodes[1][edge][1:end-1], ref_edge_nodes[2][edge][1:end-1])
                 end
             end
+
         elseif element_type isa Quad
             N = 40
             range = collect(LinRange(-1.0,1.0, N))
