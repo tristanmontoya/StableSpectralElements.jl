@@ -59,7 +59,6 @@ function RefElemData(elem::Tet,
         LGQuadrature(approx_type.p)), Nplot=10)
 
     @unpack p = approx_type
-
     fv = face_vertices(elem) 
 
     # Construct matrices on reference elements
