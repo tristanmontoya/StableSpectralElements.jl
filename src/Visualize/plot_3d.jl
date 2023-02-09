@@ -86,7 +86,7 @@ end
     obj::Union{SpatialDiscretization{3},ReferenceApproximation{3,<:AbstractElemShape,<:AbstractApproximationType}};
     volume_quadrature=true,
     facet_quadrature=true,
-    mapping_nodes=true,
+    mapping_nodes=false,
     sketch=false,
     volume_connect=false,
     facet_connect=false,
@@ -273,9 +273,8 @@ end
                     q = (Int(reference_approximation.N_q^(1/3)),
                         Int(reference_approximation.N_q^(1/3)),
                         Int(reference_approximation.N_q^(1/3)))
-                else
-                    (N1, N2, N3) = q
                 end
+                (N1, N2, N3) = q
 
                 for l in 1:N3
                     for j in 1:N2

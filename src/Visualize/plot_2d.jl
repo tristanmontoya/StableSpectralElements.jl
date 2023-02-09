@@ -64,7 +64,7 @@ end
     obj::Union{SpatialDiscretization{2},ReferenceApproximation{2,<:AbstractElemShape,<:AbstractApproximationType}};
     volume_quadrature=true,
     facet_quadrature=true,
-    mapping_nodes=true,
+    mapping_nodes=false,
     grid_connect=false,
     volume_quadrature_connect = false,
     mapping_nodes_connect = nothing,
@@ -230,7 +230,7 @@ end
         if facet_quadrature
             @series begin 
                 seriestype --> :scatter
-                markershape --> :square
+                markershape --> :circle
                 markercolor --> facet_node_color
                 markerstrokewidth --> 0.0
                 markersize --> 4
