@@ -217,7 +217,7 @@ function ReferenceApproximation(
     
     # 2D facet quadrature nodes and weights
     η_2d_1, _ = quadrature(Line(), facet_quadrature_rule[1])
-    η_2d_2, _ = quadrature(Line(), facet_quadrature_rule[1])
+    η_2d_2, _ = quadrature(Line(), facet_quadrature_rule[2])
     q_f = (length(η_2d_1)-1, length(η_2d_2)-1)
     σ_f = [(q_f[2]+1)*(i-1) + j for i in 1:q_f[1]+1, j in 1:q_f[2]+1]
 
