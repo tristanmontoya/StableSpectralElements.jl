@@ -20,7 +20,7 @@ function ReferenceApproximation(
     V_plot = LinearMap(vandermonde(element_type, q, rp) / VDM)
 
     return ReferenceApproximation(NodalTensor(q), q+1, q+1, 2, 
-        reference_element, (LinearMap(∇VDM / VDM),), LinearMap(I, p+1), R, R,
+        reference_element, (LinearMap(∇VDM / VDM),), LinearMap(I, q+1), R, R,
         Diagonal(wq), Diagonal(wf), V_plot, NoMapping())
 end
 
