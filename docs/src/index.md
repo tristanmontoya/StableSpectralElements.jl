@@ -26,9 +26,9 @@ Currently, Julia versions 1.6 or newer are supported by CLOUD.jl, although we re
 ## Basic Usage
 
 As this documentation is currently a work in progress, we recommend that users refer to the following Jupyter notebooks (included in the `examples` directory) for examples of how to use CLOUD.jl:
-* [Linear advection-diffusion equation in 1D](https://nbviewer.org/github/tristanmontoya/CLOUD.jl/blob/main/examples/advection_diffusion_1d.ipynb)
-* [Linear advection equation in 2D](https://nbviewer.org/github/tristanmontoya/CLOUD.jl/blob/main/examples/advection_2d.ipynb)
-* [Linear advection equation in 3D](https://nbviewer.org/github/tristanmontoya/CLOUD.jl/blob/main/examples/advection_3d.ipynb)
+* [Linear advection-diffusion equation in 1D](https://github.com/tristanmontoya/CLOUD.jl/tree/main/examples/advection_diffusion_1d.ipynb)
+* [Linear advection equation in 2D](https://github.com/tristanmontoya/CLOUD.jl/tree/main/examples/advection_2d.ipynb)
+* [Linear advection equation in 3D](https://github.com/tristanmontoya/CLOUD.jl/tree/main/examples/advection_3d.ipynb)
 
 Scripts for running grid refinement studies are provided in the `drivers` directory; an example is provided [here](https://github.com/tristanmontoya/CLOUD.jl/blob/main/drivers/advection_refinement.sh).
 

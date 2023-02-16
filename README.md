@@ -5,7 +5,7 @@
 <p align=center>
 <img src="docs/src/assets/visualization.png" alt="drawing" style="width:300px;"/>
 
-**CLOUD.jl** is a Julia framework for the numerical solution of hyperbolic and mixed hyperbolic-parabolic conservation laws on general unstructured grids using provably stable discontinuous spectral-element methods of arbitrary order, with an emphasis on dynamically dispatched strategies for the evaluation of a broad class of discretization operators. For further information on the functionality and usage of this package, please refer to the [example notebooks](https://nbviewer.org/github/tristanmontoya/CLOUD.jl/tree/main/examples/) as well as the [documentation](https://tjbmontoya.com/CLOUD.jl/dev/) (in progress) or [send me an email](mailto:tristan.montoya@mail.utoronto.ca).
+**CLOUD.jl** is a Julia framework for the numerical solution of hyperbolic and mixed hyperbolic-parabolic conservation laws on general unstructured grids using provably stable discontinuous spectral-element methods of arbitrary order, with an emphasis on dynamically dispatched strategies for the evaluation of a broad class of discretization operators. For further information on the functionality and usage of this package, please refer to the [example notebooks](https://github.com/tristanmontoya/CLOUD.jl/tree/main/examples/) as well as the [documentation](https://tjbmontoya.com/CLOUD.jl/dev/) (in progress) or [send me an email](mailto:tristan.montoya@mail.utoronto.ca).
 
 ## License
 
