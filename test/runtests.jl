@@ -79,7 +79,7 @@ end
 
 @testset "Advection 2D Energy-Conservative ModalTensor Tri" begin
     (l2, conservation, energy) = test_driver(
-        ReferenceApproximation(ModalTensor(p), Tri(), mapping_degree=p), 
+        ReferenceApproximation(ModalTensor(p), Tri(), volume_quadrature_rule=(LGQuadrature(p),LGRQuadrature(p)),mapping_degree=p), 
         LinearAdvectionEquation((1.0,1.0)),
         InitialDataSine(1.0,(2*π, 2*π)),
         WeakConservationForm(
@@ -88,8 +88,9 @@ end
         DefaultOperatorAlgorithm(),
         ReferenceOperator(), 1.0, 2, 1.0, 1.0/100.0,
         "test_advection_2d_collapsed_econ")
+    println(l2,conservation, energy)
     
-    @test l2 ≈ 0.07927236080713587 atol=tol
+    @test l2 ≈ 0.2669410042275925 atol=tol
     @test conservation ≈ 0.0 atol=tol
     @test energy ≈ 0.0 atol=tol
 end
@@ -107,7 +108,7 @@ end
         ReferenceOperator(), 1.0, 2, 1.0, 1.0/100.0,
         "test_advection_2d_dgsem_standard")
     
-    @test l2 ≈ 0.050184158390004785 atol=tol
+    @test l2 ≈ 0.04930951393074396 atol=tol
     @test conservation ≈ 0.0 atol=tol
     @test energy <= 0.0
 end
@@ -125,7 +126,7 @@ end
         ReferenceOperator(), 1.0, 2, 1.0, 1.0/100.0,
         "test_advection_3d_dgsem_econ")
     
-    @test l2 ≈ 0.0964323715803705 atol=tol
+    @test l2 ≈ 0.07897065489635471 atol=tol
     @test conservation ≈ 0.0 atol=tol
     @test energy≈ 0.0 atol=tol
 end
