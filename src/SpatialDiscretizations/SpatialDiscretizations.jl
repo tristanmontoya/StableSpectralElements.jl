@@ -82,7 +82,7 @@ module SpatialDiscretizations
 
         if project_jacobian
             J_proj = similar(J_q)
-            for k in 1:N_e J_proj[:,k] = V * (V'*W*V) * V' * W * J_q[:,k] end
+            for k in 1:N_e J_proj[:,k] = V * inv(Matrix(V'*W*V)) * V' * W * J_q[:,k] end
         else J_proj = J_q end
 
         return SpatialDiscretization{d}(mesh, N_e, reference_approximation, 

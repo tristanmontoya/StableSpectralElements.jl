@@ -22,7 +22,7 @@ function parse_commandline()
             help = "degree of mapping"
             arg_type = Int
             default = 1
-        "--beta", "-b"
+        "--CFL", "-C"
             help = "Time step factor"
             arg_type = Float64
             default = 2.5e-3
@@ -46,6 +46,10 @@ function parse_commandline()
             help = "ode algorithm"
             arg_type = String
             default = "CarpenterKennedy2N54"
+        "--mass_solver"
+            help = "mass matrix solver"
+            arg_type = String
+            default = "CholeskySolver"
         "--path"
             help = "results path"
             arg_type = String
@@ -89,7 +93,7 @@ function parse_commandline()
         "--load_from_file"
             help = "load_from_file"
             action = :store_true
-        "--overwrite" "-o"
+        "--overwrite", "-o"
             help = "load_from_file"
             action = :store_true
     end
@@ -100,12 +104,13 @@ end
 struct AdvectionDriver{d}
     p::Int
     l::Int
-    β::Float64
+    CFL::Float64
     n_s::Int
     scheme::AbstractApproximationType
     element_type::AbstractElemShape
     mapping_form::AbstractMappingForm
     ode_algorithm::OrdinaryDiffEqAlgorithm
+    mass_solver::AbstractMassMatrixSolver
     path::String
     M0::Int
     λ::Float64
@@ -122,12 +127,13 @@ function AdvectionDriver(parsed_args::Dict)
 
     p = parsed_args["poly_degree"]
     l = parsed_args["mapping_degree"]
-    β = parsed_args["beta"]
+    CFL = parsed_args["CFL"]
     n_s = parsed_args["n"]
     element_type = eval(Symbol(parsed_args["element_type"]))()
     scheme = eval(Symbol(parsed_args["scheme"]))(p)
     mapping_form = eval(Symbol(parsed_args["mapping_form"]))()
     ode_algorithm = eval(Symbol(parsed_args["ode_algorithm"]))()
+    mass_solver = eval(Symbol(parsed_args["mass_solver"]))()
 
     if Int(parsed_args["lambda"]) == 0 path = string(parsed_args["path"],   
         parsed_args["scheme"], "_", parsed_args["element_type"], "_", parsed_args["mapping_form"], "_p", string(parsed_args["poly_degree"]),
@@ -137,9 +143,9 @@ function AdvectionDriver(parsed_args::Dict)
         parsed_args["mapping_form"], "_p", string(parsed_args["poly_degree"]),
         "/upwind/")
     else path = string(parsed_args["path"], parsed_args["scheme"], "_",
-            parsed_args["element_type"], "_", parsed_args["mapping_form"], "_p",
-            string(parsed_args["poly_degree"]), "/lambda", 
-            replace(string(parsed_args["lambda"]), "." => "_"), "/")
+        parsed_args["element_type"], "_", parsed_args["mapping_form"], "_p",
+        string(parsed_args["poly_degree"]), "/lambda", 
+        replace(string(parsed_args["lambda"]), "." => "_"), "/")
     end
 
     M0 = parsed_args["M"]
@@ -156,15 +162,15 @@ function AdvectionDriver(parsed_args::Dict)
 
     a_vec = (a*cos(θ)*sin(ϕ), a*sin(θ)*sin(ϕ), a*cos(ϕ))
 
-    return AdvectionDriver(p,l,β,n_s,scheme,element_type,
-        mapping_form,ode_algorithm,path,M0,λ,L,
+    return AdvectionDriver(p,l,CFL,n_s,scheme,element_type,
+        mapping_form,ode_algorithm,mass_solver,path,M0,λ,L,
         Tuple(a_vec[m] for m in 1:dim(element_type)), T,
         mesh_perturb, n_grids, load_from_file, overwrite)
 end
 
 function run_driver(driver::AdvectionDriver{d}) where {d}
 
-    @unpack p,l,β,n_s,scheme,element_type,mapping_form,ode_algorithm,path,M0,λ,L,a,T,mesh_perturb, n_grids, load_from_file, overwrite = driver
+    @unpack p,l,CFL,n_s,scheme,element_type,mapping_form,ode_algorithm,mass_solver,path,M0,λ,L,a,T,mesh_perturb, n_grids, load_from_file, overwrite = driver
 
     if (!load_from_file || !isdir(path)) path = new_path(
         path,overwrite,overwrite) end
@@ -197,13 +203,18 @@ function run_driver(driver::AdvectionDriver{d}) where {d}
         
         mesh = warp_mesh(uniform_periodic_mesh(
             reference_approximation.reference_element, 
-                Tuple((0.0,L) for m in 1:d), Tuple(M for m in 1:d)), 
-                reference_approximation.reference_element, mesh_perturb)
+                Tuple((0.0,L) for m in 1:d), Tuple(M for m in 1:d),
+                collapsed_orientation=isa(element_type,Tet)), 
+                reference_approximation.reference_element, 
+                ChanWarping(mesh_perturb,Tuple(L for m in 1:d)))
 
         spatial_discretization = SpatialDiscretization(mesh, 
-            reference_approximation)
+            reference_approximation, project_jacobian=isa(mass_solver,
+            WeightAdjustedSolver))
 
-        solver = Solver(conservation_law, spatial_discretization, form)
+        solver = Solver(conservation_law, spatial_discretization, 
+            form, ReferenceOperator(), DefaultOperatorAlgorithm(),
+            mass_solver)
         
         results_path = string(path, "grid_", n, "/")
         if !isdir(results_path)
@@ -233,7 +244,8 @@ function run_driver(driver::AdvectionDriver{d}) where {d}
         end
         ode_problem = semidiscretize(solver, u0, (t0, T))
 
-        dt = β*(L/M)/(norm(a)*(2*p+1))   
+        h = L/(reference_approximation.N_p * spatial_discretization.N_e)^(1/d)
+        dt = CFL*h/(norm(a))   
         CLOUD_reset_timer!()
         sol = solve(ode_problem, ode_algorithm, adaptive=false,
             dt=dt, save_everystep=false, callback=save_callback(
@@ -252,13 +264,15 @@ function run_driver(driver::AdvectionDriver{d}) where {d}
         open(string(results_path,"screen.txt"), "a") do io
             println(io, "Solver successfully finished!\n")
             println(io, @capture_out CLOUD_print_timer(), "\n")
-            println(io,"L2 error:\n", 
-                analyze(error_analysis, last(sol.u), initial_data))
+            println(io,"L2 error:\n", analyze(error_analysis, 
+                last(sol.u), initial_data))
         end
 
         if n > 1
             refinement_results = analyze(RefinementAnalysis(initial_data, path,
-            "./", "advection test"), n, max_derivs=true)
+            "./", "advection test"), n, max_derivs=true,
+            use_weight_adjusted_mass_matrix=isa(mass_solver,
+                WeightAdjustedSolver))
             open(string(path,"screen.txt"), "a") do io
                 println(io, tabulate_analysis(refinement_results, e=1,
                     print_latex=false))

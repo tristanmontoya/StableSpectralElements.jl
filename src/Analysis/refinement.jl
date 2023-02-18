@@ -15,7 +15,8 @@ struct RefinementAnalysisResults <: AbstractAnalysisResults
 end
 
 function analyze(analysis::RefinementAnalysis{d}, n_grids=100;
-    max_derivs::Bool=false) where {d}
+    max_derivs::Bool=false, 
+    use_weight_adjusted_mass_matrix::Bool=false) where {d}
 
     @unpack sequence_path, exact_solution = analysis
 
@@ -37,17 +38,18 @@ function analyze(analysis::RefinementAnalysis{d}, n_grids=100;
             conservation_law, spatial_discretization), time_steps)
         energy_results = analyze(
                 EnergyConservationAnalysis(results_path, 
-                conservation_law, spatial_discretization), time_steps)
+                conservation_law, spatial_discretization,
+                use_weight_adjusted_mass_matrix), time_steps)
         conservation = [maximum(abs.(conservation_results.dEdt[:,e])) 
             for e in 1:N_c]'
-        energy = [maximum((energy_results.dEdt[:,e])) 
-            for e in 1:N_c]'
+        energy = [maximum((energy_results.dEdt[:,e])) for e in 1:N_c]'
     else
         conservation = transpose(
             analyze(PrimaryConservationAnalysis(results_path, 
             conservation_law, spatial_discretization), 0, N_t)[3])
         energy = transpose(analyze(EnergyConservationAnalysis(results_path, 
-            conservation_law, spatial_discretization), 0, N_t)[3])
+            conservation_law, spatial_discretization,
+            use_weight_adjusted_mass_matrix), 0, N_t)[3])
     end
 
     eoc = fill!(Array{Union{Float64, Missing}}(undef,1,N_c), missing)
@@ -85,7 +87,8 @@ function analyze(analysis::RefinementAnalysis{d}, n_grids=100;
                     conservation_law, spatial_discretization), time_steps)
                 energy_results = analyze(
                         EnergyConservationAnalysis(results_path, 
-                        conservation_law, spatial_discretization), time_steps)
+                        conservation_law, spatial_discretization,
+                        use_weight_adjusted_mass_matrix), time_steps)
                 conservation = [conservation; 
                     [maximum(abs.(conservation_results.dEdt[:,e])) for e in 1:N_c]']
                 energy = [energy;
@@ -96,7 +99,8 @@ function analyze(analysis::RefinementAnalysis{d}, n_grids=100;
                     conservation_law, spatial_discretization), 0, N_t)[3])]
                 energy = [energy; 
                     transpose(analyze(EnergyConservationAnalysis(results_path, 
-                    conservation_law, spatial_discretization), 0, N_t)[3])]
+                    conservation_law, spatial_discretization,
+                    use_weight_adjusted_mass_matrix), 0, N_t)[3])]
             end
         end
 

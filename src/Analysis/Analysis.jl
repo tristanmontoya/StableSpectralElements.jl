@@ -1,6 +1,6 @@
 module Analysis
 
-    using LinearMaps: LinearMap
+    using LinearMaps: LinearMap, UniformScalingMap
     using LinearAlgebra: Diagonal, dot, norm, eigen, inv, svd, qr, pinv, eigsortby, I, rank, cond
     using JLD2: save, load, save_object, load_object
     using Plots: plot, savefig, plot!, scatter, text, annotate!, vline!, grid, theme_palette, twinx, @layout

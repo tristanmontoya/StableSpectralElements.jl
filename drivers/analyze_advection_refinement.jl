@@ -40,6 +40,12 @@ function parse_commandline()
             help = "results path"
             arg_type = String
             default = "../results/advection_test/"
+        "--weight_adjusted", "-a"
+            help = "use weight adjusted mass matrix"
+            action = :store_true
+        "--no_p"
+            help = "don't show polynomial degree on refinement plots"
+            action = :store_true
     end
 
     return parse_args(s)
@@ -49,7 +55,8 @@ function refinement_analysis!(refinement_analysis::Vector{RefinementAnalysis},
     refinement_results::Vector{RefinementAnalysisResults},
     conservation_results::Vector{ConservationAnalysisResultsWithDerivative},
     energy_results::Vector{ConservationAnalysisResultsWithDerivative},
-    sequence_path::String, label::String)
+    sequence_path::String, label::String,
+    use_weight_adjusted_mass_matrix::Bool=false)
 
     (conservation_law, spatial_discretization, 
         initial_data, form, tspan) = load_project(
@@ -57,14 +64,16 @@ function refinement_analysis!(refinement_analysis::Vector{RefinementAnalysis},
     push!(refinement_analysis, RefinementAnalysis(initial_data, 
         sequence_path, sequence_path, label))
     push!(refinement_results, analyze(last(refinement_analysis),
-        max_derivs=true))
+        max_derivs=true, 
+        use_weight_adjusted_mass_matrix=use_weight_adjusted_mass_matrix))
     push!(conservation_results, 
         analyze(PrimaryConservationAnalysis(string(sequence_path,"grid_1/"), 
         conservation_law, spatial_discretization),
         load_time_steps(string(sequence_path,"grid_1/"))))
     push!(energy_results, 
         analyze(EnergyConservationAnalysis(string(sequence_path,"grid_1/"), 
-        conservation_law, spatial_discretization),
+        conservation_law, spatial_discretization,
+        use_weight_adjusted_mass_matrix),
         load_time_steps(string(sequence_path,"grid_1/"))))
 
 end
@@ -76,6 +85,8 @@ function analyze_advection_refinement(parsed_args::Dict)
     element_type = parsed_args["element_type"]
     mapping_form = parsed_args["mapping_form"]
     name = parsed_args["name"]
+    use_weight_adjusted_mass_matrix = parsed_args["weight_adjusted"]
+    no_p = parsed_args["no_p"]
 
     refinement_analysis = RefinementAnalysis[]
     refinement_results = RefinementAnalysisResults[]
@@ -90,22 +101,30 @@ function analyze_advection_refinement(parsed_args::Dict)
 
             sequence_path = string(path_prefix, "central/")
             if isdir(sequence_path)
-                push!(labels, string(name[j], ", \$p=\$", 
-                    latexstring(string(p[i])), " (central)"))
+                if no_p 
+                    push!(labels, string(name[j], " (central)"))
+                else
+                    push!(labels, string(name[j], ", \$p=\$", 
+                        latexstring(string(p[i])), " (central)"))
+                end
                 
                 refinement_analysis!(refinement_analysis, refinement_results,
                     conservation_results, energy_results ,sequence_path, 
-                    last(labels))
+                    last(labels), use_weight_adjusted_mass_matrix)
             end
 
             sequence_path = string(path_prefix, "upwind/")
             if isdir(sequence_path)
-                push!(labels, string(name[j], ", \$p=\$", 
-                    latexstring(string(p[i])), " (upwind)"))
+                if no_p 
+                    push!(labels, string(name[j], " (upwind)"))
+                else
+                    push!(labels, string(name[j], ", \$p=\$", 
+                        latexstring(string(p[i])), " (upwind)"))
+                end
 
                 refinement_analysis!(refinement_analysis, refinement_results,
                     conservation_results, energy_results ,sequence_path, 
-                    last(labels))
+                    last(labels), use_weight_adjusted_mass_matrix)
             end
 
             open(string(path_prefix,"refinement.txt"), "w") do io
@@ -118,7 +137,8 @@ function analyze_advection_refinement(parsed_args::Dict)
         cons_upwind = plot(conservation_results[end],
             ylabel="Upwind",legend=:none)
 
-        plt = plot(cons_central,cons_upwind, layout=(2,1), windowsize=(400,400))
+        plt = plot(cons_central,cons_upwind, linewidth=3, 
+            layout=(2,1), windowsize=(400,400))
         savefig(plt, string(path_prefix, "conservation.pdf"))
 
         ener_central = plot(energy_results[end-1],
@@ -126,13 +146,14 @@ function analyze_advection_refinement(parsed_args::Dict)
         ener_upwind = plot(energy_results[end],
             ylabel="Upwind",legend=:none)
             
-        plt = plot(ener_central,ener_upwind, layout=(2,1), windowsize=(400,400))
+        plt = plot(ener_central,ener_upwind, linewidth=3,
+            layout=(2,1), windowsize=(400,400))
         savefig(plt, string(path_prefix, "energy.pdf"))
         end
     end
 
     plt = plot(refinement_analysis, refinement_results, d=2, 
-        xlims=(5.0, 200.0), xticks=[10,100], ylims=(1.0e-12,1.0), legendfontsize=10)
+        xlims=(5.0, 200.0), xticks=[10,100], ylims=(1.0e-12,1.0), legendfontsize=10, linewidth=3)
 
     savefig(plt, string(parsed_args["path"], "refinement.pdf"))
 end

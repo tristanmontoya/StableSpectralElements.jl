@@ -5,11 +5,21 @@ module Mesh
     using Random: rand, shuffle
     using LinearAlgebra: inv, det, transpose, diagm
 
-    export GeometricFactors, uniform_periodic_mesh, warp_mesh, cartesian_mesh, Uniform, ZigZag
+    export GeometricFactors, uniform_periodic_mesh, warp_mesh, cartesian_mesh, Uniform, ZigZag, DelReyWarping, ChanWarping
 
     abstract type AbstractMeshGenStrategy end
     struct Uniform <: AbstractMeshGenStrategy end
     struct ZigZag <: AbstractMeshGenStrategy end
+
+    abstract type AbstractMeshWarping{d} end
+    struct DelReyWarping{d} <: AbstractMeshWarping{d}
+        factor::Float64
+        L::NTuple{d,Float64}
+    end
+    struct ChanWarping{d} <: AbstractMeshWarping{d} 
+        factor::Float64
+        L::NTuple{d,Float64}
+    end
 
     struct GeometricFactors{d}
         # first dimension is node index, second is element
@@ -26,24 +36,66 @@ module Mesh
         nJf::NTuple{d, Matrix{Float64}}
     end
 
-    function warp_mesh(mesh::MeshData{2}, reference_element::RefElemData{2}, 
-        factor::Float64=0.2, L::Float64=1.0)
-        @unpack x, y = mesh
+    function warp_mesh(mesh::MeshData{d}, 
+        reference_element::RefElemData{d}, 
+        factor::Float64=0.2, L::Float64=1.0) where {d}
+        return warp_mesh(mesh,reference_element,
+            DelReyWarping(factor, Tuple(L for m in 1:d)))
+    end
 
-        x = x .+ factor*sin.(π*x./L).*sin.(π*y/L)
-        y = y .+ factor*exp.((1.0.-y)/L).*sin.(π*x/L).*sin.(π*y/L)
+    function warp_mesh(mesh::MeshData{2}, 
+        reference_element::RefElemData{2}, 
+        mesh_warping::DelReyWarping{2})
         
-        return MeshData(reference_element, mesh, x, y)
+        @unpack x, y = mesh
+        @unpack factor, L = mesh_warping
+
+        x_new = x .+ L[1]*factor*sin.(π*x./L[1]).*sin.(π*y/L[2])
+        y_new = y .+ L[2]*factor*exp.((1.0.-y)/L[2]).*sin.(π*x/L[1]).*
+            sin.(π*y/L[2])
+        return MeshData(reference_element, mesh, x_new, y_new)
+    end
+
+    function warp_mesh(mesh::MeshData{2}, 
+        reference_element::RefElemData{2}, 
+        mesh_warping::ChanWarping{2})
+        
+        @unpack x, y = mesh
+        @unpack factor, L = mesh_warping
+
+        x_new = x .+ L[1]*factor*cos.(π/L[1]*(x.-0.5*L[1])) .*
+            cos.(3π/L[2]*(y.-0.5*L[2]))
+        y_new = y .+ L[2]*factor*sin.(4π/L[1]*(x_new.-0.5*L[1])) .*
+            cos.(π/L[2]*(y.-0.5*L[2]))
+        return MeshData(reference_element, mesh, x_new, y_new)
+    end
+
+    function warp_mesh(mesh::MeshData{3}, 
+        reference_element::RefElemData{3}, 
+        mesh_warping::ChanWarping{3})
+        
+        @unpack x, y, z = mesh
+        @unpack factor, L = mesh_warping
+
+        eps = factor * sin.(2π*(x.-L[1]/2)/L[1]) .* sin.(2π*(y.-L[2]/2)/L[2]) .*
+            sin.(2π*(z.-L[3]/2)/L[3])
+        x_new = x .+ L[1]*eps
+        y_new =y .+ L[2]*eps
+        z_new =z .+ L[3]*eps
+
+        return MeshData(reference_element, mesh, x_new, y_new, z_new)
     end
 
     function warp_mesh(mesh::MeshData{3}, reference_element::RefElemData{3}, 
-        factor::Float64=0.2, L::Float64=1.0)
+        mesh_warping::DelReyWarping{3})
         @unpack x, y, z = mesh
+        @unpack factor, L = mesh_warping
 
-        x = x .+ factor*sin.(π*x/L).*sin.(π*y/L)
-        y = y .+ factor*exp.((1.0.-y)/L).*sin.(π*x/L).*sin.(π*y/L)
-        z = z .+ 0.25*factor*(sin.(2π*x/L).+sin.(2π*y/L))
-        return MeshData(reference_element, mesh, x, y, z)
+        x_new = x .+ L[1]*factor*sin.(π*x/L[1]).*sin.(π*y/L[2])
+        y_new = y .+ L[2]*
+            factor*exp.((1.0.-y)/L[2]).*sin.(π*x/L[1]).*sin.(π*y/L[2])
+        z_new = z .+ 0.25*L[3]*factor*(sin.(2π*x/L[1]).+sin.(2π*y/L[2]))
+        return MeshData(reference_element, mesh, x_new, y_new, z_new)
     end
   
     function uniform_periodic_mesh(reference_element::RefElemData{1}, 
@@ -61,7 +113,7 @@ module Mesh
         M::NTuple{d,Int};
         random_rotate::Bool=false, 
         collapsed_orientation::Bool=false,
-        strategy::AbstractMeshGenStrategy=ZigZag()) where {d}
+        strategy::AbstractMeshGenStrategy=Uniform()) where {d}
 
         VXY, EtoV = cartesian_mesh(reference_element.element_type, 
             M, strategy)
