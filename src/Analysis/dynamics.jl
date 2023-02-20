@@ -119,7 +119,7 @@ KernelDMD(k::Function) = KernelDMD(k, 0.0)
 function analyze(analysis::LinearAnalysis)
 
     @unpack M, L, r, tol, use_data, results_path = analysis
-    eigenvalues, eigenvectors = eigs(L, nev=r, which=:LM)
+    eigenvalues, eigenvectors = eigs(L, nev=r, which=:LM, maxiter=1000)
 
     # normalize eigenvectors
     Z = eigenvectors/Diagonal([eigenvectors[:,i]'*M*eigenvectors[:,i] 

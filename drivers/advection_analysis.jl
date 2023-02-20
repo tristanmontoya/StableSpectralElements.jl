@@ -69,6 +69,10 @@ function parse_commandline()
             help = "Number of eigenvalues"
             arg_type = Int
             default = 1
+        "--mass_solver"
+            help = "mass matrix solver"
+            arg_type = String
+            default = "CholeskySolver"
         "--load_from_file"
             help = "load_from_file"
             action = :store_true
@@ -92,6 +96,7 @@ struct AdvectionAnalysisDriver{d}
     a::NTuple{d,Float64}
     mesh_perturb::Float64
     n_ev::Int
+    mass_solver::AbstractMassMatrixSolver
     load_from_file::Bool
     overwrite::Bool
 end
@@ -103,6 +108,7 @@ function AdvectionAnalysisDriver(parsed_args::Dict)
     element_type = eval(Symbol(parsed_args["element_type"]))()
     scheme = [eval(Symbol(parsed_args["scheme"]))(p[i]) for i in eachindex(p)] 
     mapping_form = eval(Symbol(parsed_args["mapping_form"]))()
+    mass_solver = eval(Symbol(parsed_args["mass_solver"]))()
 
     path = string(parsed_args["path"], parsed_args["scheme"], "_",
     parsed_args["element_type"], "_", parsed_args["mapping_form"], "/")
@@ -122,12 +128,12 @@ function AdvectionAnalysisDriver(parsed_args::Dict)
 
     return AdvectionAnalysisDriver(p,l,scheme,element_type,
         mapping_form,path,M,L, Tuple(a_vec[m] for m in 1:dim(element_type)),
-        mesh_perturb, n_ev, load_from_file, overwrite)
+        mesh_perturb, n_ev, mass_solver, load_from_file, overwrite)
 end
 
 function run_driver(driver::AdvectionAnalysisDriver{d}) where {d}
 
-    @unpack p,l,scheme,element_type,mapping_form,path,M,L,a,mesh_perturb, n_ev, load_from_file, overwrite = driver
+    @unpack p,l,scheme,element_type,mapping_form,path,M,L,a,mesh_perturb, n_ev, mass_solver, load_from_file, overwrite = driver
 
     if (!load_from_file || !isdir(path))
         path = new_path(path,overwrite,overwrite)
@@ -141,17 +147,21 @@ function run_driver(driver::AdvectionAnalysisDriver{d}) where {d}
     spectral_radius_upwind = Vector{Float64}(undef,length(p))
 
     for i in eachindex(p)
+        println("p =", p[i])
 
         reference_approximation =ReferenceApproximation(
             scheme[i], element_type, mapping_degree=l[i])
-        
+    
         mesh = warp_mesh(uniform_periodic_mesh(
-            reference_approximation.reference_element, 
-                Tuple((0.0,L) for m in 1:d), Tuple(M for m in 1:d)), 
-                reference_approximation.reference_element, mesh_perturb)
+            reference_approximation.reference_element,
+                Tuple((0.0,L) for m in 1:d), Tuple(M for m in 1:d),
+                collapsed_orientation=(isa(element_type,Tet) && isa(scheme,Union{ModalTensor,NodalTensor}))),
+                reference_approximation.reference_element,
+                ChanWarping(mesh_perturb,Tuple(L for m in 1:d)))
 
         spatial_discretization = SpatialDiscretization(mesh, 
-            reference_approximation)
+            reference_approximation, project_jacobian=isa(mass_solver,
+            WeightAdjustedSolver))
 
         solver_central = Solver(conservation_law, spatial_discretization,
             WeakConservationForm(mapping_form=mapping_form,
@@ -197,12 +207,16 @@ function run_driver(driver::AdvectionAnalysisDriver{d}) where {d}
 
     spectral_radius_plot = plot(p,spectral_radius_central, windowsize=(400,400),
         fontfamily="Computer Modern", legend=:topleft, xlabel=latexstring("p"),
-        ylabel=LaTeXString("Spectral Radius"), label=LaTeXString(string(typeof(scheme[1]), " (central)")))
-    plot!(spectral_radius_plot, p, spectral_radius_upwind, 
-    label=LaTeXString(string(typeof(scheme[1]), " (upwind)")))
+        linewidth=3, markersize=6, markerstrokewidth=2.0, markershape=:circle,
+        ylabel=LaTeXString("Spectral radius"), label=LaTeXString("Central"),
+        xlims=[2,16])
+    plot!(spectral_radius_plot, p, spectral_radius_upwind, markershape=:square, 
+        linewidth=3, markersize=4, markerstrokewidth=2.0,
+        label=LaTeXString("Upwind"))
     savefig(spectral_radius_plot, string(path, "spectral_radius.pdf"))
+    return spectral_radius_upwind, spectral_radius_central
 end
 
-function main(args) run_driver(AdvectionAnalysisDriver(parse_commandline())) end
+function main(args) run_dridver(AdvectionAnalysisDriver(parse_commandline())) end
 
 main(ARGS)

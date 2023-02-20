@@ -202,10 +202,10 @@ function run_driver(driver::AdvectionDriver{d}) where {d}
             scheme, element_type, mapping_degree=l)
         
         mesh = warp_mesh(uniform_periodic_mesh(
-            reference_approximation.reference_element, 
+            reference_approximation.reference_element,
                 Tuple((0.0,L) for m in 1:d), Tuple(M for m in 1:d),
-                collapsed_orientation=isa(element_type,Tet)), 
-                reference_approximation.reference_element, 
+                collapsed_orientation=(isa(element_type,Tet) && isa(scheme,Union{ModalTensor,NodalTensor}))),
+                reference_approximation.reference_element,
                 ChanWarping(mesh_perturb,Tuple(L for m in 1:d)))
 
         spatial_discretization = SpatialDiscretization(mesh, 

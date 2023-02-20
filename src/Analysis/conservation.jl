@@ -220,7 +220,7 @@ end
         results.t, results.E[:,e] .- first(results.E[:,e])
     end
     @series begin
-        linestyle --> :dash
+        linestyle --> :dot
         label --> labels[2]
         results.t, results.dEdt[:,e]
     end

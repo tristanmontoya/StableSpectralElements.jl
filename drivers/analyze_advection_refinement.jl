@@ -145,8 +145,8 @@ function analyze_advection_refinement(parsed_args::Dict)
             ylabel="Central", link=:x, legend=:topright)
         ener_upwind = plot(energy_results[end],
             ylabel="Upwind",legend=:none)
-            
-        plt = plot(ener_central,ener_upwind, linewidth=3,
+        
+        plt = plot(ener_central, ener_upwind, linewidth=3,
             layout=(2,1), windowsize=(400,400))
         savefig(plt, string(path_prefix, "energy.pdf"))
         end

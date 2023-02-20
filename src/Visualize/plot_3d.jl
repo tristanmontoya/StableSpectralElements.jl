@@ -87,6 +87,8 @@ end
     volume_quadrature=true,
     facet_quadrature=true,
     mapping_nodes=false,
+    edges=true,
+    redraw_edge=true,
     sketch=false,
     volume_connect=false,
     facet_connect=false,
@@ -97,6 +99,7 @@ end
     grid_line_width = 2.0,
     qf=nothing,
     q=nothing,
+    facet_color_inds=nothing,
     facet_inds=nothing,
     element_inds=nothing,
     mark_vertices=false,
@@ -153,7 +156,8 @@ end
         end
 
         @unpack element_type, r, s, t, rq, sq, tq, rf, sf, tf = reference_approximation.reference_element
-        if element_type isa Tet
+
+        if edges && (element_type isa Tet)
             up = collect(LinRange(-1.0,1.0, 40))
             down = up[end:-1:1]
             e = ones(40)
@@ -183,7 +187,8 @@ end
                 @series begin
                     linewidth --> edge_line_width*1.25
                     linecolor --> 1
-                    X(0.97*[up; down; -e],[-e; -e; -e], 0.97*[-e; up; down])          end
+                    X(0.97*[up; down; -e],[-e; -e; -e], 0.97*[-e; up; down])         
+                end
                 @series begin
                     linewidth --> edge_line_width*1.25
                     linecolor --> 3
@@ -221,25 +226,69 @@ end
                     X([-1.0],[1.0],[-1.0])
                 end
             end
+
+        elseif edges && (element_type isa Hex)
+            up = collect(LinRange(-1.0,1.0, 40))
+            down = up[end:-1:1]
+            e = ones(40)
+
+            @series begin
+                linewidth --> edge_line_width
+                linecolor --> :black
+                X([-e; -e; -e; -e],[up; e; down; -e], [-e; up; e; down])
+            end
+            @series begin
+                linewidth --> edge_line_width
+                linecolor --> :black
+                X([e; e; e; e],[up; e; down; -e], [-e; up; e; down])
+            end
+            @series begin
+                linewidth --> edge_line_width
+                linecolor --> :black
+                X([up; e; down; -e],[-e; -e; -e; -e], [-e; up; e; down])
+            end
+            @series begin
+                linewidth --> edge_line_width
+                linecolor --> :black
+                X([up; e; down; -e;],[e; e; e; e],[-e; up; e; down])
+            end
+            @series begin
+                linewidth --> edge_line_width
+                linecolor --> :black
+                X([up; e; down; -e], [-e; up; e; down], [-e; -e; -e; -e])
+            end
+            @series begin
+                linewidth --> edge_line_width
+                linecolor --> :black
+                X([up; e; down; -e],[-e; up; e; down],[e; e; e; e])
+            end
         end
+
         if facet_quadrature
 
-            if facet_connect && (element_type isa Tet)
-
-                nodes_per_facet = reference_approximation.N_f ÷ 4
+            if facet_connect
+                if element_type isa Tet
+                    nodes_per_facet = reference_approximation.N_f ÷ 4
+                elseif element_type isa Hex
+                    nodes_per_facet = reference_approximation.N_f ÷ 6
+                end
 
                 if isnothing(qf)
-                    (N1,N2) = (Int(sqrt(nodes_per_facet)), Int(sqrt(nodes_per_facet)))
+                    (N1,N2) = (round(Int,sqrt(nodes_per_facet)), 
+                        round(Int,sqrt(nodes_per_facet)))
                 else
                     (N1,N2) = qf
                 end
                 
-                for z in facet_inds
+                if isnothing(facet_color_inds)
+                    facet_color_inds = facet_inds
+                end
+                for z in eachindex(facet_inds)
                     for i in 1:N1
                         @series begin
-                            color --> z + 2
+                            color --> facet_color_inds[z]
                             linewidth --> grid_line_width
-                            start = i + nodes_per_facet*(z-1)
+                            start = i + nodes_per_facet*(facet_inds[z]-1)
                             X(rf[start:N2:(N2*(N1-1) + start)], 
                                 sf[start:N2:(N2*(N1-1) + start)],
                                 tf[start:N2:(N2*(N1-1) + start)])
@@ -248,9 +297,9 @@ end
                     
                     for i in 1:N2
                         @series begin
-                            color --> z + 2
+                            color --> facet_color_inds[z]
                             linewidth --> grid_line_width
-                            X(rf[(i-1)*N1+1+nodes_per_facet*(z-1):i*N1+ nodes_per_facet*(z-1)], sf[(i-1)*N1+1+nodes_per_facet*(z-1):i*N1+ nodes_per_facet*(z-1)], tf[(i-1)*N1+1+nodes_per_facet*(z-1):i*N1+ nodes_per_facet*(z-1)])
+                            X(rf[(i-1)*N1+1+nodes_per_facet*(facet_inds[z]-1):i*N1+ nodes_per_facet*(facet_inds[z]-1)], sf[(i-1)*N1+1+nodes_per_facet*(facet_inds[z]-1):i*N1+ nodes_per_facet*(facet_inds[z]-1)], tf[(i-1)*N1+1+nodes_per_facet*(facet_inds[z]-1):i*N1+ nodes_per_facet*(facet_inds[z]-1)])
                         end
                     end
                 end
@@ -267,12 +316,12 @@ end
         end
 
         if volume_quadrature
-            if volume_connect && (element_type isa Tet)
+            if volume_connect
 
                 if isnothing(q)
-                    q = (Int(reference_approximation.N_q^(1/3)),
-                        Int(reference_approximation.N_q^(1/3)),
-                        Int(reference_approximation.N_q^(1/3)))
+                    q = (round(Int,reference_approximation.N_q^(1/3)),
+                        round(Int,reference_approximation.N_q^(1/3)),
+                        round(Int,reference_approximation.N_q^(1/3)))
                 end
                 (N1, N2, N3) = q
 
@@ -314,7 +363,26 @@ end
                 X(r, s, t)
             end
         end
+
+        if redraw_edge
+            up = collect(LinRange(-1.0,1.0, 40))
+            down = up[end:-1:1]
+            e = ones(40)
+
+            @series begin
+                linewidth --> edge_line_width
+                linecolor --> :black
+                X([up; down; -e],[-e; -e; -e], [-e; up; down])
+            end
+            @series begin
+                linewidth --> edge_line_width
+                linecolor --> :black
+                X([up; down; -e],[-e; up; down], [down; -e; up])
+            end
+            
+        end
     end
+
 end
 
 function plot_ref_elem(reference_approximation::ReferenceApproximation{3, Tet, <:Union{NodalTensor,ModalTensor}}, title::String)
