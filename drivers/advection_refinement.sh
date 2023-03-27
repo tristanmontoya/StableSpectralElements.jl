@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-refinement_path="../results/advection_hrefine_feb17_tri_nodalmulti/"
+refinement_path="../results/advection_hrefine_feb27_tri_nodalmulti/"
 scheme="NodalMulti"
 elem_type="Tri"
 mapping_form="SkewSymmetricMapping"

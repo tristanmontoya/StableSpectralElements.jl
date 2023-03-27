@@ -3,9 +3,9 @@ module SpatialDiscretizations
     using UnPack
     using LinearAlgebra: I, inv, Diagonal, diagm, kron
     using LinearMaps: LinearMap
-    using StartUpDG: MeshData, basis, vandermonde, grad_vandermonde, quad_nodes, NodesAndModes.quad_nodes_tri, NodesAndModes.quad_nodes_tet, gauss_quad, gauss_lobatto_quad, face_vertices, nodes, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial, jacobiP, match_coordinate_vectors
+    using StartUpDG: MeshData, basis, vandermonde, grad_vandermonde, quad_nodes, NodesAndModes.quad_nodes_tri, NodesAndModes.quad_nodes_tet, face_vertices, nodes, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial, jacobiP, match_coordinate_vectors
 
-    using Jacobi: zgrjm, wgrjm, zgj, wgj
+    using Jacobi: zgrjm, wgrjm, zgj, wgj, zglj, wglj
     import StartUpDG: face_type, init_face_data
 
     using ..Mesh: GeometricFactors
@@ -104,11 +104,9 @@ module SpatialDiscretizations
         d = size(Λ_q, 2)
         Λ_η = similar(Λ_q)
 
-        for k in 1:N_e, i in 1:N_q
-            for m in 1:d, n in 1:d
-                Λ_η[i,m,n,k] = sum(Λ_ref[i,m,l] * Λ_q[i,l,n,k] ./ J_ref[i] 
-                    for l in 1:d)
-            end
+        for k in 1:N_e, i in 1:N_q, m in 1:d, n in 1:d
+            Λ_η[i,m,n,k] = sum(Λ_ref[i,m,l] * Λ_q[i,l,n,k] ./ J_ref[i] 
+                for l in 1:d)
         end
         
         return GeometricFactors{d}(J_q, Λ_η, J_f, nJf)
@@ -192,7 +190,7 @@ module SpatialDiscretizations
     dim(::Union{Tri,Quad}) = 2
     dim(::Union{Tet,Hex}) = 3
 
-    export AbstractQuadratureRule, DefaultQuadrature, LGLQuadrature, LGQuadrature, LGRQuadrature, JGLQuadrature, JGRQuadrature, JGQuadrature, quadrature
+    export AbstractQuadratureRule, DefaultQuadrature, LGLQuadrature, LGQuadrature, LGRQuadrature, GaussLobattoQuadrature, GaussRadauQuadrature, GaussQuadrature, quadrature
     include("quadrature_rules.jl")
 
     # new constructors for RefElemData from StartUpDG

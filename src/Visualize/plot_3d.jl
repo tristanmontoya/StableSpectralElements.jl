@@ -23,11 +23,11 @@ function low_order_subdivision(p_vis::Int, p_map::Int,
     reference_element::RefElemData{3},
     mesh::MeshData{3}, res=0.01)
 
-    @unpack rq,sq,tq, wq, VDM, elementType = reference_element
+    @unpack rq,sq,tq, wq, VDM, element_type = reference_element
     @unpack x,y,z = mesh
 
-    r1,s1,t1 = nodes(elementType,1)
-    facet_list = hcat(find_face_nodes(elementType, r1, s1, t1)...)
+    r1,s1,t1 = nodes(element_type,1)
+    facet_list = hcat(find_face_nodes(element_type, r1, s1, t1)...)
 
     tet_in=TetGen.RawTetGenIO{Cdouble}(
         pointlist=permutedims(hcat(r1,s1,t1)))
@@ -40,9 +40,9 @@ function low_order_subdivision(p_vis::Int, p_map::Int,
     sp =  tet_out.pointlist[2,:]
     tp = tet_out.pointlist[3,:]
 
-    V_map_to_plot = vandermonde(elementType, p_map, rp, sp, tp) / VDM
-    Vp = vandermonde(elementType, p_vis, rp, sp, tp)
-    Vq = vandermonde(elementType, p_vis, rq, sq, tq)
+    V_map_to_plot = vandermonde(element_type, p_map, rp, sp, tp) / VDM
+    Vp = vandermonde(element_type, p_vis, rp, sp, tp)
+    Vq = vandermonde(element_type, p_vis, rq, sq, tq)
     V_quad_to_plot = Vp * inv(Vq' * diagm(wq) * Vq) * Vq' * diagm(wq)
     
     xp, yp, zp = (x -> V_map_to_plot * x).((x, y, z))

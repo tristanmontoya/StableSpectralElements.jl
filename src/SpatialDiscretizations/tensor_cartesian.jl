@@ -11,11 +11,9 @@ function ReferenceApproximation(
     q = length(rq)-1
     VDM, ∇VDM = basis(Line(), q, rq)
 
-    if volume_quadrature_rule isa LGLQuadrature
+    if volume_quadrature_rule isa GaussLobattoQuadrature
         R = SelectionMap(match_coordinate_vectors(rf, rq), q+1)
-    else 
-        R = LinearMap(vandermonde(element_type, q, rf) / VDM) 
-    end
+    else R = LinearMap(vandermonde(element_type, q, rf) / VDM) end
 
     V_plot = LinearMap(vandermonde(element_type, q, rp) / VDM)
 
@@ -49,7 +47,7 @@ function ReferenceApproximation(approx_type::NodalTensor,
 
     # extrapolation operators
     if volume_quadrature_rule == facet_quadrature_rule
-        if volume_quadrature_rule isa LGLQuadrature
+        if volume_quadrature_rule isa GaussLobattoQuadrature
             R = SelectionMap(match_coordinate_vectors(rstf, rstq), (q+1)^2)
         else
             R =[TensorProductMap2D(R_L, I, σ, [j for i in 1:1, j in 1:q+1]); #L
@@ -97,7 +95,7 @@ function ReferenceApproximation(approx_type::NodalTensor, ::Hex;
 
     # extrapolation operators
     if (volume_quadrature_rule == facet_quadrature_rule) &&
-        (volume_quadrature_rule isa LGLQuadrature)
+        (volume_quadrature_rule isa GaussLobattoQuadrature)
         R = SelectionMap(match_coordinate_vectors(rstf,rstq),(q+1)^3)
     else 
         R = LinearMap(vandermonde(Hex(),q,rstf...) / 

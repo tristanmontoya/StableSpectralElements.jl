@@ -134,8 +134,8 @@ function plot_analysis(analysis::RefinementAnalysis{d},
     return p
 end
 
-@recipe function plot(analysis::Vector{RefinementAnalysis},
-    results::Vector{RefinementAnalysisResults}; pairs=true, xlims=nothing, reference_line=nothing, d=1, e=1)
+@recipe function plot(analysis::Vector{RefinementAnalysis{d}},
+    results::Vector{RefinementAnalysisResults}; n_grids=nothing, pairs=true, xlims=nothing, reference_line=nothing, e=1) where {d}
 
     if d == 1 xlabel --> latexstring("\\mathrm{DOF}")
     elseif d == 2 xlabel --> latexstring("\\sqrt{\\mathrm{DOF}}")
@@ -154,10 +154,10 @@ end
     for i in eachindex(analysis)
         @series begin
             if pairs && iseven(i)
-                markershape --> :square
+                markershape --> :circle
                 markerstrokewidth --> 2.0
             else
-                markershape --> :circle
+                markershape --> :square
                 markerstrokewidth --> 2.0
             end
             if pairs && (i % 4 == 1 || i % 4 == 2)
@@ -168,8 +168,11 @@ end
             label --> analysis[i].label
             linecolor --> (i-1) ÷ 2 + 1
             markercolor --> (i-1) ÷ 2 + 1
-
-            (results[i].dof[:,1].*results[i].dof[:,2]).^(1.0/d), results[i].error[:,e]
+            if isnothing(n_grids)
+                (results[i].dof[:,1].*results[i].dof[:,2]).^(1.0/d), results[i].error[:,e]
+            else
+                (results[i].dof[1:n_grids[i],1].*results[i].dof[1:n_grids[i],2]).^(1.0/d), results[i].error[1:n_grids[i],e]
+            end
         end
     end
 
@@ -179,7 +182,8 @@ end
                 linecolor --> :black
                 linestyle --> :solid
                 label --> ""
-                (results[1].dof[end-1:end,1].*results[1].dof[end-1:end,2]).^(1.0/d), reference_line[i][2]./((results[1].dof[end-1:end,1].*results[1].dof[end-1:end,2]).^(1.0/d)).^reference_line[i][1]
+                x = [reference_line[i][3], reference_line[i][4]]
+                x, reference_line[i][2]./(x.^reference_line[i][1])
             end
         end
     end

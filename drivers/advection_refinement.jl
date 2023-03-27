@@ -94,7 +94,7 @@ function parse_commandline()
             help = "load_from_file"
             action = :store_true
         "--overwrite", "-o"
-            help = "load_from_file"
+            help = "overwrite"
             action = :store_true
     end
 
@@ -135,10 +135,10 @@ function AdvectionDriver(parsed_args::Dict)
     ode_algorithm = eval(Symbol(parsed_args["ode_algorithm"]))()
     mass_solver = eval(Symbol(parsed_args["mass_solver"]))()
 
-    if Int(parsed_args["lambda"]) == 0 path = string(parsed_args["path"],   
+    if Int(round(parsed_args["lambda"])) == 0 path = string(parsed_args["path"],   
         parsed_args["scheme"], "_", parsed_args["element_type"], "_", parsed_args["mapping_form"], "_p", string(parsed_args["poly_degree"]),
          "/central/")
-    elseif Int(parsed_args["lambda"]) == 1 path = string(parsed_args["path"],
+    elseif Int(round(parsed_args["lambda"])) == 1 path = string(parsed_args["path"],
         parsed_args["scheme"], "_", parsed_args["element_type"], "_", 
         parsed_args["mapping_form"], "_p", string(parsed_args["poly_degree"]),
         "/upwind/")
@@ -213,7 +213,7 @@ function run_driver(driver::AdvectionDriver{d}) where {d}
             WeightAdjustedSolver))
 
         solver = Solver(conservation_law, spatial_discretization, 
-            form, ReferenceOperator(), DefaultOperatorAlgorithm(),
+            form, PhysicalOperator(), DefaultOperatorAlgorithm(),
             mass_solver)
         
         results_path = string(path, "grid_", n, "/")

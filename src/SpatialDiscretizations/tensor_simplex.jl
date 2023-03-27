@@ -1,6 +1,6 @@
 """Duffy transform from the square to triangle"""
 @inline function χ(::Tri, 
-    η::Union{NTuple{2,Float64},NTuple{2,Vector{Float64}}})
+     η::Union{NTuple{2,Float64},NTuple{2,Vector{Float64}}})
     return (0.5.*(1.0 .+ η[1]).*(1.0 .- η[2]) .- 1.0, η[2])
 end
 
@@ -13,48 +13,81 @@ end
 end
 
 function reference_geometric_factors(::Tri, 
-    η::NTuple{2,Vector{Float64}})
+    quadrature_rule::NTuple{2,AbstractQuadratureRule})
 
+    η = quadrature(Quad(),quadrature_rule)
     N = size(η[1],1)
     Λ_ref = Array{Float64, 3}(undef, N, 2, 2)
     
-    J_ref = (x->0.5*(1.0-x)).(η[2])
+    if ((quadrature_rule[1].a, quadrature_rule[1].b) == (0,0) &&
+        (quadrature_rule[2].a, quadrature_rule[2].b) == (0,0))    
+        J_ref = (x->0.5*(1.0-x)).(η[2])
+        Λ_ref[:,1,1] = ones(N) # Jdη1/dξ1
+        Λ_ref[:,1,2] = (x->0.5*(1.0+x)).(η[1]) # Jdη1/dξ2
+        Λ_ref[:,2,1] = zeros(N) # Jdη2/dξ1
+        Λ_ref[:,2,2] = (x->0.5*(1.0-x)).(η[2]) # Jdη2/dξ2
 
-    Λ_ref[:,1,1] = ones(N) # Jdη1/dξ1
-    Λ_ref[:,1,2] = (x->0.5*(1.0+x)).(η[1]) # Jdη1/dξ2
-    Λ_ref[:,2,1] = zeros(N) # Jdη2/dξ1
-    Λ_ref[:,2,2] = (x->0.5*(1.0-x)).(η[2]) # Jdη2/dξ2
+    elseif ((quadrature_rule[1].a, quadrature_rule[1].b) == (0,0) &&
+        (quadrature_rule[2].a, quadrature_rule[2].b) == (1,0))    
+        J_ref = 0.5*ones(N)
+        Λ_ref[:,1,1] = (x->1.0/(1.0-x)).(η[2]) # Jdη1/dξ1
+        Λ_ref[:,1,2] = (x->0.5*(1.0+x)).(η[1]) .* 
+            (x->1.0/(1.0-x)).(η[2]) # Jdη1/dξ2
+        Λ_ref[:,2,1] = zeros(N) # Jdη2/dξ1
+        Λ_ref[:,2,2] = 0.5*ones(N) # Jdη2/dξ2
 
+    else @error "Chosen Jacobi weight not supported" end
     return J_ref, Λ_ref
 end
 
 function reference_geometric_factors(::Tet, 
-    η::NTuple{3,Vector{Float64}})
+    quadrature_rule::NTuple{3,AbstractQuadratureRule})
 
+    η = quadrature(Hex(),quadrature_rule)
     N = size(η[1],1)
     Λ_ref = Array{Float64, 3}(undef, N, 3, 3)
-    
-    J_ref = (x->0.5*(1.0-x)).(η[2]) .* (x->(0.5*(1.0-x))^2).(η[3])
 
-    Λ_ref[:,1,1] = (x->0.5*(1.0-x)).(η[3]) # Jdη1/dξ1
-    Λ_ref[:,1,2] = (x->0.5*(1.0+x)).(η[1]) .* 
-        (x->0.5*(1.0-x)).(η[3])  # Jdη1/dξ2
-    Λ_ref[:,1,3] = (x->0.5*(1.0+x)).(η[1]) .* 
-        (x->0.5*(1.0-x)).(η[3])  # Jdη1/dξ3
-    
-    Λ_ref[:,2,1] = zeros(N) # Jdη2/dξ1
-    Λ_ref[:,2,2] = (x->0.5*(1.0-x)).(η[2]) .*
-        (x->0.5*(1.0-x)).(η[3]) # Jdη2/dξ2
-    Λ_ref[:,2,3] = (x->0.5*(1.0+x)).(η[2]) .* 
-        (x->0.5*(1.0-x)).(η[2]) .*
-        (x->0.5*(1.0-x)).(η[3]) # Jdη2/dξ3
+    if ((quadrature_rule[1].a, quadrature_rule[1].b) == (0,0) &&
+        (quadrature_rule[2].a, quadrature_rule[2].b) == (0,0) &&
+        (quadrature_rule[3].a, quadrature_rule[3].b) == (0,0))
 
-    Λ_ref[:,3,1] = zeros(N) # Jdη3/dξ1
-    Λ_ref[:,3,2] = zeros(N) # Jdη3/dξ2
-    Λ_ref[:,3,3] = (x->0.5*(1.0-x)).(η[2]) .*
-        (x->(0.5*(1.0-x))^2).(η[3])# Jdη3/dξ3
+        J_ref = (x->0.5*(1.0-x)).(η[2]) .* (x->(0.5*(1.0-x))^2).(η[3])
+        Λ_ref[:,1,1] = (x->0.5*(1.0-x)).(η[3]) # Jdη1/dξ1
+        Λ_ref[:,1,2] = (x->0.5*(1.0+x)).(η[1]) .* 
+            (x->0.5*(1.0-x)).(η[3])  # Jdη1/dξ2
+        Λ_ref[:,1,3] = (x->0.5*(1.0+x)).(η[1]) .* 
+            (x->0.5*(1.0-x)).(η[3])  # Jdη1/dξ3
+        Λ_ref[:,2,1] = zeros(N) # Jdη2/dξ1
+        Λ_ref[:,2,2] = (x->0.5*(1.0-x)).(η[2]) .*
+            (x->0.5*(1.0-x)).(η[3]) # Jdη2/dξ2
+        Λ_ref[:,2,3] = (x->0.5*(1.0+x)).(η[2]) .* 
+            (x->0.5*(1.0-x)).(η[2]) .*
+            (x->0.5*(1.0-x)).(η[3]) # Jdη2/dξ3
+        Λ_ref[:,3,1] = zeros(N) # Jdη3/dξ1
+        Λ_ref[:,3,2] = zeros(N) # Jdη3/dξ2
+        Λ_ref[:,3,3] = (x->0.5*(1.0-x)).(η[2]) .*
+            (x->(0.5*(1.0-x))^2).(η[3])# Jdη3/dξ3
+
+    elseif ((quadrature_rule[1].a, quadrature_rule[1].b) == (0,0) &&
+        (quadrature_rule[2].a, quadrature_rule[2].b) == (0,0) &&
+        (quadrature_rule[3].a, quadrature_rule[3].b) == (1,0))
+
+        J_ref = 0.125*(x->(1.0-x)).(η[2]) .* (x->(1.0-x)).(η[3])
+        Λ_ref[:,1,1] = 0.5*ones(N) # Jdη1/dξ1
+        Λ_ref[:,1,2] =0.25*(x->(1.0+x)).(η[1])  # Jdη1/dξ2
+        Λ_ref[:,1,3] = 0.25*(x->(1.0+x)).(η[1]) # Jdη1/dξ3
+        Λ_ref[:,2,1] = zeros(N) # Jdη2/dξ1
+        Λ_ref[:,2,2] = 0.25*(x->(1.0-x)).(η[2]) # Jdη2/dξ2
+        Λ_ref[:,2,3] = 0.125*(x->(1.0+x)).(η[2]) .* 
+            (x->(1.0-x)).(η[2])  # Jdη2/dξ3
+        Λ_ref[:,3,1] = zeros(N) # Jdη3/dξ1
+        Λ_ref[:,3,2] = zeros(N) # Jdη3/dξ2
+        Λ_ref[:,3,3] = 0.125*(x->(1.0-x)).(η[2]) .*
+            (x->(1.0-x)).(η[3])# Jdη3/dξ3
+    end
 
     return J_ref, Λ_ref
+
 end
 
 function warped_product(::Tri, p, η1D::NTuple{2,Vector{Float64}})
@@ -101,8 +134,9 @@ end
 function ReferenceApproximation(
     approx_type::Union{NodalTensor,ModalTensor}, 
     ::Tri; mapping_degree::Int=1, 
-    N_plot::Int=10, volume_quadrature_rule=(LGQuadrature(approx_type.p),
-    LGQuadrature(approx_type.p)), 
+    N_plot::Int=10, 
+    volume_quadrature_rule=(LGQuadrature(approx_type.p),
+        LGQuadrature(approx_type.p)),
     facet_quadrature_rule=LGQuadrature(approx_type.p))
 
     # one-dimensional operators
@@ -116,7 +150,7 @@ function ReferenceApproximation(
     D = (TensorProductMap2D(D_1D[1], I, σ, σ), 
         TensorProductMap2D(I, D_1D[2], σ, σ))
 
-    J_ref, Λ_ref = reference_geometric_factors(Tri(),(η1,η2))
+    J_ref, Λ_ref = reference_geometric_factors(Tri(),volume_quadrature_rule)
 
     reference_element = RefElemData(Tri(), approx_type, mapping_degree,
         volume_quadrature_rule=volume_quadrature_rule,
@@ -128,33 +162,24 @@ function ReferenceApproximation(
     σ_1 = [i for i in 1:q[1]+1, j in 1:1]
     if volume_quadrature_rule[1] == facet_quadrature_rule
         P_1 = LinearMap(I, q[1]+1)
-    else
-        P_1 = LinearMap(vandermonde(Line(),q[1],mortar_nodes) / V_1D[1])
-    end
-    if (volume_quadrature_rule[2] isa LGRQuadrature ||
-        volume_quadrature_rule[2] isa JGRQuadrature)
-        R_1 = SelectionMap([(q[2]+1)*(i-1)+1 
-            for i in 1:q[1]+1], (q[1]+1)*(q[2]+1))
-    else
-        R_1 = TensorProductMap2D(I, R_L[2], σ, σ_1)
-    end
+    else P_1 = LinearMap(vandermonde(Line(),q[1],mortar_nodes) / V_1D[1]) end
+    if volume_quadrature_rule[2] isa GaussRadauQuadrature
+        R_1 = SelectionMap([(q[2]+1)*(i-1)+1 for i in 1:q[1]+1], 
+            (q[1]+1)*(q[2]+1))
+    else R_1 = TensorProductMap2D(I, R_L[2], σ, σ_1) end
 
     # hypotenuse
     σ_2 = [j for i in 1:1, j in 1:q[2]+1]
     if volume_quadrature_rule[2] == facet_quadrature_rule
         P_2 = LinearMap(I, q[2]+1)
-    else
-        P_2 = LinearMap(vandermonde(Line(),q[2],mortar_nodes) / V_1D[2])
-    end
+    else P_2 = LinearMap(vandermonde(Line(),q[2],mortar_nodes) / V_1D[2]) end
     R_2 = TensorProductMap2D(R_R[1], I, σ, σ_2)
 
     # left
     σ_3 = [j for i in 1:1, j in 1:q[2]+1]
     if volume_quadrature_rule[2] == facet_quadrature_rule
         P_3 = LinearMap(I, q[2]+1)
-    else
-        P_3 = LinearMap(vandermonde(Line(),q[2],mortar_nodes) / V_1D[2])
-    end
+    else P_3 = LinearMap(vandermonde(Line(),q[2],mortar_nodes) / V_1D[2]) end
     R_3 = TensorProductMap2D(R_L[1], I, σ, σ_3)
 
     # combine to extrapolate to all facets
@@ -185,18 +210,18 @@ function ReferenceApproximation(
     approx_type::Union{NodalTensor,ModalTensor}, 
     ::Tet; mapping_degree::Int=1, N_plot::Int=10,
     volume_quadrature_rule=(LGQuadrature(approx_type.p),
-        LGQuadrature(approx_type.p), JGRQuadrature(approx_type.p)), 
+        LGQuadrature(approx_type.p), GaussRadauQuadrature(approx_type.p,1,0)), 
     facet_quadrature_rule=(LGQuadrature(approx_type.p), 
-        JGRQuadrature(approx_type.p)))
+        GaussRadauQuadrature(approx_type.p,1,0)))
 
     # one-dimensional operators
-    η_1D, q, V_1D, D_1D, R_L, R_R = operators_1d(volume_quadrature_rule)
-    N_q = prod(q[m]+1 for m in 1:3)
-
+    _, q, V_1D, D_1D, R_L, R_R = operators_1d(volume_quadrature_rule)
+   
     # nodes and weights on the cube
     η1, η2, η3, w_η = quadrature(Hex(), volume_quadrature_rule)
 
     # differentiation operator on the cube
+    println("q = ",q)
     σ =  [(i-1)*(q[2]+1)*(q[3]+1) + (j-1)*(q[3]+1) + k 
         for i in 1:(q[1]+1), j in 1:(q[2]+1), k in 1:(q[3]+1)]
     D = (TensorProductMap3D(D_1D[1], I, I, σ, σ),
@@ -204,16 +229,16 @@ function ReferenceApproximation(
          TensorProductMap3D(I, I, D_1D[3], σ, σ))
 
     # reference geometric factors for cube-to-tetrahedron mapping
-    J_ref, Λ_ref = reference_geometric_factors(Tet(),(η1, η2, η3))
+    J_ref, Λ_ref = reference_geometric_factors(Tet(),volume_quadrature_rule)
 
     # reference element data
     reference_element = RefElemData(Tet(), approx_type, mapping_degree,
         volume_quadrature_rule=volume_quadrature_rule,
         facet_quadrature_rule=facet_quadrature_rule,  Nplot=N_plot)
 
-    σ_13 =  [(i-1)*(q[3]+1) + k  for i in 1:(q[1]+1), j in 1:1, k in 1:(q[3]+1)]
-    σ_23 =  [(j-1)*(q[3]+1) + k  for i in 1:1, j in 1:(q[2]+1), k in 1:(q[3]+1)]
-    σ_12 =  [(i-1)*(q[2]+1) + j  for i in 1:(q[1]+1), j in 1:(q[2]+1), k in 1:1]
+    σ_13 = [(i-1)*(q[3]+1) + k  for i in 1:(q[1]+1), j in 1:1, k in 1:(q[3]+1)]
+    σ_23 = [(j-1)*(q[3]+1) + k  for i in 1:1, j in 1:(q[2]+1), k in 1:(q[3]+1)]
+    σ_12 = [(i-1)*(q[2]+1) + j  for i in 1:(q[1]+1), j in 1:(q[2]+1), k in 1:1]
     
     # 2D facet quadrature nodes and weights
     η_2d_1, _ = quadrature(Line(), facet_quadrature_rule[1])
@@ -225,7 +250,7 @@ function ReferenceApproximation(
     if (volume_quadrature_rule[1] == facet_quadrature_rule[1]) &&
         (volume_quadrature_rule[3] == facet_quadrature_rule[2])
         P_1 = LinearMap(I, (q[1]+1)*(q[3]+1) )
-    else
+    else 
         P_1 = TensorProductMap2D(vandermonde(Line(),q[1],η_2d_1) / V_1D[1],
             vandermonde(Line(),q[3],η_2d_2) / V_1D[3], σ_13[:,1,:], σ_f)
     end

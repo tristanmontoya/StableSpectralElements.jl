@@ -8,7 +8,7 @@ using UnPack
 using ArgParse
 using Dates
 using Suppressor
-using Plots; gr()
+using Plots; pyplot()
 using CLOUD
 
 function parse_commandline()
