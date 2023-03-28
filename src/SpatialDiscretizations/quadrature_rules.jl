@@ -5,6 +5,7 @@ struct GaussLobattoQuadrature <: AbstractQuadratureRule
     a::Int
     b::Int
 end
+
 struct GaussQuadrature <: AbstractQuadratureRule
     q::Int
     a::Int
@@ -68,20 +69,20 @@ function quadrature(::Line, quadrature_rule::GaussRadauQuadrature)
 end
 function quadrature(::Quad, quadrature_rule::AbstractQuadratureRule)
     r1d, w1d = quadrature(Line(), quadrature_rule)
-    mgw = meshgrid(w1d,w1d)
-    mgr = meshgrid(r1d,r1d)
-    w2d = @. mgw[1] * mgw[2] 
-    return mgr[1][:], mgr[2][:], w2d[:]
+    w_grid = meshgrid(w1d,w1d)
+    r_grid = meshgrid(r1d,r1d)
+    w2d = w_grid[1] .* w_grid[2] 
+    return r_grid[1][:], r_grid[2][:], w2d[:]
 end
 
 function quadrature(::Quad,
     quadrature_rule::NTuple{2,AbstractQuadratureRule})
     r1d_1, w1d_1 = quadrature(Line(), quadrature_rule[1])
     r1d_2, w1d_2 = quadrature(Line(), quadrature_rule[2])
-    mgw = meshgrid(w1d_1,w1d_2)
-    mgr = meshgrid(r1d_1,r1d_2)
-    w2d = @. mgw[1] * mgw[2] 
-    return mgr[1][:], mgr[2][:], w2d[:]
+    w_grid = meshgrid(w1d_1,w1d_2)
+    r_grid = meshgrid(r1d_1,r1d_2)
+    w2d = w_grid[1] .* w_grid[2] 
+    return r_grid[1][:], r_grid[2][:], w2d[:]
 end
 
 function quadrature(::Hex,
@@ -89,10 +90,10 @@ function quadrature(::Hex,
     r1d_1, w1d_1 = quadrature(Line(), quadrature_rule[1])
     r1d_2, w1d_2 = quadrature(Line(), quadrature_rule[2])
     r1d_3, w1d_3 = quadrature(Line(), quadrature_rule[3])
-    mgw = meshgrid(w1d_1,w1d_2,w1d_3)
-    mgr = meshgrid(r1d_1,r1d_2,r1d_3)
-    w2d = @. mgw[1] * mgw[2] * mgw[3] 
-    return mgr[1][:], mgr[2][:], mgr[3][:], w2d[:]
+    w_grid = meshgrid(w1d_1,w1d_2,w1d_3)
+    r_grid = meshgrid(r1d_1,r1d_2,r1d_3)
+    w2d = w_grid[1] .* w_grid[2] .* w_grid[3] 
+    return r_grid[1][:], r_grid[2][:], r_grid[3][:], w2d[:]
 end
 
 function quadrature(::Hex, quadrature_rule::AbstractQuadratureRule)
@@ -102,16 +103,16 @@ end
 function quadrature(::Tri, quadrature_rule::NTuple{2,AbstractQuadratureRule})
     r1d_1, w1d_1 = quadrature(Line(), quadrature_rule[1])
     r1d_2, w1d_2 = quadrature(Line(), quadrature_rule[2])
-    mgw = meshgrid(w1d_1, w1d_2)
-    mgr = meshgrid(r1d_1,r1d_2)
-    w2d = @. mgw[1] * mgw[2] 
+    w_grid = meshgrid(w1d_1, w1d_2)
+    r_grid = meshgrid(r1d_1,r1d_2)
+    w2d = w_grid[1] .* w_grid[2] 
     if ((quadrature_rule[1].a, quadrature_rule[1].b) == (0,0) &&
         (quadrature_rule[2].a, quadrature_rule[2].b) == (0,0))  
-        return χ(Tri(), (mgr[1][:], mgr[2][:]))..., 
-            0.5*(η -> (1-η)).(mgr[2][:]) .* w2d[:]
+        return χ(Tri(), (r_grid[1][:], r_grid[2][:]))..., 
+            0.5*(η -> (1-η)).(r_grid[2][:]) .* w2d[:]
     elseif ((quadrature_rule[1].a, quadrature_rule[1].b) == (0,0) &&
         (quadrature_rule[2].a, quadrature_rule[2].b) == (1,0))
-        return χ(Tri(), (mgr[1][:], mgr[2][:]))..., 0.5*w2d[:]
+        return χ(Tri(), (r_grid[1][:], r_grid[2][:]))..., 0.5*w2d[:]
     else 
         @error "Chosen Jacobi weight not supported" 
     end
@@ -121,20 +122,20 @@ function quadrature(::Tet, quadrature_rule::NTuple{3,AbstractQuadratureRule})
     r1d_1, w1d_1 = quadrature(Line(), quadrature_rule[1])
     r1d_2, w1d_2 = quadrature(Line(), quadrature_rule[2])
     r1d_3, w1d_3 = quadrature(Line(), quadrature_rule[3])
-    mgw = meshgrid(w1d_1,w1d_2,w1d_3)
-    mgr = meshgrid(r1d_1,r1d_2,r1d_3)
-    w2d = @. mgw[1] * mgw[2] * mgw[3] 
+    w_grid = meshgrid(w1d_1,w1d_2,w1d_3)
+    r_grid = meshgrid(r1d_1,r1d_2,r1d_3)
+    w2d = w_grid[1] .* w_grid[2] .* w_grid[3] 
 
     if ((quadrature_rule[1].a, quadrature_rule[1].b) == (0,0) &&
         (quadrature_rule[2].a, quadrature_rule[2].b) == (0,0) &&
         (quadrature_rule[3].a, quadrature_rule[3].b) == (0,0))
-        return χ(Tet(), (mgr[1][:], mgr[2][:], mgr[3][:]))...,
-        0.25(η -> (1-η)).(mgr[2][:]) .* (η -> ((1-η))^2).(mgr[3][:]) .* w2d[:]
+        return χ(Tet(), (r_grid[1][:], r_grid[2][:], r_grid[3][:]))...,
+        0.25(η -> (1-η)).(r_grid[2][:]) .* (η -> ((1-η))^2).(r_grid[3][:]) .* w2d[:]
     elseif ((quadrature_rule[1].a, quadrature_rule[1].b) == (0,0) &&
         (quadrature_rule[2].a, quadrature_rule[2].b) == (0,0) &&
         (quadrature_rule[3].a, quadrature_rule[3].b) == (1,0))
-        return χ(Tet(), (mgr[1][:], mgr[2][:], mgr[3][:]))...,
-        0.25(η -> (1-η)).(mgr[2][:]) .* (η -> (1-η)).(mgr[3][:]) .* w2d[:]
+        return χ(Tet(), (r_grid[1][:], r_grid[2][:], r_grid[3][:]))...,
+        0.25(η -> (1-η)).(r_grid[2][:]) .* (η -> (1-η)).(r_grid[3][:]) .* w2d[:]
     else 
         @error "Chosen Jacobi weight not supported" 
     end
