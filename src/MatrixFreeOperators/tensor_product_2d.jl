@@ -1,8 +1,8 @@
 struct TensorProductMap2D{A_type,B_type} <: LinearMaps.LinearMap{Float64}
     A::A_type
     B::B_type
-    σᵢ::Matrix{Int}
-    σₒ::Matrix{Int}
+    σᵢ::AbstractMatrix{Int}
+    σₒ::AbstractMatrix{Int}
 end
 
 @inline Base.size(L::TensorProductMap2D) = (size(L.σₒ,1)*size(L.σₒ,2), 
@@ -36,17 +36,17 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
     @unpack A, B, σᵢ, σₒ = L
 
     Z = Matrix{Float64}(undef, size(σᵢ,1), size(σₒ,2))
-    @inbounds for α2 in axes(σₒ,2), β1 in axes(σᵢ,1)
+    for α2 in axes(σₒ,2), β1 in axes(σᵢ,1)
         temp = 0.0
-        @inbounds @simd for β2 in axes(σᵢ,2)
+        @simd for β2 in axes(σᵢ,2)
             @muladd temp = temp + B[α2,β2] * x[σᵢ[β1,β2]]
         end
         Z[β1,α2] = temp
     end
 
-    @inbounds for α1 in axes(σₒ,1), α2 in axes(σₒ,2)
+    for α1 in axes(σₒ,1), α2 in axes(σₒ,2)
         temp = 0.0
-        @inbounds @simd for β1 in axes(σᵢ,1)
+        @simd for β1 in axes(σᵢ,1)
             @muladd temp = temp + A[α1,β1] * Z[β1,α2]
         end
         y[σₒ[α1,α2]] = temp
@@ -71,9 +71,9 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
     
     LinearMaps.check_dim_mul(y, L, x)
     @unpack A, B, σᵢ, σₒ = L
-    @inbounds for α1 in axes(σₒ,1), α2 in axes(σₒ,2)
+    for α1 in axes(σₒ,1), α2 in axes(σₒ,2)
         temp = 0.0
-        @inbounds @simd for β1 in axes(σᵢ,1)
+        @simd for β1 in axes(σᵢ,1)
             @muladd temp = temp + A[α1,β1] * x[σᵢ[β1,α2]]
         end
         y[σₒ[α1,α2]] = temp
@@ -99,9 +99,9 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
     LinearMaps.check_dim_mul(y, L, x)
     @unpack A, B, σᵢ, σₒ = L
 
-    @inbounds for α1 in axes(σₒ,1), α2 in axes(σₒ,2)
+    for α1 in axes(σₒ,1), α2 in axes(σₒ,2)
         temp = 0.0
-        @inbounds @simd for β2 in axes(σᵢ,2)
+        @simd for β2 in axes(σᵢ,2)
             @muladd temp = temp + B[α2,β2] * x[σᵢ[α1,β2]]
         end
         y[σₒ[α1,α2]] = temp

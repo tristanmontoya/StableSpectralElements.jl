@@ -35,6 +35,9 @@ module MatrixFreeOperators
     export WarpedTensorProductMap2D
     include("warped_product_2d.jl")
 
+    export WarpedTensorProductMap3D
+    include("warped_product_3d.jl")
+
     export SelectionMap
     include("selection.jl")
 

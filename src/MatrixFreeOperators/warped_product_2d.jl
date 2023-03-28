@@ -1,47 +1,51 @@
 """
 Warped tensor-product operator (e.g. for Dubiner-type bases)
 """    
-struct WarpedTensorProductMap2D{A_type, B_type} <: LinearMaps.LinearMap{Float64}
-    A::A_type
-    B::Vector{B_type}
+
+struct WarpedTensorProductMap2D <: LinearMaps.LinearMap{Float64}
+    A::AbstractArray{Float64,2}
+    B::AbstractArray{Float64,3}
     σᵢ::Matrix{Int}
     σₒ::Matrix{Int}
+    N2::Vector{Int}
+    Z::Matrix{Float64}
+
+    function WarpedTensorProductMap2D(A::AbstractArray{Float64,2},
+        B::AbstractArray{Float64,3}, σᵢ::Matrix{Int}, σₒ::Matrix{Int})
+        return new(A,B,σᵢ,σₒ,
+            [count(a -> a>0, σᵢ[β1,:]) for β1 in axes(σᵢ,1)],
+            Matrix{Float64}(undef, size(σᵢ,1), size(σₒ,2)))
+    end
 end
 
 @inline Base.size(L::WarpedTensorProductMap2D) = (count(a->a>0,L.σₒ), 
     count(a->a>0,L.σᵢ))
 
 """
-Multiply a vector of length Σ_{β1}N2[β1] by the M1*M2 x Σ_{β1}N2[β1] matrix
+Evaluate the matrix-vector product
 
-L[σₒ[α1,α2], σᵢ[β1,β2]] = A[α1,β1] B[β1][α2,β2].
-
-The action of this matrix on a vector x is 
-
-(Lx)[σₒ[α1,α2]] = ∑_{β1,β2} A[α1,β1] B[β1][α2,β2] x[σᵢ[β1,β2]] 
-                = ∑_{β1} A[α1,β1] (∑_{β2} B[β1][α2,β2] x[σᵢ[β1,β2]]) 
-                = ∑_{β1} A[α1,β1] Z[α2,β1] 
+(Lx)[σₒ[α1,α2]] = ∑_{β1,β2} A[α1,β1] B[α2,β1,β2] x[σᵢ[β1,β2]] 
+                = ∑_{β1} A[α1,β1] (∑_{β2} B[α2,β1,β2] x[σᵢ[β1,β2]]) 
+                = ∑_{β1} A[α1,β1] Z[β1,α2]
 """
 function LinearAlgebra.mul!(y::AbstractVector, 
     L::WarpedTensorProductMap2D, x::AbstractVector)
     
     LinearMaps.check_dim_mul(y, L, x)
-    @unpack A, B, σᵢ, σₒ = L
+    @unpack A, B, σᵢ, σₒ, N2, Z = L
 
-    Z = Matrix{Float64}(undef, size(σₒ,2), size(σᵢ,1))
-    @inbounds for α2 in axes(σₒ,2), β1 in axes(σᵢ,1)
-        N2 = count(a -> a>0, σᵢ[β1,:])
+    for α2 in axes(σₒ,2), β1 in axes(σᵢ,1)
         temp = 0.0
-        @inbounds @simd for β2 in 1:N2
-            @muladd temp = temp + B[β1][α2,β2] * x[σᵢ[β1,β2]]
+        @simd for β2 in 1:N2[β1]
+            @muladd temp = temp + B[α2,β1,β2] * x[σᵢ[β1,β2]]
         end
-        Z[α2,β1] = temp
+        Z[β1,α2] = temp
     end
 
-    @inbounds for α1 in axes(σₒ,1), α2 in axes(σₒ,2)
+    for α1 in axes(σₒ,1), α2 in axes(σₒ,2)
         temp = 0.0
-        @inbounds @simd for β1 in axes(σᵢ,1)
-            @muladd temp = temp + A[α1,β1] * Z[α2,β1]
+        @simd for β1 in axes(σᵢ,1)
+            @muladd temp = temp + A[α1,β1] * Z[β1,α2]
         end
         y[σₒ[α1,α2]] = temp
     end
@@ -49,30 +53,35 @@ function LinearAlgebra.mul!(y::AbstractVector,
     return y
 end
 
+"""
+Evaluate the matrix-vector product
+
+(Lx)[σᵢ[β1,β2]] = ∑_{α1,α2} B[α2,β1,β2] A[α1,β1] x[σₒ[α1,α2]] 
+                = ∑_{α2} B[α2,β1,β2] (∑_{α1} A[α1,β1] x[σₒ[α1,α2]] )
+                = ∑_{α2} B[α2,β1,β2] Z[β1,α2])
+"""
 function LinearMaps._unsafe_mul!(y::AbstractVector, 
     L::LinearMaps.TransposeMap{Float64, <:WarpedTensorProductMap2D},
     x::AbstractVector)
 
     LinearMaps.check_dim_mul(y, L, x)
-    @unpack A, B, σᵢ, σₒ = L.lmap
+    @unpack A, B, σᵢ, σₒ, N2, Z = L.lmap
 
-    Z = Matrix{Float64}(undef, size(σᵢ,1), size(σₒ,2))
-    @inbounds for α1 in axes(σᵢ,1), β2 in axes(σₒ,2)
+    for β1 in axes(σᵢ,1), α2 in axes(σₒ,2)
         temp = 0.0
-        @inbounds @simd for β1 in axes(σₒ,1)
-            @muladd temp = temp + A[β1,α1]*x[σₒ[β1,β2]]
+        @simd for α1 in axes(σₒ,1)
+            @muladd temp = temp + A[α1,β1] * x[σₒ[α1,α2]]
         end
-        Z[α1,β2] = temp
+        Z[β1,α2] = temp
     end
 
-    @inbounds for α1 in axes(σᵢ,1)
-        M2 = count(a -> a>0, σᵢ[α1,:])
-        @inbounds for α2 in 1:M2
+    for β1 in axes(σᵢ,1)
+        for β2 in 1:N2[β1]
             temp = 0.0
-            @inbounds @simd for β2 in axes(σₒ,2)
-                @muladd temp = temp + B[α1][β2,α2]*Z[α1,β2]
+            @simd for α2 in axes(σₒ,2)
+                @muladd temp = temp + B[α2,β1,β2] * Z[β1,α2]
             end
-            y[σᵢ[α1,α2]] = temp
+            y[σᵢ[β1,β2]] = temp
         end
     end
 

@@ -9,7 +9,7 @@ module SpatialDiscretizations
     import StartUpDG: face_type, init_face_data
 
     using ..Mesh: GeometricFactors
-    using ..MatrixFreeOperators: TensorProductMap2D, TensorProductMap3D, WarpedTensorProductMap2D, SelectionMap
+    using ..MatrixFreeOperators: TensorProductMap2D, TensorProductMap3D, WarpedTensorProductMap2D, WarpedTensorProductMap3D, SelectionMap
 
     using Reexport
     @reexport using StartUpDG: RefElemData, AbstractElemShape, Line, Quad, Tri, Tet, Hex
@@ -42,7 +42,7 @@ module SpatialDiscretizations
         Λ_ref::Array{Float64, 3}
     end
 
-    """MatrixFreeOperators for local approximation on reference element"""
+    """Operators for local approximation on reference element"""
     struct ReferenceApproximation{d, ElemShape, ApproxType}
         approx_type::ApproxType
         N_p::Int

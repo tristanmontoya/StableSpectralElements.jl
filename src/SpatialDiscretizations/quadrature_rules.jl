@@ -112,7 +112,9 @@ function quadrature(::Tri, quadrature_rule::NTuple{2,AbstractQuadratureRule})
     elseif ((quadrature_rule[1].a, quadrature_rule[1].b) == (0,0) &&
         (quadrature_rule[2].a, quadrature_rule[2].b) == (1,0))
         return χ(Tri(), (mgr[1][:], mgr[2][:]))..., 0.5*w2d[:]
-    else @error "Chosen Jacobi weight not supported" end
+    else 
+        @error "Chosen Jacobi weight not supported" 
+    end
 end
 
 function quadrature(::Tet, quadrature_rule::NTuple{3,AbstractQuadratureRule})
@@ -133,5 +135,7 @@ function quadrature(::Tet, quadrature_rule::NTuple{3,AbstractQuadratureRule})
         (quadrature_rule[3].a, quadrature_rule[3].b) == (1,0))
         return χ(Tet(), (mgr[1][:], mgr[2][:], mgr[3][:]))...,
         0.25(η -> (1-η)).(mgr[2][:]) .* (η -> (1-η)).(mgr[3][:]) .* w2d[:]
-    else @error "Chosen Jacobi weight not supported" end
+    else 
+        @error "Chosen Jacobi weight not supported" 
+    end
 end

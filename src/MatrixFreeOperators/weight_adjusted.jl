@@ -19,7 +19,6 @@ struct WeightAdjustedMap <: LinearMaps.LinearMap{Float64}
         else
             M = V' * W * V
             M_inv = inv(M_mat)
-
         end
         return new(V,W,Jinv,M,M_inv)
     end

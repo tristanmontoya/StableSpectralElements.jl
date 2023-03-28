@@ -2,8 +2,8 @@ struct TensorProductMap3D{A_type,B_type,C_type} <: LinearMaps.LinearMap{Float64}
     A::A_type
     B::B_type
     C::C_type
-    σᵢ::Array{Int,3}
-    σₒ::Array{Int,3}
+    σᵢ::AbstractArray{Int,3}
+    σₒ::AbstractArray{Int,3}
 end
 
 @inline Base.size(L::TensorProductMap3D) = (
