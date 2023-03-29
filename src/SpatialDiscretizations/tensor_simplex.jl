@@ -242,7 +242,7 @@ function ReferenceApproximation(
         VDM_plot_1D = (vandermonde(Line(), q[1], equi_nodes(Line(),N_plot)),
             vandermonde(Line(), q[2], equi_nodes(Line(),N_plot)))
         V_plot = LinearMap(kron(VDM_plot_1D[1]/V_1D[1], VDM_plot_1D[2]/V_1D[2]))
-        approx_type = NodalTensor(min(q[1],q[2],q[3]))
+        approx_type = NodalTensor(min(q[1],q[2]))
     end
 
     return ReferenceApproximation(approx_type, size(V,2), N_q, 3*(q_f + 1),

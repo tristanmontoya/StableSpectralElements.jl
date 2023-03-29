@@ -1,138 +1,8 @@
-Base.@kwdef struct StrongConservationForm{MappingForm,TwoPointFlux} <: AbstractResidualForm{MappingForm,TwoPointFlux}
-    mapping_form::MappingForm = StandardMapping()
-    inviscid_numerical_flux::AbstractInviscidNumericalFlux =
-        LaxFriedrichsNumericalFlux()
-    viscous_numerical_flux::AbstractViscousNumericalFlux = BR1()
-    two_point_flux::TwoPointFlux = NoTwoPointFlux()
-end
-
-Base.@kwdef struct WeakConservationForm{MappingForm,TwoPointFlux} <: AbstractResidualForm{MappingForm,TwoPointFlux}
-    mapping_form::MappingForm = StandardMapping()
-    inviscid_numerical_flux::AbstractInviscidNumericalFlux =
-        LaxFriedrichsNumericalFlux()
-    viscous_numerical_flux::AbstractViscousNumericalFlux = BR1()
-    two_point_flux::TwoPointFlux = NoTwoPointFlux()
-end
-
-"""
-Make operators for strong conservation form
-"""
-function make_operators(spatial_discretization::SpatialDiscretization{d}, 
-    ::StrongConservationForm{StandardMapping,<:AbstractTwoPointFlux},
-    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm(),
-    mass_matrix_solver::AbstractMassMatrixSolver=CholeskySolver()) where {d}
-
-    @unpack N_e, M = spatial_discretization
-    @unpack D, V, Vf, R, W, B, N_p, N_q, N_f = spatial_discretization.reference_approximation
-    @unpack nrstJ = 
-        spatial_discretization.reference_approximation.reference_element
-    @unpack J_q, Λ_q, J_f, nJf = spatial_discretization.geometric_factors
-    op(A::LinearMap) = make_operator(A, operator_algorithm)
-
-    operators = Array{DiscretizationOperators}(undef, N_e)
-    for k in 1:N_e
-        VOL = Tuple(sum(op(-W * D[m] + R' * B * Diagonal(nrstJ[m]) * R) * 
-                Diagonal(Λ_q[:,m,n,k]) for m in 1:d) for n in 1:d)
-        FAC = op(-R' * B) * Diagonal(J_f[:,k])
-        SRC = Diagonal(W * J_q[:,k])
-
-        operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC, 
-            mass_matrix(V,W,Diagonal(J_q[:,k]), mass_matrix_solver), 
-            op(V), op(Vf), Tuple(nJf[m][:,k]./J_f[:,k] for m in 1:d), 
-            N_p, N_q, N_f)
-    end
-    return operators
-end
-
-"""
-Make operators for weak conservation form
-"""
-function make_operators(spatial_discretization::SpatialDiscretization{1}, 
-    ::WeakConservationForm{StandardMapping,<:AbstractTwoPointFlux},
-    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm(),
-    mass_matrix_solver::AbstractMassMatrixSolver=CholeskySolver())
-
-    @unpack N_e, M, reference_approximation = spatial_discretization
-    @unpack D, V, Vf, R, W, B, N_p, N_q, N_f = reference_approximation
-    @unpack nrstJ = reference_approximation.reference_element
-    @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
-    op(A::LinearMap) = make_operator(A, operator_algorithm)
-
-    operators = Array{DiscretizationOperators}(undef, N_e)
-    @inbounds for k in 1:N_e
-        VOL = (op(D[1]' * W),)
-        FAC = op(-R' * B)
-        SRC = Diagonal(W * J_q[:,k])
-
-        operators[k] = DiscretizationOperators{1}(VOL, FAC, SRC,
-            mass_matrix(V,W,Diagonal(J_q[:,k]), mass_matrix_solver),
-            op(V), op(Vf), (nJf[1][:,k],), N_p, N_q, N_f)
-    end
-    return operators
-end
-
-function make_operators(spatial_discretization::SpatialDiscretization{d}, 
-    ::WeakConservationForm{StandardMapping,<:AbstractTwoPointFlux},
-    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm(),
-    mass_matrix_solver::AbstractMassMatrixSolver=CholeskySolver()) where {d}
-
-    @unpack N_e, M, reference_approximation = spatial_discretization
-    @unpack V, Vf, R, W, B, D, N_p, N_q, N_f = reference_approximation
-    @unpack nrstJ = reference_approximation.reference_element
-    @unpack J_q, Λ_q, J_f, nJf = spatial_discretization.geometric_factors
-    op(A::LinearMap) = make_operator(A, operator_algorithm)
-
-    operators = Array{DiscretizationOperators}(undef, N_e)
-    @inbounds for k in 1:N_e
-        VOL = Tuple(sum(op(D[m]') * Diagonal(W * Λ_q[:,m,n,k]) for m in 1:d)
-                    for n in 1:d)
-        FAC = op(-R' * B) * Diagonal(J_f[:,k])
-        SRC = Diagonal(W * J_q[:,k])
-
-        operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC, 
-            mass_matrix(V,W,Diagonal(J_q[:,k]), mass_matrix_solver), 
-            op(V), op(Vf), Tuple(nJf[m][:,k]./J_f[:,k] for m in 1:d), 
-            N_p, N_q, N_f)
-    end
-    return operators
-end
-
-function make_operators(spatial_discretization::SpatialDiscretization{d}, 
-    ::WeakConservationForm{<:SkewSymmetricMapping,<:AbstractTwoPointFlux},
-    operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm(),
-    mass_matrix_solver::AbstractMassMatrixSolver=CholeskySolver()) where {d}
-
-    @unpack N_e, M, reference_approximation = spatial_discretization
-    @unpack V, Vf, R, W, B, D, N_p, N_q, N_f = reference_approximation
-    @unpack nrstJ = reference_approximation.reference_element
-    @unpack J_q, Λ_q, J_f, nJf = spatial_discretization.geometric_factors
-    op(A::LinearMap) = make_operator(A, operator_algorithm)
-
-    operators = Array{DiscretizationOperators}(undef, N_e)
-    @inbounds for k in 1:N_e
-        VOL = Tuple(sum(
-            op(D[m]') * Diagonal(0.5 * W * Λ_q[:,m,n,k]) -
-                        Diagonal(0.5 * W * Λ_q[:,m,n,k]) * op(D[m])  # skew part
-                    for m in 1:d) +
-                op(R') * Diagonal(0.5 * B * nJf[n][:,k]) * op(R)  # sym part
-                    for n in 1:d)
-        FAC = op(-R' * B) * Diagonal(J_f[:,k])
-        SRC = Diagonal(W * J_q[:,k])
-
-        operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC, 
-            mass_matrix(V,W,Diagonal(J_q[:,k]), mass_matrix_solver), 
-            op(V), op(Vf), Tuple(nJf[m][:,k]./J_f[:,k] for m in 1:d), 
-            N_p, N_q, N_f)
-    end
-    return operators
-end
-
 """
 Evaluate semi-discrete residual for a first-order problem
 """
 function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
-    solver::Solver{d, <:AbstractResidualForm, FirstOrder},
-    t::Float64) where {d}
+    solver::Solver{d, <:WeakConservationForm, FirstOrder}, t::Float64) where {d}
 
     @unpack conservation_law, operators, connectivity, form, N_e = solver
     @unpack inviscid_numerical_flux = form
@@ -191,7 +61,7 @@ end
 Evaluate semi-discrete residual for a second-order problem
 """
 function rhs!(dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
-    solver::Solver{d, <:AbstractResidualForm, SecondOrder},
+    solver::Solver{d, <:WeakConservationForm, SecondOrder},
     t::Float64) where {d}
 
     @unpack conservation_law, operators, x_q, connectivity, form, N_e = solver

@@ -44,7 +44,7 @@ function RefElemData(elem::Tri,
 
     return RefElemData(elem, Polynomial(), N, fv, V1,
                     tuple(r, s), VDM, vec(Fmask),
-                    Nplot, tuple(rp, sp), Vp,
+                    tuple(rp, sp), Vp,
                     tuple(rq, sq), wq, Vq,
                     tuple(rf, sf), wf, Vf, tuple(nrJ, nsJ),
                     M, Pq, (Dr, Ds), LIFT)
@@ -99,7 +99,7 @@ function RefElemData(elem::Tet,
 
     return RefElemData(elem, Polynomial(), N, fv, V1,
                         tuple(r, s, t), VDM, vec(Fmask),
-                        Nplot, tuple(rp, sp, tp), Vp,
+                        tuple(rp, sp, tp), Vp,
                         tuple(rq, sq, tq), wq, Vq,
                         tuple(rf, sf, tf), wf, Vf, tuple(nrJ, nsJ, ntJ),
                         M, Pq, (Dr, Ds, Dt), LIFT)

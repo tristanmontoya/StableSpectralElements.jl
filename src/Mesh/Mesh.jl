@@ -80,8 +80,8 @@ module Mesh
         eps = factor * sin.(2π*(x.-L[1]/2)/L[1]) .* sin.(2π*(y.-L[2]/2)/L[2]) .*
             sin.(2π*(z.-L[3]/2)/L[3])
         x_new = x .+ L[1]*eps
-        y_new =y .+ L[2]*eps
-        z_new =z .+ L[3]*eps
+        y_new = y .+ L[2]*eps
+        z_new = z .+ L[3]*eps
 
         return MeshData(reference_element, mesh, x_new, y_new, z_new)
     end
@@ -101,7 +101,7 @@ module Mesh
     function uniform_periodic_mesh(reference_element::RefElemData{1}, 
         limits::NTuple{2,Float64}, M::Int)
 
-        VX, EtoV = uniform_mesh(reference_element.elementType, M)
+        VX, EtoV = uniform_mesh(reference_element.element_type, M)
         mesh =  MeshData(limits[1] .+ 0.5*(limits[2]-limits[1])*(VX[1] .+ 1.0), EtoV,reference_element)
 
         return make_periodic(mesh)
@@ -126,10 +126,11 @@ module Mesh
                 row = EtoV[k,:]
                 EtoV[k,:] = vcat(row[end-step+1:end], row[1:end-step])
             end
-            
         elseif reference_element.element_type isa Tet && collapsed_orientation
+
             # Second algorithm from Warburton's PhD thesis
             EtoV_new = Vector{Float64}(undef,4)
+
             for k in 1:N_e
                 EtoV_new = sort(EtoV[k,:], rev=true)
                 X = hcat([[VXY[1][EtoV_new[m]] - VXY[1][EtoV_new[1]];
@@ -139,7 +140,9 @@ module Mesh
                 if det(X) < 0 
                     EtoV[k,:] = [EtoV_new[2]; 
                                 EtoV_new[1]; EtoV_new[3]; EtoV_new[4]]
-                else EtoV[k,:] = EtoV_new end
+                else 
+                    EtoV[k,:] = EtoV_new 
+                end
             end
         end
 
@@ -149,38 +152,30 @@ module Mesh
     end
 
     function cartesian_mesh(element_type::AbstractElemShape, 
-        M::NTuple{d,Int}, ::Uniform) where {d}
-        return uniform_mesh(element_type, [M[m] for m in 1:d]...)
-    end
-
-    function cartesian_mesh(element_type::Union{Quad,Hex,Tet},
-        M::NTuple{d,Int}, ::ZigZag) where {d}
-        # zigzag not implemented for quad/hex/tet etc.
+        M::NTuple{d,Int}, ::AbstractMeshGenStrategy) where {d}
         return uniform_mesh(element_type, [M[m] for m in 1:d]...)
     end
 
     function cartesian_mesh(::Tri,  M::NTuple{2,Int}, ::ZigZag)
-        if !(iseven(M[1]) && iseven(M[2]))
-            error("ERROR: ZigZag mesh must have even number of elements in each direction")
-        end
 
+        if !(iseven(M[1]) && iseven(M[2]))
+            @error "ERROR: ZigZag mesh must have even number of elements in each direction"
+        end
         (VX,VY), _ = uniform_mesh(Quad(), M[1], M[2])
         EtoV = Matrix{Int64}(undef, 0, 3)
-        for i in 1:2:(M[1]-1)
-            for j in 1:2:(M[2]-1)
-                bot_left = (j-1)*(M[2]+1) + i
-                bot_mid = j*(M[2]+1) + i
-                bot_right = (j+1)*(M[2]+1) + i
-                EtoV =vcat(EtoV,[
-                    bot_mid bot_left bot_left+1 ;
-                    bot_left+1 bot_mid+1 bot_mid ;
-                    bot_right+1 bot_right bot_mid ;
-                    bot_mid bot_mid+1 bot_right+1 ;
-                    bot_mid+2 bot_mid+1 bot_left+1 ;
-                    bot_left+1 bot_left+2 bot_mid+2 ;
-                    bot_right+1 bot_mid+1 bot_mid+2  ;
-                    bot_mid+2 bot_right+2 bot_right+1])
-            end
+        for i in 1:2:(M[1]-1), j in 1:2:(M[2]-1)
+            bot_left = (j-1)*(M[2]+1) + i
+            bot_mid = j*(M[2]+1) + i
+            bot_right = (j+1)*(M[2]+1) + i
+            EtoV =vcat(EtoV,[
+                bot_mid bot_left bot_left+1 ;
+                bot_left+1 bot_mid+1 bot_mid ;
+                bot_right+1 bot_right bot_mid ;
+                bot_mid bot_mid+1 bot_right+1 ;
+                bot_mid+2 bot_mid+1 bot_left+1 ;
+                bot_left+1 bot_left+2 bot_mid+2 ;
+                bot_right+1 bot_mid+1 bot_mid+2  ;
+                bot_mid+2 bot_right+2 bot_right+1])
         end
         return (VX, VY), EtoV
     end
@@ -217,6 +212,7 @@ module Mesh
             # loops over slower indices
             @inbounds for i in 1:N_q
                 J_q[i,k] = det(dxdr_q[i,:,:,k])
+                # can do this in a more specialized way for 2D and 3D etc.
                 Λ_q[i,:,:,k] = J_q[i,k]*inv(dxdr_q[i,:,:,k])
             end
         

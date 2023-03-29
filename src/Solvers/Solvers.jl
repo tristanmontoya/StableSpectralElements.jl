@@ -27,6 +27,7 @@ module Solvers
         VOL::NTuple{d,LinearMap}
         FAC::LinearMap
         SRC::LinearMap
+        NTR::NTuple{d,LinearMap}
         M::Union{Cholesky, AbstractMatrix, WeightAdjustedMap}
         V::LinearMap
         Vf::LinearMap
@@ -79,7 +80,7 @@ module Solvers
     end
     
     
-    export AbstractMassMatrixSolver, CholeskySolver, WeightAdjustedSolver, mass_matrix
+    export AbstractMassMatrixSolver, CholeskySolver, WeightAdjustedSolver, PreInvert, mass_matrix
     include("mass_matrix.jl") 
 
     export initialize, semidiscretize, precompute
@@ -88,8 +89,11 @@ module Solvers
     export apply_operators!, auxiliary_variable
     include("apply_operators.jl")
 
-    export StrongConservationForm, WeakConservationForm
-    include("conservation_form.jl")
+    export StrongConservationForm, WeakConservationForm, SplitConservationForm
+    include("make_operators.jl")
+
+    include("weak_conservation_form.jl")
+    include("split_conservation_form.jl")
 
     export LinearResidual
     include("linear.jl")
