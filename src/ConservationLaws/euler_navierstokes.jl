@@ -66,16 +66,14 @@ struct IsentropicVortex <: AbstractGridFunction{2}
     γ::Float64
     Ma::Float64
     ϵ::Float64
-    θ::Float64
     x_0::NTuple{2,Float64}
     N_c::Int
 
     function IsentropicVortex(γ::Float64,
         Ma::Float64,
         ϵ::Float64,
-        θ::Float64,
         x_0::NTuple{2,Float64})
-        return new(γ, Ma, ϵ, θ, x_0, 4)
+        return new(γ, Ma, ϵ, x_0, 4)
     end
 end
 
@@ -99,7 +97,8 @@ end
 """
 Evaluate the flux for the Euler equations
 """
-@inline function physical_flux(conservation_law::EulerType{d}, 
+@inline function physical_flux!(f::AbstractArray{Float64,3},    
+    conservation_law::EulerType{d}, 
     u::AbstractMatrix{Float64}) where {d}
 
     @unpack γ = conservation_law
@@ -108,9 +107,11 @@ Evaluate the flux for the Euler equations
     V = velocity(conservation_law, u)
     p = pressure(conservation_law, u)
     
-    return Tuple(hcat(ρV[:,m], 
-        [ρV[:,m].*V[:,n] .+ I[m,n]*p for n in 1:d]...,
-        V[:,m].*(E .+ p)) for m in 1:d)
+    @inbounds for m in 1:d 
+        f[:,1,m] .= ρV[:,m]
+        f[:,2:end-1,m] .= hcat([ρV[:,m].*V[:,n] .+ I[m,n]*p for n in 1:d]...)
+        f[:,end,m] = V[:,m].*(E .+ p)
+    end
 end
 
 """Lax-Friedrichs/Rusanov flux for the Euler equations"""
@@ -126,19 +127,21 @@ end
     ρ_in = @view u_in[:,1]
     V_in = velocity(conservation_law, u_in)
     p_in = pressure(conservation_law, u_in)
-    f_in = physical_flux(conservation_law,u_in)
+    f_in = Array{Float64}(undef, size(u_in)..., d)
+    physical_flux!(f_in, conservation_law,u_in)
     normV_in = sqrt.(sum(V_in[:,m].^2 for m in 1:d))
 
     ρ_out = @view u_out[:,1]
     V_out = velocity(conservation_law, u_out)
     p_out = pressure(conservation_law, u_out)
-    f_out = physical_flux(conservation_law, u_out)
+    f_out = Array{Float64}(undef, size(u_out)..., d)
+    physical_flux!(f_out, conservation_law,u_out)
     normV_out = sqrt.(sum(V_out[:,m].^2 for m in 1:d))
 
     a = max.(normV_in .+ sqrt.(abs.(γ*p_in ./ ρ_in)), 
             normV_out .+ sqrt.(abs.(γ*p_out ./ ρ_out)))
 
-    return 0.5*(hcat([sum((f_in[m][:,e] .+ f_out[m][:,e]) .* n[m] for m in 1:d)
+    return 0.5*(hcat([sum((f_in[:,e,m] .+ f_out[:,e,m]) .* n[m] for m in 1:d)
             for e in 1:N_c]...) .- λ*a.*(u_out .- u_in))
 end
 
@@ -147,9 +150,7 @@ function evaluate(f::EulerPeriodicTest{d},
 
     ρ = 1.0 + f.ϵ*sin(π*sum(x[m] for m in 1:d))
 
-    return [ρ, 
-        fill(ρ,d)...,
-        1.0/(1.0-f.γ) + 0.5*ρ*d]
+    return [ρ, fill(ρ,d)..., 1.0/(1.0-f.γ) + 0.5*ρ*d]
 end
 
 function evaluate(f::TaylorGreenVortex,  x::NTuple{3,Float64}, t::Float64=0.0)
@@ -164,15 +165,13 @@ function evaluate(f::TaylorGreenVortex,  x::NTuple{3,Float64}, t::Float64=0.0)
 end
 
 function evaluate(f::IsentropicVortex, x::NTuple{2,Float64}, t::Float64=0.0)
-    
-    r = (x[1] - f.x_0[1])^2 + (x[2] - f.x_0[2])^2
-    k = f.ϵ*exp(1.0 - r)
-    u = f.Ma*cos(f.θ) - k*(x[2] - f.x_0[2])
-    v = f.Ma*sin(f.θ) + k*(x[1] - f.x_0[1])
-    T = 1.0 - 0.5*(f.γ - 1.0) * f.ϵ^2 * f.Ma^2 * exp(1.0 - r)
-    ρ = T^(1.0/(f.γ-1.0))
+    fx = 1.0 - (x[1] - f.x_0[1] - t)^2 - (x[2] - f.x_0[2])^2
+    u = 1.0 - (f.ϵ*(x[2] - f.x_0[2]))/(2.0*π)*exp(0.5*fx)
+    v = (f.ϵ*(x[1] - f.x_0[1] - t))/(2.0*π)*exp(0.5*fx)
+    ρ = (1.0 - ((f.ϵ)^2*(f.γ-1.0)*(f.Ma)^2/(8.0*π^2) * exp(fx)))^(1.0/(1.0-f.γ))
+    p = ρ^(f.γ)/(f.γ * f.Ma^2)
 
-    return [ρ, ρ*u, ρ*v, (ρ^f.γ)/(f.γ-1.0) + 0.5*ρ*(u^2 + v^2)]
+    return [ρ, ρ*u, ρ*v, p/(1.0-f.γ) + 0.5*ρ*(u^2 + v^2)]
 end
 
 function evaluate(
@@ -187,7 +186,6 @@ function evaluate(
        return evaluate(initial_data,x)
     end
 end
-
 
 function evaluate(
     exact_solution::ExactSolution{2,EulerEquations{2}, IsentropicVortex,NoSourceTerm{2}},

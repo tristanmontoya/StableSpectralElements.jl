@@ -9,8 +9,6 @@ struct WarpedTensorProductMap3D <: LinearMaps.LinearMap{Float64}
     σₒ::Array{Int,3}
     N2::Vector{Int}
     N3::Matrix{Int}
-    Z::Array{Float64,3}
-    W::Array{Float64,3}
 
     function WarpedTensorProductMap3D(A::AbstractArray{Float64,2},
         B::AbstractArray{Float64,3}, C::AbstractArray{Float64,4}, 
@@ -19,9 +17,7 @@ struct WarpedTensorProductMap3D <: LinearMaps.LinearMap{Float64}
         return new(A, B, C, σᵢ, σₒ,
             [count(a -> a>0, σᵢ[β1,1,:]) for β1 in axes(σᵢ,1)],
             [count(a -> a>0, σᵢ[β1,β2,:]) 
-                for β1 in axes(σᵢ,1),  β2 in axes(σᵢ,2)],
-            Array{Float64,3}(undef, size(σᵢ,1), size(σᵢ,3), size(σₒ,3)),
-            Array{Float64,3}(undef, size(σᵢ,1), size(σₒ,2), size(σₒ,3)))
+                for β1 in axes(σᵢ,1),  β2 in axes(σᵢ,2)])
     end
 end
 
@@ -43,7 +39,10 @@ function LinearAlgebra.mul!(y::AbstractVector,
     L::WarpedTensorProductMap3D, x::AbstractVector)
     
     LinearMaps.check_dim_mul(y, L, x)
-    @unpack A, B, C, σᵢ, σₒ, N2, N3, Z, W = L
+    @unpack A, B, C, σᵢ, σₒ, N2, N3 = L
+    
+    Z = Array{Float64,3}(undef, size(σᵢ,1), size(σᵢ,3), size(σₒ,3))
+    W = Array{Float64,3}(undef, size(σᵢ,1), size(σₒ,2), size(σₒ,3))
 
     for β1 in axes(σᵢ,1)
         for β2 in 1:N2[β1], α3 in axes(σₒ,3)
@@ -91,7 +90,10 @@ function LinearMaps._unsafe_mul!(y::AbstractVector,
     x::AbstractVector)
     
     LinearMaps.check_dim_mul(y, L, x)
-    @unpack A, B, C, σᵢ, σₒ, N2, N3, Z, W = L.lmap
+    @unpack A, B, C, σᵢ, σₒ, N2, N3 = L.lmap
+
+    Z = Array{Float64,3}(undef, size(σᵢ,1), size(σᵢ,3), size(σₒ,3))
+    W = Array{Float64,3}(undef, size(σᵢ,1), size(σₒ,2), size(σₒ,3))
 
     for β1 in axes(σᵢ,1), α2 in axes(σₒ,2), α3 in axes(σₒ,3)
         temp = 0.0

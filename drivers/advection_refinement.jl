@@ -190,7 +190,7 @@ function run_driver(driver::AdvectionDriver{d}) where {d}
     else initial_data = InitialDataSine(1.0,Tuple(2*π/L for m in 1:d)) end
 
     conservation_law = LinearAdvectionEquation(a)
-    form = WeakConservationForm(mapping_form=mapping_form, 
+    form = SplitConservationForm(mapping_form=mapping_form, 
             inviscid_numerical_flux=LaxFriedrichsNumericalFlux(λ))
     eoc = -1.0
 
@@ -246,7 +246,7 @@ function run_driver(driver::AdvectionDriver{d}) where {d}
 
         h = L/(reference_approximation.N_p * spatial_discretization.N_e)^(1/d)
         dt = CFL*h/(norm(a))   
-        CLOUD_reset_timer!()
+        reset_timer!()
         sol = solve(ode_problem, ode_algorithm, adaptive=false,
             dt=dt, save_everystep=false, callback=save_callback(
                 results_path, (t0,T), ceil(Int, T/(dt*n_s)), restart_step))
@@ -263,7 +263,7 @@ function run_driver(driver::AdvectionDriver{d}) where {d}
 
         open(string(results_path,"screen.txt"), "a") do io
             println(io, "Solver successfully finished!\n")
-            println(io, @capture_out CLOUD_print_timer(), "\n")
+            println(io, @capture_out print_timer(), "\n")
             println(io,"L2 error:\n", analyze(error_analysis, 
                 last(sol.u), initial_data))
         end

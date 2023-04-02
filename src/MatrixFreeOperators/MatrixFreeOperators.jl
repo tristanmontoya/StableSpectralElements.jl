@@ -47,4 +47,7 @@ module MatrixFreeOperators
     export WeightAdjustedMap
     include("weight_adjusted.jl")
 
+    export ZeroMap
+    include("zero.jl")
+
 end

@@ -16,9 +16,9 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
     L::GenericMatrixMap, x::AbstractVector{Float64})
     @unpack A = L
 
-    @inbounds for i in eachindex(y)
+    for i in eachindex(y)
         temp = 0.0
-        @inbounds @simd for j in eachindex(x)
+        @simd for j in eachindex(x)
             @muladd temp = temp + A[i,j]*x[j]
         end
         y[i] = temp

@@ -8,13 +8,11 @@ struct WarpedTensorProductMap2D <: LinearMaps.LinearMap{Float64}
     σᵢ::Matrix{Int}
     σₒ::Matrix{Int}
     N2::Vector{Int}
-    Z::Matrix{Float64}
 
     function WarpedTensorProductMap2D(A::AbstractArray{Float64,2},
         B::AbstractArray{Float64,3}, σᵢ::Matrix{Int}, σₒ::Matrix{Int})
         return new(A,B,σᵢ,σₒ,
-            [count(a -> a>0, σᵢ[β1,:]) for β1 in axes(σᵢ,1)],
-            Matrix{Float64}(undef, size(σᵢ,1), size(σₒ,2)))
+            [count(a -> a>0, σᵢ[β1,:]) for β1 in axes(σᵢ,1)])
     end
 end
 
@@ -30,9 +28,10 @@ Evaluate the matrix-vector product
 """
 function LinearAlgebra.mul!(y::AbstractVector, 
     L::WarpedTensorProductMap2D, x::AbstractVector)
-    
     LinearMaps.check_dim_mul(y, L, x)
-    @unpack A, B, σᵢ, σₒ, N2, Z = L
+    @unpack A, B, σᵢ, σₒ, N2 = L
+    
+    Z = Matrix{Float64}(undef, size(σᵢ,1), size(σₒ,2))
 
     for α2 in axes(σₒ,2), β1 in axes(σᵢ,1)
         temp = 0.0
@@ -49,7 +48,6 @@ function LinearAlgebra.mul!(y::AbstractVector,
         end
         y[σₒ[α1,α2]] = temp
     end
-
     return y
 end
 
@@ -65,8 +63,10 @@ function LinearMaps._unsafe_mul!(y::AbstractVector,
     x::AbstractVector)
 
     LinearMaps.check_dim_mul(y, L, x)
-    @unpack A, B, σᵢ, σₒ, N2, Z = L.lmap
+    @unpack A, B, σᵢ, σₒ, N2 = L.lmap
 
+    Z = Matrix{Float64}(undef, size(σᵢ,1), size(σₒ,2))
+    
     for β1 in axes(σᵢ,1), α2 in axes(σₒ,2)
         temp = 0.0
         @simd for α1 in axes(σₒ,1)

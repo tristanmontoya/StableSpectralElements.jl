@@ -64,14 +64,14 @@ end
 
 function precompute(operators::DiscretizationOperators{d}, 
     operator_algorithm::AbstractOperatorAlgorithm=BLASAlgorithm()) where {d}
-    @unpack VOL, FAC, SRC, NTR, M, V, Vf, n_f, N_p, N_q, N_f = operators
+    @unpack VOL, FAC, SRC, NTR, M, V, R, n_f, N_p, N_q, N_f = operators
 
     return DiscretizationOperators{d}(
         Tuple(make_operator(VOL[n], operator_algorithm) for n in 1:d),
         make_operator(FAC, operator_algorithm), 
         make_operator(SRC, operator_algorithm),
         Tuple(make_operator(NTR[n], operator_algorithm) for n in 1:d),
-        M, V, Vf, n_f, N_p, N_q, N_f)
+        M, V, R, n_f, N_p, N_q, N_f)
 end
 
 function semidiscretize(

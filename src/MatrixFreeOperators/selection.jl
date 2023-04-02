@@ -26,9 +26,9 @@ function LinearMaps._unsafe_mul!(y::AbstractVector,
     
     LinearMaps.check_dim_mul(y, transR, x)
     @unpack volume_ids = transR.lmap
-    @inbounds for i in eachindex(volume_ids)
+    for i in eachindex(volume_ids)
         y[i] = 0.0
-        @inbounds for j in volume_ids[i] @muladd y[i] = y[i] + x[j] end
+        for j in volume_ids[i] @muladd y[i] = y[i] + x[j] end
     end
 
     return y

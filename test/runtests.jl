@@ -82,7 +82,7 @@ end
         ReferenceApproximation(ModalTensor(p), Tri(), volume_quadrature_rule=(LGQuadrature(p),LGRQuadrature(p)),mapping_degree=p), 
         LinearAdvectionEquation((1.0,1.0)),
         InitialDataSine(1.0,(2*π, 2*π)),
-        WeakConservationForm(
+        SplitConservationForm(
             mapping_form=SkewSymmetricMapping(),
             inviscid_numerical_flux=LaxFriedrichsNumericalFlux(0.0)),
         DefaultOperatorAlgorithm(),
