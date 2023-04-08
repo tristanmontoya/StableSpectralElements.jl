@@ -1,12 +1,11 @@
 name = "CLOUD"
 uuid = "fb992021-99c7-4c2d-a14b-5e48ac4045b2"
 authors = ["Tristan Montoya <montoya.tristan@gmail.com>"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
 Arpack = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
-BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 DiffEqCallbacks = "459566f4-90b8-5000-8ac3-15dfb0a30def"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 DocumenterTools = "35a29f4d-8980-5a13-9543-d66fff28ecb8"
@@ -41,3 +40,6 @@ TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 Triangulate = "f7e6ffb2-c36d-4f8f-a77e-16e897189344"
 UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
+
+[compat]
+StartUpDG = "0.16"
