@@ -43,4 +43,9 @@ julia> spatial_discretization = SpatialDiscretization(mesh,
     reference_approximation.reference_element)
 ```
 Note that the field `reference_element` is of type `RefElemData` from StartUpDG, and is used to store geometric information about the reference element and to define the operators used in constructing the polynomial mapping; the operators used for the discretizations are defined separately according to the specific scheme (e.g. `NodalTensor` in this case). We can now visualize the discretization on the mesh:
+
+```julia
+julia> plot(spatial_discretization, grid_connect=true, mapping_nodes=true)
+```
+
 ![Example mesh](./assets/mesh.svg)

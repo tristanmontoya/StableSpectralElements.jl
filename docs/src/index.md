@@ -17,12 +17,9 @@ To install CLOUD.jl, open a `julia` session and enter:
 
 ```julia
 julia> import Pkg
-
+julia> Pkg.add(url="https://github.com/pjabardo/Jacobi.jl.git#master")
 julia> Pkg.add(url="https://github.com/tristanmontoya/CLOUD.jl.git")
 ```
-
-Currently, Julia versions 1.6 or newer are supported by CLOUD.jl, although we recommend using the [current stable release](https://julialang.org/downloads/), due to a performance issue for diagonal matrix multiplication which was fixed in [Julia PR #44651](https://github.com/JuliaLang/julia/pull/44651).
-
 ## Basic Usage
 
 As this documentation is currently a work in progress, we recommend that users refer to the following Jupyter notebooks (included in the `examples` directory) for examples of how to use CLOUD.jl:
