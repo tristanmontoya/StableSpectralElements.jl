@@ -42,5 +42,6 @@ UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 
 [compat]
-StartUpDG = "0.16"
+IJulia = "1"
 NodesAndModes = "0.9.2"
+StartUpDG = "0.16"
