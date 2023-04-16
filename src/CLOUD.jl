@@ -1,7 +1,7 @@
 module CLOUD
 
-    if VERSION < v"1.6"
-        error("CLOUD.jl requires Julia v1.6 or newer.")
+    if VERSION < v"1.7"
+        error("CLOUD.jl requires Julia v1.7 or newer.")
     end
 
     using Reexport
@@ -12,9 +12,6 @@ module CLOUD
     include("ConservationLaws/ConservationLaws.jl")
     @reexport using .ConservationLaws
 
-    include("Mesh/Mesh.jl")
-    @reexport using .Mesh
-    
     include("MatrixFreeOperators/MatrixFreeOperators.jl")
     @reexport using .MatrixFreeOperators
 

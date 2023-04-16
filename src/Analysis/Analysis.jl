@@ -17,8 +17,7 @@ module Analysis
     using TimerOutputs
 
     using ..ConservationLaws: AbstractConservationLaw
-    using ..Mesh: uniform_periodic_mesh
-    using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation
+    using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation, uniform_periodic_mesh
     using ..GridFunctions: AbstractGridFunction, evaluate
     using ..Solvers: AbstractResidualForm, AbstractStrategy, Solver, semidiscretize, LinearResidual, get_dof, rhs!
     using ..File: new_path, load_project, load_solution, load_time_steps, load_snapshots, load_snapshots_with_derivatives, load_solver, save_callback, save_solution, save_project

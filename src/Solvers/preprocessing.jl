@@ -88,8 +88,9 @@ function semidiscretize(
     if periodic_connectivity_check
         normal_error = check_normals(spatial_discretization)
         for m in eachindex(normal_error)
-            if maximum(abs.(normal_error[m])) > tol
-                error("Connectivity Error: Facet normals not equal and opposite. If this is not a periodic problem, or if you're alright with a loss of conservation, run again with periodic_connectivity_check=false.")
+            max = maximum(abs.(normal_error[m]))
+            if max > tol
+                error(string("Connectivity Error: Facet normals not equal and opposite. If this is not a periodic problem, or if you're alright with a loss of conservation, run again with periodic_connectivity_check=false. Max error = ", max))
             end
         end
     end

@@ -13,7 +13,6 @@ second-order problems are treated by CLOUD.jl as first-order systems of the form
 \partial_t \underline{U}(\bm{x},t) + \bm{\nabla}_{\bm{x}} \cdot \underline{\bm{F}}(\underline{U}(\bm{x},t), \underline{\bm{Q}}(\bm{x},t)) &= \underline{0}.
 \end{aligned}
 ```
-CLOUD.jl also supports source terms of the form $\underline{S}(\bm{x},t)$, specifically for code verification using the method of manufactured solutions. 
 
 ## Reference
 

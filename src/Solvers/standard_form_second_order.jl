@@ -10,13 +10,13 @@ Evaluate semi-discrete residual for a second-order problem
     @unpack source_term, N_c = conservation_law
     @unpack f_q, f_f, f_n, u_q, r_q, u_f, CI, u_n, q_q, q_f = solver.preallocated_arrays
 
-    Threads.@threads for k in 1:N_e
+    @threads_optional for k in 1:N_e
         mul!(view(u_q, :,:,k), operators[k].V, u[:,:,k])
         mul!(view(u_f,:,k,:), operators[k].R, u_q[:,:,k])
     end
 
     #auxiliary variable
-    Threads.@threads for k in 1:N_e
+    @threads_optional for k in 1:N_e
 
         numerical_flux!(view(u_n,:,:,:,k), conservation_law,
             viscous_numerical_flux, u_f[:,k,:], u_f[CI[connectivity[:,k]],:], 
@@ -41,7 +41,7 @@ Evaluate semi-discrete residual for a second-order problem
     end
 
     # time derivative
-    Threads.@threads for k in 1:N_e
+    @threads_optional for k in 1:N_e
 
         physical_flux!(view(f_q,:,:,:,k),conservation_law, 
             u_q[:,:,k], q_q[:,:,:,k])

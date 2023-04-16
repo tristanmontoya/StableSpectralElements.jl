@@ -14,6 +14,14 @@ module Solvers
     
     export AbstractResidualForm, StandardForm, AbstractMappingForm, AbstractStrategy, DiscretizationOperators, PreAllocatedArrays, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, get_dof, rhs!, make_operators
 
+    macro threads_optional(ex)
+        if Threads.nthreads() == 1
+            return esc(ex)
+        else
+            return esc(:(Threads.@threads $ex))
+        end
+    end
+
     abstract type AbstractResidualForm{MappingForm, TwoPointFlux} end
     abstract type AbstractMappingForm end
     abstract type AbstractStrategy end

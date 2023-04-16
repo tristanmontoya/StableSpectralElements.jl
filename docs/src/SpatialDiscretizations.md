@@ -36,8 +36,7 @@ In the above, the blue grid lines are used to represent the tensor-product volum
 All the information used to define the spatial discretization on the physical domain $\Omega$ is contained within a `SpatialDiscretization` structure, which is constructed using a `ReferenceApproximation` and a `MeshData` from StartUpDG.jl, which are stored as the fields `reference_approximation` and `mesh`. When the constructor for a `SpatialDiscretization` is called, the grid metrics are computed and stored in a `GeometricFactors` structure, with the corresponding field being `geometric_factors`. CLOUD.jl provides utilities to easily generate uniform periodic meshes on line segments, rectangles, or rectangular prisms; using such a mesh and `reference_approximation` defined previously, we can construct a spatial discretization on the domain $\Omega = [0,1] \times [0,1]$ with four edges in each direction (a total of $N_e = 32$ triangular elements) as shown below:
 
 ```julia
-julia> mesh = uniform_periodic_mesh(reference_approximation.reference_element, 
-    ((0.0, 1.0),(0.0,1.0), (4,4)))
+julia> mesh = uniform_periodic_mesh(reference_approximation, ((0.0, 1.0),(0.0,1.0), (4,4)))
 
 julia> spatial_discretization = SpatialDiscretization(mesh, 
     reference_approximation.reference_element)

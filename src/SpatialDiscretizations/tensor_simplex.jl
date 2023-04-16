@@ -217,7 +217,11 @@ function ReferenceApproximation(
     end
   
     # extrapolation/interpolation onto left edge
-    extrap_3 = TensorProductMap2D(R_L[1], I, σ, σ_f')
+    if volume_quadrature_rule[1] isa GaussRadauQuadrature
+        extrap_3 = SelectionMap([j for j in 1:q[2]+1], N_q)
+    else 
+        extrap_3 = TensorProductMap2D(R_L[1], I, σ, σ_f')
+    end
     if volume_quadrature_rule[2] == facet_quadrature_rule
         interp_3 = LinearMap(I, q[2]+1)
     else 

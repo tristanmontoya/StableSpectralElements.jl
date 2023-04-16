@@ -1,14 +1,13 @@
 module SpatialDiscretizations
 
     using UnPack
-    using LinearAlgebra: I, inv, Diagonal, diagm, kron
+    using LinearAlgebra: I, inv, Diagonal, diagm, kron, transpose, det
+    using Random: rand, shuffle
     using LinearMaps: LinearMap
-    using StartUpDG: MeshData, basis, vandermonde, grad_vandermonde, quad_nodes, NodesAndModes.quad_nodes_tri, NodesAndModes.quad_nodes_tet, face_vertices, nodes, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial, jacobiP, match_coordinate_vectors
-
+    using StartUpDG: MeshData, basis, vandermonde, grad_vandermonde, quad_nodes, NodesAndModes.quad_nodes_tri, NodesAndModes.quad_nodes_tet, face_vertices, nodes, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial, jacobiP, match_coordinate_vectors,uniform_mesh, make_periodic
+    
     using Jacobi: zgrjm, wgrjm, zgj, wgj, zglj, wglj
-    import StartUpDG: face_type, init_face_data
 
-    using ..Mesh: GeometricFactors
     using ..MatrixFreeOperators: TensorProductMap2D, TensorProductMap3D, WarpedTensorProductMap2D, WarpedTensorProductMap3D, SelectionMap
 
     using Reexport
@@ -36,7 +35,9 @@ module SpatialDiscretizations
 
     """Collapsed coordinate mapping χ: [-1,1]ᵈ → Ωᵣ"""
     abstract type AbstractReferenceMapping end
+
     struct NoMapping <: AbstractReferenceMapping end
+
     struct ReferenceMapping <: AbstractReferenceMapping 
         J_ref::Vector{Float64}
         Λ_ref::Array{Float64, 3}
@@ -57,6 +58,21 @@ module SpatialDiscretizations
         B::Diagonal
         V_plot::LinearMap
         reference_mapping::AbstractReferenceMapping
+    end
+
+    struct GeometricFactors{d}
+        # first dimension is node index, second is element
+        J_q::Matrix{Float64}
+    
+        # first dimension is node index, second and third are matrix indices mn,
+        # fourth is element
+        Λ_q::Array{Float64,4}
+    
+        # first dimension is node index, second is element
+        J_f::Matrix{Float64}
+    
+        # d-tuple of matrices, where first is node index, second is element
+        nJf::NTuple{d, Matrix{Float64}}
     end
     
     """Data for constructing the global spatial discretization"""
@@ -128,6 +144,7 @@ module SpatialDiscretizations
     """
     function check_facet_nodes(
         spatial_discretization::SpatialDiscretization{d}) where {d}
+
         @unpack geometric_factors, mesh, N_e = spatial_discretization
         return Tuple([maximum(abs.(mesh.xyzf[m][:,k] -
                 mesh.xyzf[m][mesh.mapP[:,k]])) for k in 1:N_e]
@@ -186,9 +203,9 @@ module SpatialDiscretizations
             for m in 1:d) for k in 1:spatial_discretization.N_e]
     end
 
-    dim(::Line) = 1
-    dim(::Union{Tri,Quad}) = 2
-    dim(::Union{Tet,Hex}) = 3
+    @inline dim(::Line) = 1
+    @inline dim(::Union{Tri,Quad}) = 2
+    @inline dim(::Union{Tet,Hex}) = 3
 
     export AbstractQuadratureRule, DefaultQuadrature, LGLQuadrature, LGQuadrature, LGRQuadrature, GaussLobattoQuadrature, GaussRadauQuadrature, GaussQuadrature, quadrature
     include("quadrature_rules.jl")
@@ -201,5 +218,8 @@ module SpatialDiscretizations
 
     export reference_geometric_factors, operators_1d
     include("tensor_simplex.jl")
+
+    export GeometricFactors, uniform_periodic_mesh, warp_mesh, cartesian_mesh, Uniform, ZigZag, DelReyWarping, ChanWarping
+    include("mesh.jl")
 
 end
