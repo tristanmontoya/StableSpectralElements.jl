@@ -1,7 +1,7 @@
 module SpatialDiscretizations
 
     using UnPack
-    using LinearAlgebra: I, inv, Diagonal, diagm, kron, transpose, det
+    using LinearAlgebra: I, inv, Diagonal, diagm, kron, transpose, det, eigvals
     using Random: rand, shuffle
     using LinearMaps: LinearMap
     using StartUpDG: MeshData, basis, vandermonde, grad_vandermonde, quad_nodes, NodesAndModes.quad_nodes_tri, NodesAndModes.quad_nodes_tet, face_vertices, nodes, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial, jacobiP, match_coordinate_vectors,uniform_mesh, make_periodic
@@ -13,7 +13,7 @@ module SpatialDiscretizations
     using Reexport
     @reexport using StartUpDG: RefElemData, AbstractElemShape, Line, Quad, Tri, Tet, Hex
 
-    export AbstractApproximationType, NodalTensor, ModalTensor, ModalMulti, NodalMulti, AbstractReferenceMapping, NoMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, dim, χ, warped_product
+    export AbstractApproximationType, NodalTensor, ModalTensor, ModalMulti, NodalMulti, AbstractReferenceMapping, NoMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, trace_constant, dim, χ, warped_product
     
     abstract type AbstractApproximationType end
 
@@ -98,8 +98,13 @@ module SpatialDiscretizations
 
         if project_jacobian
             J_proj = similar(J_q)
-            for k in 1:N_e J_proj[:,k] = V * inv(Matrix(V'*W*V)) * V' * W * J_q[:,k] end
-        else J_proj = J_q end
+            Minv = inv(Matrix(V'*W*V)) 
+            for k in 1:N_e 
+                J_proj[:,k] = V * Minv * V' * W * J_q[:,k] 
+            end
+        else 
+            J_proj = J_q 
+        end
 
         return SpatialDiscretization{d}(mesh, N_e, reference_approximation, 
             GeometricFactors(J_proj, Λ_q, J_f, nJf),
@@ -201,6 +206,14 @@ module SpatialDiscretizations
         @unpack xyz = spatial_discretization.mesh
         return [Tuple(sum(xyz[m][:,k])/length(xyz[m][:,k]) 
             for m in 1:d) for k in 1:spatial_discretization.N_e]
+    end
+
+    """
+    Trace inequality constant from Chan et al. (2016)
+    """
+    function trace_constant(reference_approximation::ReferenceApproximation)
+        @unpack B, Vf, W, V = reference_approximation
+        return maximum(eigvals(Matrix(Vf' * B * Vf), Matrix(V' * W * V)))
     end
 
     @inline dim(::Line) = 1
