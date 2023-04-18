@@ -18,6 +18,14 @@ struct GaussRadauQuadrature <: AbstractQuadratureRule
     b::Int
 end
 
+struct XiaoGimbutasQuadrature <: AbstractQuadratureRule
+    degree::Int
+end
+
+struct JaskowiecSukumarQuadrature <: AbstractQuadratureRule
+    degree::Int
+end
+
 struct DefaultQuadrature <: AbstractQuadratureRule
     degree::Int
 end
@@ -46,8 +54,19 @@ function quadrature(::Tri, quadrature_rule::DefaultQuadrature)
     return quad_nodes_tri(quadrature_rule.degree)
 end
 
-function quadrature(::Tet, quadrature_rule::DefaultQuadrature)
+function quadrature(::Tet, quadrature_rule::XiaoGimbutasQuadrature)
+    if quadrature_rule.degree > 15
+        @error "Xiao-Gimbutas quadrature rules not available for N > 20."
+    end
     return quad_nodes_tet(quadrature_rule.degree)
+end
+
+function quadrature(::Tet, quadrature_rule::JaskowiecSukumarQuadrature)
+    return jaskowiec_sukumar_quad_nodes(Tet(), quadrature_rule.degree)
+end
+
+function quadrature(::Tet, quadrature_rule::DefaultQuadrature)
+    return jaskowiec_sukumar_quad_nodes(Tet(), quadrature_rule.degree)
 end
 
 function quadrature(::Line, quadrature_rule::GaussLobattoQuadrature)
@@ -114,7 +133,7 @@ function quadrature(::Tri, quadrature_rule::NTuple{2,AbstractQuadratureRule})
         (quadrature_rule[2].a, quadrature_rule[2].b) == (1,0))
         return χ(Tri(), (r_grid[1][:], r_grid[2][:]))..., 0.5*w2d[:]
     else 
-        @error "Chosen Jacobi weight not supported" 
+        @error "Chosen Jacobi weight not supported." 
     end
 end
 

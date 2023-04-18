@@ -4,7 +4,7 @@ module SpatialDiscretizations
     using LinearAlgebra: I, inv, Diagonal, diagm, kron, transpose, det, eigvals
     using Random: rand, shuffle
     using LinearMaps: LinearMap
-    using StartUpDG: MeshData, basis, vandermonde, grad_vandermonde, quad_nodes, NodesAndModes.quad_nodes_tri, NodesAndModes.quad_nodes_tet, face_vertices, nodes, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial, jacobiP, match_coordinate_vectors,uniform_mesh, make_periodic
+    using StartUpDG: MeshData, basis, vandermonde, grad_vandermonde, quad_nodes, NodesAndModes.quad_nodes_tri, NodesAndModes.quad_nodes_tet, face_vertices, nodes, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial, jacobiP, match_coordinate_vectors,uniform_mesh, make_periodic, jaskowiec_sukumar_quad_nodes
     
     using Jacobi: zgrjm, wgrjm, zgj, wgj, zglj, wglj
 
@@ -220,10 +220,11 @@ module SpatialDiscretizations
     @inline dim(::Union{Tri,Quad}) = 2
     @inline dim(::Union{Tet,Hex}) = 3
 
-    export AbstractQuadratureRule, DefaultQuadrature, LGLQuadrature, LGQuadrature, LGRQuadrature, GaussLobattoQuadrature, GaussRadauQuadrature, GaussQuadrature, quadrature
+    export AbstractQuadratureRule, DefaultQuadrature, LGLQuadrature, LGQuadrature, LGRQuadrature, GaussLobattoQuadrature, GaussRadauQuadrature, GaussQuadrature, XiaoGimbutasQuadrature, JaskowiecSukumarQuadrature, quadrature
     include("quadrature_rules.jl")
 
     # new constructors for RefElemData from StartUpDG
+    # this will eventually be integrated within StartUpDG.
     include("ref_elem_data.jl")
 
     include("multidimensional.jl")
