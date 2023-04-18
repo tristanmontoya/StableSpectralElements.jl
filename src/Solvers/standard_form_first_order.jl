@@ -16,7 +16,6 @@ Evaluate semi-discrete residual for a first-order problem
     end
 
     @timeit "eval residual" Threads.@threads for k in 1:N_e
-        println("element ", k, "on thread ", Threads.threadid())
         physical_flux!(view(f_q,:,:,:,k),conservation_law, u_q[:,:,k])
 
         f_f[:,:,k] .= numerical_flux(conservation_law, inviscid_numerical_flux,
