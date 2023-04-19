@@ -7,7 +7,7 @@ Evaluate semi-discrete residual for a first-order problem
 
     @unpack conservation_law, operators, connectivity, form, N_e = solver
     @unpack inviscid_numerical_flux = form
-    @unpack source_term, N_c = conservation_law
+    @unpack source_term = conservation_law
     @unpack f_q, f_f, f_n, u_q, r_q, u_f, CI = solver.preallocated_arrays
     
     @timeit "reconstruct nodal solution" Threads.@threads for k in 1:N_e

@@ -3,7 +3,7 @@ struct ZeroMap <: LinearMaps.LinearMap{Float64}
     N::Int
 end
 
-@inline Base.size(::ZeroMap) = (M,N)
+@inline Base.size(L::ZeroMap) = (L.M,L.N)
 
 function LinearAlgebra.transpose(L::ZeroMap)
     return ZeroMap(L.N,L.M)

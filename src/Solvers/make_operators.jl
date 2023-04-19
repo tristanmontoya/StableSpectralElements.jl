@@ -36,14 +36,14 @@ function make_operators(spatial_discretization::SpatialDiscretization{1},
     @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
     op(A::LinearMap) = make_operator(A, operator_algorithm)
 
-    operators = Array{DiscretizationOperators}(undef, N_e)
-    @inbounds for k in 1:N_e
+    operators = Array{PhysicalOperators{1}}(undef, N_e)
+    Threads.@threads for k in 1:N_e
         VOL = (op(D[1]' * W),)
         FAC = op(-R' * B)
         SRC = Diagonal(W * J_q[:,k])
         NTR = (Diagonal(nJf[1][:,k]) * op(R),)
 
-        operators[k] = DiscretizationOperators{1}(VOL, FAC, SRC, NTR,
+        operators[k] = PhysicalOperators{1}(VOL, FAC, SRC, NTR,
             mass_matrix(V,W,Diagonal(J_q[:,k]), mass_matrix_solver),
             op(V), op(R), (nJf[1][:,k],), N_p, N_q, N_f)
     end
@@ -61,7 +61,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     @unpack J_q, Λ_q, J_f, nJf = spatial_discretization.geometric_factors
     op(A::LinearMap) = make_operator(A, operator_algorithm)
 
-    operators = Array{DiscretizationOperators}(undef, N_e)
+    operators = Array{PhysicalOperators{d}}(undef, N_e)
     @inbounds for k in 1:N_e
         VOL = Tuple(sum(op(D[m]') * Diagonal(W * Λ_q[:,m,n,k]) for m in 1:d)    
             for n in 1:d)
@@ -71,7 +71,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
         n_f = Tuple(nJf[m][:,k] ./ J_f[:,k] for m in 1:d)
         NTR = Tuple(LinearMap(zeros(N_f,N_q)) for m in 1:d)
 
-        operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC, NTR,
+        operators[k] = PhysicalOperator{d}(VOL, FAC, SRC, NTR,
             mass_matrix(V,W,Diagonal(J_q[:,k]), mass_matrix_solver), 
             op(V), op(R), n_f, N_p, N_q, N_f)
     end
@@ -89,7 +89,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     @unpack J_q, Λ_q, J_f, nJf = spatial_discretization.geometric_factors
     op(A::LinearMap) = make_operator(A, operator_algorithm)
 
-    operators = Array{DiscretizationOperators}(undef, N_e)
+    operators = Array{PhysicalOperators{d}}(undef, N_e)
     @inbounds for k in 1:N_e
         VOL = Tuple(sum(
             op(D[m]') * Diagonal(0.5 * W * Λ_q[:,m,n,k]) -
@@ -103,7 +103,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
         n_f = Tuple(nJf[m][:,k] ./ J_f[:,k] for m in 1:d)
         NTR = Tuple(ZeroMap(N_f,N_q) for m in 1:d)
 
-        operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC, NTR,
+        operators[k] = PhysicalOperators{d}(VOL, FAC, SRC, NTR,
             mass_matrix(V,W,Diagonal(J_q[:,k]), mass_matrix_solver), 
             op(V), op(R), n_f, N_p, N_q, N_f)
     end
@@ -121,7 +121,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     @unpack J_q, Λ_q, J_f, nJf = spatial_discretization.geometric_factors
     op(A::LinearMap) = make_operator(A, operator_algorithm)
 
-    operators = Array{DiscretizationOperators}(undef, N_e)
+    operators = Array{PhysicalOperators{d}}(undef, N_e)
     @inbounds for k in 1:N_e
         VOL = Tuple(-sum(
             Diagonal(0.5* W * Λ_q[:,m,n,k]) * op(D[m]) -
@@ -134,7 +134,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
         n_f = Tuple(nJf[m][:,k] ./ J_f[:,k] for m in 1:d)
         NTR = Tuple(Diagonal(-n_f[m]) * op(R) for m in 1:d)
 
-        operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC, NTR,
+        operators[k] = PhysicalOperators{d}(VOL, FAC, SRC, NTR,
             mass_matrix(V,W,Diagonal(J_q[:,k]), mass_matrix_solver), 
             op(V), op(R), n_f, N_p, N_q, N_f)
     end
@@ -152,7 +152,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     @unpack J_q, Λ_q, J_f, nJf = spatial_discretization.geometric_factors
     op(A::LinearMap) = make_operator(A, operator_algorithm)
 
-    operators = Array{DiscretizationOperators}(undef, N_e)
+    operators = Array{PhysicalOperators{d}}(undef, N_e)
     @inbounds for k in 1:N_e
         VOL = Tuple(sum(
             op(D[m]') * Diagonal(0.5 * W * Λ_q[:,m,n,k]) -
@@ -163,7 +163,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
         n_f = Tuple(nJf[m][:,k] ./ J_f[:,k] for m in 1:d)
         NTR = Tuple(Diagonal(-0.5*n_f[m]) * op(R) for m in 1:d)
 
-        operators[k] = DiscretizationOperators{d}(VOL, FAC, SRC, NTR,
+        operators[k] = PhysicalOperators{d}(VOL, FAC, SRC, NTR,
             mass_matrix(V,W,Diagonal(J_q[:,k]), mass_matrix_solver), 
             op(V), op(R), n_f, N_p, N_q, N_f)
     end

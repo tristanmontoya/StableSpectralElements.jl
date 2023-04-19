@@ -12,11 +12,12 @@ module Solvers
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization, check_facet_nodes, check_normals
     using ..GridFunctions: AbstractGridFunction, AbstractGridFunction, NoSourceTerm, evaluate   
     
-    export AbstractResidualForm, StandardForm, AbstractMappingForm, AbstractStrategy, DiscretizationOperators, PreAllocatedArrays, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, get_dof, rhs!, make_operators
+    export AbstractResidualForm, StandardForm, AbstractMappingForm, AbstractStrategy, AbstractDiscretizationOperators, PhysicalOperators, PreAllocatedArrays, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, get_dof, rhs!, make_operators
 
     abstract type AbstractResidualForm{MappingForm, TwoPointFlux} end
     abstract type AbstractMappingForm end
     abstract type AbstractStrategy end
+    abstract type AbstractDiscretizationOperators{d} end
 
     StandardForm = AbstractResidualForm{<:AbstractMappingForm, NoTwoPointFlux}
 
@@ -25,7 +26,7 @@ module Solvers
     struct PhysicalOperator <: AbstractStrategy end
     struct ReferenceOperator <: AbstractStrategy end
 
-    struct DiscretizationOperators{d}
+    struct PhysicalOperators{d} <: AbstractDiscretizationOperators{d}
         VOL::NTuple{d,LinearMap}
         FAC::LinearMap
         SRC::LinearMap
@@ -79,29 +80,29 @@ module Solvers
             Array{Float64}(undef,N_f, N_e, N_c, d)) #note switched order
     end
 
-    struct Solver{d,ResidualForm,PDEType}
+    struct Solver{d,ResidualForm,PDEType,OperatorType}
         conservation_law::AbstractConservationLaw{d,PDEType}
-        operators::Vector{<:DiscretizationOperators}
-        x_q::NTuple{d,Matrix{Float64}}
+        operators::Vector{OperatorType}
         connectivity::Matrix{Int}
         form::ResidualForm
+        N_q::Int
+        N_f::Int
+        N_c::Int
         N_e::Int
         preallocated_arrays::PreAllocatedArrays{PDEType}
-        
-        function Solver(conservation_law::AbstractConservationLaw{d,PDEType},
-            operators::Vector{<:DiscretizationOperators},
-            x_q::NTuple{d,Matrix{Float64}},
-            connectivity::Matrix{Int},
-            form::ResidualForm) where {d,ResidualForm,PDEType}
+    end
 
-            @unpack N_c = conservation_law
-            N_e = length(operators)
-            @unpack N_q, N_f = operators[1]
+    function Solver(conservation_law::AbstractConservationLaw{d,PDEType},
+        operators::Vector{PhysicalOperators{d}},
+        connectivity::Matrix{Int},
+        form::ResidualForm) where {d,ResidualForm,PDEType}
 
-            return new{d,ResidualForm,PDEType}(conservation_law, operators,
-                x_q, connectivity, form, N_e, 
-                PreAllocatedArrays{PDEType}(N_q,N_f,N_c,d,N_e))
-        end
+        @unpack N_c = conservation_law
+        N_e = length(operators)
+        @unpack N_q, N_f = operators[1]
+
+        return Solver{d,ResidualForm,PDEType,PhysicalOperators{d}}(conservation_law, operators, connectivity, form, N_q, N_f, N_c, N_e,
+            PreAllocatedArrays{PDEType}(N_q,N_f,N_c,d,N_e))
     end
 
     @inline function get_dof(spatial_discretization::SpatialDiscretization{d}, 

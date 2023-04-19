@@ -26,11 +26,9 @@ function Solver(conservation_law::AbstractConservationLaw,
 
     operators = make_operators(spatial_discretization, form,
         operator_algorithm, mass_matrix_solver)
-        
+
     return Solver(conservation_law, 
-        operators,
-        spatial_discretization.mesh.xyzq,
-        spatial_discretization.mesh.mapP, form)
+        operators, spatial_discretization.mesh.mapP, form)
 end
 
 function Solver(conservation_law::AbstractConservationLaw,     
@@ -51,7 +49,6 @@ function Solver(conservation_law::AbstractConservationLaw,
     return Solver(conservation_law, 
             [precompute(operators[k], operator_algorithm) 
                 for k in 1:spatial_discretization.N_e],
-            spatial_discretization.mesh.xyzq,
             spatial_discretization.mesh.mapP, form)
 end
 
@@ -62,11 +59,11 @@ function Solver(conservation_law::AbstractConservationLaw,
         form, ReferenceOperator())
 end
 
-function precompute(operators::DiscretizationOperators{d}, 
+function precompute(operators::PhysicalOperators{d}, 
     operator_algorithm::AbstractOperatorAlgorithm=BLASAlgorithm()) where {d}
     @unpack VOL, FAC, SRC, NTR, M, V, R, n_f, N_p, N_q, N_f = operators
 
-    return DiscretizationOperators{d}(
+    return PhysicalOperators{d}(
         Tuple(make_operator(VOL[n], operator_algorithm) for n in 1:d),
         make_operator(FAC, operator_algorithm), 
         make_operator(SRC, operator_algorithm),
