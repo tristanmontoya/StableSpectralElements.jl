@@ -13,8 +13,20 @@ module MatrixFreeOperators
         return map
     end
     
+    function make_operator(matrix::Matrix, ::DefaultOperatorAlgorithm)
+        return LinearMaps.WrappedMap(matrix)
+    end
+
+    function make_operator(matrix::Matrix, ::BLASAlgorithm)
+        return LinearMaps.WrappedMap(matrix)
+    end
+
     function make_operator(map::LinearMap, ::BLASAlgorithm)
         return LinearMaps.WrappedMap(Matrix(map))
+    end
+
+    function make_operator(matrix::Matrix, ::GenericMatrixAlgorithm)
+        return GenericMatrixMap(matrix)
     end
 
     function make_operator(map::LinearMap, ::GenericMatrixAlgorithm)

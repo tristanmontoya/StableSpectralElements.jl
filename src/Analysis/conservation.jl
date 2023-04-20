@@ -5,7 +5,7 @@ abstract type AbstractConservationAnalysisResults <: AbstractAnalysisResults end
 Evaluate change in ∫udx  
 """
 struct PrimaryConservationAnalysis <: ConservationAnalysis
-    WJ::Vector{<:AbstractMatrix}
+    WJ::Vector{Diagonal}
     N_c::Int
     N_e::Int
     V::LinearMap
@@ -17,7 +17,7 @@ end
 Evaluate change in  ∫½u²dx  
 """
 struct EnergyConservationAnalysis <: ConservationAnalysis
-    WJ::Vector{<:AbstractMatrix}
+    mass_solver::AbstractMassMatrixSolver
     N_c::Int
     N_e::Int
     V::LinearMap
@@ -45,7 +45,7 @@ function PrimaryConservationAnalysis(results_path::String,
     @unpack W, V =  spatial_discretization.reference_approximation
     @unpack geometric_factors, mesh, N_e = spatial_discretization
     
-    WJ = [Matrix(W) * Diagonal(geometric_factors.J_q[:,k]) for k in 1:N_e]
+    WJ = [Diagonal(W .* geometric_factors.J_q[:,k]) for k in 1:N_e]
 
     return PrimaryConservationAnalysis(
         WJ, N_c, N_e, V, results_path, "conservation.jld2")
@@ -54,7 +54,7 @@ end
 function EnergyConservationAnalysis(results_path::String,
     conservation_law::AbstractConservationLaw,
     spatial_discretization::SpatialDiscretization{d},
-    use_weight_adjusted_mass_matrix::Bool=false) where {d}
+    mass_solver=WeightAdjustedSolver(spatial_discretization)) where {d}
 
     _, N_c, N_e = get_dof(spatial_discretization, conservation_law)
 
@@ -62,13 +62,8 @@ function EnergyConservationAnalysis(results_path::String,
     @unpack mesh, N_e = spatial_discretization
     @unpack J_q = spatial_discretization.geometric_factors
 
-    if use_weight_adjusted_mass_matrix && !(V isa UniformScalingMap)
-        WJ = [Matrix(W * V * inv(Matrix(V' * W * inv(Diagonal(J_q[:,k])) * V)) *
-            V' * W) for k in 1:N_e]
-    else WJ = [Matrix(W) * Diagonal(J_q[:,k]) for k in 1:N_e] end
-
     return EnergyConservationAnalysis(
-        WJ, N_c, N_e, V ,results_path, "energy.jld2")
+        mass_solver, N_c, N_e, V ,results_path, "energy.jld2")
 end
 
 function evaluate_conservation(
@@ -83,10 +78,15 @@ end
 function evaluate_conservation(
     analysis::EnergyConservationAnalysis, 
     u::Array{Float64,3})
-    @unpack WJ, N_c, N_e, V = analysis 
-
-    return [0.5*sum(u[:,e,k]'*V'*WJ[k]*V*u[:,e,k] 
-        for k in 1:N_e) for e in 1:N_c]
+    @unpack mass_solver, N_c, N_e, V = analysis 
+    E = zeros(N_c)
+    for k in 1:N_e
+        M = mass_matrix(mass_solver, k)
+        for e in 1:N_c
+            E[e] += 0.5*u[:,e,k]'*M*u[:,e,k] 
+        end
+    end
+    return E
 end
 
 function evaluate_conservation_residual(
@@ -103,10 +103,16 @@ function evaluate_conservation_residual(
     analysis::EnergyConservationAnalysis, 
     u::Array{Float64,3},
     dudt::Array{Float64,3})
-    @unpack WJ, N_c, N_e, V = analysis 
+    @unpack mass_solver, N_c, N_e, V = analysis 
 
-    return [sum(u[:,e,k]'*V'*WJ[k]*V*dudt[:,e,k] 
-        for k in 1:N_e) for e in 1:N_c]
+    dEdt = zeros(N_c)
+    for k in 1:N_e
+        M = mass_matrix(mass_solver, k)
+        for e in 1:N_c
+            dEdt[e] += u[:,e,k]'*M*dudt[:,e,k] 
+        end
+    end
+    return dEdt
 end
 
 

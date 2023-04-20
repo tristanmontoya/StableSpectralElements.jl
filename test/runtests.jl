@@ -11,7 +11,7 @@ const p = 4
         ReferenceApproximation(ModalMulti(p), Line()), 
         LinearAdvectionDiffusionEquation(1.0,5.0e-2),
         InitialDataSine(1.0,2π),
-        WeakConservationForm(
+        StandardForm(
             mapping_form=StandardMapping(),
             inviscid_numerical_flux=LaxFriedrichsNumericalFlux(),
             viscous_numerical_flux=BR1()),
@@ -29,7 +29,7 @@ end
         ReferenceApproximation(ModalTensor(p), Tri(), volume_quadrature_rule=(LGQuadrature(p),LGRQuadrature(p)),mapping_degree=p), 
         LinearAdvectionEquation((1.0,1.0)),
         InitialDataSine(1.0,(2*π, 2*π)),
-        SplitConservationForm(
+        StandardForm(
             mapping_form=SkewSymmetricMapping(),
             inviscid_numerical_flux=LaxFriedrichsNumericalFlux(0.0)),
         DefaultOperatorAlgorithm(),
@@ -47,11 +47,11 @@ end
         volume_quadrature_rule=LGLQuadrature(p), facet_quadrature_rule=LGLQuadrature(p)), 
         LinearAdvectionEquation((1.0,1.0)),
         InitialDataSine(1.0,(2*π, 2*π)),
-        WeakConservationForm(
+        StandardForm(
             mapping_form=StandardMapping(),
             inviscid_numerical_flux=LaxFriedrichsNumericalFlux(1.0)),
         BLASAlgorithm(),
-        ReferenceOperator(), 1.0, 2, 1.0, 1.0/100.0, 0.1,
+        PhysicalOperator(), 1.0, 2, 1.0, 1.0/100.0, 0.1,
         "test_advection_2d_dgsem_standard")
     
     @test l2 ≈ 0.04930951393074396 atol=tol
@@ -64,7 +64,7 @@ end
         ReferenceApproximation(ModalTensor(p), Tet(), mapping_degree=3),
         LinearAdvectionEquation((1.0,1.0,1.0)),
         InitialDataSine(1.0,(2*π, 2*π, 2*π)),
-        SplitConservationForm(
+        StandardForm(
             mapping_form=SkewSymmetricMapping(),
             inviscid_numerical_flux=LaxFriedrichsNumericalFlux(0.0)),
         DefaultOperatorAlgorithm(),

@@ -27,13 +27,16 @@ function test_driver(
         spatial_discretization, initial_data, form, (0.0, T),
         string("results/", test_name,"/"), overwrite=true, clear=true)
 
+    mass_solver = CholeskySolver(spatial_discretization)
+
     ode_problem = semidiscretize(conservation_law,
         spatial_discretization,
         initial_data, 
         form,
         (0.0, T),
         strategy,
-        operator_algorithm)
+        operator_algorithm,
+        mass_matrix_solver=mass_solver)
 
     sol = solve(ode_problem, CarpenterKennedy2N54(),
         adaptive=false, dt=dt, callback=save_callback(results_path, (0.0,T),  floor(Int, 1.0/(dt*50))))
@@ -44,7 +47,7 @@ function test_driver(
         conservation_law, spatial_discretization), 
         load_time_steps(results_path))
     energy = analyze(EnergyConservationAnalysis(results_path,
-        conservation_law, spatial_discretization),
+        conservation_law, spatial_discretization, mass_solver),
         load_time_steps(results_path))
 
     return (error..., maximum(abs.(conservation.dEdt[:,1])), 

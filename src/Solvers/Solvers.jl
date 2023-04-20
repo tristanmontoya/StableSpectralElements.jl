@@ -2,7 +2,7 @@ module Solvers
 
     using UnPack
     import LinearAlgebra
-    using LinearAlgebra: Diagonal, eigvals, inv, mul!, factorize, cholesky,ldiv!, Factorization, Cholesky, Symmetric
+    using LinearAlgebra: Diagonal, eigvals, inv, mul!, lmul!, diag, diagm, factorize, cholesky, ldiv!, Factorization, Cholesky, Symmetric, I, UniformScaling
     using TimerOutputs
     using LinearMaps: LinearMap, UniformScalingMap
     using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
@@ -12,34 +12,46 @@ module Solvers
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization, check_facet_nodes, check_normals
     using ..GridFunctions: AbstractGridFunction, AbstractGridFunction, NoSourceTerm, evaluate   
     
-    export AbstractResidualForm, StandardForm, AbstractMappingForm, AbstractStrategy, AbstractDiscretizationOperators, PhysicalOperators, PreAllocatedArrays, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, get_dof, rhs!, make_operators
+    export AbstractResidualForm, StandardForm, AbstractMappingForm, AbstractStrategy, AbstractDiscretizationOperators, PhysicalOperators, PreAllocatedArrays, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, get_dof, rhs!, make_operators, StandardForm
 
     abstract type AbstractResidualForm{MappingForm, TwoPointFlux} end
     abstract type AbstractMappingForm end
     abstract type AbstractStrategy end
     abstract type AbstractDiscretizationOperators{d} end
+    abstract type AbstractMassMatrixSolver end
 
-    StandardForm = AbstractResidualForm{<:AbstractMappingForm, NoTwoPointFlux}
 
     struct StandardMapping <: AbstractMappingForm end
     struct SkewSymmetricMapping <: AbstractMappingForm end
     struct PhysicalOperator <: AbstractStrategy end
     struct ReferenceOperator <: AbstractStrategy end
 
-    struct PhysicalOperators{d} <: AbstractDiscretizationOperators{d}
-        VOL::NTuple{d,LinearMap}
-        FAC::LinearMap
-        SRC::LinearMap
-        NTR::NTuple{d,LinearMap}
-        M::Union{Cholesky, AbstractMatrix, WeightAdjustedMap}
-        V::LinearMap
-        R::LinearMap
-        n_f::NTuple{d, Vector{Float64}}
-        N_p::Int
-        N_q::Int
-        N_f::Int
+    Base.@kwdef struct StandardForm{MappingForm} <: AbstractResidualForm{MappingForm,NoTwoPointFlux}
+        mapping_form::MappingForm = SkewSymmetricMapping()
+        inviscid_numerical_flux::AbstractInviscidNumericalFlux =
+            LaxFriedrichsNumericalFlux()
+        viscous_numerical_flux::AbstractViscousNumericalFlux = BR1()
     end
 
+    struct ReferenceOperators{d} <: AbstractDiscretizationOperators{d}
+        D::NTuple{d,LinearMap}
+        V::LinearMap
+        R::LinearMap
+        W::LinearMap
+        B::LinearMap
+        halfWΛ::Array{Diagonal,3} # d x d x N_e
+        halfN::Matrix{Diagonal}
+        BJf::Vector{Diagonal}
+        n_f::Vector{NTuple{d, Vector{Float64}}}
+    end
+
+    struct PhysicalOperators{d} <: AbstractDiscretizationOperators{d}
+        VOL::Vector{NTuple{d,LinearMap}}
+        FAC::Vector{LinearMap}
+        V::Vector{LinearMap}
+        R::Vector{LinearMap}
+        n_f::Vector{NTuple{d, Vector{Float64}}}
+    end
     struct PreAllocatedArrays{PDEType}
         f_q::Array{Float64,4}
         f_f::Array{Float64,3}
@@ -47,14 +59,15 @@ module Solvers
         u_q::Array{Float64,3}
         r_q::Array{Float64,3}
         u_f::Array{Float64,3}
+        temp::Array{Float64,3}
         CI::CartesianIndices
         u_n::Union{Nothing,Array{Float64,4}}
         q_q::Union{Nothing,Array{Float64,4}}
         q_f::Union{Nothing,Array{Float64,4}}
     end
     
-    @timeit "allocate" function PreAllocatedArrays{FirstOrder}( 
-        N_q::Int,N_f::Int,N_c::Int,d::Int,N_e::Int)
+    function PreAllocatedArrays{FirstOrder}( 
+        N_p::Int, N_q::Int,N_f::Int,N_c::Int,d::Int,N_e::Int,temp_size::Int=N_p)
         return PreAllocatedArrays{FirstOrder}(
             Array{Float64}(undef,N_q, N_c, d, N_e),
             Array{Float64}(undef,N_f, N_c, N_e),
@@ -62,11 +75,13 @@ module Solvers
             Array{Float64}(undef,N_q, N_c, N_e),
             Array{Float64}(undef,N_q, N_c, N_e),
             Array{Float64}(undef,N_f, N_e, N_c), #note switched order
+            Array{Float64}(undef,temp_size, N_c, N_e),
             CartesianIndices((N_f,N_e)), nothing, nothing, nothing)
     end
 
     function PreAllocatedArrays{SecondOrder}(
-        N_q::Int, N_f::Int, N_c::Int, d::Int, N_e::Int)
+        N_p::Int, N_q::Int, N_f::Int, N_c::Int, d::Int, N_e::Int,
+        temp_size::Int=N_p)
         return PreAllocatedArrays{SecondOrder}(
             Array{Float64}(undef,N_q, N_c, d, N_e),
             Array{Float64}(undef,N_f, N_c, N_e),
@@ -74,6 +89,7 @@ module Solvers
             Array{Float64}(undef,N_q, N_c, N_e),
             Array{Float64}(undef,N_q, N_c, N_e),
             Array{Float64}(undef,N_f, N_e, N_c), #note switched order
+            Array{Float64}(undef,temp_size, N_c, N_e),
             CartesianIndices((N_f,N_e)),
             Array{Float64}(undef,N_f, N_c, d, N_e),
             Array{Float64}(undef,N_q, N_c, d, N_e),
@@ -82,7 +98,8 @@ module Solvers
 
     struct Solver{d,ResidualForm,PDEType,OperatorType}
         conservation_law::AbstractConservationLaw{d,PDEType}
-        operators::Vector{OperatorType}
+        operators::OperatorType
+        mass_solver::AbstractMassMatrixSolver
         connectivity::Matrix{Int}
         form::ResidualForm
         N_q::Int
@@ -93,16 +110,35 @@ module Solvers
     end
 
     function Solver(conservation_law::AbstractConservationLaw{d,PDEType},
-        operators::Vector{PhysicalOperators{d}},
+        operators::ReferenceOperators{d},
+        mass_solver::AbstractMassMatrixSolver,
         connectivity::Matrix{Int},
         form::ResidualForm) where {d,ResidualForm,PDEType}
 
         @unpack N_c = conservation_law
-        N_e = length(operators)
-        @unpack N_q, N_f = operators[1]
+        N_e = size(operators.halfWΛ,3)
+        (N_q,N_p) = size(operators.V)
+        N_f = size(operators.R,1)
 
-        return Solver{d,ResidualForm,PDEType,PhysicalOperators{d}}(conservation_law, operators, connectivity, form, N_q, N_f, N_c, N_e,
-            PreAllocatedArrays{PDEType}(N_q,N_f,N_c,d,N_e))
+        return Solver{d,ResidualForm,PDEType,ReferenceOperators{d}}(conservation_law, 
+            operators, mass_solver, connectivity, form, N_q, N_f, N_c, N_e,
+            PreAllocatedArrays{PDEType}(N_p,N_q,N_f,N_c,d,N_e,N_q))
+    end
+
+    function Solver(conservation_law::AbstractConservationLaw{d,PDEType},
+        operators::PhysicalOperators{d},
+        mass_solver::AbstractMassMatrixSolver,
+        connectivity::Matrix{Int},
+        form::ResidualForm) where {d,ResidualForm,PDEType}
+
+        @unpack N_c = conservation_law
+        N_e = length(operators.V)
+        (N_q,N_p) = size(operators.V[1])
+        N_f = size(operators.R[1],1)
+
+        return Solver{d,ResidualForm,PDEType,PhysicalOperators{d}}(conservation_law, 
+            operators, mass_solver, connectivity, form, N_q, N_f, N_c, N_e,
+            PreAllocatedArrays{PDEType}(N_p,N_q,N_f,N_c,d,N_e,N_p))
     end
 
     @inline function get_dof(spatial_discretization::SpatialDiscretization{d}, 
@@ -111,30 +147,12 @@ module Solvers
             conservation_law.N_c, spatial_discretization.N_e)
     end
 
-    @inline function diff_with_extrap_flux!(f_f::AbstractMatrix{Float64}, 
-        ::AbstractMatrix{Float64}, ::NTuple{d, ZeroMap}, 
-        ::AbstractArray{Float64,3}) where {d}
-        return f_f
-    end
-    
-    @inline function diff_with_extrap_flux!(f_f::AbstractMatrix{Float64}, 
-        f_n::AbstractMatrix{Float64}, NTR::NTuple{d, <:LinearMap}, 
-        f_q::AbstractArray{Float64,3}) where {d}
-    
-        @inbounds for m in 1:d
-            mul!(f_n, NTR[m], f_q[:,:,m])
-            f_f .+= f_n
-        end
-        return f_f
-    end    
-
-    export AbstractMassMatrixSolver, CholeskySolver, WeightAdjustedSolver, PreInvert, mass_matrix
+    export CholeskySolver, WeightAdjustedSolver, DiagonalSolver, mass_matrix, mass_matrix_inverse, max_matrix_solve
     include("mass_matrix.jl") 
 
     export initialize, semidiscretize, precompute
     include("preprocessing.jl")
 
-    export StrongConservationForm, WeakConservationForm, SplitConservationForm
     include("make_operators.jl")
     
     export diff_with_extrap_flux!
