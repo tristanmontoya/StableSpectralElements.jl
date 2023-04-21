@@ -12,7 +12,7 @@ module Solvers
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization, check_facet_nodes, check_normals
     using ..GridFunctions: AbstractGridFunction, AbstractGridFunction, NoSourceTerm, evaluate   
     
-    export AbstractResidualForm, StandardForm, AbstractMappingForm, AbstractStrategy, AbstractDiscretizationOperators, PhysicalOperators, PreAllocatedArrays, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, get_dof, rhs!, make_operators, StandardForm
+    export AbstractResidualForm, StandardForm, AbstractMappingForm, AbstractStrategy, AbstractDiscretizationOperators, AbstractMassMatrixSolver, PhysicalOperators, PreAllocatedArrays, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, get_dof, rhs!, make_operators, StandardForm
 
     abstract type AbstractResidualForm{MappingForm, TwoPointFlux} end
     abstract type AbstractMappingForm end

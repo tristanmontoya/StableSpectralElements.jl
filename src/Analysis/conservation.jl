@@ -80,8 +80,10 @@ function evaluate_conservation(
     u::Array{Float64,3})
     @unpack mass_solver, N_c, N_e, V = analysis 
     E = zeros(N_c)
+    N_p = size(V,2)
+    M = Matrix{Float64}(undef, N_p, N_p)
     for k in 1:N_e
-        M = mass_matrix(mass_solver, k)
+        M .= mass_matrix(mass_solver, k)
         for e in 1:N_c
             E[e] += 0.5*u[:,e,k]'*M*u[:,e,k] 
         end
@@ -107,6 +109,7 @@ function evaluate_conservation_residual(
 
     dEdt = zeros(N_c)
     for k in 1:N_e
+        println("k = ", k)
         M = mass_matrix(mass_solver, k)
         for e in 1:N_c
             dEdt[e] += u[:,e,k]'*M*dudt[:,e,k] 
@@ -114,7 +117,6 @@ function evaluate_conservation_residual(
     end
     return dEdt
 end
-
 
 function analyze(analysis::ConservationAnalysis, 
     initial_time_step::Union{Int,String}=0, 
