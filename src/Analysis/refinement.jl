@@ -15,8 +15,8 @@ struct RefinementAnalysisResults <: AbstractAnalysisResults
 end
 
 function analyze(analysis::RefinementAnalysis{d}, n_grids=100;
-    mass_solver=nothing,
-    max_derivs::Bool=false) where {d}
+    max_derivs::Bool=false, 
+    use_weight_adjusted_mass_matrix::Bool=true) where {d}
 
     @unpack sequence_path, exact_solution = analysis
 
@@ -32,8 +32,10 @@ function analyze(analysis::RefinementAnalysis{d}, n_grids=100;
     error = transpose(analyze(ErrorAnalysis(results_path, conservation_law,  
         spatial_discretization), u, exact_solution))
 
-    if isnothing(mass_solver)
+    if use_weight_adjusted_mass_matrix
         mass_solver = WeightAdjustedSolver(spatial_discretization)
+    else
+        mass_solver = CholeskySolver(spatial_discretization)
     end
 
     if max_derivs
@@ -66,6 +68,12 @@ function analyze(analysis::RefinementAnalysis{d}, n_grids=100;
         conservation_law, spatial_discretization = load_project(results_path) 
         (N_p, N_c, N_e) = get_dof(spatial_discretization, conservation_law)
         dof = [dof; [N_p N_e]]
+
+        if use_weight_adjusted_mass_matrix
+            mass_solver = WeightAdjustedSolver(spatial_discretization)
+        else
+            mass_solver = CholeskySolver(spatial_discretization)
+        end    
 
         if !isfile(string(results_path), "error.jld2")  
             error = [error; fill(NaN, 1, N_c)]
