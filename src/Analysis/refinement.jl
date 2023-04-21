@@ -91,7 +91,7 @@ function analyze(analysis::RefinementAnalysis{d}, n_grids=100;
                 energy_results = analyze(
                         EnergyConservationAnalysis(results_path, 
                         conservation_law, spatial_discretization,
-                        use_weight_adjusted_mass_matrix), time_steps)
+                        mass_solver), time_steps)
                 conservation = [conservation; 
                     [maximum(abs.(conservation_results.dEdt[:,e])) for e in 1:N_c]']
                 energy = [energy;
@@ -103,7 +103,7 @@ function analyze(analysis::RefinementAnalysis{d}, n_grids=100;
                 energy = [energy; 
                     transpose(analyze(EnergyConservationAnalysis(results_path, 
                     conservation_law, spatial_discretization,
-                    use_weight_adjusted_mass_matrix), 0, N_t)[3])]
+                    mass_solver), 0, N_t)[3])]
             end
         end
 
