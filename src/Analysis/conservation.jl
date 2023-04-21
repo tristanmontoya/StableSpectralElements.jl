@@ -109,7 +109,6 @@ function evaluate_conservation_residual(
 
     dEdt = zeros(N_c)
     for k in 1:N_e
-        println("k = ", k)
         M = mass_matrix(mass_solver, k)
         for e in 1:N_c
             dEdt[e] += u[:,e,k]'*M*dudt[:,e,k] 
