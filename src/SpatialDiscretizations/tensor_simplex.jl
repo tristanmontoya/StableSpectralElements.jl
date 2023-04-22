@@ -258,9 +258,9 @@ function ReferenceApproximation(
     approx_type::Union{NodalTensor,ModalTensor}, 
     ::Tet; mapping_degree::Int=1, N_plot::Int=10,
     volume_quadrature_rule=(LGQuadrature(approx_type.p),
-        LGQuadrature(approx_type.p), GaussRadauQuadrature(approx_type.p,1,0)), 
+        LGQuadrature(approx_type.p), GaussQuadrature(approx_type.p,1,0)), 
     facet_quadrature_rule=(LGQuadrature(approx_type.p), 
-        GaussRadauQuadrature(approx_type.p,1,0)))
+        GaussQuadrature(approx_type.p,1,0)))
 
     # one-dimensional operators
     η_1D, w_1D, q, V_1D, D_1D, R_L, R_R = operators_1d(volume_quadrature_rule)

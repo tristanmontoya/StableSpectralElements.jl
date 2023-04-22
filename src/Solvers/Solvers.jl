@@ -20,7 +20,6 @@ module Solvers
     abstract type AbstractDiscretizationOperators{d} end
     abstract type AbstractMassMatrixSolver end
 
-
     struct StandardMapping <: AbstractMappingForm end
     struct SkewSymmetricMapping <: AbstractMappingForm end
     struct PhysicalOperator <: AbstractStrategy end
