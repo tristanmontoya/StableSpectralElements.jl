@@ -101,6 +101,7 @@ module Solvers
         mass_solver::AbstractMassMatrixSolver
         connectivity::Matrix{Int}
         form::ResidualForm
+        N_p::Int
         N_q::Int
         N_f::Int
         N_c::Int
@@ -120,7 +121,7 @@ module Solvers
         N_f = size(operators.R,1)
 
         return Solver{d,ResidualForm,PDEType,ReferenceOperators{d}}(conservation_law, 
-            operators, mass_solver, connectivity, form, N_q, N_f, N_c, N_e,
+            operators, mass_solver, connectivity, form, N_p, N_q, N_f, N_c, N_e,
             PreAllocatedArrays{PDEType}(N_p,N_q,N_f,N_c,d,N_e,N_q))
     end
 
@@ -136,7 +137,7 @@ module Solvers
         N_f = size(operators.R[1],1)
 
         return Solver{d,ResidualForm,PDEType,PhysicalOperators{d}}(conservation_law, 
-            operators, mass_solver, connectivity, form, N_q, N_f, N_c, N_e,
+            operators, mass_solver, connectivity, form, N_p, N_q, N_f, N_c, N_e,
             PreAllocatedArrays{PDEType}(N_p,N_q,N_f,N_c,d,N_e,N_p))
     end
 
