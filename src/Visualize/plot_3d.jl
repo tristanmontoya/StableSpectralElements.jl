@@ -111,6 +111,10 @@ end
     xlabelfontsize --> 15
     ylabelfontsize --> 15
     zlabelfontsize --> 15
+
+    left_margin --> -10mm
+    top_margin --> -20mm, 
+    bottom_margin --> -10mm
     windowsize --> (400,400)
 
     if sketch

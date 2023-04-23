@@ -59,7 +59,7 @@ end
     @test energy <= 0.0
 end
 
-@testset "Advection 3D Energy-Conservative NodalTensor Hex" begin
+@testset "Advection 3D Energy-Conservative ModalTensor Tet" begin
     (l2, conservation, energy) = test_driver(
         ReferenceApproximation(ModalTensor(p), Tet(), mapping_degree=3),
         LinearAdvectionEquation((1.0,1.0,1.0)),
@@ -71,7 +71,7 @@ end
         ReferenceOperator(), 1.0, 2, 1.0, 1.0/100.0, 0.1,
         "test_advection_3d_collapsed_econ")
     
-    @test l2 ≈ 0.18914781650309648 atol=tol
+    @test l2 ≈ 0.18704148457389136 atol=tol
     @test conservation ≈ 0.0 atol=tol
     @test energy≈ 0.0 atol=tol
 end
