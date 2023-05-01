@@ -6,6 +6,10 @@ struct RefinementAnalysis{d} <: AbstractAnalysis
     label::String
 end
 
+struct RefinementErrorAnalysis{d} <: AbstractAnalysis
+    exact_solution::AbstractGridFunction{d}
+    sequence_path::String
+end
 struct RefinementAnalysisResults <: AbstractAnalysisResults
     error::Matrix{Float64} # columns are solution variables
     eoc::Matrix{Union{Float64,Missing}}
@@ -14,8 +18,59 @@ struct RefinementAnalysisResults <: AbstractAnalysisResults
     energy::Matrix{Float64}
 end
 
-function analyze(analysis::RefinementAnalysis{d}, n_grids=100;
-    max_derivs::Bool=false, 
+
+struct RefinementErrorAnalysisResults <: AbstractAnalysisResults
+    error::Matrix{Float64} # columns are solution variables
+    eoc::Matrix{Union{Float64,Missing}}
+    dof::Matrix{Int} # columns are N_p, N_e
+end
+
+function analyze(analysis::RefinementErrorAnalysis{d}, n_grids=100) where {d}
+
+    @unpack sequence_path, exact_solution = analysis
+
+    results_path = string(sequence_path, "grid_1/")
+    if !isfile(string(results_path,"error.jld2")) error("File not found!") end
+
+    conservation_law, spatial_discretization = load_project(results_path) 
+    (N_p, N_c, N_e) = get_dof(spatial_discretization, conservation_law)
+    dof = [N_p N_e]
+    error = transpose(load(string(results_path,"error.jld2"))["error"])
+    eoc = fill!(Array{Union{Float64, Missing}}(undef,1,N_c), missing)
+
+    i = 2
+    grid_exists = true
+    
+    while isdir(string(sequence_path, "grid_", i, "/")) && i <= n_grids
+        results_path = string(sequence_path, "grid_", i, "/")
+        
+        conservation_law, spatial_discretization = load_project(results_path) 
+        (N_p, N_c, N_e) = get_dof(spatial_discretization, conservation_law)
+        dof = [dof; [N_p N_e]]
+
+        if !isfile(string(results_path), "error.jld2")  
+            error = [error; fill(NaN, 1, N_c)]
+            eoc = [eoc; fill(NaN, 1, N_c)]
+        else
+            error = [error; transpose(load(string(results_path,"error.jld2"))["error"])]
+            eoc = [eoc; transpose([ 
+                (log(error[i,e]) - log(error[i-1,e])) /
+                    (log((dof[i,1]*dof[i,2])^(-1.0/d) ) - 
+                    log((dof[i-1,1]*dof[i-1,2])^(-1.0/d)))
+                for e in 1:N_c])]
+        end
+
+        if !isfile(string(sequence_path, "grid_", i+1, "/error.jld2"))
+            grid_exists = false
+        end
+        i = i+1
+    end
+    
+    return RefinementErrorAnalysisResults(error, eoc, dof)
+end
+
+function analyze(analysis::RefinementAnalysis{d}, 
+    n_grids=100; max_derivs::Bool=false, 
     use_weight_adjusted_mass_matrix::Bool=true) where {d}
 
     @unpack sequence_path, exact_solution = analysis
@@ -145,8 +200,10 @@ function plot_analysis(analysis::RefinementAnalysis{d},
     return p
 end
 
-@recipe function plot(analysis::Vector{RefinementAnalysis{d}},
-    results::Vector{RefinementAnalysisResults}; n_grids=nothing, pairs=true, xlims=nothing, reference_line=nothing, e=1) where {d}
+@recipe function plot(
+    analysis::Vector{<:Union{RefinementAnalysis{d},RefinementErrorAnalysis{d}}},
+    results::Vector{<:Union{RefinementAnalysisResults,RefinementErrorAnalysisResults}}; 
+    n_grids=nothing, pairs=true, xlims=nothing, reference_line=nothing, e=1) where {d}
 
     if d == 1 xlabel --> latexstring("\\mathrm{DOF}")
     elseif d == 2 xlabel --> latexstring("\\sqrt{\\mathrm{DOF}}")

@@ -49,8 +49,10 @@ function DiagonalSolver(spatial_discretization::SpatialDiscretization)
     return DiagonalSolver(WJ⁻¹)
 end
 
-function WeightAdjustedSolver(spatial_discretization::SpatialDiscretization,  
+function WeightAdjustedSolver(spatial_discretization::SpatialDiscretization; 
+    operator_algorithm=DefaultOperatorAlgorithm(), 
     tol=1.0e-13)
+    
     @unpack V, W = spatial_discretization.reference_approximation
     @unpack J_q = spatial_discretization.geometric_factors
     @unpack N_e = spatial_discretization
@@ -75,7 +77,8 @@ function WeightAdjustedSolver(spatial_discretization::SpatialDiscretization,
         J⁻¹W[k] = Diagonal(W ./ J_q[:,k])
     end
 
-    return WeightAdjustedSolver(M⁻¹,J⁻¹W, V, V')
+    return WeightAdjustedSolver(M⁻¹,J⁻¹W, make_operator(V, operator_algorithm),
+        make_operator(V', operator_algorithm))
 end
 
 @inline function mass_matrix(mass_solver::CholeskySolver, k::Int)

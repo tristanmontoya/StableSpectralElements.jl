@@ -2,6 +2,7 @@ module Solvers
 
     using UnPack
     import LinearAlgebra
+    using GFlops
     using LinearAlgebra: Diagonal, eigvals, inv, mul!, lmul!, diag, diagm, factorize, cholesky, ldiv!, Factorization, Cholesky, Symmetric, I, UniformScaling
     using TimerOutputs
     using LinearMaps: LinearMap, UniformScalingMap
@@ -147,7 +148,7 @@ module Solvers
             conservation_law.N_c, spatial_discretization.N_e)
     end
 
-    export CholeskySolver, WeightAdjustedSolver, DiagonalSolver, mass_matrix, mass_matrix_inverse, max_matrix_solve
+    export CholeskySolver, WeightAdjustedSolver, DiagonalSolver, mass_matrix, mass_matrix_inverse, mass_matrix_solve!
     include("mass_matrix.jl") 
 
     export initialize, semidiscretize, precompute
@@ -161,4 +162,7 @@ module Solvers
 
     export LinearResidual
     include("linear.jl")
+
+    export rhs_benchmark!
+    include("benchmark.jl")
 end

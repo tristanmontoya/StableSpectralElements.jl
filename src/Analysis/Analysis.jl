@@ -44,6 +44,6 @@ module Analysis
     export ConservationAnalysis, PrimaryConservationAnalysis, EnergyConservationAnalysis, ConservationAnalysisResults, ConservationAnalysisResultsWithDerivative, plot_evolution
     include("conservation.jl")
 
-    export RefinementAnalysis, RefinementAnalysisResults, run_refinement, get_tickslogscale
+    export RefinementAnalysis, RefinementErrorAnalysis, RefinementAnalysisResults, RefinementErrorAnalysisResults, run_refinement, get_tickslogscale
     include("refinement.jl")
 end

@@ -8,11 +8,11 @@ end
 
 @inline Base.size(L::GenericMatrixMap) = size(L.A)
 
-function LinearAlgebra.transpose(L::GenericMatrixMap)
+@inline function LinearAlgebra.transpose(L::GenericMatrixMap)
     return GenericMatrixMap(transpose(L.A))
 end
 
-function LinearAlgebra.mul!(y::AbstractVector{Float64},
+@inline function LinearAlgebra.mul!(y::AbstractVector{Float64},
     L::GenericMatrixMap, x::AbstractVector{Float64})
     @unpack A = L
 

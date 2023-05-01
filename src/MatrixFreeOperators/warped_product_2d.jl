@@ -33,7 +33,7 @@ function LinearAlgebra.mul!(y::AbstractVector,
     
     Z = Matrix{Float64}(undef, size(σᵢ,1), size(σₒ,2))
 
-    for α2 in axes(σₒ,2), β1 in axes(σᵢ,1)
+    @inbounds for α2 in axes(σₒ,2), β1 in axes(σᵢ,1)
         temp = 0.0
         @simd for β2 in 1:N2[β1]
             @muladd temp = temp + B[α2,β1,β2] * x[σᵢ[β1,β2]]
@@ -41,7 +41,7 @@ function LinearAlgebra.mul!(y::AbstractVector,
         Z[β1,α2] = temp
     end
 
-    for α1 in axes(σₒ,1), α2 in axes(σₒ,2)
+    @inbounds for α1 in axes(σₒ,1), α2 in axes(σₒ,2)
         temp = 0.0
         @simd for β1 in axes(σᵢ,1)
             @muladd temp = temp + A[α1,β1] * Z[β1,α2]
@@ -67,7 +67,7 @@ function LinearMaps._unsafe_mul!(y::AbstractVector,
 
     Z = Matrix{Float64}(undef, size(σᵢ,1), size(σₒ,2))
     
-    for β1 in axes(σᵢ,1), α2 in axes(σₒ,2)
+    @inbounds for β1 in axes(σᵢ,1), α2 in axes(σₒ,2)
         temp = 0.0
         @simd for α1 in axes(σₒ,1)
             @muladd temp = temp + A[α1,β1] * x[σₒ[α1,α2]]
@@ -75,7 +75,7 @@ function LinearMaps._unsafe_mul!(y::AbstractVector,
         Z[β1,α2] = temp
     end
 
-    for β1 in axes(σᵢ,1)
+    @inbounds for β1 in axes(σᵢ,1)
         for β2 in 1:N2[β1]
             temp = 0.0
             @simd for α2 in axes(σₒ,2)

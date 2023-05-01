@@ -49,13 +49,11 @@ Evaluate semi-discrete residual for a first-order problem
     @unpack D, V, R, W, B, halfWΛ, halfN, BJf, n_f = solver.operators
     
     @timeit "reconstruct nodal solution" Threads.@threads for k in 1:N_e
-#        println("t = ", t, " reconstruct k = ", k)
         mul!(view(u_q, :,:,k), V, u[:,:,k])
         mul!(view(u_f,:,k,:), R, u_q[:,:,k])
     end
 
     @timeit "eval residual" Threads.@threads for k in 1:N_e
-#        println("t = ", t, " residual k = ", k)
         physical_flux!(view(f_q,:,:,:,k),conservation_law, u_q[:,:,k])
 
         f_f[:,:,k] .= numerical_flux(conservation_law, inviscid_numerical_flux,
