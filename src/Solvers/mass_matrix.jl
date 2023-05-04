@@ -50,7 +50,7 @@ function DiagonalSolver(spatial_discretization::SpatialDiscretization)
 end
 
 function WeightAdjustedSolver(spatial_discretization::SpatialDiscretization; 
-    operator_algorithm=DefaultOperatorAlgorithm(), 
+    operator_algorithm=DefaultOperatorAlgorithm(), assume_orthonormal=false,
     tol=1.0e-13)
     
     @unpack V, W = spatial_discretization.reference_approximation
@@ -60,9 +60,13 @@ function WeightAdjustedSolver(spatial_discretization::SpatialDiscretization;
     if V isa UniformScalingMap
         return DiagonalSolver(spatial_discretization)
     end
+
     M = Matrix(V'*W*V)
     M_diag = diag(M)
-    if maximum(abs.(M - diagm(M_diag))) < tol
+
+    if assume_orthonormal 
+        M⁻¹ = I
+    elseif maximum(abs.(M - diagm(M_diag))) < tol
         if maximum(abs.(M_diag .- 1.0)) < tol
             M⁻¹ = I
         else
