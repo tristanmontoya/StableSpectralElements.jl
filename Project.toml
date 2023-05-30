@@ -41,6 +41,7 @@ WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 
 [compat]
 Arpack = "0.5"
+BenchmarkTools = "1"
 DiffEqCallbacks = "2"
 Documenter = "0.27"
 DocumenterTools = "0.1"
