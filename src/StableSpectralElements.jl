@@ -1,7 +1,7 @@
-module CLOUD
+module StableSpectralElements
 
     if VERSION < v"1.7"
-        error("CLOUD.jl requires Julia v1.7 or newer.")
+        error("StableSpectralElements.jl requires Julia v1.7 or newer.")
     end
 
     using Reexport

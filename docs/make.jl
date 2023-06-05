@@ -1,12 +1,12 @@
 import Pkg
 Pkg.add("Documenter")
 using Documenter
-using CLOUD
+using StableSpectralElements
 
 push!(LOAD_PATH,"../src/")
 
 makedocs(
-    sitename = "CLOUD.jl",
+    sitename = "StableSpectralElements.jl",
     authors = "Tristan Montoya",
     pages = [
         "Home" => "index.md",
@@ -20,5 +20,5 @@ makedocs(
     )
 )
 deploydocs(
-    repo="github.com/tristanmontoya/CLOUD.jl.git"
+    repo="github.com/tristanmontoya/StableSpectralElements.jl.git"
 )

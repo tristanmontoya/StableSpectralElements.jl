@@ -1,4 +1,4 @@
-name = "CLOUD"
+name = "StableSpectralElements"
 uuid = "fb992021-99c7-4c2d-a14b-5e48ac4045b2"
 authors = ["Tristan Montoya <montoya.tristan@gmail.com>"]
 version = "0.1.0"
@@ -67,3 +67,4 @@ TimerOutputs = "0.5"
 Triangulate = "2"
 UnPack = "1"
 WriteVTK = "1"
+julia = "1.7"

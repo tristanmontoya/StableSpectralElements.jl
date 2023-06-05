@@ -6,7 +6,7 @@ The equations to be solved are defined by subtypes of `AbstractConservationLaw` 
 ```math
 \partial_t \underline{U}(\bm{x},t) + \bm{\nabla}_{\bm{x}} \cdot \underline{\bm{F}}(\underline{U}(\bm{x},t)) = \underline{0},
 ```
-second-order problems are treated by CLOUD.jl as first-order systems of the form 
+second-order problems are treated by StableSpectralElements.jl as first-order systems of the form 
 ```math
 \begin{aligned}
 \underline{\bm{Q}}(\bm{x},t) - \bm{\nabla}_{\bm{x}} \underline{U}(\bm{x},t) &= \underline{0},\\
