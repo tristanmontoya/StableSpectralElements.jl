@@ -26,8 +26,6 @@ As this documentation is currently a work in progress, we recommend that users r
 * [Linear advection equation in 2D](https://github.com/tristanmontoya/CLOUD.jl/tree/main/examples/advection_2d.ipynb)
 * [Linear advection equation in 3D](https://github.com/tristanmontoya/CLOUD.jl/tree/main/examples/advection_3d.ipynb)
 
-Scripts for running grid refinement studies are provided in the `drivers` directory; an example is provided [here](https://github.com/tristanmontoya/CLOUD.jl/blob/main/drivers/advection_refinement.sh).
-
 ## Modules
 CLOUD.jl is structured as several submodules, which are exported with the top-level module `CLOUD`; below is a list of those most important for new users to familiarize themselves with:
 * [`ConservationLaws`](ConservationLaws.md)
