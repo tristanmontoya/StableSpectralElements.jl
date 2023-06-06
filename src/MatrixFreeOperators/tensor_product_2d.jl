@@ -5,6 +5,25 @@ struct TensorProductMap2D{A_type,B_type} <: LinearMaps.LinearMap{Float64}
     σₒ::AbstractMatrix{Int}
 end
 
+function TensorProductMap2D(A, B)
+    (M1,N1) = size(A)
+    (M2,N2) = size(B)
+    σᵢ = [M2*(α1-1) + α2 for α1 in 1:M1, α2 in 1:M2]
+    σₒ = [N2*(β1-1) + β2 for β1 in 1:N1, β2 in 1:N2]
+
+    if A isa LinearMaps.UniformScalingMap{Bool} 
+        A = I 
+    elseif A isa LinearMaps.WrappedMap
+        A = A.lmap
+    end
+    if B isa LinearMaps.UniformScalingMap{Bool} 
+        B = I 
+    elseif B isa LinearMaps.WrappedMap
+        B = B.lmap
+    end
+    return TensorProductMap2D(A,B, σᵢ, σₒ)
+end
+
 @inline Base.size(L::TensorProductMap2D) = (size(L.σₒ,1)*size(L.σₒ,2), 
     size(L.σᵢ,1)*size(L.σᵢ,2))
 

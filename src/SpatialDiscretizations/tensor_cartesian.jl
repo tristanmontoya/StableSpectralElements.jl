@@ -31,14 +31,12 @@ function ReferenceApproximation(approx_type::NodalTensor,
     nodes_1D = quadrature(Line(),volume_quadrature_rule)[1]
     q = length(nodes_1D)-1
     VDM_1D, ∇VDM_1D = basis(Line(), q, nodes_1D)
+    D_1D = ∇VDM_1D / VDM_1D
+    I_1D = LinearMap(I, q+1)
     R_L = vandermonde(Line(), q, [-1.0]) / VDM_1D
     R_R = vandermonde(Line(), q, [1.0]) / VDM_1D
 
-    # differentiation matrix
-    σ = [(q+1)*(i-1) + j for i in 1:q+1, j in 1:q+1]
-    D = (TensorProductMap2D(∇VDM_1D / VDM_1D, I, σ, σ),
-            TensorProductMap2D(I, ∇VDM_1D / VDM_1D, σ, σ))
-
+    # reference element data
     reference_element = RefElemData(element_type, mapping_degree,
         quad_rule_vol=quadrature(Quad(), volume_quadrature_rule),
         quad_rule_face=quadrature(Line(), facet_quadrature_rule), Nplot=N_plot)
@@ -50,10 +48,7 @@ function ReferenceApproximation(approx_type::NodalTensor,
         if volume_quadrature_rule isa GaussLobattoQuadrature
             R = SelectionMap(match_coordinate_vectors(rstf, rstq), (q+1)^2)
         else
-            R =[TensorProductMap2D(R_L, I, σ, [j for i in 1:1, j in 1:q+1]); #L
-                TensorProductMap2D(R_R, I, σ, [j for i in 1:1, j in 1:q+1]); #R
-                TensorProductMap2D(I, R_L, σ, [i for i in 1:q+1, j in 1:1]); #B
-                TensorProductMap2D(I, R_R ,σ, [i for i in 1:q+1, j in 1:1])] #T
+            R = [R_L ⊗ I_1D; R_R ⊗ I_1D; I_1D ⊗ R_L; I_1D ⊗ R_R]
         end
     else
         R = LinearMap(vandermonde(element_type,q,rstf...) / 
@@ -64,7 +59,8 @@ function ReferenceApproximation(approx_type::NodalTensor,
         vandermonde(element_type, q, rstq...))
 
     return ReferenceApproximation(NodalTensor(q), (q+1)^2, (q+1)^2, 4*(q+1), 
-        reference_element, D, LinearMap(I, (q+1)^2), R, R,
+        reference_element, (D_1D ⊗ I_1D, I_1D ⊗ D_1D), 
+        LinearMap(I, (q+1)^2), R, R,
         Diagonal(wq), Diagonal(wf), V_plot, NoMapping())
 end
 
@@ -77,15 +73,9 @@ function ReferenceApproximation(approx_type::NodalTensor, ::Hex;
     q = length(nodes_1D)-1
     VDM_1D, ∇VDM_1D = basis(Line(), q, nodes_1D)
     D_1D = ∇VDM_1D / VDM_1D
+    I_1D = LinearMap(I, q+1)
 
-    # differentiation matrix
-    σ =  [(i-1)*(q+1)^2 + (j-1)*(q+1) + k 
-        for i in 1:(q+1), j in 1:(q+1), k in 1:(q+1)]
-
-    D = (TensorProductMap3D(D_1D, I, I, σ, σ),
-         TensorProductMap3D(I, D_1D, I, σ, σ),
-         TensorProductMap3D(I, I, D_1D, σ, σ))
-
+    # reference element data
     reference_element = RefElemData(Hex(), mapping_degree,
         quad_rule_vol=quadrature(Hex(), volume_quadrature_rule),
         quad_rule_face=quadrature(Quad(), facet_quadrature_rule),
@@ -106,6 +96,8 @@ function ReferenceApproximation(approx_type::NodalTensor, ::Hex;
         vandermonde(Hex(), q, rstq...))
 
     return ReferenceApproximation(approx_type, (q+1)^3, (q+1)^3, 6*(q+1)^2, 
-        reference_element, D, LinearMap(I, (q+1)^3), R, R,
+        reference_element,
+        (D_1D ⊗ I_1D ⊗ I_1D, I_1D ⊗ D_1D ⊗ I_1D, I_1D ⊗ I_1D ⊗ D_1D), 
+        LinearMap(I, (q+1)^3), R, R,
         Diagonal(wq), Diagonal(wf), V_plot, NoMapping())
 end

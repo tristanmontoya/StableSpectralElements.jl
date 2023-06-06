@@ -10,6 +10,31 @@ end
     size(L.σₒ,1)*size(L.σₒ,2)*size(L.σₒ,3), 
     size(L.σᵢ,1)*size(L.σᵢ,2)*size(L.σᵢ,3))
 
+function TensorProductMap2D(A, B, C)
+    (M1,N1) = size(A)
+    (M2,N2) = size(B)
+    (M3,N3) = size(C)
+    σᵢ = [M2*M3*(α1-1) + M3*(α2-1) + α3 for α1 in 1:M1, α2 in 1:M2, α3 in 1:M3]
+    σₒ = [N2*N3*(β1-1) + N3*(β2-1) + β3 for β1 in 1:N1, β2 in 1:N2, β3 in 1:N3]
+
+    if A isa LinearMaps.UniformScalingMap{Bool} 
+        A = I 
+    elseif A isa LinearMaps.WrappedMap
+        A = A.lmap
+    end
+    if B isa LinearMaps.UniformScalingMap{Bool} 
+        B = I 
+    elseif B isa LinearMaps.WrappedMap
+        B = B.lmap
+    end
+    if C isa LinearMaps.UniformScalingMap{Bool} 
+        C = I 
+    elseif B isa LinearMaps.WrappedMap
+        C = C.lmap
+    end
+    return TensorProductMap3D(A,B,C, σᵢ, σₒ)
+end
+
 """
 Compute transpose using
 (A ⊗ B ⊗ C)ᵀ = Aᵀ ⊗ Bᵀ ⊗ Cᵀ
