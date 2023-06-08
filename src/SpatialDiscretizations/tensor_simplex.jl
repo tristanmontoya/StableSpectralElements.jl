@@ -152,7 +152,7 @@ end
 function operators_1d(
     quadrature_rule::NTuple{d,AbstractQuadratureRule}) where {d}
 
-    η_1D, w_1D, q, V_1D, D_1D, R_L, R_R = fill((),7)
+    η_1D, w_1D, q, V_1D, D_1D, I_1D, R_L, R_R = fill((),8)
 
     for m in 1:d
         η, w = quadrature(Line(),quadrature_rule[m])
@@ -161,11 +161,12 @@ function operators_1d(
         q = (q..., length(η_1D[m]) - 1)
         V_1D = (V_1D..., vandermonde(Line(),q[m],η_1D[m] ))
         D_1D = (D_1D..., grad_vandermonde(Line(),q[m], η_1D[m]) / V_1D[m])
+        I_1D = (I_1D..., LinearMap(I,q[m]+1))
         R_L = (R_L..., vandermonde(Line(),q[m],[-1.0]) / V_1D[m])
         R_R = (R_R..., vandermonde(Line(),q[m],[1.0]) / V_1D[m])
     end
     
-    return η_1D, w_1D, q, V_1D, D_1D, R_L, R_R
+    return η_1D, w_1D, q, V_1D, D_1D, I_1D, R_L, R_R
 end
 
 function ReferenceApproximation(
@@ -176,13 +177,8 @@ function ReferenceApproximation(
     facet_quadrature_rule=LGQuadrature(approx_type.p))
 
     # one-dimensional operators
-    η_1D, w_1D, q, V_1D, D_1D, R_L, R_R = operators_1d(volume_quadrature_rule)
+    η_1D, w_1D, q, V_1D, D_1D, I_1D, R_L, R_R = operators_1d(volume_quadrature_rule)
     N_q = (q[1]+1)*(q[2]+1)
-    
-    # differentiation operator in collapsed coordinate system
-    σ = [(q[2]+1)*(i-1) + j for i in 1:q[1]+1, j in 1:q[2]+1]
-    D = (TensorProductMap2D(D_1D[1], I, σ, σ),
-        TensorProductMap2D(I, D_1D[2], σ, σ))
 
     # geometric factors for collapsed coordinate transformation
     J_ref, Λ_ref = reference_geometric_factors(Tri(),volume_quadrature_rule)
@@ -194,6 +190,8 @@ function ReferenceApproximation(
     # one-dimensional facet quadrature rule
     η_f, _ = quadrature(Line(), facet_quadrature_rule)
     q_f = length(η_f) - 1
+
+    σ = [(q[2]+1)*(i-1) + j for i in 1:q[1]+1, j in 1:q[2]+1]
     σ_f = [i for i in 1:(q_f+1), j in 1:1]
 
     # extrapolation/interpolation onto bottom edge
@@ -250,7 +248,8 @@ function ReferenceApproximation(
     end
 
     return ReferenceApproximation(approx_type, size(V,2), N_q, 3*(q_f + 1),
-        reference_element, D, V, R * V, R, W, Diagonal(reference_element.wf),
+        reference_element, (D_1D[1] ⊗ I_1D[2], I_1D[1] ⊗ D_1D[2]), 
+        V, R * V, R, W, Diagonal(reference_element.wf),
         V_plot, ReferenceMapping(J_ref, Λ_ref))
 end
 
@@ -263,15 +262,8 @@ function ReferenceApproximation(
         GaussQuadrature(approx_type.p,1,0)))
 
     # one-dimensional operators
-    η_1D, w_1D, q, V_1D, D_1D, R_L, R_R = operators_1d(volume_quadrature_rule)
-    N_q = (q[1]+1)*(q[2]+1)*(q[3]+1)
-
-    # differentiation operator in collapsed coordinate system
-    σ =  [(i-1)*(q[2]+1)*(q[3]+1) + (j-1)*(q[3]+1) + k 
-        for i in 1:(q[1]+1), j in 1:(q[2]+1), k in 1:(q[3]+1)]
-    D = (TensorProductMap3D(D_1D[1], I, I, σ, σ),
-         TensorProductMap3D(I, D_1D[2], I, σ, σ),
-         TensorProductMap3D(I, I, D_1D[3], σ, σ))
+    η_1D, w_1D, q, V_1D, D_1D, I_1D, R_L, R_R = operators_1d(
+        volume_quadrature_rule)
 
     # reference geometric factors for cube-to-tetrahedron mapping
     J_ref, Λ_ref = reference_geometric_factors(Tet(),volume_quadrature_rule)
@@ -280,6 +272,8 @@ function ReferenceApproximation(
     w_grid = meshgrid(w_1D[1],w_1D[2], w_1D[3])
     W = Diagonal(J_ref .* w_grid[1][:] .* w_grid[2][:] .* w_grid[3][:])
 
+    σ = [(i-1)*(q[2]+1)*(q[3]+1) + (j-1)*(q[3]+1) + k 
+        for i in 1:(q[1]+1), j in 1:(q[2]+1), k in 1:(q[3]+1)]
     σ_13 = [(i-1)*(q[3]+1) + k  for i in 1:(q[1]+1), j in 1:1, k in 1:(q[3]+1)]
     σ_23 = [(j-1)*(q[3]+1) + k  for i in 1:1, j in 1:(q[2]+1), k in 1:(q[3]+1)]
     σ_12 = [(i-1)*(q[2]+1) + j  for i in 1:(q[1]+1), j in 1:(q[2]+1), k in 1:1]
@@ -357,6 +351,9 @@ function ReferenceApproximation(
     end
     
     return ReferenceApproximation(approx_type, size(V,2), 
-        length(wq), length(wf),reference_element, D, V, R * V, R, 
-        W, Diagonal(wf), V_plot, ReferenceMapping(J_ref, Λ_ref))
+        length(wq), length(wf),reference_element, 
+        (D_1D[1] ⊗ I_1D[2] ⊗ I_1D[3], 
+         I_1D[1] ⊗ D_1D[2] ⊗ I_1D[3],
+         I_1D[1] ⊗ I_1D[2] ⊗ D_1D[3]),
+        V, R * V, R, W, Diagonal(wf), V_plot, ReferenceMapping(J_ref, Λ_ref))
 end

@@ -32,7 +32,7 @@ end
         StandardForm(
             mapping_form=SkewSymmetricMapping(),
             inviscid_numerical_flux=LaxFriedrichsNumericalFlux(0.0)),
-        DefaultOperatorAlgorithm(),
+        GenericTensorProductAlgorithm(),
         ReferenceOperator(), 1.0, 2, 1.0, 1.0/100.0, 0.1,
         "test_advection_2d_collapsed_econ")
 

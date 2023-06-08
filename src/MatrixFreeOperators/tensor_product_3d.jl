@@ -10,7 +10,7 @@ end
     size(L.σₒ,1)*size(L.σₒ,2)*size(L.σₒ,3), 
     size(L.σᵢ,1)*size(L.σᵢ,2)*size(L.σᵢ,3))
 
-function TensorProductMap2D(A, B, C)
+function TensorProductMap3D(A, B, C)
     (M1,N1) = size(A)
     (M2,N2) = size(B)
     (M3,N3) = size(C)
