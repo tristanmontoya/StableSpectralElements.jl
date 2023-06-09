@@ -15,7 +15,7 @@ Discretizations employing nodal as well as modal bases are implemented, with the
 
 StableSpectralElements.jl is a registered Julia package, so it can be installed by entering the following commands within the REPL:
 ```julia
-using Pkg; Pkg.add("StableSpectralElements")
+using Pkg; Pkg.update(); Pkg.add("StableSpectralElements")
 ```
 ## Basic Usage
 
