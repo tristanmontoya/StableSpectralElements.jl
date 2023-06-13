@@ -1,23 +1,24 @@
 """
 Warped tensor-product operator (e.g. for Dubiner-type bases)
 """    
-struct WarpedTensorProductMap3D <: LinearMaps.LinearMap{Float64}
-    A::AbstractArray{Float64,2}
-    B::AbstractArray{Float64,3}
-    C::AbstractArray{Float64,4}
-    σᵢ::Array{Int,3}
-    σₒ::Array{Int,3}
-    N2::Vector{Int}
-    N3::Matrix{Int}
+struct WarpedTensorProductMap3D{A_type,B_type,C_type,σᵢ_type,σₒ_type,N2_type,N3_type} <: LinearMaps.LinearMap{Float64}
+    A::A_type
+    B::B_type
+    C::C_type
+    σᵢ::σᵢ_type
+    σₒ::σₒ_type
+    N2::N2_type
+    N3::N3_type
 
-    function WarpedTensorProductMap3D(A::AbstractArray{Float64,2},
-        B::AbstractArray{Float64,3}, C::AbstractArray{Float64,4}, 
-        σᵢ::Array{Int,3}, σₒ::Array{Int,3})
-        
-        return new(A, B, C, σᵢ, σₒ,
-            [count(a -> a>0, σᵢ[β1,1,:]) for β1 in axes(σᵢ,1)],
-            [count(a -> a>0, σᵢ[β1,β2,:]) 
-                for β1 in axes(σᵢ,1),  β2 in axes(σᵢ,2)])
+    function WarpedTensorProductMap3D(
+        A::A_type,B::B_type,C::C_type,σᵢ::σᵢ_type,
+        σₒ::σₒ_type) where {A_type,B_type,C_type,σᵢ_type,σₒ_type}
+        N1 = size(σᵢ,1)
+        N2max = size(σᵢ,2)
+        return new{A_type,B_type,C_type,σᵢ_type,σₒ_type,SVector{N1,Int},SMatrix{N1,N2max,Int}}(A, B, C, σᵢ, σₒ,
+            SVector{N1,Int}([count(a -> a>0, σᵢ[β1,1,:]) for β1 in axes(σᵢ,1)]),
+            SMatrix{N1,N2max,Int}([count(a -> a>0, σᵢ[β1,β2,:]) 
+                for β1 in axes(σᵢ,1),  β2 in axes(σᵢ,2)]))
     end
 end
 

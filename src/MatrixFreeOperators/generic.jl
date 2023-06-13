@@ -7,7 +7,6 @@ function GenericMatrixMap(L::LinearMap)
 end
 
 @inline Base.size(L::GenericMatrixMap) = size(L.A)
-
 @inline function LinearAlgebra.transpose(L::GenericMatrixMap)
     return GenericMatrixMap(transpose(L.A))
 end

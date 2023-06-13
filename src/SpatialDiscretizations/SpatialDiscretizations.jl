@@ -1,6 +1,7 @@
 module SpatialDiscretizations
 
     using UnPack
+    using StaticArrays: SArray
     using LinearAlgebra: I, inv, Diagonal, diagm, kron, transpose, det, eigvals
     using Random: rand, shuffle
     using LinearMaps: LinearMap, ⊗

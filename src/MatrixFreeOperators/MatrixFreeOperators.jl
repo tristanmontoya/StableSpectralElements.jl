@@ -1,6 +1,6 @@
 module MatrixFreeOperators
 
-    using LinearAlgebra, LinearMaps, MuladdMacro, UnPack, GFlops
+    using LinearAlgebra, LinearMaps, MuladdMacro, UnPack, GFlops, StaticArrays
     export AbstractOperatorAlgorithm, BLASAlgorithm, GenericMatrixAlgorithm, GenericTensorProductAlgorithm, DefaultOperatorAlgorithm, make_operator, count_ops
     
     abstract type AbstractOperatorAlgorithm end
@@ -46,7 +46,6 @@ module MatrixFreeOperators
     function make_operator(map::LinearMap, ::GenericTensorProductAlgorithm)
         return map
     end
-
 
     function count_ops(map::LinearMap)
         x = rand(size(map,2))

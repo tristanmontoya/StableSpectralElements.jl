@@ -117,7 +117,10 @@ function warped_product(::Tri, p, η1D::NTuple{2,Vector{Float64}})
         end
     end
 
-    return WarpedTensorProductMap2D(A,B,σᵢ,σₒ)
+    return WarpedTensorProductMap2D(SArray{Tuple{M1,p+1}}(A),
+        SArray{Tuple{M1,p+1,p+1}}(B),
+        SArray{Tuple{M1,M2}}(σᵢ),
+        SArray{Tuple{p+1,p+1}}(σₒ))
 end
 
 function warped_product(::Tet, p, η1D::NTuple{3,Vector{Float64}})
@@ -146,7 +149,11 @@ function warped_product(::Tet, p, η1D::NTuple{3,Vector{Float64}})
         end
     end
 
-    return WarpedTensorProductMap3D(A,B,C,σᵢ,σₒ)
+    return WarpedTensorProductMap3D(SArray{Tuple{M1,p+1}}(A),
+        SArray{Tuple{M1,p+1,p+1}}(B),
+        SArray{Tuple{M1,p+1,p+1,p+1}}(C),
+        SArray{Tuple{M1,M2,M3}}(σᵢ),
+        SArray{Tuple{p+1,p+1,p+1}}(σₒ))
 end
 
 function operators_1d(
