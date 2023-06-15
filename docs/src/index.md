@@ -33,8 +33,5 @@ StableSpectralElements.jl is structured as several submodules, which are exporte
 * `Visualize`
 * `Analysis`
 
-## Authors
-StableSpectralElements.jl was developed by [Tristan Montoya](https://tjbmontoya.com/), a PhD candidate at the [University of Toronto Institute for Aerospace Studies](https://www.utias.utoronto.ca/) under the supervision of [David W. Zingg](http://goldfinger.utias.utoronto.ca/dwz/).
-
 ## License
 This software is released under the [GPLv3 license](https://www.gnu.org/licenses/gpl-3.0.en.html).
