@@ -9,11 +9,11 @@ module MatrixFreeOperators
     struct GenericMatrixAlgorithm <: AbstractOperatorAlgorithm end
     struct GenericTensorProductAlgorithm <: AbstractOperatorAlgorithm end
 
-    function make_operator(map::LinearMap, ::DefaultOperatorAlgorithm)
+    function make_operator(map::LinearMap, ::AbstractOperatorAlgorithm)
         return map
     end
     
-    function make_operator(matrix::Matrix, ::DefaultOperatorAlgorithm)
+    function make_operator(matrix::Matrix, ::AbstractOperatorAlgorithm)
         return LinearMaps.WrappedMap(matrix)
     end
 
@@ -34,6 +34,11 @@ module MatrixFreeOperators
     end
 
     function make_operator(
+        map::LinearMaps.BlockMap, alg::AbstractOperatorAlgorithm)
+        return vcat([make_operator(block, alg) for block in map.maps]...)
+    end
+
+    function make_operator(
         map::LinearMaps.KroneckerMap{Float64, <:NTuple{2,LinearMap}}, ::GenericTensorProductAlgorithm)
         return TensorProductMap2D(map.maps[1],map.maps[2])
     end
@@ -42,11 +47,7 @@ module MatrixFreeOperators
         map::LinearMaps.KroneckerMap{Float64, <:NTuple{3,LinearMap}}, ::GenericTensorProductAlgorithm)
         return TensorProductMap3D(map.maps[1],map.maps[2],map.maps[3])
     end
-
-    function make_operator(map::LinearMap, ::GenericTensorProductAlgorithm)
-        return map
-    end
-
+    
     function count_ops(map::LinearMap)
         x = rand(size(map,2))
         y = rand(size(map,1))

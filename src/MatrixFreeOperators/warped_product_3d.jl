@@ -41,11 +41,11 @@ Evaluate the matrix-vector product
     
     LinearMaps.check_dim_mul(y, L, x)
     @unpack A, B, C, σᵢ, σₒ, N2, N3 = L
-    
-    Z = Array{Float64,3}(undef, size(σᵢ,1), size(σᵢ,3), size(σₒ,3))
-    W = Array{Float64,3}(undef, size(σᵢ,1), size(σₒ,2), size(σₒ,3))
 
-    for β1 in axes(σᵢ,1)
+    Z = MArray{Tuple{size(σᵢ,1), size(σᵢ,2), size(σₒ,3)},Float64}(undef)
+    W = MArray{Tuple{size(σᵢ,1), size(σₒ,2), size(σₒ,3)},Float64}(undef)
+    
+    @inbounds for β1 in axes(σᵢ,1)
         for β2 in 1:N2[β1], α3 in axes(σₒ,3)
             temp = 0.0
             @simd for β3 in 1:N3[β1,β2]
@@ -55,7 +55,7 @@ Evaluate the matrix-vector product
         end
     end
 
-    for β1 in axes(σᵢ,1), α2 in axes(σₒ,2), α3 in axes(σₒ,3)
+    @inbounds for β1 in axes(σᵢ,1), α2 in axes(σₒ,2), α3 in axes(σₒ,3)
         temp = 0.0
         @simd for β2 in 1:N2[β1]
             @muladd temp = temp + B[α2,β1,β2] * Z[β1,β2,α3]
@@ -63,7 +63,7 @@ Evaluate the matrix-vector product
         W[β1,α2,α3] = temp
     end
 
-    for α1 in axes(σₒ,1), α2 in axes(σₒ,2), α3 in axes(σₒ,3)
+    @inbounds for α1 in axes(σₒ,1), α2 in axes(σₒ,2), α3 in axes(σₒ,3)
         temp = 0.0
         @simd for β1 in axes(σᵢ,1)
             @muladd temp = temp + A[α1,β1] * W[β1,α2,α3]
@@ -93,9 +93,9 @@ Evaluate the matrix-vector product
     LinearMaps.check_dim_mul(y, L, x)
     @unpack A, B, C, σᵢ, σₒ, N2, N3 = L.lmap
 
-    Z = Array{Float64,3}(undef, size(σᵢ,1), size(σᵢ,3), size(σₒ,3))
-    W = Array{Float64,3}(undef, size(σᵢ,1), size(σₒ,2), size(σₒ,3))
-
+    Z = MArray{Tuple{size(σᵢ,1), size(σᵢ,2), size(σₒ,3)},Float64}(undef)
+    W = MArray{Tuple{size(σᵢ,1), size(σₒ,2), size(σₒ,3)},Float64}(undef)
+    
     for β1 in axes(σᵢ,1), α2 in axes(σₒ,2), α3 in axes(σₒ,3)
         temp = 0.0
         @simd for α1 in axes(σₒ,1)

@@ -184,58 +184,30 @@ function ReferenceApproximation(
     facet_quadrature_rule=LGQuadrature(approx_type.p))
 
     # one-dimensional operators
-    η_1D, w_1D, q, V_1D, D_1D, I_1D, R_L, R_R = operators_1d(volume_quadrature_rule)
-    N_q = (q[1]+1)*(q[2]+1)
+    η_1D, w_1D, q, V_1D, D_1D, I_1D, R_L, R_R = operators_1d(
+        volume_quadrature_rule)
 
     # geometric factors for collapsed coordinate transformation
     J_ref, Λ_ref = reference_geometric_factors(Tri(),volume_quadrature_rule)
     
-    # tensor-product quadrature
+    # tensor-product quadrature weights scaled by Jacobian determinant of χ(η)
     w_grid = meshgrid(w_1D[1],w_1D[2]) 
     W = Diagonal(J_ref .* w_grid[1][:] .* w_grid[2][:])
 
     # one-dimensional facet quadrature rule
     η_f, _ = quadrature(Line(), facet_quadrature_rule)
-    q_f = length(η_f) - 1
 
-    σ = [(q[2]+1)*(i-1) + j for i in 1:q[1]+1, j in 1:q[2]+1]
-    σ_f = [i for i in 1:(q_f+1), j in 1:1]
-
-    # extrapolation/interpolation onto bottom edge
-    if volume_quadrature_rule[2] isa GaussRadauQuadrature
-        extrap_1 = SelectionMap([(q[2]+1)*(i-1)+1 for i in 1:q[1]+1], N_q)
-    else 
-        extrap_1 = TensorProductMap2D(I, R_L[2], σ, σ_f) 
+    # interpolation/extrapolation operators
+    P = ()
+    @inbounds for m in 1:2
+        if volume_quadrature_rule[m] == facet_quadrature_rule
+            P = (P..., LinearMap(I, q[m]+1))
+        else
+            P = (P...,LinearMap(vandermonde(Line(),q[m],η_f) / V_1D[m]))
+        end
     end
-    if volume_quadrature_rule[1] == facet_quadrature_rule
-        interp_1 = LinearMap(I, q[1]+1)
-    else 
-        interp_1 = LinearMap(vandermonde(Line(),q[1],η_f) / V_1D[1]) 
-    end
-
-    # extrapolation/interpolation onto hypotenuse
-    extrap_2 = TensorProductMap2D(R_R[1], I, σ, σ_f')
-    if volume_quadrature_rule[2] == facet_quadrature_rule
-        interp_2 = LinearMap(I, q[2]+1)
-    else 
-        interp_2 = LinearMap(vandermonde(Line(),q[2],η_f) / V_1D[2]) 
-    end
-  
-    # extrapolation/interpolation onto left edge
-    if volume_quadrature_rule[1] isa GaussRadauQuadrature
-        extrap_3 = SelectionMap([j for j in 1:q[2]+1], N_q)
-    else 
-        extrap_3 = TensorProductMap2D(R_L[1], I, σ, σ_f')
-    end
-    if volume_quadrature_rule[2] == facet_quadrature_rule
-        interp_3 = LinearMap(I, q[2]+1)
-    else 
-        interp_3 = LinearMap(vandermonde(Line(),q[2],η_f) / V_1D[2])
-    end
-
-    # full interpolation/extrapolation operator
-    R = [interp_1 * extrap_1; interp_2 * extrap_2; interp_3 * extrap_3]
-
+    R = [P[1] ⊗ R_L[2]; R_R[1] ⊗ P[2]; R_L[1] ⊗ P[2]]
+        
     # reference element data (mainly used for mapping, normals, etc.)
     reference_element = RefElemData(Tri(), approx_type, mapping_degree,
         volume_quadrature_rule=volume_quadrature_rule,
@@ -254,10 +226,10 @@ function ReferenceApproximation(
         approx_type = NodalTensor(min(q[1],q[2]))
     end
 
-    return ReferenceApproximation(approx_type, size(V,2), N_q, 3*(q_f + 1),
-        reference_element, (D_1D[1] ⊗ I_1D[2], I_1D[1] ⊗ D_1D[2]), 
-        V, R * V, R, W, Diagonal(reference_element.wf),
-        V_plot, ReferenceMapping(J_ref, Λ_ref))
+    return ReferenceApproximation(approx_type, size(V,2), 
+        (q[1]+1)*(q[2]+1), 3*length(η_f), reference_element, 
+        (D_1D[1] ⊗ I_1D[2], I_1D[1] ⊗ D_1D[2]), V, R * V, R, W, 
+        Diagonal(reference_element.wf), V_plot, ReferenceMapping(J_ref, Λ_ref))
 end
 
 function ReferenceApproximation(

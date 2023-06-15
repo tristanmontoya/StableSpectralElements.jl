@@ -1,25 +1,25 @@
-struct TensorProductMap2D{A_type,B_type} <: LinearMaps.LinearMap{Float64}
+struct TensorProductMap2D{A_type,B_type,σᵢ_type,σₒ_type} <: LinearMaps.LinearMap{Float64}
     A::A_type
     B::B_type
-    σᵢ::AbstractMatrix{Int}
-    σₒ::AbstractMatrix{Int}
+    σᵢ::σᵢ_type
+    σₒ::σₒ_type
 end
 
 function TensorProductMap2D(A, B)
     (M1,N1) = size(A)
     (M2,N2) = size(B)
-    σᵢ = [M2*(α1-1) + α2 for α1 in 1:M1, α2 in 1:M2]
-    σₒ = [N2*(β1-1) + β2 for β1 in 1:N1, β2 in 1:N2]
+    σₒ = SMatrix{M1,M2,Int}([M2*(α1-1) + α2 for α1 in 1:M1, α2 in 1:M2])
+    σᵢ = SMatrix{N1,N2,Int}([N2*(β1-1) + β2 for β1 in 1:N1, β2 in 1:N2])
 
     if A isa LinearMaps.UniformScalingMap{Bool} 
         A = I 
     elseif A isa LinearMaps.WrappedMap
-        A = A.lmap
+        A = SMatrix{M1,N1,Float64}(A.lmap)
     end
     if B isa LinearMaps.UniformScalingMap{Bool} 
         B = I 
     elseif B isa LinearMaps.WrappedMap
-        B = B.lmap
+        B = SMatrix{M2,N2,Float64}(B.lmap)
     end
     return TensorProductMap2D(A,B, σᵢ, σₒ)
 end
@@ -54,8 +54,9 @@ or L = A ⊗ B. The action of this matrix on a vector x is
     LinearMaps.check_dim_mul(y, L, x)
     @unpack A, B, σᵢ, σₒ = L
 
-    Z = Matrix{Float64}(undef, size(σᵢ,1), size(σₒ,2))
-    for α2 in axes(σₒ,2), β1 in axes(σᵢ,1)
+    Z = MMatrix{size(σᵢ,1), size(σₒ,2),Float64}(undef)
+
+    @inbounds for α2 in axes(σₒ,2), β1 in axes(σᵢ,1)
         temp = 0.0
         @simd for β2 in axes(σᵢ,2)
             @muladd temp = temp + B[α2,β2] * x[σᵢ[β1,β2]]
@@ -63,7 +64,7 @@ or L = A ⊗ B. The action of this matrix on a vector x is
         Z[β1,α2] = temp
     end
 
-    for α1 in axes(σₒ,1), α2 in axes(σₒ,2)
+    @inbounds for α1 in axes(σₒ,1), α2 in axes(σₒ,2)
         temp = 0.0
         @simd for β1 in axes(σᵢ,1)
             @muladd temp = temp + A[α1,β1] * Z[β1,α2]
@@ -89,16 +90,15 @@ or L = A ⊗ I_{M2}. The action of this matrix on a vector x is
     x::AbstractVector{Float64})
     
     LinearMaps.check_dim_mul(y, L, x)
-    @unpack A, B, σᵢ, σₒ = L
-    for α1 in axes(σₒ,1), α2 in axes(σₒ,2)
+    @inbounds for α1 in axes(L.σₒ,1), α2 in axes(L.σₒ,2)
         temp = 0.0
-        @simd for β1 in axes(σᵢ,1)
-            @muladd temp = temp + A[α1,β1] * x[σᵢ[β1,α2]]
+        @simd for β1 in axes(L.σᵢ,1)
+            @muladd temp = temp + L.A[α1,β1] * x[L.σᵢ[β1,α2]]
         end
-        y[σₒ[α1,α2]] = temp
+        y[L.σₒ[α1,α2]] = temp
     end
 
-    y = B * y
+    y = L.B * y
     return y
 end
 
@@ -118,7 +118,7 @@ or L = I_{M1} ⊗ B. The action of this matrix on a vector x is
     LinearMaps.check_dim_mul(y, L, x)
     @unpack A, B, σᵢ, σₒ = L
 
-    for α1 in axes(σₒ,1), α2 in axes(σₒ,2)
+    @inbounds for α1 in axes(σₒ,1), α2 in axes(σₒ,2)
         temp = 0.0
         @simd for β2 in axes(σᵢ,2)
             @muladd temp = temp + B[α2,β2] * x[σᵢ[α1,β2]]

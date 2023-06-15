@@ -52,7 +52,7 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
     @unpack A, B, C, σᵢ, σₒ = L
 
     Z_3 = Array{Float64}(undef, size(σᵢ,1), size(σᵢ,2), size(σₒ,3))
-    for α3 in axes(σₒ,3), β2 in axes(σᵢ,2), β1 in axes(σᵢ,1)
+    @inbounds for α3 in axes(σₒ,3), β2 in axes(σᵢ,2), β1 in axes(σᵢ,1)
         temp = 0.0
         @simd for β3 in axes(σᵢ,3)
             @muladd temp = temp + C[α3,β3] * x[σᵢ[β1,β2,β3]]
@@ -61,7 +61,7 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
     end
 
     Z_2 = Array{Float64}(undef, size(σᵢ,1), size(σₒ,2), size(σₒ,3))
-    for α3 in axes(σₒ,3), α2 in axes(σₒ,2), β1 in axes(σᵢ,1)
+    @inbounds for α3 in axes(σₒ,3), α2 in axes(σₒ,2), β1 in axes(σᵢ,1)
         temp = 0.0
         @simd for β2 in axes(σᵢ,2)
             @muladd temp = temp + B[α2,β2] * Z_3[β1,β2,α3]
@@ -69,7 +69,7 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
         Z_2[β1,α2,α3] = temp
     end
 
-    for α3 in axes(σₒ,3), α2 in axes(σₒ,2), α1 in axes(σₒ,1)
+    @inbounds for α3 in axes(σₒ,3), α2 in axes(σₒ,2), α1 in axes(σₒ,1)
         temp = 0.0
         @simd for β1 in axes(σᵢ,1)
             @muladd temp = temp + A[α1,β1] * Z_2[β1,α2,α3]
@@ -87,7 +87,7 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
     LinearMaps.check_dim_mul(y, L, x)
     @unpack A, B, C, σᵢ, σₒ = L
 
-    for α1 in axes(σₒ,1), α2 in axes(σₒ,2), α3 in axes(σₒ,3)
+    @inbounds for α1 in axes(σₒ,1), α2 in axes(σₒ,2), α3 in axes(σₒ,3)
         temp = 0.0
         @simd for β1 in axes(σᵢ,1)
             @muladd temp = temp + A[α1,β1] * x[σᵢ[β1,α2,α3]]
@@ -106,7 +106,7 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
     LinearMaps.check_dim_mul(y, L, x)
     @unpack A, B, C, σᵢ, σₒ = L
 
-    for α1 in axes(σₒ,1), α2 in axes(σₒ,2), α3 in axes(σₒ,3)
+    @inbounds for α1 in axes(σₒ,1), α2 in axes(σₒ,2), α3 in axes(σₒ,3)
         temp = 0.0
         @simd for β2 in axes(σᵢ,2)
             @muladd temp = temp + B[α2,β2] * x[σᵢ[α1,β2,α3]]
@@ -125,7 +125,7 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
     LinearMaps.check_dim_mul(y, L, x)
     @unpack A, B, C, σᵢ, σₒ = L
 
-    for α1 in axes(σₒ,1), α2 in axes(σₒ,2), α3 in axes(σₒ,3)
+    @inbounds for α1 in axes(σₒ,1), α2 in axes(σₒ,2), α3 in axes(σₒ,3)
         temp = 0.0
         @simd for β3 in axes(σᵢ,3)
             @muladd temp = temp + C[α3,β3] * x[σᵢ[α1,α2,β3]]

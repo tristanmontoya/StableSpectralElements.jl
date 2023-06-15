@@ -32,7 +32,7 @@ function LinearAlgebra.mul!(y::AbstractVector,
     LinearMaps.check_dim_mul(y, L, x)
     @unpack A, B, σᵢ, σₒ, N2 = L
     
-    Z = Matrix{Float64}(undef, size(σᵢ,1), size(σₒ,2))
+    Z = MMatrix{size(σᵢ,1), size(σₒ,2),Float64}(undef)
 
     @inbounds for α2 in axes(σₒ,2), β1 in axes(σᵢ,1)
         temp = 0.0
@@ -66,12 +66,12 @@ function LinearMaps._unsafe_mul!(y::AbstractVector,
     LinearMaps.check_dim_mul(y, L, x)
     @unpack A, B, σᵢ, σₒ, N2 = L.lmap
 
-    Z = Matrix{Float64}(undef, size(σᵢ,1), size(σₒ,2))
-    
+    Z = MMatrix{size(σᵢ,1), size(σₒ,2),Float64}(undef)
+    X = SMatrix{size(σₒ,2), size(σₒ,1),Float64}(x[σₒ[:,:]]')
     @inbounds for β1 in axes(σᵢ,1), α2 in axes(σₒ,2)
         temp = 0.0
         @simd for α1 in axes(σₒ,1)
-            @muladd temp = temp + A[α1,β1] * x[σₒ[α1,α2]]
+            @muladd temp = temp + A[α1,β1] * X[α2,α1]
         end
         Z[β1,α2] = temp
     end
