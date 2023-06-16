@@ -32,8 +32,8 @@ function warp_mesh(mesh::MeshData{2},
     reference_element::RefElemData{2}, 
     mesh_warping::DelReyWarping{2})
     
-    @unpack x, y = mesh
-    @unpack factor, L = mesh_warping
+    (; x, y) = mesh
+    (; factor, L) = mesh_warping
 
     x_new = x .+ L[1]*factor*sin.(π*x./L[1]).*sin.(π*y/L[2])
     y_new = y .+ L[2]*factor*exp.((1.0.-y)/L[2]).*sin.(π*x/L[1]).*
@@ -45,8 +45,8 @@ function warp_mesh(mesh::MeshData{2},
     reference_element::RefElemData{2}, 
     mesh_warping::ChanWarping{2})
     
-    @unpack x, y = mesh
-    @unpack factor, L = mesh_warping
+    (; x, y) = mesh
+    (; factor, L) = mesh_warping
     
     x_new = x .+ L[1]*factor*cos.(π/L[1]*(x.-0.5*L[1])) .*
         cos.(3π/L[2]*(y.-0.5*L[2]))
@@ -60,8 +60,8 @@ function warp_mesh(mesh::MeshData{3},
     reference_element::RefElemData{3}, 
     mesh_warping::ChanWarping{3})
     
-    @unpack x, y, z = mesh
-    @unpack factor, L = mesh_warping
+    (; x, y, z) = mesh
+    (; factor, L) = mesh_warping
     
     y_new = y .+ L[2]*factor*cos.(3π/L[1]*(x.-0.5*L[1])) .*
         cos.(π/L[2]*(y.-0.5*L[2])) .* cos.(π/L[3]*(z.-0.5*L[3]))
@@ -77,8 +77,8 @@ function warp_mesh(mesh::MeshData{2},
     reference_element::RefElemData{2}, 
     mesh_warping::UniformWarping{2})
     
-    @unpack x, y = mesh
-    @unpack factor, L = mesh_warping
+    (; x, y) = mesh
+    (; factor, L) = mesh_warping
 
     eps = factor * sin.(2π*(x.-L[1]/2)/L[1]) .* sin.(2π*(y.-L[2]/2)/L[2])
     x_new = x .+ L[1]*eps
@@ -91,8 +91,8 @@ function warp_mesh(mesh::MeshData{3},
     reference_element::RefElemData{3}, 
     mesh_warping::UniformWarping{3})
     
-    @unpack x, y, z = mesh
-    @unpack factor, L = mesh_warping
+    (; x, y, z) = mesh
+    (; factor, L) = mesh_warping
 
     eps = factor * sin.(2π*(x.-L[1]/2)/L[1]) .* sin.(2π*(y.-L[2]/2)/L[2]) .*
         sin.(2π*(z.-L[3]/2)/L[3])
@@ -105,13 +105,15 @@ end
 
 function warp_mesh(mesh::MeshData{3}, reference_element::RefElemData{3}, 
     mesh_warping::DelReyWarping{3})
-    @unpack x, y, z = mesh
-    @unpack factor, L = mesh_warping
+
+    (; x, y, z) = mesh
+    (; factor, L) = mesh_warping
 
     x_new = x .+ L[1]*factor*sin.(π*x/L[1]).*sin.(π*y/L[2])
     y_new = y .+ L[2]*
         factor*exp.((1.0.-y)/L[2]).*sin.(π*x/L[1]).*sin.(π*y/L[2])
-    z_new = z .+ 0.25*L[3]*factor*(sin.(2π*x/L[1]).*sin.(2π*y/L[2])).*sin.(2π*z/L[3])
+    z_new = z .+ 0.25*L[3]*
+        factor*(sin.(2π*x/L[1]).*sin.(2π*y/L[2])).*sin.(2π*z/L[3])
     return MeshData(reference_element, mesh, x_new, y_new, z_new)
 end
 
@@ -119,7 +121,8 @@ function uniform_periodic_mesh(reference_element::RefElemData{1},
     limits::NTuple{2,Float64}, M::Int)
 
     VX, EtoV = uniform_mesh(reference_element.element_type, M)
-    mesh =  MeshData(limits[1] .+ 0.5*(limits[2]-limits[1])*(VX[1] .+ 1.0), EtoV,reference_element)
+    mesh = MeshData(limits[1] .+ 0.5*(limits[2]-limits[1])*(VX[1] .+ 1.0),
+        EtoV,reference_element)
 
     return make_periodic(mesh)
 end
@@ -180,6 +183,7 @@ function cartesian_mesh(::Tri,  M::NTuple{2,Int}, ::ZigZag)
     end
     (VX,VY), _ = uniform_mesh(Quad(), M[1], M[2])
     EtoV = Matrix{Int64}(undef, 0, 3)
+
     for i in 1:2:(M[1]-1), j in 1:2:(M[2]-1)
         bot_left = (j-1)*(M[2]+1) + i
         bot_mid = j*(M[2]+1) + i

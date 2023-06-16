@@ -2,8 +2,6 @@ module ConservationLaws
 
     using LinearMaps: LinearMap
     using LinearAlgebra: mul!, I
-    using UnPack
-
     import ..GridFunctions: AbstractGridFunction, NoSourceTerm, InitialDataSine, InitialDataGaussian, InitialDataGassner, SourceTermGassner, evaluate
 
     export physical_flux, physical_flux!, numerical_flux, numerical_flux!, AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, NoInviscidFlux, NoViscousFlux, LaxFriedrichsNumericalFlux, RoeNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, EntropyConservativeFlux, NoTwoPointFlux, ExactSolution

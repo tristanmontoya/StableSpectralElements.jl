@@ -1,11 +1,8 @@
-"""This assumes facet nodes aligned with volume nodes"""
 function RefElemData(elem::Tri,  
     approx_type::Union{ModalTensor,NodalTensor}, N; volume_quadrature_rule=(
         LGQuadrature(approx_type.p),LGRQuadrature(approx_type.p)),
         facet_quadrature_rule=LGQuadrature(approx_type.p),
         Nplot=10)
-
-    @unpack p = approx_type
 
     fv = face_vertices(elem) # set faces for triangle
 
@@ -35,8 +32,8 @@ function RefElemData(elem::Tri,
     M = Vq' * diagm(wq) * Vq
     Pq = M \ (Vq' * diagm(wq))
 
-    Vf = vandermonde(elem, N, rf, sf) / VDM # interpolates from nodes to face nodes
-    LIFT = M \ (Vf' * diagm(wf)) # lift matrix used in rhs evaluation
+    Vf = vandermonde(elem, N, rf, sf) / VDM # 
+    LIFT = M \ (Vf' * diagm(wf)) 
 
     # plotting nodes
     rp, sp = χ(Tri(),equi_nodes(Quad(),Nplot)) 
@@ -50,7 +47,6 @@ function RefElemData(elem::Tri,
                     M, Pq, (Dr, Ds), LIFT)
 end
 
-"""This assumes facet coordinate systems aligned with volume coordinate system, but not necessarily with volume nodes"""
 function RefElemData(elem::Tet,  
     approx_type::Union{ModalTensor,NodalTensor}, N;
     volume_quadrature_rule=(LGQuadrature(approx_type.p), 
@@ -58,7 +54,6 @@ function RefElemData(elem::Tet,
     facet_quadrature_rule=(LGQuadrature(approx_type.p), 
         LGQuadrature(approx_type.p)), Nplot=10)
 
-    @unpack p = approx_type
     fv = face_vertices(elem) 
 
     # Construct matrices on reference elements

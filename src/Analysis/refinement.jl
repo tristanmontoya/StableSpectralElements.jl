@@ -27,7 +27,7 @@ end
 
 function analyze(analysis::RefinementErrorAnalysis{d}, n_grids=100) where {d}
 
-    @unpack sequence_path, exact_solution = analysis
+    (; sequence_path, exact_solution) = analysis
 
     results_path = string(sequence_path, "grid_1/")
     if !isfile(string(results_path,"error.jld2")) error("File not found!") end
@@ -73,7 +73,7 @@ function analyze(analysis::RefinementAnalysis{d},
     n_grids=100; max_derivs::Bool=false, 
     use_weight_adjusted_mass_matrix::Bool=true) where {d}
 
-    @unpack sequence_path, exact_solution = analysis
+    (; sequence_path, exact_solution) = analysis
 
     results_path = string(sequence_path, "grid_1/")
     if !isfile(string(results_path,"error.jld2")) error("File not found!") end
@@ -182,8 +182,8 @@ end
 function plot_analysis(analysis::RefinementAnalysis{d},
     results::RefinementAnalysisResults; e=1) where {d}
 
-    @unpack analysis_path = analysis
-    @unpack error, dof = results
+    (; analysis_path) = analysis
+    (; error, dof) = results
 
     if d == 1
         xlabel = latexstring("\\mathrm{DOF}")

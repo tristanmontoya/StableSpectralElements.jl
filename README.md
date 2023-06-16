@@ -11,7 +11,7 @@
 
 StableSpectralElements.jl is a registered Julia package (compatible with Julia versions 1.7 and higher) and can be installed by entering the following commands within the REPL:
 ```julia
-using Pkg;  Pkg.add("StableSpectralElements")
+using Pkg; Pkg.add("StableSpectralElements")
 ```
 
 For further information on the functionality and usage of this package, please refer to the [example notebooks](https://github.com/tristanmontoya/StableSpectralElements.jl/tree/main/examples/) as well as the [documentation](https://tjbmontoya.com/StableSpectralElements.jl/dev/), or feel free to [send me an email](mailto:tristan.montoya@mail.utoronto.ca).

@@ -79,7 +79,7 @@ end
 
 @inline function pressure(conservation_law::EulerType{d}, 
     u::AbstractMatrix{Float64}) where {d}
-    @unpack γ = conservation_law
+    (; γ) = conservation_law
     ρ = @view u[:,1]
     ρV = @view u[:,2:end-1]
     E = @view u[:,end]
@@ -88,7 +88,7 @@ end
 
 @inline function velocity(conservation_law::EulerType{d}, 
     u::AbstractMatrix{Float64}) where {d}
-    @unpack γ = conservation_law
+    (; γ) = conservation_law
     ρ = @view u[:,1]
     ρV = @view u[:,2:end-1]
     return hcat([ρV[:,m] ./ ρ for m in 1:d]...)
@@ -101,7 +101,7 @@ Evaluate the flux for the Euler equations
     conservation_law::EulerType{d}, 
     u::AbstractMatrix{Float64}) where {d}
 
-    @unpack γ = conservation_law
+    (; γ) = conservation_law
     ρV = @view u[:,2:end-1]
     E = @view u[:,end]
     V = velocity(conservation_law, u)
@@ -121,8 +121,8 @@ end
     u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
     n::NTuple{d, Vector{Float64}}) where {d}
 
-    @unpack γ, N_c = conservation_law
-    @unpack λ = numerical_flux
+    (; γ, N_c) = conservation_law
+    (; λ) = numerical_flux
 
     ρ_in = @view u_in[:,1]
     V_in = velocity(conservation_law, u_in)
@@ -177,7 +177,7 @@ end
 function evaluate(
     exact_solution::ExactSolution{d,EulerEquations{d}, EulerPeriodicTest{d},NoSourceTerm{d}},
     x::NTuple{d,Float64},t::Float64=0.0) where {d}
-    @unpack initial_data, conservation_law = exact_solution
+    (; initial_data, conservation_law) = exact_solution
     
     if !exact_solution.periodic
         ρ = 1.0 + initial_data.ϵ*sin(π*(sum(x[m] for m in 1:d) - t*d))
@@ -190,7 +190,7 @@ end
 function evaluate(
     exact_solution::ExactSolution{2,EulerEquations{2}, IsentropicVortex,NoSourceTerm{2}},
     x::NTuple{2,Float64},t::Float64=0.0)
-    @unpack initial_data, conservation_law = exact_solution
+    (; initial_data, conservation_law) = exact_solution
     
     if !exact_solution.periodic
         return evaluate(initial_data, 

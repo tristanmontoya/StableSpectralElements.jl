@@ -6,10 +6,9 @@ Evaluate semi-discrete residual for a first-order problem
     solver::Solver{d, <:StandardForm, FirstOrder, PhysicalOperators{d}},
     t::Float64) where {d}
 
-    @unpack conservation_law, operators, connectivity, form, N_e = solver
-    @unpack inviscid_numerical_flux = form
-    @unpack source_term = conservation_law
-    @unpack f_q, f_f, u_q, u_f, temp, CI = solver.preallocated_arrays
+    (; conservation_law, operators, connectivity, form, N_e) = solver
+    (; inviscid_numerical_flux) = form
+    (; f_q, f_f, u_q, u_f, temp, CI) = solver.preallocated_arrays
     
     @timeit "reconstruct nodal solution" Threads.@threads for k in 1:N_e
         mul!(view(u_q, :,:,k), operators.V[k], u[:,:,k])
@@ -25,7 +24,7 @@ Evaluate semi-discrete residual for a first-order problem
         fill!(view(dudt,:,:,k),0.0)
         @inbounds for m in 1:d
             mul!(view(temp,:,:,k),operators.VOL[k][m],f_q[:,:,m,k])
-            dudt[:,:,k] .+= temp[:,:,k] 
+            dudt[:,:,k] .+= temp[:,:,k]
         end
 
         mul!(view(temp,:,:,k), operators.FAC[k], f_f[:,:,k])
@@ -42,11 +41,10 @@ Evaluate semi-discrete residual for a first-order problem
     solver::Solver{d, <:StandardForm{SkewSymmetricMapping}, FirstOrder, ReferenceOperators{d}},
     t::Float64) where {d}
 
-    @unpack conservation_law, connectivity, form, N_e = solver
-    @unpack inviscid_numerical_flux = form
-    @unpack source_term = conservation_law
-    @unpack f_q, f_f, f_n, u_q, r_q, u_f, temp, CI = solver.preallocated_arrays
-    @unpack D, V, R, W, B, halfWΛ, halfN, BJf, n_f = solver.operators
+    (; conservation_law, connectivity, form, N_e) = solver
+    (; inviscid_numerical_flux) = form
+    (; f_q, f_f, f_n, u_q, r_q, u_f, temp, CI) = solver.preallocated_arrays
+    (; D, V, R, halfWΛ, halfN, BJf, n_f) = solver.operators
     
     @timeit "reconstruct nodal solution" Threads.@threads for k in 1:N_e
         mul!(view(u_q, :,:,k), V, u[:,:,k])

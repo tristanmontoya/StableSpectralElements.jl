@@ -6,10 +6,10 @@ function make_operators(spatial_discretization::SpatialDiscretization{1},
     alg::AbstractOperatorAlgorithm,
     mass_solver::AbstractMassMatrixSolver)
 
-    @unpack N_e, M, reference_approximation = spatial_discretization
-    @unpack D, V, R, W, B, N_p, N_q, N_f = reference_approximation
-    @unpack nrstJ = reference_approximation.reference_element
-    @unpack J_q, Λ_q, nJf = spatial_discretization.geometric_factors
+    (; N_e, M, reference_approximation) = spatial_discretization
+    (; D, V, R, W, B, N_p, N_q, N_f) = reference_approximation
+    (; nrstJ) = reference_approximation.reference_element
+    (; J_q, Λ_q, nJf) = spatial_discretization.geometric_factors
 
     VOL = Vector{NTuple{1,LinearMap}}(undef,N_e)
     FAC = Vector{LinearMap}(undef,N_e)
@@ -33,10 +33,10 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     alg::AbstractOperatorAlgorithm,
     mass_solver::AbstractMassMatrixSolver) where {d}
 
-    @unpack N_e, M, reference_approximation = spatial_discretization
-    @unpack V, R, W, B, D, N_p, N_q, N_f = reference_approximation
-    @unpack nrstJ = reference_approximation.reference_element
-    @unpack J_q, Λ_q, J_f, nJf = spatial_discretization.geometric_factors
+    (; N_e, M, reference_approximation) = spatial_discretization
+    (; V, R, W, B, D, N_p, N_q, N_f) = reference_approximation
+    (; nrstJ) = reference_approximation.reference_element
+    (; J_q, Λ_q, J_f, nJf) = spatial_discretization.geometric_factors
     
     VOL = Vector{NTuple{d,LinearMap}}(undef,N_e)
     FAC = Vector{LinearMap}(undef,N_e)
@@ -64,10 +64,10 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     alg::AbstractOperatorAlgorithm,
     mass_solver::AbstractMassMatrixSolver) where {d}
 
-    @unpack N_e, reference_approximation = spatial_discretization
-    @unpack V, R, W, B, D, N_p, N_q, N_f = reference_approximation
-    @unpack nrstJ = reference_approximation.reference_element
-    @unpack J_q, Λ_q, J_f, nJf = spatial_discretization.geometric_factors
+    (; N_e, reference_approximation) = spatial_discretization
+    (; V, R, W, B, D, N_p, N_q, N_f) = reference_approximation
+    (; nrstJ) = reference_approximation.reference_element
+    (; J_q, Λ_q, J_f, nJf) = spatial_discretization.geometric_factors
  
     VOL = Vector{NTuple{d,LinearMap}}(undef,N_e)
     FAC = Vector{LinearMap}(undef,N_e)

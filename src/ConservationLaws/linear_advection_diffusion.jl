@@ -155,7 +155,7 @@ function evaluate(
     exact_solution::ExactSolution{d,LinearAdvectionEquation{d}, <:AbstractGridFunction{d},NoSourceTerm{d}},
     x::NTuple{d,Float64},t::Float64=0.0) where {d}
 
-    @unpack initial_data, conservation_law = exact_solution
+    (; initial_data, conservation_law) = exact_solution
     
     if !exact_solution.periodic 
         z = Tuple(x[m] - conservation_law.a[m]*t for m in 1:d)
@@ -168,8 +168,8 @@ function evaluate(
     exact_solution::ExactSolution{d,LinearAdvectionDiffusionEquation{d}, InitialDataGaussian{d},NoSourceTerm{d}},
     x::NTuple{d,Float64},t::Float64=0.0) where {d}
 
-    @unpack A, σ, x₀ = exact_solution.initial_data
-    @unpack a, b = exact_solution.conservation_law
+    (; A, σ, x₀) = exact_solution.initial_data
+    (; a, b) = exact_solution.conservation_law
 
     if !exact_solution.periodic z = Tuple(x[m] - a[m]*t for m in 1:d)
     else z = x end
@@ -183,8 +183,8 @@ function evaluate(
     exact_solution::ExactSolution{d,LinearAdvectionDiffusionEquation{d}, InitialDataSine{d},NoSourceTerm{d}},
     x::NTuple{d,Float64},t::Float64=0.0) where {d}
     
-    @unpack A, k = exact_solution.initial_data
-    @unpack a, b = exact_solution.conservation_law
+    (; A, k) = exact_solution.initial_data
+    (; a, b) = exact_solution.conservation_law
 
     if !exact_solution.periodic z = Tuple(x[m] - a[m]*t for m in 1:d)
     else z = x end

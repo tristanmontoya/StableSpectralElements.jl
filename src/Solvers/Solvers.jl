@@ -1,6 +1,5 @@
 module Solvers
-
-    using UnPack
+    
     import LinearAlgebra
     using GFlops
     using LinearAlgebra: Diagonal, eigvals, inv, mul!, lmul!, diag, diagm, factorize, cholesky, ldiv!, Factorization, Cholesky, Symmetric, I, UniformScaling
@@ -116,7 +115,7 @@ module Solvers
         connectivity::Matrix{Int},
         form::ResidualForm) where {d,ResidualForm,PDEType}
 
-        @unpack N_c = conservation_law
+        (; N_c) = conservation_law
         N_e = size(operators.halfWΛ,3)
         (N_q,N_p) = size(operators.V)
         N_f = size(operators.R,1)
@@ -132,7 +131,7 @@ module Solvers
         connectivity::Matrix{Int},
         form::ResidualForm) where {d,ResidualForm,PDEType}
 
-        @unpack N_c = conservation_law
+        (; N_c) = conservation_law
         N_e = length(operators.V)
         (N_q,N_p) = size(operators.V[1])
         N_f = size(operators.R[1],1)

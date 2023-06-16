@@ -189,24 +189,22 @@ function ReferenceApproximation(
 
     # geometric factors for collapsed coordinate transformation
     J_ref, Λ_ref = reference_geometric_factors(Tri(),volume_quadrature_rule)
-    
-    # tensor-product quadrature weights scaled by Jacobian determinant of χ(η)
-    w_grid = meshgrid(w_1D[1],w_1D[2]) 
-    W = Diagonal(J_ref .* w_grid[1][:] .* w_grid[2][:])
 
     # one-dimensional facet quadrature rule
     η_f, _ = quadrature(Line(), facet_quadrature_rule)
 
     # interpolation/extrapolation operators
-    P = ()
-    @inbounds for m in 1:2
-        if volume_quadrature_rule[m] == facet_quadrature_rule
-            P = (P..., LinearMap(I, q[m]+1))
-        else
-            P = (P...,LinearMap(vandermonde(Line(),q[m],η_f) / V_1D[m]))
-        end
+    if volume_quadrature_rule[1] == facet_quadrature_rule
+        η1_to_ηf = LinearMap(I, q[1]+1)
+    else
+        η1_to_ηf = vandermonde(Line(),q[1],η_f) / V_1D[1]
     end
-    R = [P[1] ⊗ R_L[2]; R_R[1] ⊗ P[2]; R_L[1] ⊗ P[2]]
+    if volume_quadrature_rule[2] == facet_quadrature_rule
+        η2_to_ηf = LinearMap(I, q[2]+1)
+    else
+        η2_to_ηf = vandermonde(Line(),q[2],η_f) / V_1D[2]
+    end
+    R = [η1_to_ηf ⊗ R_L[2]; R_R[1] ⊗ η2_to_ηf; R_L[1] ⊗ η2_to_ηf]
         
     # reference element data (mainly used for mapping, normals, etc.)
     reference_element = RefElemData(Tri(), approx_type, mapping_degree,
@@ -219,17 +217,15 @@ function ReferenceApproximation(
         V_plot = LinearMap(vandermonde(Tri(), 
             approx_type.p, reference_element.rstp...))
     else
-        V = LinearMap(I, N_q)
-        VDM_plot_1D = (vandermonde(Line(), q[1], equi_nodes(Line(),N_plot)),
-            vandermonde(Line(), q[2], equi_nodes(Line(),N_plot)))
-        V_plot = LinearMap(kron(VDM_plot_1D[1]/V_1D[1], VDM_plot_1D[2]/V_1D[2]))
+        V = LinearMap(I, (q[1]+1)*(q[2]+1))
+        V_plot = (vandermonde(Line(),q[1],equi_nodes(Line(),N_plot))/V_1D[1]) ⊗
+            (vandermonde(Line(),q[2],equi_nodes(Line(),N_plot))/V_1D[2])
         approx_type = NodalTensor(min(q[1],q[2]))
     end
 
-    return ReferenceApproximation(approx_type, size(V,2), 
-        (q[1]+1)*(q[2]+1), 3*length(η_f), reference_element, 
-        (D_1D[1] ⊗ I_1D[2], I_1D[1] ⊗ D_1D[2]), V, R * V, R, W, 
-        Diagonal(reference_element.wf), V_plot, ReferenceMapping(J_ref, Λ_ref))
+    return ReferenceApproximation(approx_type, reference_element, 
+        (D_1D[1] ⊗ I_1D[2], I_1D[1] ⊗ D_1D[2]), V, R * V, R, 
+        V_plot, ReferenceMapping(J_ref, Λ_ref))
 end
 
 function ReferenceApproximation(
@@ -247,92 +243,54 @@ function ReferenceApproximation(
     # reference geometric factors for cube-to-tetrahedron mapping
     J_ref, Λ_ref = reference_geometric_factors(Tet(),volume_quadrature_rule)
 
-    # tensor-product quadrature
-    w_grid = meshgrid(w_1D[1],w_1D[2], w_1D[3])
-    W = Diagonal(J_ref .* w_grid[1][:] .* w_grid[2][:] .* w_grid[3][:])
-
-    σ = [(i-1)*(q[2]+1)*(q[3]+1) + (j-1)*(q[3]+1) + k 
-        for i in 1:(q[1]+1), j in 1:(q[2]+1), k in 1:(q[3]+1)]
-    σ_13 = [(i-1)*(q[3]+1) + k  for i in 1:(q[1]+1), j in 1:1, k in 1:(q[3]+1)]
-    σ_23 = [(j-1)*(q[3]+1) + k  for i in 1:1, j in 1:(q[2]+1), k in 1:(q[3]+1)]
-    σ_12 = [(i-1)*(q[2]+1) + j  for i in 1:(q[1]+1), j in 1:(q[2]+1), k in 1:1]
-    
-    # 2D facet quadrature nodes and weights
+    # two-dimensional facet quadrature nodes and weights
     η_f1, _ = quadrature(Line(), facet_quadrature_rule[1])
     η_f2, _ = quadrature(Line(), facet_quadrature_rule[2])
-    q_f = (length(η_f1)-1, length(η_f2)-1)
-    N_f = (q_f[1]+1)*(q_f[2]+1)
-    σ_f = [(q_f[2]+1)*(i-1) + j for i in 1:q_f[1]+1, j in 1:q_f[2]+1]
 
-    # extrapolation/interpolation onto front face (η2 = -1)
-    extrap_1 = TensorProductMap3D(I, R_L[2], I, σ, σ_13)
-    if (volume_quadrature_rule[1] == facet_quadrature_rule[1]) &&
-        (volume_quadrature_rule[3] == facet_quadrature_rule[2])
-        interp_1 = LinearMap(I,N_f)
-    else 
-        interp_1 = TensorProductMap2D(vandermonde(Line(),q[1],η_f1) / V_1D[1],
-            vandermonde(Line(),q[3],η_f2) / V_1D[3], σ_13[:,1,:], σ_f)
-    end
-
-    # extrapolation/interpolation onto hypotenuse face (η1 = +1)
-    extrap_2 = TensorProductMap3D(R_R[1], I, I, σ, σ_23)
-    if (volume_quadrature_rule[2] == facet_quadrature_rule[1]) &&
-        (volume_quadrature_rule[3] == facet_quadrature_rule[2])
-        interp_2 = LinearMap(I, N_f)
+    # interpolation/extrapolation operators
+    if volume_quadrature_rule[1] == facet_quadrature_rule[1]
+        η1_to_ηf1 = LinearMap(I,q[1]+1)
     else
-        interp_2 = TensorProductMap2D(vandermonde(Line(),q[2],η_f1) / V_1D[2],
-            vandermonde(Line(),q[3],η_f2) / V_1D[3], σ_23[1,:,:], σ_f)
+        η1_to_ηf1 = LinearMap(vandermonde(Line(),q[1],η_f1) / V_1D[1])
     end
-
-    # extrapolation/interpolation onto left face (η1 = -1)
-    extrap_3 = TensorProductMap3D(R_L[1], I, I, σ, σ_23)
-    if (volume_quadrature_rule[2] == facet_quadrature_rule[1]) &&
-        (volume_quadrature_rule[3] == facet_quadrature_rule[2])
-        interp_3 = LinearMap(I, N_f)
+    if volume_quadrature_rule[2] == facet_quadrature_rule[1]
+        η2_to_ηf1 = LinearMap(I,q[2]+1)
     else
-        interp_3 = TensorProductMap2D(vandermonde(Line(),q[2],η_f1) / V_1D[2],
-            vandermonde(Line(),q[3],η_f2) / V_1D[3], σ_23[1,:,:], σ_f)
+        η2_to_ηf1 = LinearMap(vandermonde(Line(),q[2],η_f1) / V_1D[2])
     end
-
-    # extrapolation/interpolation onto bottom face (η3 = -1)
-    extrap_4 = TensorProductMap3D(I, I, R_L[3], σ, σ_12)
-    if (volume_quadrature_rule[1] == facet_quadrature_rule[1]) &&
-        (volume_quadrature_rule[2] == facet_quadrature_rule[2])
-        interp_4 = LinearMap(I, N_f)
+    if volume_quadrature_rule[2] == facet_quadrature_rule[2]
+        η2_to_ηf2 = LinearMap(I,q[2]+1)
     else
-        interp_4 = TensorProductMap2D(vandermonde(Line(),q[1],η_f1) / V_1D[1],
-            vandermonde(Line(),q[2],η_f2) / V_1D[2], σ_12[:,:,1], σ_f)
+        η2_to_ηf2 = LinearMap(vandermonde(Line(),q[2],η_f2) / V_1D[2])
     end
-
-    # full interpolation/extrapolation operator
-    R = [interp_1 * extrap_1; interp_2 * extrap_2; 
-        interp_3 * extrap_3; interp_4 * extrap_4]
-
+    if volume_quadrature_rule[3] == facet_quadrature_rule[2]
+        η3_to_ηf2 = LinearMap(I,q[3]+1)
+    else
+        η3_to_ηf2 = LinearMap(vandermonde(Line(),q[3],η_f2) / V_1D[3])
+    end
+    R = [η1_to_ηf1 ⊗ R_L[2] ⊗ η3_to_ηf2; R_R[1] ⊗ η2_to_ηf1 ⊗ η3_to_ηf2;
+        R_L[1] ⊗ η2_to_ηf1 ⊗ η3_to_ηf2;  η1_to_ηf1 ⊗ η2_to_ηf2 ⊗ R_L[3]]
+    
     # reference element data (mainly used for mapping, normals, etc.)
     reference_element = RefElemData(Tet(), approx_type, mapping_degree,
         volume_quadrature_rule=volume_quadrature_rule,
         facet_quadrature_rule=facet_quadrature_rule,  Nplot=N_plot)
 
-    @unpack rstq, rstf, rstp, wq, wf = reference_element
-
     # construct nodal or modal scheme
     if approx_type isa ModalTensor
         V = warped_product(Tet(),approx_type.p, η_1D)
-        V_plot = LinearMap(vandermonde(Tet(), approx_type.p, rstp...))
+        V_plot = LinearMap(vandermonde(Tet(), approx_type.p, 
+            reference_element.rstp...))
     else
         V = LinearMap(I, (q[1]+1)*(q[2]+1)*(q[3]+1))
-        VDM_plot_1D = (vandermonde(Line(), q[1], equi_nodes(Line(),N_plot)),
-            vandermonde(Line(), q[2], equi_nodes(Line(),N_plot)),
-            vandermonde(Line(), q[3], equi_nodes(Line(),N_plot)) )
-        V_plot = LinearMap(kron(VDM_plot_1D[1]/V_1D[1], VDM_plot_1D[2]/V_1D[2],
-            VDM_plot_1D[3]/V_1D[3]))
+        V_plot = (vandermonde(Line(),q[1],equi_nodes(Line(),N_plot))/V_1D[1]) ⊗
+            (vandermonde(Line(),q[2],equi_nodes(Line(),N_plot))/V_1D[2]) ⊗
+            (vandermonde(Line(),q[3],equi_nodes(Line(),N_plot))/V_1D[3])
         approx_type = NodalTensor(min(q[1],q[2],q[3]))
     end
     
-    return ReferenceApproximation(approx_type, size(V,2), 
-        length(wq), length(wf),reference_element, 
-        (D_1D[1] ⊗ I_1D[2] ⊗ I_1D[3], 
-         I_1D[1] ⊗ D_1D[2] ⊗ I_1D[3],
-         I_1D[1] ⊗ I_1D[2] ⊗ D_1D[3]),
-        V, R * V, R, W, Diagonal(wf), V_plot, ReferenceMapping(J_ref, Λ_ref))
+    return ReferenceApproximation(approx_type,
+        reference_element, (D_1D[1] ⊗ I_1D[2] ⊗ I_1D[3],  
+        I_1D[1] ⊗ D_1D[2] ⊗ I_1D[3], I_1D[1] ⊗ I_1D[2] ⊗ D_1D[3]),
+        V, R * V, R, V_plot, ReferenceMapping(J_ref, Λ_ref))
 end

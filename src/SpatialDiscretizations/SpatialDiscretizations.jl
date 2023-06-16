@@ -1,7 +1,6 @@
 module SpatialDiscretizations
 
-    using UnPack
-    using StaticArrays: SArray, SMatrix, SVector, MMatrix, MArray, MVector
+    using StaticArrays: SArray
     using LinearAlgebra: I, inv, Diagonal, diagm, kron, transpose, det, eigvals
     using Random: rand, shuffle
     using LinearMaps: LinearMap, ⊗
@@ -18,27 +17,31 @@ module SpatialDiscretizations
     
     abstract type AbstractApproximationType end
 
+    """Nodal approximation using tensor-product operators"""
     struct NodalTensor <: AbstractApproximationType 
         p::Int
     end
 
+
+    """Modal approximation using tensor-product operators"""
     struct ModalTensor <: AbstractApproximationType
         p::Int
     end
 
+    """Modal approximation using multidimensional operators"""
     struct ModalMulti <: AbstractApproximationType
         p::Int
     end
 
+
+    """Nodal approximation using multidimensional operators"""
     struct NodalMulti <: AbstractApproximationType
         p::Int
     end
 
     """Collapsed coordinate mapping χ: [-1,1]ᵈ → Ωᵣ"""
     abstract type AbstractReferenceMapping end
-
     struct NoMapping <: AbstractReferenceMapping end
-
     struct ReferenceMapping <: AbstractReferenceMapping 
         J_ref::Vector{Float64}
         Λ_ref::Array{Float64, 3}
@@ -59,6 +62,19 @@ module SpatialDiscretizations
         B::Diagonal
         V_plot::LinearMap
         reference_mapping::AbstractReferenceMapping
+
+        function ReferenceApproximation(approx_type::ApproxType,
+            reference_element::RefElemData{d,ElemShape},  
+            D::NTuple{d, LinearMap}, V::LinearMap, Vf::LinearMap, 
+            R::LinearMap, V_plot::LinearMap, 
+            reference_mapping::AbstractReferenceMapping = NoMapping()
+            ) where {d, ElemShape, ApproxType}
+
+            return new{d, ElemShape, ApproxType}(approx_type, size(V,2), 
+                size(V,1), size(R,1), reference_element, D, V, Vf, R, 
+                Diagonal(reference_element.wq), Diagonal(reference_element.wf),
+                V_plot, reference_mapping)
+        end
     end
 
     struct GeometricFactors{d}
@@ -90,16 +106,16 @@ module SpatialDiscretizations
         reference_approximation::ReferenceApproximation{d};
         project_jacobian::Bool=false) where {d}
 
-        @unpack reference_element, reference_mapping, W, V = reference_approximation
+        (; reference_element, reference_mapping, W, V) = reference_approximation
 
         N_e = size(mesh.xyz[1])[2]
         geometric_factors = apply_reference_mapping(GeometricFactors(mesh,
             reference_element), reference_mapping)
-        @unpack J_q, Λ_q, J_f, nJf = geometric_factors
+        (; J_q, Λ_q, J_f, nJf) = geometric_factors
 
         if project_jacobian
             J_proj = similar(J_q)
-            Minv = inv(Matrix(V'*W*V)) 
+            Minv = inv(Matrix(V'*W*V))
             for k in 1:N_e 
                 J_proj[:,k] = V * Minv * V' * W * J_q[:,k] 
             end
@@ -119,9 +135,8 @@ module SpatialDiscretizations
     """Express all metric terms in terms of collapsed coordinates"""
     function apply_reference_mapping(geometric_factors::GeometricFactors,
         reference_mapping::ReferenceMapping)
-        @unpack J_q, Λ_q, J_f, nJf = geometric_factors
-        @unpack J_ref, Λ_ref = reference_mapping
-
+        (; J_q, Λ_q, J_f, nJf) = geometric_factors
+        (; J_ref, Λ_ref) = reference_mapping
         (N_q, N_e) = size(J_q)
         d = size(Λ_q, 2)
         Λ_η = similar(Λ_q)
@@ -139,7 +154,7 @@ module SpatialDiscretizations
     """
     function check_normals(
         spatial_discretization::SpatialDiscretization{d}) where {d}
-        @unpack geometric_factors, mesh, N_e = spatial_discretization
+        (; geometric_factors, mesh, N_e) = spatial_discretization
         return Tuple([maximum(abs.(geometric_factors.nJf[m][:,k] + 
                 geometric_factors.nJf[m][mesh.mapP[:,k]])) for k in 1:N_e]
                 for m in 1:d)
@@ -150,11 +165,9 @@ module SpatialDiscretizations
     """
     function check_facet_nodes(
         spatial_discretization::SpatialDiscretization{d}) where {d}
-
-        @unpack geometric_factors, mesh, N_e = spatial_discretization
+        (; mesh, N_e) = spatial_discretization
         return Tuple([maximum(abs.(mesh.xyzf[m][:,k] -
-                mesh.xyzf[m][mesh.mapP[:,k]])) for k in 1:N_e]
-                for m in 1:d)
+            mesh.xyzf[m][mesh.mapP[:,k]])) for k in 1:N_e] for m in 1:d)
     end
 
     """
@@ -162,15 +175,15 @@ module SpatialDiscretizations
     """
     function check_sbp_property(
         reference_approximation::ReferenceApproximation{d}) where {d}       
-        @unpack W, D, R, B = reference_approximation
-        @unpack reference_mapping = reference_approximation
-        @unpack nrstJ = reference_approximation.reference_element
+        (; W, D, R, B) = reference_approximation
+        (; reference_mapping) = reference_approximation
+        (; nrstJ) = reference_approximation.reference_element
 
         if reference_mapping isa NoMapping
             return Tuple(maximum(abs.(Matrix(W*D[m] + D[m]'*W - 
                 R'*B*Diagonal(nrstJ[m])*R))) for m in 1:d)
         else
-            @unpack Λ_ref, J_ref = reference_mapping
+            (; Λ_ref, J_ref) = reference_mapping
             D_ξ = Tuple(sum(Diagonal(Λ_ref[:,l,m]./J_ref) * D[l]
                 for l in 1:d) for m in 1:d)
             return Tuple(maximum(abs.(Matrix(W*D_ξ[m] + D_ξ[m]'*W - 
@@ -184,8 +197,8 @@ module SpatialDiscretizations
     function check_sbp_property(
         spatial_discretization::SpatialDiscretization{d}, k::Int=1) where {d}
 
-        @unpack V, Vf, D, B = spatial_discretization.reference_approximation
-        @unpack Λ_q, nJf = spatial_discretization.geometric_factors
+        (; W, D, R, B) = spatial_discretization.reference_approximation
+        (; Λ_q, nJf) = spatial_discretization.geometric_factors
 
         S = Tuple((sum( 0.5 * D[m]' * W * Diagonal(Λ_q[:,m,n,k]) -
                         0.5 * Diagonal(Λ_q[:,m,n,k]) * W * D[m] for m in 1:d) + 
@@ -203,8 +216,7 @@ module SpatialDiscretizations
     """
     function centroids(
         spatial_discretization::SpatialDiscretization{d}) where {d}
-
-        @unpack xyz = spatial_discretization.mesh
+        (; xyz) = spatial_discretization.mesh
         return [Tuple(sum(xyz[m][:,k])/length(xyz[m][:,k]) 
             for m in 1:d) for k in 1:spatial_discretization.N_e]
     end
@@ -213,7 +225,7 @@ module SpatialDiscretizations
     Trace inequality constant from Chan et al. (2016)
     """
     function trace_constant(reference_approximation::ReferenceApproximation)
-        @unpack B, Vf, W, V = reference_approximation
+        (; B, Vf, W, V) = reference_approximation
         return maximum(eigvals(Matrix(Vf' * B * Vf), Matrix(V' * W * V)))
     end
 
@@ -225,7 +237,6 @@ module SpatialDiscretizations
     include("quadrature_rules.jl")
 
     # new constructors for RefElemData from StartUpDG
-    # this will eventually be integrated within StartUpDG.
     include("ref_elem_data.jl")
 
     include("multidimensional.jl")

@@ -42,7 +42,7 @@ Evaluate the matrix-vector product
 function LinearAlgebra.mul!(y::AbstractVector, 
     L::FastWarpedTensorProductMap2D, x::AbstractVector)
     LinearMaps.check_dim_mul(y, L, x)
-    @unpack A, B, σᵢ, σₒ, N2 = L
+    (; A, B, σᵢ, σₒ, N2) = L
     
     Z = Matrix{Float64}(undef, size(σᵢ,1), size(σₒ,2))
 
@@ -76,7 +76,7 @@ function LinearMaps._unsafe_mul!(y::AbstractVector,
     x::AbstractVector)
 
     LinearMaps.check_dim_mul(y, L, x)
-    @unpack A, B, σᵢ, σₒ, N2 = L.lmap
+    (; A, B, σᵢ, σₒ, N2) = L.lmap
 
     Z = Matrix{Float64}(undef, size(σᵢ,1), size(σₒ,2))
     

@@ -1,6 +1,6 @@
 module MatrixFreeOperators
 
-    using LinearAlgebra, LinearMaps, MuladdMacro, UnPack, GFlops, StaticArrays
+    using LinearAlgebra, LinearMaps, MuladdMacro, GFlops, StaticArrays
     export AbstractOperatorAlgorithm, BLASAlgorithm, GenericMatrixAlgorithm, GenericTensorProductAlgorithm, DefaultOperatorAlgorithm, make_operator, count_ops
     
     abstract type AbstractOperatorAlgorithm end

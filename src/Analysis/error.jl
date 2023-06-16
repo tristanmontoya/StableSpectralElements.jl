@@ -20,9 +20,9 @@ function ErrorAnalysis(results_path::String,
     conservation_law::AbstractConservationLaw,
     spatial_discretization::SpatialDiscretization{d}) where {d}
 
-    @unpack W, V = 
+    (; W, V) = 
         spatial_discretization.reference_approximation
-    @unpack geometric_factors, mesh, N_e = spatial_discretization
+    (; geometric_factors, mesh, N_e) = spatial_discretization
     _, N_c, N_e = get_dof(spatial_discretization, conservation_law)
     
     norm = QuadratureL2([Matrix(W) * Diagonal(geometric_factors.J_q[:,k]) 
@@ -37,7 +37,7 @@ function analyze(analysis::ErrorAnalysis{QuadratureL2, d},
     exact_solution::AbstractGridFunction{d}, 
     t::Float64=0.0) where {d}
 
-    @unpack norm, N_c, N_e, V_err, x_err, results_path = analysis 
+    (; norm, N_c, N_e, V_err, x_err, results_path) = analysis 
 
     u_exact = evaluate(exact_solution, x_err, t)
     nodal_error = Tuple(u_exact[:,e,:] - convert(Matrix, V_err * sol[:,e,:])

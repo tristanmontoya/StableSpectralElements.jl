@@ -23,8 +23,8 @@ function low_order_subdivision(p_vis::Int, p_map::Int,
     reference_element::RefElemData{3},
     mesh::MeshData{3}, res=0.01)
 
-    @unpack rq,sq,tq, wq, VDM, element_type = reference_element
-    @unpack x,y,z = mesh
+    (; rq,sq,tq, wq, VDM, element_type) = reference_element
+    (; x,y,z) = mesh
 
     r1,s1,t1 = nodes(element_type,1)
     facet_list = hcat(find_face_nodes(element_type, r1, s1, t1)...)
@@ -64,9 +64,9 @@ function postprocess_vtk(
     filename::String, u::Array{Float64,3}; e=1, p_vis=nothing, p_map=nothing,
     variable_name="u")
 
-    @unpack reference_element, V, V_plot = spatial_discretization.reference_approximation
-    @unpack mesh, x_plot = spatial_discretization
-    @unpack rstp = reference_element
+    (; reference_element, V, V_plot) = spatial_discretization.reference_approximation
+    (; mesh, x_plot) = spatial_discretization
+    (; rstp) = reference_element
 
     if isnothing(p_vis) || isnothing(p_map)
         points, cells = low_order_subdivision(rstp, x_plot)
@@ -126,12 +126,12 @@ end
     end
 
     if obj isa SpatialDiscretization
-        @unpack N_e = obj
+        (; N_e) = obj
         xlabel --> "\$x_1\$"
         ylabel --> "\$x_2\$"
         zlabel --> "\$x_3\$"
-        @unpack reference_approximation, mesh = obj
-        @unpack reference_element = reference_approximation
+        (; reference_approximation, mesh) = obj
+        (; reference_element) = reference_approximation
     else
         N_e = 1
         xlims --> [-1.1, 1.1]
@@ -159,7 +159,7 @@ end
             X = (x,y,z) -> (x,y,z)
         end
 
-        @unpack element_type, r, s, t, rq, sq, tq, rf, sf, tf = reference_approximation.reference_element
+        (; element_type, r, s, t, rq, sq, tq, rf, sf, tf) = reference_approximation.reference_element
 
         if edges && (element_type isa Tet)
             up = collect(LinRange(-1.0,1.0, 40))
@@ -390,7 +390,7 @@ end
 end
 
 function plot_ref_elem(reference_approximation::ReferenceApproximation{3, Tet, <:Union{NodalTensor,ModalTensor}}, title::String)
-    @unpack p = reference_approximation.approx_type
+    (; p) = reference_approximation.approx_type
     vol_nodes = plot(reference_approximation, volume_connect=true,
         facet_connect=true, facet_quadrature=false,
         volume_quadrature=true, mapping_nodes=false, markersize=4, 

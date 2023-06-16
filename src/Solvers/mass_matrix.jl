@@ -16,9 +16,9 @@ struct WeightAdjustedSolver <: AbstractMassMatrixSolver
 end
 
 function CholeskySolver(spatial_discretization::SpatialDiscretization)
-    @unpack V, W = spatial_discretization.reference_approximation
-    @unpack J_q = spatial_discretization.geometric_factors
-    @unpack N_e = spatial_discretization
+    (; V, W) = spatial_discretization.reference_approximation
+    (; J_q) = spatial_discretization.geometric_factors
+    (; N_e) = spatial_discretization
 
     if V isa UniformScalingMap
         return DiagonalSolver(spatial_discretization)
@@ -34,9 +34,9 @@ function CholeskySolver(spatial_discretization::SpatialDiscretization)
 end
 
 function DiagonalSolver(spatial_discretization::SpatialDiscretization)
-    @unpack V, W = spatial_discretization.reference_approximation
-    @unpack J_q = spatial_discretization.geometric_factors
-    @unpack N_e = spatial_discretization
+    (; V, W) = spatial_discretization.reference_approximation
+    (; J_q) = spatial_discretization.geometric_factors
+    (; N_e) = spatial_discretization
 
     if !(V isa UniformScalingMap)
         return CholeskySolver(spatial_discretization)
@@ -53,9 +53,9 @@ function WeightAdjustedSolver(spatial_discretization::SpatialDiscretization;
     operator_algorithm=DefaultOperatorAlgorithm(), assume_orthonormal=false,
     tol=1.0e-13)
     
-    @unpack V, W = spatial_discretization.reference_approximation
-    @unpack J_q = spatial_discretization.geometric_factors
-    @unpack N_e = spatial_discretization
+    (; V, W) = spatial_discretization.reference_approximation
+    (; J_q) = spatial_discretization.geometric_factors
+    (; N_e) = spatial_discretization
 
     if V isa UniformScalingMap
         return DiagonalSolver(spatial_discretization)
@@ -86,22 +86,22 @@ function WeightAdjustedSolver(spatial_discretization::SpatialDiscretization;
 end
 
 @inline function mass_matrix(mass_solver::CholeskySolver, k::Int)
-    @unpack WJ, V = mass_solver
+    (; WJ, V) = mass_solver
     return Matrix(V' * WJ[k] * V)
 end
 
 @inline function mass_matrix(mass_solver::DiagonalSolver, k::Int)
-    @unpack WJ⁻¹ = mass_solver
+    (; WJ⁻¹) = mass_solver
     return inv(WJ⁻¹[k])
 end
 
 @inline function mass_matrix(mass_solver::WeightAdjustedSolver, k::Int)
-    @unpack M⁻¹,J⁻¹W, V, Vᵀ = mass_solver
+    (; M⁻¹,J⁻¹W, V, Vᵀ) = mass_solver
     return inv(Matrix(M⁻¹*Vᵀ*J⁻¹W[k]*V*M⁻¹))
 end
 
 @inline function mass_matrix_inverse(mass_solver::CholeskySolver, k::Int)
-    @unpack WJ, V = mass_solver
+    (; WJ, V) = mass_solver
     return inv(Matrix(V'*WJ[k]*V))
 end
 
@@ -110,7 +110,7 @@ end
 end
 
 @inline function mass_matrix_inverse(mass_solver::WeightAdjustedSolver, k::Int)
-    @unpack M⁻¹, Vᵀ, J⁻¹W, V = mass_solver
+    (; M⁻¹, Vᵀ, J⁻¹W, V) = mass_solver
     return Matrix(M⁻¹*Vᵀ*J⁻¹W[k]*V*M⁻¹)
 end
 
@@ -128,7 +128,7 @@ end
 
 @inline function mass_matrix_solve!(mass_solver::WeightAdjustedSolver, k::Int,
     rhs::AbstractMatrix, temp::AbstractMatrix)
-    @unpack M⁻¹, Vᵀ, J⁻¹W, V = mass_solver
+    (; M⁻¹, Vᵀ, J⁻¹W, V) = mass_solver
     lmul!(M⁻¹, rhs)
     mul!(temp, V, rhs)
     lmul!(J⁻¹W[k], temp)

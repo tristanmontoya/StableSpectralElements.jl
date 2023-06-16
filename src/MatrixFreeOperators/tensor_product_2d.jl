@@ -5,6 +5,9 @@ struct TensorProductMap2D{A_type,B_type,σᵢ_type,σₒ_type} <: LinearMaps.Lin
     σₒ::σₒ_type
 end
 
+@inline Base.size(L::TensorProductMap2D) = (size(L.σₒ,1)*size(L.σₒ,2), 
+    size(L.σᵢ,1)*size(L.σᵢ,2))
+
 function TensorProductMap2D(A, B)
     (M1,N1) = size(A)
     (M2,N2) = size(B)
@@ -23,9 +26,6 @@ function TensorProductMap2D(A, B)
     end
     return TensorProductMap2D(A,B, σᵢ, σₒ)
 end
-
-@inline Base.size(L::TensorProductMap2D) = (size(L.σₒ,1)*size(L.σₒ,2), 
-    size(L.σᵢ,1)*size(L.σᵢ,2))
 
 """
 Return the transpose using
@@ -47,12 +47,12 @@ or L = A ⊗ B. The action of this matrix on a vector x is
                 = ∑_{β1} A[α1,β1] (∑_{β2} B[α2,β2] x[σᵢ[β1,β2]]) 
                 = ∑_{β1} A[α1,β1] Z[α2,β1] 
 """
-@inline function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
+function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
     L::TensorProductMap2D{<:AbstractMatrix{Float64},<:AbstractMatrix{Float64}},
     x::AbstractVector{Float64})
     
     LinearMaps.check_dim_mul(y, L, x)
-    @unpack A, B, σᵢ, σₒ = L
+    (; A, B, σᵢ, σₒ) = L
 
     Z = MMatrix{size(σᵢ,1), size(σₒ,2),Float64}(undef)
 
@@ -85,21 +85,22 @@ or L = A ⊗ I_{M2}. The action of this matrix on a vector x is
 (Lx)[σₒ[α1,α2]] = ∑_{β1,β2} A[α1,β1] δ_{α2,β2} x[σᵢ[β1,β2]] 
                 = ∑_{β1} A[α1,β1] x[σᵢ[β1,α2]] 
 """
-@inline function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
+function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
     L::TensorProductMap2D{<:AbstractMatrix{Float64},<:UniformScaling},
     x::AbstractVector{Float64})
-    
+
     LinearMaps.check_dim_mul(y, L, x)
-    @inbounds for α1 in axes(L.σₒ,1), α2 in axes(L.σₒ,2)
+    (; A, B, σᵢ, σₒ) = L
+
+    @inbounds for α1 in axes(σₒ,1), α2 in axes(σₒ,2)
         temp = 0.0
-        @simd for β1 in axes(L.σᵢ,1)
-            @muladd temp = temp + L.A[α1,β1] * x[L.σᵢ[β1,α2]]
+        @simd for β1 in axes(σᵢ,1)
+            @muladd temp = temp + A[α1,β1] * x[σᵢ[β1,α2]]
         end
-        y[L.σₒ[α1,α2]] = temp
+        y[σₒ[α1,α2]] = temp
     end
 
-    y = L.B * y
-    return y
+    return lmul!(B,y)
 end
 
 """
@@ -111,12 +112,12 @@ or L = I_{M1} ⊗ B. The action of this matrix on a vector x is
 (Lx)[σₒ[α1,α2]] = ∑_{β1,β2} δ_{α1,β1} B[α2,β2] x[σᵢ[β1,β2]] 
                 = ∑_{β2} B[α2,β2] x[σᵢ[α1,β2]]) 
 """
-@inline function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
+function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
     L::TensorProductMap2D{<:UniformScaling,<:AbstractMatrix{Float64}},
     x::AbstractVector{Float64})
 
     LinearMaps.check_dim_mul(y, L, x)
-    @unpack A, B, σᵢ, σₒ = L
+    (; A, B, σᵢ, σₒ) = L
 
     @inbounds for α1 in axes(σₒ,1), α2 in axes(σₒ,2)
         temp = 0.0
@@ -126,6 +127,5 @@ or L = I_{M1} ⊗ B. The action of this matrix on a vector x is
         y[σₒ[α1,α2]] = temp
     end
 
-    y = A * y
-    return y
+    return lmul!(A,y)
 end

@@ -118,7 +118,7 @@ KernelDMD(k::Function) = KernelDMD(k, 0.0)
 """Linear eigensolution analysis"""
 function analyze(analysis::LinearAnalysis)
 
-    @unpack M, L, r, tol, use_data, results_path = analysis
+    (; M, L, r, tol, use_data, results_path) = analysis
     eigenvalues, eigenvectors = eigs(L, nev=r, which=:LM, maxiter=1000)
 
     # normalize eigenvectors
@@ -160,7 +160,7 @@ function analyze(analysis::KoopmanAnalysis,
     algorithm::AbstractKoopmanAlgorithm, 
     range=nothing, samples=nothing)
 
-    @unpack svd_tol, proj_tol, r, results_path = analysis
+    (; svd_tol, proj_tol, r, results_path) = analysis
 
     # load time steps
     time_steps = load_time_steps(results_path)
@@ -201,8 +201,8 @@ end
 function analyze(analysis::KoopmanAnalysis,
     algorithm::GeneratorDMD, range=nothing)
 
-    @unpack r, svd_tol, proj_tol, results_path = analysis
-    @unpack basis, basis_derivatives, f = algorithm
+    (; r, svd_tol, proj_tol, results_path) = analysis
+    (; basis, basis_derivatives, f) = algorithm
 
     # load time step and ensure rank is suitable
     time_steps = load_time_steps(results_path)
@@ -237,7 +237,7 @@ function analyze(analysis::KoopmanAnalysis,
 end
 
 function forecast(results::DynamicalAnalysisResults, Δt::Float64; starting_step::Int=0)
-    @unpack c, λ, Z = results
+    (; c, λ, Z) = results
     n_modes = size(Z,2)
     if starting_step == 0
         c0 = c[:,end]
@@ -248,7 +248,7 @@ function forecast(results::DynamicalAnalysisResults, Δt::Float64; starting_step
 end
 
 function forecast(results::DynamicalAnalysisResults, Δt::Float64, c0::Vector{ComplexF64})
-    @unpack λ, Z = results
+    (; λ, Z) = results
     n_modes = size(Z,2)
     return sum(Z[:,j]*exp(λ[j]*Δt)*c0[j] for j in 1:n_modes)
 end
@@ -260,7 +260,7 @@ function analyze_running(analysis::KoopmanAnalysis,
     sampling_strategy=nothing,
     window_size=nothing)
 
-    @unpack results_path, N_p, N_c, N_e = analysis
+    (; results_path, N_p, N_c, N_e) = analysis
 
     n_s = range[2]-range[1] + 1
     model = Vector{DynamicalAnalysisResults}(undef, n_s - 1)
@@ -271,7 +271,7 @@ function analyze_running(analysis::KoopmanAnalysis,
     time_steps = load_time_steps(results_path)
 
     if !isnothing(sampling_strategy)
-        @unpack n = sampling_strategy
+        (; n) = sampling_strategy
     else
         n = 1
     end
@@ -322,7 +322,7 @@ end
 function forecast(analysis::KoopmanAnalysis, Δt::Float64, 
     range::NTuple{2,Int64}, forecast_name::String="forecast"; window_size=nothing, algorithm::AbstractKoopmanAlgorithm=StandardDMD(), new_projection=false)
     
-    @unpack results_path, N_p, N_c, N_e = analysis
+    (; results_path, N_p, N_c, N_e) = analysis
     time_steps = load_time_steps(results_path)
     forecast_path = new_path(string(results_path, forecast_name, "/"),
         true,true)
@@ -391,7 +391,7 @@ end
 find_conjugate_pairs(::Vector{Float64}; tol=1.0e-8) = nothing
 
 function make_dmd_matrices(X::AbstractMatrix{Float64},Y::AbstractMatrix{Float64}, algorithm::ExtendedDMD)
-    @unpack basis = algorithm
+    (; basis) = algorithm
 
     Φ_X= vcat([ϕ.(X) for ϕ ∈ basis]...)
     Φ_Y= vcat([ϕ.(Y) for ϕ ∈ basis]...)
@@ -401,7 +401,7 @@ end
 
 function make_dmd_matrices(X::AbstractMatrix{Float64},Y::AbstractMatrix{Float64}, algorithm::KernelDMD)
 
-    @unpack k, η = algorithm
+    (; k, η) = algorithm
     N_s = size(X,2)
     G_hat = [k(X[:,i], X[:,j]) for i in 1:N_s, j in 1:N_s]
 
@@ -413,7 +413,7 @@ end
 function dmd(X::Matrix{Float64},Y::Matrix{Float64}, algorithm::StandardDMD,
     r::Int=0, svd_tol=1.0e-10)
 
-    @unpack basis = algorithm
+    (; basis) = algorithm
 
     Φ_X = vcat([ϕ.(X) for ϕ ∈ basis]...)
     Φ_Y = vcat([ϕ.(Y) for ϕ ∈ basis]...)
@@ -493,7 +493,7 @@ end
 function dmd(X::AbstractMatrix{Float64},Y::AbstractMatrix{Float64},
     algorithm::KernelResDMD, r::Int=0, svd_tol=1.0e-10)
 
-    @unpack k, ϵ = algorithm
+    (; k, ϵ) = algorithm
 
     (X_1, Y_1) = (X[:,2:2:end], Y[:,2:2:end])
     (X_2, Y_2) = (X[:,1:2:end], Y[:,1:2:end])
@@ -533,7 +533,7 @@ function dmd(X::AbstractMatrix{Float64},Y::AbstractMatrix{Float64},
 end
 
 function generate_samples(sampling_strategy::GaussianSampling,  integrator::ODEIntegrator, t_s=nothing)
-    @unpack σ, n = sampling_strategy
+    (; σ, n) = sampling_strategy
     int_copy = deepcopy(integrator)
     u_centre = int_copy.sol.u[1]
     N = length(u_centre)
@@ -670,8 +670,8 @@ function plot_modes(analysis::AbstractDynamicalAnalysis,
     coeffs=nothing, projection=nothing,
     conjugate_pairs=nothing)
     #println("conj pairs: ", conjugate_pairs)
-    @unpack N_p, N_c, N_e, plotter = analysis
-    @unpack x_plot, V_plot = plotter
+    (; N_p, N_c, N_e, plotter) = analysis
+    (; x_plot, V_plot) = plotter
 
     n_modes = size(Z,2)
     p = plot()

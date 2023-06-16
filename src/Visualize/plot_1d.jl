@@ -18,7 +18,7 @@ end
     sol::Array{Float64,3}; e=1,
     exact_solution=nothing, time=0.0)
 
-    @unpack x_plot, N_e, reference_approximation = spatial_discretization
+    (; x_plot, N_e, reference_approximation) = spatial_discretization
     xlabel --> "\$x\$"
     label --> ["\$U^h(x,t)\$" "\$U(x,t)\$"]
 
@@ -39,7 +39,7 @@ end
     sol::Vector{Array{Float64,3}}; e=1,
     exact_solution=nothing, t=0.0)
 
-    @unpack x_plot, N_e, reference_approximation = spatial_discretization
+    (; x_plot, N_e, reference_approximation) = spatial_discretization
     xlabel --> "\$x\$"
     label --> ""
 

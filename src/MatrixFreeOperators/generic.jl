@@ -7,13 +7,13 @@ function GenericMatrixMap(L::LinearMap)
 end
 
 @inline Base.size(L::GenericMatrixMap) = size(L.A)
-@inline function LinearAlgebra.transpose(L::GenericMatrixMap)
+function LinearAlgebra.transpose(L::GenericMatrixMap)
     return GenericMatrixMap(transpose(L.A))
 end
 
-@inline function LinearAlgebra.mul!(y::AbstractVector{Float64},
+function LinearAlgebra.mul!(y::AbstractVector{Float64},
     L::GenericMatrixMap, x::AbstractVector{Float64})
-    @unpack A = L
+    (; A) = L
 
     for i in eachindex(y)
         temp = 0.0

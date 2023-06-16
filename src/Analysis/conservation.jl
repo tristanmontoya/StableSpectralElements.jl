@@ -42,8 +42,8 @@ function PrimaryConservationAnalysis(results_path::String,
 
     _, N_c, N_e = get_dof(spatial_discretization, conservation_law)
   
-    @unpack W, V =  spatial_discretization.reference_approximation
-    @unpack geometric_factors, mesh, N_e = spatial_discretization
+    (; W, V) =  spatial_discretization.reference_approximation
+    (; geometric_factors, mesh, N_e) = spatial_discretization
     
     WJ = [Diagonal(W .* geometric_factors.J_q[:,k]) for k in 1:N_e]
 
@@ -58,9 +58,9 @@ function EnergyConservationAnalysis(results_path::String,
 
     _, N_c, N_e = get_dof(spatial_discretization, conservation_law)
 
-    @unpack W, V =  spatial_discretization.reference_approximation
-    @unpack mesh, N_e = spatial_discretization
-    @unpack J_q = spatial_discretization.geometric_factors
+    (; W, V) =  spatial_discretization.reference_approximation
+    (; mesh, N_e) = spatial_discretization
+    (; J_q) = spatial_discretization.geometric_factors
 
     return EnergyConservationAnalysis(
         mass_solver, N_c, N_e, V ,results_path, "energy.jld2")
@@ -69,7 +69,7 @@ end
 function evaluate_conservation(
     analysis::PrimaryConservationAnalysis, 
     u::Array{Float64,3})
-    @unpack WJ, N_c, N_e, V = analysis 
+    (; WJ, N_c, N_e, V) = analysis 
 
     return [sum(sum(WJ[k]*V*u[:,e,k]) 
         for k in 1:N_e) for e in 1:N_c]
@@ -78,7 +78,7 @@ end
 function evaluate_conservation(
     analysis::EnergyConservationAnalysis, 
     u::Array{Float64,3})
-    @unpack mass_solver, N_c, N_e, V = analysis 
+    (; mass_solver, N_c, N_e, V) = analysis 
     E = zeros(N_c)
     N_p = size(V,2)
     M = Matrix{Float64}(undef, N_p, N_p)
@@ -95,7 +95,7 @@ function evaluate_conservation_residual(
     analysis::PrimaryConservationAnalysis, 
     ::Array{Float64,3},
     dudt::Array{Float64,3})
-    @unpack WJ, N_c, N_e, V = analysis 
+    (; WJ, N_c, N_e, V) = analysis 
 
     return [sum(ones(size(WJ[k],1))'*WJ[k]*V*dudt[:,e,k]
         for k in 1:N_e) for e in 1:N_c]
@@ -105,7 +105,7 @@ function evaluate_conservation_residual(
     analysis::EnergyConservationAnalysis, 
     u::Array{Float64,3},
     dudt::Array{Float64,3})
-    @unpack mass_solver, N_c, N_e, V = analysis 
+    (; mass_solver, N_c, N_e, V) = analysis 
 
     dEdt = zeros(N_c)
     for k in 1:N_e
@@ -121,7 +121,7 @@ function analyze(analysis::ConservationAnalysis,
     initial_time_step::Union{Int,String}=0, 
     final_time_step::Union{Int,String}="final")
     
-    @unpack results_path, dict_name = analysis
+    (; results_path, dict_name) = analysis
 
     u_0, _ = load_solution(results_path, initial_time_step)
     u_f, _ = load_solution(results_path, final_time_step)
@@ -136,7 +136,7 @@ end
 function analyze(analysis::ConservationAnalysis,
     time_steps::Vector{Int})
 
-    @unpack results_path, N_c, dict_name = analysis
+    (; results_path, N_c, dict_name) = analysis
     N_t = length(time_steps)
     t = Vector{Float64}(undef,N_t)
     E = Matrix{Float64}(undef,N_t, N_c)
@@ -162,7 +162,7 @@ function analyze(analysis::ConservationAnalysis,
     time_steps::Vector{Int}, Δt::Float64, start::Int=1,
     resolution=100;  n=1, window_size=nothing, new_projection=false)
 
-    @unpack results_path, N_c, dict_name = analysis
+    (; results_path, N_c, dict_name) = analysis
     N_t = length(time_steps)
     t = Vector{Float64}(undef,N_t)
     E = Matrix{Float64}(undef,N_t, N_c)

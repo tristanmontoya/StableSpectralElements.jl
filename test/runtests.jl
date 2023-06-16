@@ -1,5 +1,5 @@
 push!(LOAD_PATH,"../")
-using Test, StableSpectralElements, OrdinaryDiffEq, UnPack
+using Test, StableSpectralElements, OrdinaryDiffEq
 
 include("test_driver.jl")
 

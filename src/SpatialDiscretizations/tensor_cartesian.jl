@@ -7,7 +7,7 @@ function ReferenceApproximation(
         quad_rule_vol=quadrature(Line(), 
         volume_quadrature_rule), Nplot=N_plot)
 
-    @unpack rp, rq, rf, wq, wf = reference_element
+    (; rp, rq, rf) = reference_element
     q = length(rq)-1
     VDM, ∇VDM = basis(Line(), q, rq)
 
@@ -17,9 +17,8 @@ function ReferenceApproximation(
 
     V_plot = LinearMap(vandermonde(element_type, q, rp) / VDM)
 
-    return ReferenceApproximation(NodalTensor(q), q+1, q+1, 2, 
-        reference_element, (LinearMap(∇VDM / VDM),), LinearMap(I, q+1), R, R,
-        Diagonal(wq), Diagonal(wf), V_plot, NoMapping())
+    return ReferenceApproximation(approx_type, reference_element,
+        (LinearMap(∇VDM / VDM),), LinearMap(I, q+1), R, R, V_plot)
 end
 
 function ReferenceApproximation(approx_type::NodalTensor, 
@@ -41,7 +40,7 @@ function ReferenceApproximation(approx_type::NodalTensor,
         quad_rule_vol=quadrature(Quad(), volume_quadrature_rule),
         quad_rule_face=quadrature(Line(), facet_quadrature_rule), Nplot=N_plot)
 
-    @unpack rstp, rstq, rstf, wq, wf = reference_element
+    (; rstp, rstq, rstf) = reference_element
 
     # extrapolation operators
     if volume_quadrature_rule == facet_quadrature_rule
@@ -58,10 +57,8 @@ function ReferenceApproximation(approx_type::NodalTensor,
     V_plot = LinearMap(vandermonde(element_type, q, rstp...) / 
         vandermonde(element_type, q, rstq...))
 
-    return ReferenceApproximation(NodalTensor(q), (q+1)^2, (q+1)^2, 4*(q+1), 
-        reference_element, (D_1D ⊗ I_1D, I_1D ⊗ D_1D), 
-        LinearMap(I, (q+1)^2), R, R,
-        Diagonal(wq), Diagonal(wf), V_plot, NoMapping())
+    return ReferenceApproximation(approx_type, reference_element,
+        (D_1D ⊗ I_1D, I_1D ⊗ D_1D), LinearMap(I, (q+1)^2), R, R, V_plot)
 end
 
 function ReferenceApproximation(approx_type::NodalTensor, ::Hex;
@@ -81,7 +78,7 @@ function ReferenceApproximation(approx_type::NodalTensor, ::Hex;
         quad_rule_face=quadrature(Quad(), facet_quadrature_rule),
         Nplot=N_plot)
 
-    @unpack rstp, rstq, rstf, wq, wf = reference_element
+    (; rstp, rstq, rstf) = reference_element
 
     # extrapolation operators
     if (volume_quadrature_rule == facet_quadrature_rule) &&
@@ -95,9 +92,7 @@ function ReferenceApproximation(approx_type::NodalTensor, ::Hex;
     V_plot = LinearMap(vandermonde(Hex(), q, rstp...) / 
         vandermonde(Hex(), q, rstq...))
 
-    return ReferenceApproximation(approx_type, (q+1)^3, (q+1)^3, 6*(q+1)^2, 
-        reference_element,
+    return ReferenceApproximation(approx_type, reference_element,
         (D_1D ⊗ I_1D ⊗ I_1D, I_1D ⊗ D_1D ⊗ I_1D, I_1D ⊗ I_1D ⊗ D_1D), 
-        LinearMap(I, (q+1)^3), R, R,
-        Diagonal(wq), Diagonal(wf), V_plot, NoMapping())
+        LinearMap(I, (q+1)^3), R, R, V_plot)
 end

@@ -26,9 +26,9 @@ function postprocess_vtk(
     spatial_discretization::SpatialDiscretization{2},
     filename::String, u::Array{Float64,3}; e=1, variable_name="u")
 
-    @unpack V_plot, reference_element = spatial_discretization.reference_approximation
-    @unpack x_plot = spatial_discretization
-    @unpack rstp = reference_element
+    (; V_plot, reference_element) = spatial_discretization.reference_approximation
+    (; x_plot) = spatial_discretization
+    (; rstp) = reference_element
 
     points, cells = low_order_subdivision(rstp, x_plot)
     u_nodal = vec(Matrix(V_plot * u[:,e,:]))
@@ -42,9 +42,9 @@ function postprocess_vtk_high_order(
     spatial_discretization::SpatialDiscretization{2},
     filename::String, u::Array{Float64,3}; e=1, variable_name="u")
 
-    @unpack V_plot, reference_element = spatial_discretization.reference_approximation
-    @unpack x_plot, N_e = spatial_discretization
-    @unpack rstp = reference_element
+    (; V_plot, reference_element) = spatial_discretization.reference_approximation
+    (; x_plot, N_e) = spatial_discretization
+    (; rstp) = reference_element
 
 
     points = permutedims(hcat(vec(x_plot[1]), vec(x_plot[2])))
@@ -84,11 +84,11 @@ end
     windowsize --> (400,400)
 
     if obj isa SpatialDiscretization
-        @unpack N_e = obj
+        (; N_e) = obj
         xlabel --> "\$x_1\$"
         ylabel --> "\$x_2\$"
-        @unpack reference_approximation, mesh = obj
-        @unpack reference_element = reference_approximation
+        (; reference_approximation, mesh) = obj
+        (; reference_element) = reference_approximation
     else
         N_e = 1
         xlims --> [-1.1, 1.1]
@@ -117,7 +117,7 @@ end
             X = (x,y) -> (x,y)
         end
 
-        @unpack element_type, r, s, rq, sq, rf, sf = reference_approximation.reference_element
+        (; element_type, r, s, rq, sq, rf, sf) = reference_approximation.reference_element
 
         if element_type isa Tri
             ref_edge_nodes = map_face_nodes(element_type,

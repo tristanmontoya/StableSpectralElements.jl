@@ -5,10 +5,10 @@ using BenchmarkTools
     solver::Solver{d, <:StandardForm, FirstOrder, PhysicalOperators{d}},
     t::Float64) where {d}
 
-    @unpack conservation_law, operators, connectivity, form = solver
-    @unpack inviscid_numerical_flux = form
-    @unpack source_term = conservation_law
-    @unpack f_q, f_f, u_q, u_f, temp, CI = solver.preallocated_arrays
+    (; conservation_law, operators, connectivity, form) = solver
+    (; inviscid_numerical_flux) = form
+    (; source_term) = conservation_law
+    (; f_q, f_f, u_q, u_f, temp, CI) = solver.preallocated_arrays
     
     k = 1  # just one element
 
@@ -37,11 +37,11 @@ end
     solver::Solver{d, <:StandardForm{SkewSymmetricMapping}, FirstOrder, ReferenceOperators{d}},
     t::Float64) where {d}
 
-    @unpack conservation_law, connectivity, form = solver
-    @unpack inviscid_numerical_flux = form
-    @unpack source_term = conservation_law
-    @unpack f_q, f_f, f_n, u_q, r_q, u_f, temp, CI = solver.preallocated_arrays
-    @unpack D, V, R, W, B, halfWΛ, halfN, BJf, n_f = solver.operators
+    (; conservation_law, connectivity, form) = solver
+    (; inviscid_numerical_flux) = form
+    (; source_term) = conservation_law
+    (; f_q, f_f, f_n, u_q, r_q, u_f, temp, CI) = solver.preallocated_arrays
+    (; D, V, R, W, B, halfWΛ, halfN, BJf, n_f) = solver.operators
     
     k = 1  #just one element
 

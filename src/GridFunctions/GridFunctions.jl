@@ -1,6 +1,4 @@
 module GridFunctions
-
-    using UnPack
     
     export AbstractGridFunction, SumOfFunctions, ConstantFunction, InitialDataSine, InitialDataCosine, InitialDataGaussian, InitialDataGassner, BurgersSolution, SourceTermGassner, GaussianNoise, NoSourceTerm, evaluate
     
@@ -124,7 +122,7 @@ module GridFunctions
 
     function evaluate(f::InitialDataGaussian{d}, 
         x::NTuple{d,Float64},t::Float64=0.0) where {d}
-        @unpack A, σ, x₀, N_c = f
+        (; A, σ, x₀, N_c) = f
         r² = sum((x[m] - x₀[m]).^2 for m in 1:d)
         return fill(A*exp.(-r²/(2.0*σ^2)),N_c)
     end

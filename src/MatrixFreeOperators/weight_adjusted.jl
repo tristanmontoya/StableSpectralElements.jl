@@ -27,13 +27,13 @@ end
 function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
     L::WeightAdjustedMap,
     x::AbstractVector{Float64})
-    @unpack V, W, Jinv, M = L
+    (; V, W, Jinv, M) = L
     mul!(y, M*inv(V' * W * Jinv * V)*M,  x)
 end
 
 function LinearAlgebra.ldiv!(L::WeightAdjustedMap,
     rhs::AbstractArray{Float64})
-    @unpack V, W, Jinv, M_inv = L
+    (; V, W, Jinv, M_inv) = L
     y = similar(rhs)
     mul!(y, M_inv * V' * W * Jinv * V * M_inv, rhs)
     rhs[:] = y

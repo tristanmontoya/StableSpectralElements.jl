@@ -2,9 +2,9 @@ function initialize(initial_data::AbstractGridFunction,
     conservation_law::AbstractConservationLaw,
     spatial_discretization::SpatialDiscretization{d}) where {d}
 
-    @unpack geometric_factors = spatial_discretization
-    @unpack N_q, V, W = spatial_discretization.reference_approximation
-    @unpack xyzq = spatial_discretization.mesh
+    (; geometric_factors) = spatial_discretization
+    (; N_q, V, W) = spatial_discretization.reference_approximation
+    (; xyzq) = spatial_discretization.mesh
     N_p, N_c, N_e = get_dof(spatial_discretization, conservation_law)
     
     u0 = Array{Float64}(undef, N_p, N_c, N_e)
@@ -39,9 +39,9 @@ function Solver(conservation_law::AbstractConservationLaw,
     alg::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm(),
     mass_solver::AbstractMassMatrixSolver=WeightAdjustedSolver(spatial_discretization)) where {d}
 
-    @unpack D, V, W, R, B = spatial_discretization.reference_approximation
-    @unpack J_q, Λ_q, nJf, J_f = spatial_discretization.geometric_factors
-    @unpack N_e = spatial_discretization
+    (; D, V, W, R, B) = spatial_discretization.reference_approximation
+    (; J_q, Λ_q, nJf, J_f) = spatial_discretization.geometric_factors
+    (; N_e) = spatial_discretization
 
     halfWΛ = Array{Diagonal,3}(undef, d, d, N_e)
     halfN = Matrix{Diagonal}(undef, d, N_e)

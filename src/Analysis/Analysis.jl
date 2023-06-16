@@ -6,7 +6,6 @@ module Analysis
     using Plots: plot, savefig, plot!, scatter, text, annotate!, vline!, grid, theme_palette, twinx, @layout
     using RecipesBase
     using LaTeXStrings: LaTeXString, latexstring
-    using UnPack
     using StartUpDG: MeshData
     using SparseArrays: sparse, blockdiag, kron
     using Arpack: eigs

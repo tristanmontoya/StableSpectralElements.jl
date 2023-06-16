@@ -8,7 +8,6 @@ module Visualize
     using WriteVTK
     using LinearMaps: LinearMap
     using LinearAlgebra: diagm
-    using UnPack
     using RecipesBase
     using Triangulate
     using TetGen
