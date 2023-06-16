@@ -34,7 +34,7 @@ module MatrixFreeOperators
     end
 
     function make_operator(
-        map::LinearMaps.BlockMap, alg::AbstractOperatorAlgorithm)
+        map::LinearMaps.BlockMap, alg::GenericTensorProductAlgorithm)
         return vcat([make_operator(block, alg) for block in map.maps]...)
     end
 
@@ -59,10 +59,8 @@ module MatrixFreeOperators
     include("tensor_product_2d.jl")
     include("tensor_product_3d.jl")
 
-    export WarpedTensorProductMap2D
+    export WarpedTensorProductMap2D, WarpedTensorProductMap3D
     include("warped_product_2d.jl")
-
-    export WarpedTensorProductMap3D
     include("warped_product_3d.jl")
 
     export SelectionMap
