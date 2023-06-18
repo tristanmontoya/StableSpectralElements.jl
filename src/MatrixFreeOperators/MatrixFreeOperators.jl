@@ -69,9 +69,6 @@ module MatrixFreeOperators
     export GenericMatrixMap
     include("generic.jl")
 
-    export WeightAdjustedMap
-    include("weight_adjusted.jl")
-
     export ZeroMap
     include("zero.jl")
 

@@ -2,8 +2,8 @@ using BenchmarkTools
 
 @inline function rhs_benchmark!(
     dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
-    solver::Solver{d, <:StandardForm, FirstOrder, PhysicalOperators{d}},
-    t::Float64) where {d}
+    solver::Solver{d, <:StandardForm, FirstOrder, PhysicalOperators{d},N_p,N_q,N_f,N_c,N_e},
+    t::Float64) where {d,N_p,N_q,N_f,N_c,N_e}
 
     (; conservation_law, operators, connectivity, form) = solver
     (; inviscid_numerical_flux) = form
@@ -34,14 +34,13 @@ end
 
 @inline function rhs_benchmark!(
     dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
-    solver::Solver{d, <:StandardForm{SkewSymmetricMapping}, FirstOrder, ReferenceOperators{d}},
-    t::Float64) where {d}
+    solver::Solver{d, <:StandardForm{SkewSymmetricMapping}, FirstOrder, ReferenceOperators{d},N_p,N_q,N_f,N_c,N_e},
+    t::Float64) where {d,N_p,N_q,N_f,N_c,N_e}
 
     (; conservation_law, connectivity, form) = solver
     (; inviscid_numerical_flux) = form
-    (; source_term) = conservation_law
     (; f_q, f_f, f_n, u_q, r_q, u_f, temp, CI) = solver.preallocated_arrays
-    (; D, V, R, W, B, halfWΛ, halfN, BJf, n_f) = solver.operators
+    (; D, V, R, halfWΛ, halfN, BJf, n_f) = solver.operators
     
     k = 1  #just one element
 
@@ -54,9 +53,9 @@ end
         u_f[:,k,:], u_f[CI[connectivity[:,k]],:], n_f[k])
 
     fill!(view(r_q,:,:,k),0.0)
-    for n in 1:d
+    @inbounds for n in 1:d
         # apply volume operators
-        for m in 1:d
+        @inbounds for m in 1:d
             mul!(view(temp,:,:,k),halfWΛ[m,n,k],f_q[:,:,n,k])
             mul!(view(u_q,:,:,k),D[m]',temp[:,:,k])
             r_q[:,:,k] .+= u_q[:,:,k] 

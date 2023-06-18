@@ -2,12 +2,13 @@ module Solvers
     
     import LinearAlgebra
     using GFlops
+    using StaticArrays
     using LinearAlgebra: Diagonal, eigvals, inv, mul!, lmul!, diag, diagm, factorize, cholesky, ldiv!, Factorization, Cholesky, Symmetric, I, UniformScaling
     using TimerOutputs
     using LinearMaps: LinearMap, UniformScalingMap
     using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
     
-    using ..MatrixFreeOperators: AbstractOperatorAlgorithm, BLASAlgorithm, GenericMatrixAlgorithm, DefaultOperatorAlgorithm, WeightAdjustedMap, ZeroMap, make_operator
+    using ..MatrixFreeOperators: AbstractOperatorAlgorithm,  DefaultOperatorAlgorithm, make_operator
     using ..ConservationLaws: AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, AbstractTwoPointFlux, NoInviscidFlux, NoViscousFlux, NoTwoPointFlux, NoSourceTerm, physical_flux!, physical_flux, numerical_flux, numerical_flux!, LaxFriedrichsNumericalFlux, BR1
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization, check_facet_nodes, check_normals
     using ..GridFunctions: AbstractGridFunction, AbstractGridFunction, NoSourceTerm, evaluate   
@@ -51,7 +52,7 @@ module Solvers
         R::Vector{LinearMap}
         n_f::Vector{NTuple{d, Vector{Float64}}}
     end
-    struct PreAllocatedArrays{PDEType}
+    struct PreAllocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}
         f_q::Array{Float64,4}
         f_f::Array{Float64,3}
         f_n::Array{Float64,3}
@@ -65,9 +66,9 @@ module Solvers
         q_f::Union{Nothing,Array{Float64,4}}
     end
     
-    function PreAllocatedArrays{FirstOrder}( 
-        N_p::Int, N_q::Int,N_f::Int,N_c::Int,d::Int,N_e::Int,temp_size::Int=N_p)
-        return PreAllocatedArrays{FirstOrder}(
+    function PreAllocatedArrays{d,FirstOrder,N_p,N_q,N_f,N_c,N_e}(
+        temp_size::Int=N_p) where {d,N_p,N_q,N_f,N_c,N_e}
+        return PreAllocatedArrays{d,FirstOrder,N_p,N_q,N_f,N_c,N_e}(
             Array{Float64}(undef,N_q, N_c, d, N_e),
             Array{Float64}(undef,N_f, N_c, N_e),
             Array{Float64}(undef,N_f, N_c, N_e),
@@ -78,10 +79,9 @@ module Solvers
             CartesianIndices((N_f,N_e)), nothing, nothing, nothing)
     end
 
-    function PreAllocatedArrays{SecondOrder}(
-        N_p::Int, N_q::Int, N_f::Int, N_c::Int, d::Int, N_e::Int,
-        temp_size::Int=N_p)
-        return PreAllocatedArrays{SecondOrder}(
+    function PreAllocatedArrays{d,SecondOrder,N_p,N_q,N_f,N_c,N_e}(
+        temp_size::Int=N_p) where {d,N_p,N_q,N_f,N_c,N_e}
+        return PreAllocatedArrays{d,SecondOrder,N_p,N_q,N_f,N_c,N_e}(
             Array{Float64}(undef,N_q, N_c, d, N_e),
             Array{Float64}(undef,N_f, N_c, N_e),
             Array{Float64}(undef,N_f, N_c, N_e),
@@ -95,18 +95,13 @@ module Solvers
             Array{Float64}(undef,N_f, N_e, N_c, d)) #note switched order
     end
 
-    struct Solver{d,ResidualForm,PDEType,OperatorType}
+    struct Solver{d,ResidualForm,PDEType,OperatorType,N_p,N_q,N_f,N_c,N_e}
         conservation_law::AbstractConservationLaw{d,PDEType}
         operators::OperatorType
         mass_solver::AbstractMassMatrixSolver
         connectivity::Matrix{Int}
         form::ResidualForm
-        N_p::Int
-        N_q::Int
-        N_f::Int
-        N_c::Int
-        N_e::Int
-        preallocated_arrays::PreAllocatedArrays{PDEType}
+        preallocated_arrays::PreAllocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}
     end
 
     function Solver(conservation_law::AbstractConservationLaw{d,PDEType},
@@ -120,9 +115,9 @@ module Solvers
         (N_q,N_p) = size(operators.V)
         N_f = size(operators.R,1)
 
-        return Solver{d,ResidualForm,PDEType,ReferenceOperators{d}}(conservation_law, 
-            operators, mass_solver, connectivity, form, N_p, N_q, N_f, N_c, N_e,
-            PreAllocatedArrays{PDEType}(N_p,N_q,N_f,N_c,d,N_e,N_q))
+        return Solver{d,ResidualForm,PDEType,ReferenceOperators{d}, N_p, N_q, N_f, N_c, N_e}(
+            conservation_law, operators, mass_solver, connectivity, form,
+            PreAllocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}(N_q))
     end
 
     function Solver(conservation_law::AbstractConservationLaw{d,PDEType},
@@ -131,14 +126,15 @@ module Solvers
         connectivity::Matrix{Int},
         form::ResidualForm) where {d,ResidualForm,PDEType}
 
+        # get array sizes
         (; N_c) = conservation_law
         N_e = length(operators.V)
         (N_q,N_p) = size(operators.V[1])
         N_f = size(operators.R[1],1)
 
-        return Solver{d,ResidualForm,PDEType,PhysicalOperators{d}}(conservation_law, 
-            operators, mass_solver, connectivity, form, N_p, N_q, N_f, N_c, N_e,
-            PreAllocatedArrays{PDEType}(N_p,N_q,N_f,N_c,d,N_e,N_p))
+        return Solver{d,ResidualForm,PDEType,PhysicalOperators{d}, N_p, N_q, N_f, N_c, N_e}(
+            conservation_law, operators, mass_solver, connectivity, form,
+            PreAllocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}(N_q))
     end
 
     @inline function get_dof(spatial_discretization::SpatialDiscretization{d}, 

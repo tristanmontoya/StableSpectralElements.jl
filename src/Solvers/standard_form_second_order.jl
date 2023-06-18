@@ -3,13 +3,12 @@ Evaluate semi-discrete residual for a second-order problem
 """
 @timeit "rhs" function rhs!(
     dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
-    solver::Solver{d, <:StandardForm, SecondOrder,PhysicalOperators{d}},
-    t::Float64) where {d}
+    solver::Solver{d,<:StandardForm,SecondOrder,PhysicalOperators{d},N_p,N_q,N_f,N_c,N_e},
+    t::Float64) where {d,N_p,N_q,N_f,N_c,N_e}
 
-    (; conservation_law, operators, connectivity, form, N_e) = solver
+    (; conservation_law, operators, connectivity, form) = solver
     (; inviscid_numerical_flux, viscous_numerical_flux) = form
-    (; source_term, N_c) = conservation_law
-    (; f_q, f_f, f_n, u_q, r_q, u_f, temp, CI, u_n, q_q, q_f) = solver.preallocated_arrays
+    (; f_q, f_f, u_q, u_f, temp, CI, u_n, q_q, q_f) = solver.preallocated_arrays
 
     Threads.@threads for k in 1:N_e
         mul!(view(u_q, :,:,k), operators.V[k], u[:,:,k])
