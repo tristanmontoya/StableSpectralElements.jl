@@ -22,5 +22,6 @@ CurrentModule = ConservationLaws
 ```@docs
     LinearAdvectionEquation
     LinearAdvectionDiffusionEquation
+    InviscidBurgersEquation
     EulerEquations
 ```

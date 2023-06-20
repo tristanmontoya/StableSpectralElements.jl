@@ -13,7 +13,7 @@ struct LinearAdvectionEquation{d} <: AbstractConservationLaw{d,FirstOrder}
     N_c::Int
 
     function LinearAdvectionEquation(a::NTuple{d,Float64}, 
-        source_term::AbstractGridFunction{d}) where {d}
+        source_term::AbstractGridFunction{d}=NoSourceTerm{d}()) where {d}
         return new{d}(a, source_term, 1)
     end
 end
@@ -33,25 +33,17 @@ struct LinearAdvectionDiffusionEquation{d} <: AbstractConservationLaw{d,SecondOr
     source_term::AbstractGridFunction{d}
     N_c::Int
 
-    function LinearAdvectionDiffusionEquation(a::NTuple{d,Float64}, 
-        b::Float64, source_term::AbstractGridFunction{d}) where {d}
+    function LinearAdvectionDiffusionEquation(
+        a::NTuple{d,Float64}, b::Float64, 
+        source_term::AbstractGridFunction{d}=NoSourceTerm{d}()) where {d}
         return new{d}(a, b, source_term, 1)
     end
 end
 
 const AdvectionType{d} = Union{LinearAdvectionEquation{d}, LinearAdvectionDiffusionEquation{d}}
 
-function LinearAdvectionEquation(a::NTuple{d,Float64}) where {d}
-    return LinearAdvectionEquation(a,NoSourceTerm{d}())
-end
-
 function LinearAdvectionEquation(a::Float64)
     return LinearAdvectionEquation((a,),NoSourceTerm{1}())
-end
-
-function LinearAdvectionDiffusionEquation(a::NTuple{d,Float64}, 
-    b::Float64) where {d}
-    return LinearAdvectionDiffusionEquation(a,b,NoSourceTerm{d}())
 end
 
 function LinearAdvectionDiffusionEquation(a::Float64, b::Float64)
@@ -86,7 +78,6 @@ Evaluate the flux for the linear advection-diffusion equation
     @inbounds for m in 1:d
         f[:,:,m] .= conservation_law.a[m] .* u .- conservation_law.b .* q[:,:,m]
     end
-    return f
 end
 
 """
@@ -131,7 +122,7 @@ Evaluate the interface normal solution for the (advection-)diffusion equation us
     u_avg = 0.5*(u_in .+ u_out)
 
     @inbounds for m in 1:d
-        u_nstar[:,:,m] = u_avg.*n[m]
+        u_nstar[:,:,m] .= u_avg.*n[m]
     end
     return u_nstar
 end
@@ -141,14 +132,15 @@ Evaluate the numerical flux for the (advection-)diffusion equation using the BR1
 
 `F*(u⁻, u⁺, q⁻, q⁺, n) = ½(F²(u⁻,q⁻) + F²(u⁺, q⁺))⋅n`
 """
-@inline function numerical_flux(conservation_law::LinearAdvectionDiffusionEquation{d},
+@inline function numerical_flux(
+    conservation_law::LinearAdvectionDiffusionEquation{d},
     ::BR1, u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
     q_in::AbstractArray{Float64,3}, q_out::AbstractArray{Float64,3}, 
     n::NTuple{d, Vector{Float64}}) where {d}
 
     # average both sides
     minus_q_avg = -0.5*(q_in .+ q_out)
-    return sum(conservation_law.b*minus_q_avg[:,:,m] .* n[m] for m in 1:d)
+    return sum(conservation_law.b * minus_q_avg[:,:,m] .* n[m] for m in 1:d)
 end
 
 function evaluate(

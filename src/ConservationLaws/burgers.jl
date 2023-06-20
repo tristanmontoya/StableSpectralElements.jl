@@ -1,7 +1,11 @@
-"""
-Inviscid Burgers' equation
+@doc raw"""
+    InviscidBurgersEquation(a::NTuple{d,Float64}) where {d}
 
-`∂ₜu + ∇⋅(a ½u²) = s`
+Define an inviscid burgers equation of the form
+```math
+\partial_t U(\bm{x},t) + \bm{\nabla} \cdot \bigg(\frac{1}{2}\bm{a} U(\bm{x},t)^2 \bigg) = 0,
+```
+where $\bm{a} \in \R^d$. A specialized constructor `InviscidBurgersEquation()` is provided for the one-dimensional case with $a=1$.
 """
 struct InviscidBurgersEquation{d} <: AbstractConservationLaw{d,FirstOrder}
     a::NTuple{d,Float64} 
@@ -25,13 +29,17 @@ struct ViscousBurgersEquation{d} <: AbstractConservationLaw{d,SecondOrder}
     source_term::AbstractGridFunction{d}
     N_c::Int
 
-    function LinearAdvectionDiffusionEquation(a::NTuple{d,Float64}, 
+    function ViscousBurgersEquation(a::NTuple{d,Float64}, 
         b::Float64, source_term::AbstractGridFunction{d}) where {d}
         return new{d}(a, b, source_term, 1)
     end
 end
 
 const BurgersType{d} = Union{InviscidBurgersEquation{d}, ViscousBurgersEquation{d}}
+
+function InviscidBurgersEquation()
+    return InviscidBurgersEquation((1.0,),NoSourceTerm{1}())
+end
 
 """
 Evaluate the flux for the inviscid Burgers' equation

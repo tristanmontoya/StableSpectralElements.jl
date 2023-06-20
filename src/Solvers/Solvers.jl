@@ -13,7 +13,7 @@ module Solvers
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization, check_facet_nodes, check_normals
     using ..GridFunctions: AbstractGridFunction, AbstractGridFunction, NoSourceTerm, evaluate   
     
-    export AbstractResidualForm, StandardForm, AbstractMappingForm, AbstractStrategy, AbstractDiscretizationOperators, AbstractMassMatrixSolver, PhysicalOperators, PreAllocatedArrays, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, get_dof, rhs!, make_operators, StandardForm
+    export AbstractResidualForm, StandardForm, AbstractMappingForm, AbstractStrategy, AbstractDiscretizationOperators, AbstractMassMatrixSolver, PhysicalOperators, PreAllocatedArrays, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, get_dof, rhs!, rhs_static!, make_operators, StandardForm
 
     abstract type AbstractResidualForm{MappingForm, TwoPointFlux} end
     abstract type AbstractMappingForm end
@@ -136,6 +136,54 @@ module Solvers
             conservation_law, operators, mass_solver, connectivity, form,
             PreAllocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}(N_q))
     end
+
+    function Solver(conservation_law::AbstractConservationLaw,     
+        spatial_discretization::SpatialDiscretization,
+        form::AbstractResidualForm,
+        ::PhysicalOperator,
+        operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm(),
+        mass_solver::AbstractMassMatrixSolver=WeightAdjustedSolver(spatial_discretization))
+    
+        operators = make_operators(spatial_discretization, form,
+            operator_algorithm, mass_solver)
+    
+        return Solver(conservation_law, operators, mass_solver,
+            spatial_discretization.mesh.mapP, form)
+    end
+    
+    function Solver(conservation_law::AbstractConservationLaw,     
+        spatial_discretization::SpatialDiscretization{d},
+        form::AbstractResidualForm,
+        ::ReferenceOperator,
+        alg::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm(),
+        mass_solver::AbstractMassMatrixSolver=WeightAdjustedSolver(spatial_discretization)) where {d}
+    
+        (; D, V, W, R, B) = spatial_discretization.reference_approximation
+        (; J_q, Λ_q, nJf, J_f) = spatial_discretization.geometric_factors
+        (; N_e) = spatial_discretization
+    
+        halfWΛ = Array{Diagonal,3}(undef, d, d, N_e)
+        halfN = Matrix{Diagonal}(undef, d, N_e)
+        BJf = Vector{Diagonal}(undef, N_e)
+        n_f = Vector{NTuple{d, Vector{Float64}}}(undef,N_e)
+    
+        Threads.@threads for k in 1:N_e
+                halfWΛ[:,:,k] = [Diagonal(0.5 * W * Λ_q[:,m,n,k]) 
+                    for m in 1:d, n in 1:d]
+                halfN[:,k] = [Diagonal(0.5 * nJf[m][:,k] ./ J_f[:,k]) 
+                    for m in 1:d]
+                BJf[k] = Diagonal(B .* J_f[:,k])
+                n_f[k] = Tuple(nJf[m][:,k] ./ J_f[:,k] for m in 1:d)
+        end
+    
+        operators = ReferenceOperators{d}(
+            Tuple(make_operator(D[m], alg) for m in 1:d), 
+            make_operator(V, alg), make_operator(R, alg), 
+            W, B, halfWΛ, halfN, BJf, n_f)
+    
+        return Solver(conservation_law, operators, mass_solver,
+            spatial_discretization.mesh.mapP, form)
+    end    
 
     @inline function get_dof(spatial_discretization::SpatialDiscretization{d}, 
         conservation_law::AbstractConservationLaw{d}) where {d}

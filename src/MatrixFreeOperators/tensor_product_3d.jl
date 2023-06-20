@@ -27,12 +27,12 @@ function TensorProductMap3D(A, B, C)
     if B isa LinearMaps.UniformScalingMap{Bool} 
         B = I 
     elseif B isa LinearMaps.WrappedMap
-        B = SMatrix{M2,N2,Float64}(A.lmap)
+        B = SMatrix{M2,N2,Float64}(B.lmap)
     end
     if C isa LinearMaps.UniformScalingMap{Bool} 
         C = I 
     elseif C isa LinearMaps.WrappedMap
-        C = SMatrix{M3,N3,Float64}(A.lmap)
+        C = SMatrix{M3,N3,Float64}(C.lmap)
     end
     return TensorProductMap3D(A,B,C, σᵢ, σₒ)
 end
