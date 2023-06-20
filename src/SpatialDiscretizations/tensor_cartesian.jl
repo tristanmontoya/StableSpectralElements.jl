@@ -7,7 +7,7 @@ function ReferenceApproximation(
         quad_rule_vol=quadrature(Line(), 
         volume_quadrature_rule), Nplot=N_plot)
 
-    (; rp, rq, rf) = reference_element
+    (; rp, rq, rstq, rf, rstf) = reference_element
     q = length(rq)-1
     VDM, ∇VDM = basis(Line(), q, rq)
 
