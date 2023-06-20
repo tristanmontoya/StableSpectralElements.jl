@@ -36,6 +36,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TetGen = "c5d3f3f7-f850-59f6-8a2e-ffc6dc1317ea"
 TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 Triangulate = "f7e6ffb2-c36d-4f8f-a77e-16e897189344"
+Trixi = "a7f1ee26-1774-49b1-8366-f1abc58fbfcb"
 WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 
 [compat]

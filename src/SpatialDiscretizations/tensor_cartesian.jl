@@ -12,7 +12,7 @@ function ReferenceApproximation(
     VDM, ∇VDM = basis(Line(), q, rq)
 
     if volume_quadrature_rule isa GaussLobattoQuadrature
-        R = SelectionMap(match_coordinate_vectors(rf, rq), q+1)
+        R = SelectionMap(match_coordinate_vectors(rstf, rstq), q+1)
     else R = LinearMap(vandermonde(element_type, q, rf) / VDM) end
 
     V_plot = LinearMap(vandermonde(element_type, q, rp) / VDM)
