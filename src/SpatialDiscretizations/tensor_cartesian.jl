@@ -1,5 +1,5 @@
 function ReferenceApproximation(
-    approx_type::NodalTensor, element_type::Line,
+    approx_type::NodalTensor, element_type::Line;
     mapping_degree::Int=1, N_plot::Int=10,
     volume_quadrature_rule=LGQuadrature(approx_type.p))
 
