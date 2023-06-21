@@ -4,6 +4,10 @@ struct QuadratureL2 <: AbstractNorm
     WJ::Vector{AbstractMatrix}
 end
 
+struct QuadratureL2Normalized <: AbstractNorm 
+    WJ::Vector{AbstractMatrix}
+end
+
 struct RMS <: AbstractNorm end
 struct l∞ <: AbstractNorm end
 
@@ -18,18 +22,22 @@ end
 
 function ErrorAnalysis(results_path::String, 
     conservation_law::AbstractConservationLaw,
-    spatial_discretization::SpatialDiscretization{d}) where {d}
+    spatial_discretization::SpatialDiscretization{d}; 
+    normalize=false) where {d}
 
     (; W, V) = 
         spatial_discretization.reference_approximation
     (; geometric_factors, mesh, N_e) = spatial_discretization
     _, N_c, N_e = get_dof(spatial_discretization, conservation_law)
-    
-    norm = QuadratureL2([Matrix(W) * Diagonal(geometric_factors.J_q[:,k]) 
-        for k in 1:N_e])
 
-    return ErrorAnalysis{QuadratureL2, d}(
-        norm, N_c, N_e, V, mesh.xyzq, results_path)
+    if normalize
+        norm = QuadratureL2Normalized(
+            [Matrix(W) * Diagonal(geometric_factors.J_q[:,k]) for k in 1:N_e])
+    else
+        norm = QuadratureL2([Matrix(W) * Diagonal(geometric_factors.J_q[:,k]) 
+        for k in 1:N_e])
+    end
+    return ErrorAnalysis(norm, N_c, N_e, V, mesh.xyzq, results_path)
 end
 
 function analyze(analysis::ErrorAnalysis{QuadratureL2, d}, 
@@ -45,6 +53,29 @@ function analyze(analysis::ErrorAnalysis{QuadratureL2, d},
 
     error = [sqrt(sum(dot(nodal_error[e][:,k], norm.WJ[k]*nodal_error[e][:,
         k]) for k in 1:N_e )) for e in 1:N_c]
+
+    save(string(results_path, "error.jld2"), 
+        Dict("error_analysis" => analysis,
+            "error" => error))
+    
+    return error
+end
+
+function analyze(analysis::ErrorAnalysis{QuadratureL2Normalized, d}, 
+    sol::Array{Float64,3}, 
+    exact_solution::AbstractGridFunction{d}, 
+    t::Float64=0.0) where {d}
+
+    (; norm, N_c, N_e, V_err, x_err, results_path) = analysis 
+
+    u_exact = evaluate(exact_solution, x_err, t)
+    nodal_error = Tuple(u_exact[:,e,:] - convert(Matrix, V_err * sol[:,e,:])
+        for e in 1:N_c)
+
+    total_volume = sum(sum.(norm.WJ))
+    error = [sqrt(sum(dot(nodal_error[e][:,k], 
+            norm.WJ[k]*nodal_error[e][:,k]) for k in 1:N_e)/total_volume) 
+            for e in 1:N_c]
 
     save(string(results_path, "error.jld2"), 
         Dict("error_analysis" => analysis,

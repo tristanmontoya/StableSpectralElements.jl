@@ -34,7 +34,7 @@ module Analysis
             "results" => results))
     end
          
-    export ErrorAnalysis, AbstractNorm, QuadratureL2
+    export ErrorAnalysis, AbstractNorm, QuadratureL2, QuadratureL2Normalized
     include("error.jl")
 
     export LinearAnalysis, DynamicalAnalysisResults, KoopmanAnalysis, AbstractKoopmanAlgorithm, StandardDMD, ExtendedDMD, KernelDMD, KernelResDMD, ExtendedResDMD, GeneratorDMD, AbstractSamplingAlgorithmx, GaussianSampling, analyze_running, forecast, monomial_basis, monomial_derivatives, make_dmd_matrices, dmd, generate_samples
