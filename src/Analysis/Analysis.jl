@@ -6,7 +6,7 @@ module Analysis
     using Plots: plot, savefig, plot!, scatter, text, annotate!, vline!, grid, theme_palette, twinx, @layout
     using RecipesBase
     using LaTeXStrings: LaTeXString, latexstring
-    using StartUpDG: MeshData
+    using StartUpDG: MeshData, vandermonde
     using SparseArrays: sparse, blockdiag, kron
     using Arpack: eigs
     using OrdinaryDiffEq: OrdinaryDiffEqAlgorithm, ODESolution, ODEIntegrator, solve, RK4, step!, reinit!
@@ -16,7 +16,7 @@ module Analysis
     using TimerOutputs
 
     using ..ConservationLaws: AbstractConservationLaw
-    using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation, uniform_periodic_mesh
+    using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation, uniform_periodic_mesh, quadrature
     using ..GridFunctions: AbstractGridFunction, evaluate
     using ..Solvers: AbstractResidualForm, AbstractStrategy, Solver, AbstractMassMatrixSolver, WeightAdjustedSolver, mass_matrix, semidiscretize, LinearResidual, get_dof, rhs!
     using ..File: new_path, load_project, load_solution, load_time_steps, load_snapshots, load_snapshots_with_derivatives, load_solver, save_callback, save_solution, save_project
