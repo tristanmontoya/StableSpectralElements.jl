@@ -30,7 +30,9 @@ function ErrorAnalysis(results_path::String,
         # interpolate, which I haven't done here.
 
         (; wq, rstq, element_type) = reference_element
-        r_err..., w_err = quadrature(element_type, error_quadrature_rule)
+        error_quad = quadrature(element_type, error_quadrature_rule)
+        r_err = error_quad[1:d]
+        w_err = error_quad[d+1]
         V_modes_to_errq = vandermonde(element_type, approx_type.p, r_err...)
         VDM = vandermonde(element_type, approx_type.p, rstq...)
         P_volq_to_modes = inv(VDM' * Diagonal(wq) * VDM) * VDM' * Diagonal(wq)
