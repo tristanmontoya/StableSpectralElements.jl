@@ -3,9 +3,12 @@
 
 Define an inviscid burgers equation of the form
 ```math
-\partial_t U(\bm{x},t) + \bm{\nabla} \cdot \bigg(\frac{1}{2}\bm{a} U(\bm{x},t)^2 \bigg) = 0,
+\partial_t U(\bm{x},t) + \bm{\nabla} \cdot \big(\tfrac{1}{2}\bm{a} U(\bm{x},t)^2 \big) = 0,
 ```
-where $\bm{a} \in \R^d$. A specialized constructor `InviscidBurgersEquation()` is provided for the one-dimensional case with $a=1$.
+where $\bm{a} \in \R^d$. A specialized constructor `InviscidBurgersEquation()` is provided for the one-dimensional case, wherein the PDE becomes
+```math
+\partial_t U(x,t) + \partial_x \big(\tfrac{1}{2}U(x,t)^2 \big) = 0.
+```
 """
 struct InviscidBurgersEquation{d} <: AbstractConservationLaw{d,FirstOrder}
     a::NTuple{d,Float64} 
@@ -13,15 +16,20 @@ struct InviscidBurgersEquation{d} <: AbstractConservationLaw{d,FirstOrder}
     N_c::Int
 
     function InviscidBurgersEquation(a::NTuple{d,Float64}, 
-        source_term::AbstractGridFunction{d}) where {d}
+        source_term::AbstractGridFunction{d}=NoSourceTerm()) where {d}
         return new{d}(a, source_term, 1)
     end
 end
 
-"""
-Viscous Burgers' equation (1D)
+@doc raw"""
+    ViscousBurgersEquation(a::NTuple{d,Float64}, 
+    b::Float64) where {d}
 
-`∂ₜu + ∇⋅(a ½u² - b∇u) = s`
+Define a viscous burgers equation of the form
+```math
+\partial_t U(\bm{x},t) + \bm{\nabla} \cdot \big(\tfrac{1}{2}\bm{a} U(\bm{x},t)^2 - b \bm{\nabla} U(\bm{x},t)\big) = 0,
+```
+where $\bm{a} \in \R^d$ and $b \in \R^+$.
 """
 struct ViscousBurgersEquation{d} <: AbstractConservationLaw{d,SecondOrder}
     a::NTuple{d,Float64}
@@ -30,7 +38,8 @@ struct ViscousBurgersEquation{d} <: AbstractConservationLaw{d,SecondOrder}
     N_c::Int
 
     function ViscousBurgersEquation(a::NTuple{d,Float64}, 
-        b::Float64, source_term::AbstractGridFunction{d}) where {d}
+        b::Float64, 
+        source_term::AbstractGridFunction{d}=NoSourceTerm()) where {d}
         return new{d}(a, b, source_term, 1)
     end
 end
@@ -38,7 +47,7 @@ end
 const BurgersType{d} = Union{InviscidBurgersEquation{d}, ViscousBurgersEquation{d}}
 
 function InviscidBurgersEquation()
-    return InviscidBurgersEquation((1.0,),NoSourceTerm{1}())
+    return InviscidBurgersEquation((1.0,))
 end
 
 """

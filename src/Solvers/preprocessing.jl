@@ -19,15 +19,15 @@ function initialize(initial_data::AbstractGridFunction,
 end
 
 function semidiscretize(
-    conservation_law::AbstractConservationLaw,spatial_discretization::SpatialDiscretization,
-    initial_data::AbstractGridFunction, 
+    conservation_law::AbstractConservationLaw{d,PDEType},spatial_discretization::SpatialDiscretization{d},
+    initial_data::AbstractGridFunction{d}, 
     form::AbstractResidualForm,
     tspan::NTuple{2,Float64}, 
     strategy::AbstractStrategy=ReferenceOperator(),
     operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm();
     mass_matrix_solver::AbstractMassMatrixSolver=CholeskySolver(spatial_discretization),
     periodic_connectivity_check::Bool=true,
-    tol::Float64=1e-12)
+    tol::Float64=1e-12) where {d, PDEType}
 
     if periodic_connectivity_check
         normal_error = check_normals(spatial_discretization)
@@ -40,9 +40,16 @@ function semidiscretize(
     end
 
     u0 = initialize(initial_data,conservation_law, spatial_discretization)
-
-    return semidiscretize(Solver(conservation_law,spatial_discretization,
+    println("check = ", (PDEType == SecondOrder && strategy isa ReferenceOperator))
+    if PDEType == SecondOrder && strategy isa ReferenceOperator
+        @warn "Reference-operator approach only implemented for first-order equations. Using physical-operator formulation."
+        return semidiscretize(Solver(conservation_law,spatial_discretization,
+            form,PhysicalOperator(),operator_algorithm,mass_matrix_solver),
+            u0, tspan)
+    else
+        return semidiscretize(Solver(conservation_law,spatial_discretization,
         form,strategy,operator_algorithm,mass_matrix_solver),u0, tspan)
+    end
 end
 
 function semidiscretize(solver::Solver, u0::Array{Float64,3},
