@@ -1,7 +1,7 @@
 name = "StableSpectralElements"
 uuid = "fb992021-99c7-4c2d-a14b-5e48ac4045b2"
 authors = ["Tristan Montoya <montoya.tristan@gmail.com>"]
-version = "0.1.3"
+version = "0.1.4"
 
 [deps]
 Arpack = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
