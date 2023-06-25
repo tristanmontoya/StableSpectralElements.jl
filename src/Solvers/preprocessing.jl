@@ -40,7 +40,6 @@ function semidiscretize(
     end
 
     u0 = initialize(initial_data,conservation_law, spatial_discretization)
-    println("check = ", (PDEType == SecondOrder && strategy isa ReferenceOperator))
     if PDEType == SecondOrder && strategy isa ReferenceOperator
         @warn "Reference-operator approach only implemented for first-order equations. Using physical-operator formulation."
         return semidiscretize(Solver(conservation_law,spatial_discretization,

@@ -1,13 +1,11 @@
 @doc raw"""
     InviscidBurgersEquation(a::NTuple{d,Float64}) where {d}
 
-Define an inviscid burgers equation of the form
+Define an inviscid Burgers' equation of the form
 ```math
 \partial_t U(\bm{x},t) + \bm{\nabla} \cdot \big(\tfrac{1}{2}\bm{a} U(\bm{x},t)^2 \big) = 0,
 ```
-where $\bm{a} \in \R^d$. A specialized constructor `InviscidBurgersEquation()` is provided for the one-dimensional case, wherein the PDE becomes
-```math
-\partial_t U(x,t) + \partial_x \big(\tfrac{1}{2}U(x,t)^2 \big) = 0.
+where $\bm{a} \in \R^d$. A specialized constructor `InviscidBurgersEquation()` is provided for the one-dimensional case with `a = (1.0,)`.
 ```
 """
 struct InviscidBurgersEquation{d} <: AbstractConservationLaw{d,FirstOrder}
@@ -25,11 +23,11 @@ end
     ViscousBurgersEquation(a::NTuple{d,Float64}, 
     b::Float64) where {d}
 
-Define a viscous burgers equation of the form
+Define a viscous Burgers' equation of the form
 ```math
 \partial_t U(\bm{x},t) + \bm{\nabla} \cdot \big(\tfrac{1}{2}\bm{a} U(\bm{x},t)^2 - b \bm{\nabla} U(\bm{x},t)\big) = 0,
 ```
-where $\bm{a} \in \R^d$ and $b \in \R^+$.
+where $\bm{a} \in \R^d$ and $b \in \R^+$. A specialized constructor `ViscousBurgersEquation(b::Float64)` is provided for the one-dimensional case with `a = (1.0,)`.
 """
 struct ViscousBurgersEquation{d} <: AbstractConservationLaw{d,SecondOrder}
     a::NTuple{d,Float64}
@@ -48,6 +46,10 @@ const BurgersType{d} = Union{InviscidBurgersEquation{d}, ViscousBurgersEquation{
 
 function InviscidBurgersEquation()
     return InviscidBurgersEquation((1.0,))
+end
+
+function ViscousBurgersEquation(b::Float64)
+    return ViscousBurgersEquation((1.0,), b)
 end
 
 """

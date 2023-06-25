@@ -17,12 +17,11 @@ Evaluate semi-discrete residual for a second-order problem
 
     #auxiliary variable
     @views Threads.@threads for k in 1:N_e
-        numerical_flux!(u_n[:,:,:,k], conservation_law,
-            viscous_numerical_flux, u_f[:,k,:], u_f[CI[connectivity[:,k]],:], 
-             operators.n_f[k])
+        numerical_flux!(u_n[:,:,:,k], conservation_law, viscous_numerical_flux, 
+            u_f[:,k,:], u_f[CI[connectivity[:,k]],:], operators.n_f[k])
         
-        fill!(dudt[:,:,k],0.0)
         @inbounds for m in 1:d
+            fill!(dudt[:,:,k],0.0)
             mul!(temp[:,:,k],operators.VOL[k][m],u_q[:,:,k])
             dudt[:,:,k] .-= temp[:,:,k]
 
