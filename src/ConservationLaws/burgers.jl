@@ -6,7 +6,6 @@ Define an inviscid Burgers' equation of the form
 \partial_t U(\bm{x},t) + \bm{\nabla} \cdot \big(\tfrac{1}{2}\bm{a} U(\bm{x},t)^2 \big) = 0,
 ```
 where $\bm{a} \in \R^d$. A specialized constructor `InviscidBurgersEquation()` is provided for the one-dimensional case with `a = (1.0,)`.
-```
 """
 struct InviscidBurgersEquation{d} <: AbstractConservationLaw{d,FirstOrder}
     a::NTuple{d,Float64} 
@@ -20,8 +19,7 @@ struct InviscidBurgersEquation{d} <: AbstractConservationLaw{d,FirstOrder}
 end
 
 @doc raw"""
-    ViscousBurgersEquation(a::NTuple{d,Float64}, 
-    b::Float64) where {d}
+    ViscousBurgersEquation(a::NTuple{d,Float64}, b::Float64) where {d}
 
 Define a viscous Burgers' equation of the form
 ```math
@@ -35,8 +33,7 @@ struct ViscousBurgersEquation{d} <: AbstractConservationLaw{d,SecondOrder}
     source_term::AbstractGridFunction{d}
     N_c::Int
 
-    function ViscousBurgersEquation(a::NTuple{d,Float64}, 
-        b::Float64, 
+    function ViscousBurgersEquation(a::NTuple{d,Float64}, b::Float64, 
         source_term::AbstractGridFunction{d}=NoSourceTerm()) where {d}
         return new{d}(a, b, source_term, 1)
     end

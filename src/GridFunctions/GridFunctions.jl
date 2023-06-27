@@ -88,76 +88,74 @@ module GridFunctions
         return SumOfFunctions(f,g)
     end
 
-    function InitialDataSine(A::Float64, k::Float64)
+    @inline function InitialDataSine(A::Float64, k::Float64)
         return InitialDataSine(A,(k,))
     end
 
-    function InitialDataCosine(A::Float64, k::Float64)
+    @inline function InitialDataCosine(A::Float64, k::Float64)
         return InitialDataCosine(A,(k,))
     end
 
-    function InitialDataGaussian(A::Float64, σ::Float64, x₀::Float64)
+    @inline function InitialDataGaussian(A::Float64, σ::Float64, x₀::Float64)
         return InitialDataGaussian(A,σ,(x₀,))
     end
-
-    function evaluate(func::SumOfFunctions{d}, 
+    
+    @inline function evaluate(func::SumOfFunctions{d}, 
         x::NTuple{d,Float64},t::Float64=0.0) where {d}
         return evaluate(func.f,x,t) .+ evaluate(func.g,x,t)
     end
 
-    function evaluate(f::ConstantFunction{d},
+    @inline function evaluate(f::ConstantFunction{d},
         x::NTuple{d,Float64},t::Float64=0.0) where {d}
         return fill(f.c, f.N_c)
     end
 
-    function evaluate(f::InitialDataSine{d}, 
+    @inline function evaluate(f::InitialDataSine{d}, 
         x::NTuple{d,Float64},t::Float64=0.0) where {d}
         return fill(f.A*prod(Tuple(sin(f.k[m]*x[m]) for m in 1:d)), f.N_c)
     end
 
-    function evaluate(f::InitialDataCosine{d}, 
+    @inline function evaluate(f::InitialDataCosine{d}, 
         x::NTuple{d,Float64},t::Float64=0.0) where {d}
         return fill(f.A*prod(Tuple(cos(f.k[m]*x[m]) for m in 1:d)), f.N_c)
     end
 
-    function evaluate(f::InitialDataGaussian{d}, 
+    @inline function evaluate(f::InitialDataGaussian{d}, 
         x::NTuple{d,Float64},t::Float64=0.0) where {d}
         (; A, σ, x₀, N_c) = f
         r² = sum((x[m] - x₀[m]).^2 for m in 1:d)
         return fill(A*exp.(-r²/(2.0*σ^2)),N_c)
     end
 
-    function evaluate(f::InitialDataGassner, 
+    @inline function evaluate(f::InitialDataGassner, 
         x::NTuple{1,Float64},t::Float64=0.0)
         return [sin(f.k*x[1])+f.ϵ]
     end
 
-    function evaluate(f::SourceTermGassner, 
+    @inline function evaluate(f::SourceTermGassner, 
         x::NTuple{1,Float64},t::Float64=0.0)
         return [f.k .* cos(f.k*(x[1]-t))*(-1.0 + f.ϵ + sin(f.k*(x[1]-t)))]
     end
 
-    function evaluate(f::GaussianNoise{d},
+    @inline function evaluate(f::GaussianNoise{d},
         x::NTuple{d,Float64},t::Float64=0.0) where {d}
         return [f.σ*randn() for e in 1:f.N_c]
     end
 
-    function evaluate(f::AbstractGridFunction{d},
-        x::NTuple{d,Vector{Float64}}, t::Float64=0.0) where {d}
+    @inline function evaluate(f::AbstractGridFunction{d}, x::NTuple{d,Vector{Float64}}, t::Float64=0.0) where {d}
         N = length(x[1])
         u0 = Matrix{Float64}(undef, N, f.N_c)
-        for i in 1:N
-            u0[i,:] = evaluate(f, Tuple(x[m][i] for m in 1:d),t)
+        @inbounds for i in 1:N
+            u0[i,:] .= evaluate(f, Tuple(x[m][i] for m in 1:d),t)
         end
         return u0
     end
 
-    function evaluate(f::AbstractGridFunction{d},
-        x::NTuple{d,Matrix{Float64}},t::Float64=0.0) where {d}
+    function evaluate(f::AbstractGridFunction{d}, x::NTuple{d,Matrix{Float64}},t::Float64=0.0) where {d}
         N, N_e = size(x[1])
         u0 = Array{Float64}(undef, N, f.N_c, N_e)
-        for k in 1:N_e
-            u0[:,:,k] = evaluate(f, Tuple(x[m][:,k] for m in 1:d),t)
+        @inbounds for k in 1:N_e
+            u0[:,:,k] .= evaluate(f, Tuple(x[m][:,k] for m in 1:d),t)
         end
         return u0
     end

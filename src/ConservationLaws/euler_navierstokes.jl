@@ -110,7 +110,7 @@ Evaluate the flux for the Euler equations
     @inbounds for m in 1:d 
         f[:,1,m] .= ρV[:,m]
         f[:,2:end-1,m] .= hcat([ρV[:,m].*V[:,n] .+ I[m,n]*p for n in 1:d]...)
-        f[:,end,m] = V[:,m].*(E .+ p)
+        f[:,end,m] .= V[:,m] .* (E .+ p)
     end
 end
 
@@ -128,18 +128,20 @@ end
     V_in = velocity(conservation_law, u_in)
     p_in = pressure(conservation_law, u_in)
     f_in = Array{Float64}(undef, size(u_in)..., d)
-    physical_flux!(f_in, conservation_law,u_in)
-    normV_in = sqrt.(sum(V_in[:,m].^2 for m in 1:d))
+    physical_flux!(f_in, conservation_law, u_in)
 
     ρ_out = @view u_out[:,1]
     V_out = velocity(conservation_law, u_out)
     p_out = pressure(conservation_law, u_out)
     f_out = Array{Float64}(undef, size(u_out)..., d)
-    physical_flux!(f_out, conservation_law,u_out)
-    normV_out = sqrt.(sum(V_out[:,m].^2 for m in 1:d))
+    physical_flux!(f_out, conservation_law, u_out)
 
-    a = max.(normV_in .+ sqrt.(abs.(γ*p_in ./ ρ_in)), 
-            normV_out .+ sqrt.(abs.(γ*p_out ./ ρ_out)))
+    Vn_in = sum(V_in[:,m] .* n[m] for m in 1:d)
+    Vn_out = sum(V_out[:,m] .* n[m] for m in 1:d)
+    c_in = sqrt.(abs.(γ*p_in ./ ρ_in))
+    c_out = sqrt.(abs.(γ*p_out ./ ρ_out))
+
+    a = max.(abs.(Vn_in), abs.(Vn_out)) .+ max.(c_in, c_out)
 
     return 0.5*(hcat([sum((f_in[:,e,m] .+ f_out[:,e,m]) .* n[m] for m in 1:d)
             for e in 1:N_c]...) .- λ*a.*(u_out .- u_in))

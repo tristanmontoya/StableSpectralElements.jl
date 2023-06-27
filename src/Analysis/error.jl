@@ -51,7 +51,7 @@ end
 
 function analyze(analysis::ErrorAnalysis{d}, 
     sol::Array{Float64,3}, 
-    exact_solution::AbstractGridFunction{d}, 
+    exact_solution::AbstractGridFunction{d},
     t::Float64=0.0; normalize=false) where {d}
 
     (; N_c, N_e, WJ_err, V_err, x_err, total_volume, results_path) = analysis 
@@ -64,7 +64,7 @@ function analyze(analysis::ErrorAnalysis{d},
         k]) for k in 1:N_e) for e in 1:N_c]
     
     if normalize
-        error = sqrt.(squared_error./total_volume)
+        error = sqrt.(squared_error ./ total_volume)
     else
         error = sqrt.(squared_error)
     end
