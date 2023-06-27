@@ -41,7 +41,7 @@ end
     @test energy ≈ 0.0 atol=tol
 end
 
-@testset "Advection-Diffusion 2D Standard NodalTensor Quad" begin
+@testset "Advection 2D Standard NodalTensor Quad" begin
     (l2, conservation, energy) = test_driver(
         ReferenceApproximation(NodalTensor(p), Quad(), mapping_degree=p,
         volume_quadrature_rule=LGLQuadrature(p), facet_quadrature_rule=LGLQuadrature(p)), 

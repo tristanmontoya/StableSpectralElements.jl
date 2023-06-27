@@ -1,6 +1,7 @@
 module ConservationLaws
 
     using LinearMaps: LinearMap
+    using StaticArrays: SVector
     using LinearAlgebra: mul!, I
     import ..GridFunctions: AbstractGridFunction, NoSourceTerm, InitialDataSine, InitialDataGaussian, InitialDataGassner, SourceTermGassner, evaluate
 
@@ -44,7 +45,7 @@ module ConservationLaws
     struct EntropyConservativeFlux <: AbstractTwoPointFlux end
     struct NoTwoPointFlux <: AbstractTwoPointFlux end
 
-    """Generic structure for exact solution to PDE"""
+    """Generic structure for exact solution to PDE (may be deprecated in future versions)"""
     struct ExactSolution{d,ConservationLaw,InitialData,SourceTerm} <: AbstractGridFunction{d}
         conservation_law::ConservationLaw
         initial_data::InitialData

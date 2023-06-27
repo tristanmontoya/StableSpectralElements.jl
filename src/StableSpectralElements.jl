@@ -1,7 +1,7 @@
 module StableSpectralElements
 
-    if VERSION < v"1.7"
-        error("StableSpectralElements.jl requires Julia v1.7 or newer.")
+    if VERSION < v"1.8"
+        error("StableSpectralElements.jl requires Julia v1.8 or newer.")
     end
 
     using Reexport

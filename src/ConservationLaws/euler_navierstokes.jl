@@ -28,56 +28,27 @@ struct EulerEquations{d} <: AbstractConservationLaw{d,FirstOrder}
     source_term::AbstractGridFunction{d}
     N_c::Int
 
-    function EulerEquations{d}(γ::Float64, 
-        source_term::AbstractGridFunction{d}) where {d}
+    function EulerEquations{d}(γ::Float64=1.4, 
+        source_term::AbstractGridFunction{d}=NoSourceTerm{d}()) where {d}
         return new{d}(γ,source_term, d+2)
     end
 end
 
-struct NavierStokesEquations{d} <: AbstractConservationLaw{d,SecondOrder} end
+struct NavierStokesEquations{d} <: AbstractConservationLaw{d,SecondOrder} 
+    γ::Float64
+    source_term::AbstractGridFunction{d}
+    N_c::Int
+
+    function NavierStokesEquations{d}(γ::Float64=1.4, 
+        source_term::AbstractGridFunction{d}=NoSourceTerm{d}()) where {d}
+        @error "Navier-Stokes not implemented."
+        return new{d}(γ,source_term, d+2)
+    end
+end
 
 const EulerType{d} = Union{EulerEquations{d}, NavierStokesEquations{d}}
 
-function EulerEquations{d}(γ::Float64) where {d}
-    return EulerEquations{d}(γ,NoSourceTerm{d}())
-end
-
-struct EulerPeriodicTest{d} <: AbstractGridFunction{d}
-    γ::Float64
-    ϵ::Float64
-    N_c::Int
-
-    function EulerPeriodicTest{d}(γ::Float64,
-        ϵ::Float64) where {d}
-        return new{d}(γ,ϵ,d+2)
-    end
-end
-
-struct TaylorGreenVortex <: AbstractGridFunction{3}
-    Ma::Float64
-    N_c::Int
-
-    function TaylorGreenVortex(Ma::Float64)
-        return new(Ma,5)
-    end
-end
-
-struct IsentropicVortex <: AbstractGridFunction{2}
-    γ::Float64
-    Ma::Float64
-    ϵ::Float64
-    x_0::NTuple{2,Float64}
-    N_c::Int
-
-    function IsentropicVortex(γ::Float64,
-        Ma::Float64,
-        ϵ::Float64,
-        x_0::NTuple{2,Float64})
-        return new(γ, Ma, ϵ, x_0, 4)
-    end
-end
-
-@inline function pressure(conservation_law::EulerType{d}, 
+function pressure(conservation_law::EulerType{d}, 
     u::AbstractMatrix{Float64}) where {d}
     (; γ) = conservation_law
     ρ = @view u[:,1]
@@ -86,7 +57,7 @@ end
     return (γ-1) .* (E .- (0.5./ρ) .* (sum(ρV[:,m].^2 for m in 1:d)))
 end
 
-@inline function velocity(conservation_law::EulerType{d}, 
+function velocity(conservation_law::EulerType{d}, 
     u::AbstractMatrix{Float64}) where {d}
     (; γ) = conservation_law
     ρ = @view u[:,1]
@@ -97,7 +68,7 @@ end
 """
 Evaluate the flux for the Euler equations
 """
-@inline function physical_flux!(f::AbstractArray{Float64,3},    
+function physical_flux!(f::AbstractArray{Float64,3},    
     conservation_law::EulerType{d}, 
     u::AbstractMatrix{Float64}) where {d}
 
@@ -115,7 +86,7 @@ Evaluate the flux for the Euler equations
 end
 
 """Lax-Friedrichs/Rusanov flux for the Euler equations"""
-@inline function numerical_flux(
+function numerical_flux(
     conservation_law::EulerType{d},
     numerical_flux::LaxFriedrichsNumericalFlux, 
     u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
@@ -147,12 +118,85 @@ end
             for e in 1:N_c]...) .- λ*a.*(u_out .- u_in))
 end
 
+"""
+Isentropic vortex problem, taken verbatim from the Trixi.jl examples (https://github.com/trixi-framework/Trixi.jl/blob/main/examples/tree_2d_dgsem/elixir_euler_vortex.jl).
+
+Domain should be [-10,10] × [-10,10].
+"""
+struct IsentropicVortex <: AbstractGridFunction{2} 
+    γ::Float64
+    strength::Float64
+    N_c::Int
+    function IsentropicVortex(conservation_law::EulerEquations{2}, 
+        strength::Float64=5.0)
+        return new(conservation_law.γ,strength,4)
+    end
+end
+
+function evaluate(f::IsentropicVortex, x::NTuple{2,Float64},t::Float64=0.0)
+    inicenter = SVector(0.0, 0.0)
+    iniamplitude = f.strength
+
+    # base flow
+    gamma = f.γ
+    rho = 1.0
+    v1 = 1.0
+    v2 = 1.0
+    vel = SVector(v1, v2)
+    p = 25.0
+
+    rt = p / rho                  # ideal gas equation
+    t_loc = 0.0
+    cent = inicenter + vel*t_loc      # advection of center
+    cent = SVector(x) - cent # distance to center point
+    cent = SVector(-cent[2], cent[1])
+    r2 = cent[1]^2 + cent[2]^2
+    du = iniamplitude / (2*π) * exp(0.5 * (1 - r2)) # vel. perturbation
+    dtemp = -(gamma - 1) / (2 * gamma * rt) * du^2 # isentropic
+    rho = rho * (1 + dtemp)^(1 / (gamma - 1))
+    vel = vel + du * cent
+    v1, v2 = vel
+    p = p * (1 + dtemp)^(gamma / (gamma - 1))
+    return [rho, rho*v1, rho*v2, p/(gamma-1) + 0.5*rho*(v1^2 + v2^2)]
+  end
+
+"""
+Periodic wave test case used in the following papers:
+- Veilleux et al., "Stable Spectral Difference approach using Raviart-Thomas elements for 3D computations on tetrahedral grids," JSC 2022.
+- Pazner and Persson, "Approximate tensor-product preconditioners for very high order discontinuous Galerkin methods," JCP 2018.
+- Jiang and Shu, "Efficient Implementation of Weighted ENO Schemes," JCP 1996.
+
+Domain should be [0,2]ᵈ.
+"""
+struct EulerPeriodicTest{d} <: AbstractGridFunction{d} 
+    γ::Float64
+    strength::Float64
+    N_c::Int
+    function EulerPeriodicTest(conservation_law::EulerEquations{d}, 
+        strength::Float64=0.2) where {d}
+        return new{d}(conservation_law.γ,strength,d+2)
+    end
+end
+
 function evaluate(f::EulerPeriodicTest{d}, 
     x::NTuple{d,Float64},t::Float64=0.0) where {d}
 
-    ρ = 1.0 + f.ϵ*sin(π*sum(x[m] for m in 1:d))
-
+    ρ = 1.0 + f.strength*sin(π*sum(x[m] for m in 1:d))
     return [ρ, fill(ρ,d)..., 1.0/(1.0-f.γ) + 0.5*ρ*d]
+end
+
+"""Inviscid 3D Taylor-Green vortex, I think I got this version of it from Shadpey and Zingg, "Entropy-Stable Multidimensional Summation-by-Parts Discretizations on hp-Adaptive Curvilinear Grids for Hyperbolic Conservation Laws," JSC 2020.
+
+Domain should be [-π,π]³.
+"""
+struct TaylorGreenVortex <: AbstractGridFunction{3} 
+    γ::Float64
+    Ma::Float64
+    N_c::Int
+    function TaylorGreenVortex(conservation_law::EulerEquations{3},
+        Ma::Float64=0.1)
+        return new(conservation_law.γ,Ma,5)
+    end
 end
 
 function evaluate(f::TaylorGreenVortex,  x::NTuple{3,Float64}, t::Float64=0.0)
@@ -164,41 +208,4 @@ function evaluate(f::TaylorGreenVortex,  x::NTuple{3,Float64}, t::Float64=0.0)
     v = -cos(x[1])*sin(x[2])*cos(x[3])
 
     return [1.0, u, v, 0.0,  p/(1.0-f.γ) + 0.5*ρ*(u^2 + v^2)]
-end
-
-function evaluate(f::IsentropicVortex, x::NTuple{2,Float64}, t::Float64=0.0)
-    fx = 1.0 - (x[1] - f.x_0[1] - t)^2 - (x[2] - f.x_0[2])^2
-    u = 1.0 - (f.ϵ*(x[2] - f.x_0[2]))/(2.0*π)*exp(0.5*fx)
-    v = (f.ϵ*(x[1] - f.x_0[1] - t))/(2.0*π)*exp(0.5*fx)
-    ρ = (1.0 - ((f.ϵ)^2*(f.γ-1.0)*(f.Ma)^2/(8.0*π^2) * exp(fx)))^(1.0/(1.0-f.γ))
-    p = ρ^(f.γ)/(f.γ * f.Ma^2)
-
-    return [ρ, ρ*u, ρ*v, p/(1.0-f.γ) + 0.5*ρ*(u^2 + v^2)]
-end
-
-function evaluate(
-    exact_solution::ExactSolution{d,EulerEquations{d}, EulerPeriodicTest{d},NoSourceTerm{d}},
-    x::NTuple{d,Float64},t::Float64=0.0) where {d}
-    (; initial_data, conservation_law) = exact_solution
-    
-    if !exact_solution.periodic
-        ρ = 1.0 + initial_data.ϵ*sin(π*(sum(x[m] for m in 1:d) - t*d))
-        return [ρ, [ρ for m in 1:d]..., 1.0/(1.0-conservation_law.γ) + 0.5*ρ*d]
-    else
-       return evaluate(initial_data,x)
-    end
-end
-
-function evaluate(
-    exact_solution::ExactSolution{2,EulerEquations{2}, IsentropicVortex,NoSourceTerm{2}},
-    x::NTuple{2,Float64},t::Float64=0.0)
-    (; initial_data, conservation_law) = exact_solution
-    
-    if !exact_solution.periodic
-        return evaluate(initial_data, 
-            (x[1] - initial_data.Ma*cos(initial_data.θ)*t,
-            (x[2] - initial_data.Ma*sin(initial_data.θ))*t ))
-    else
-       return evaluate(initial_data,x)
-    end
 end

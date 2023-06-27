@@ -15,7 +15,8 @@ second-order problems are treated by StableSpectralElements.jl as first-order sy
 ```
 Currently, the linear advection and advection-diffusion equations, the inviscid and viscous Burgers' equations, and the compressible Euler equations are supported by StableSpectralElements.jl, but any system of the above form can in principle be implemented, provided that appropriate physical and numerical fluxes are defined.
 
-## Reference
+## Equations
+Listed below are partial differential equations supported by StableSpectralElements.jl.
 
 ```@meta
 CurrentModule = ConservationLaws
