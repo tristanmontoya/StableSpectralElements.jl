@@ -37,9 +37,10 @@ Evaluate semi-discrete residual for a second-order problem
    @views Threads.@threads for k in 1:N_e
         physical_flux!(f_q[:,:,:,k], conservation_law, u_q[:,:,k], q_q[:,:,:,k])
 
-        f_f[:,:,k] .= numerical_flux(conservation_law, inviscid_numerical_flux,
+         numerical_flux!(f_f[:,:,k],conservation_law, inviscid_numerical_flux,
                 u_f[:,k,:], u_f[CI[connectivity[:,k]],:], operators.n_f[k]) .+ 
-            numerical_flux(conservation_law, viscous_numerical_flux, 
+        
+        numerical_flux!(f_f[:,:,k], conservation_law, viscous_numerical_flux, 
                 u_f[:,k,:], u_f[CI[connectivity[:,k]],:], q_f[:,k,:,:], 
                 q_f[CI[connectivity[:,k]],:,:], operators.n_f[k])
 

@@ -19,11 +19,11 @@ using BenchmarkTools
     @timeit "phys flux" physical_flux!(f_q[:,:,:,k],
         conservation_law, u_q[:,:,k])
 
-    @timeit "num flux" f_f[:,:,k] .= numerical_flux( 
+    @timeit "num flux" numerical_flux!(f_f[:,:,k],
         conservation_law,
         inviscid_numerical_flux, u_f[:,k,:], 
         u_f[CI[connectivity[:,k]],:], operators.n_f[k])
-
+    
     @timeit "fill w zeros" fill!(view(dudt,:,:,k),0.0)
     @inbounds for m in 1:d
         @timeit "volume operators" begin
@@ -48,8 +48,9 @@ end
         (; inviscid_numerical_flux) = form
         (; f_q, f_f, f_n, u_q, r_q, u_f, temp, CI) = solver.preallocated_arrays
         (; D, V, R, halfWΛ, halfN, BJf, n_f) = solver.operators
-        k = 1  #just one element
     end
+    
+    k = 1  #just one element
     
     @timeit "vandermonde" mul!(u_q[:,:,k], V, u[:,:,k])
     
@@ -58,7 +59,7 @@ end
     @timeit "phys flux" physical_flux!(f_q[:,:,:,k],
         conservation_law, u_q[:,:,k])
 
-    @timeit "num flux" f_f[:,:,k] .= numerical_flux( 
+    @timeit "num flux" numerical_flux!(f_f[:,:,k],
         conservation_law,
         inviscid_numerical_flux, u_f[:,k,:], 
         u_f[CI[connectivity[:,k]],:], n_f[k])

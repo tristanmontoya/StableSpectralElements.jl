@@ -59,7 +59,6 @@ end
 
 function velocity(conservation_law::EulerType{d}, 
     u::AbstractMatrix{Float64}) where {d}
-    (; γ) = conservation_law
     ρ = @view u[:,1]
     ρV = @view u[:,2:end-1]
     return hcat([ρV[:,m] ./ ρ for m in 1:d]...)
@@ -72,50 +71,52 @@ function physical_flux!(f::AbstractArray{Float64,3},
     conservation_law::EulerType{d}, 
     u::AbstractMatrix{Float64}) where {d}
 
-    (; γ) = conservation_law
-    ρV = @view u[:,2:end-1]
-    E = @view u[:,end]
-    V = velocity(conservation_law, u)
-    p = pressure(conservation_law, u)
-    
-    @inbounds for m in 1:d 
-        f[:,1,m] .= ρV[:,m]
-        f[:,2:end-1,m] .= hcat([ρV[:,m].*V[:,n] .+ I[m,n]*p for n in 1:d]...)
-        f[:,end,m] .= V[:,m] .* (E .+ p)
+    @inbounds for i in axes(u,1)
+        V = SVector{d}(u[i,m+1] / u[i,1] for m in 1:d)
+        p = (conservation_law.γ-1) * (u[i,end] - (0.5/u[i,1]) * 
+         (sum(u[i,m+1]^2 for m in 1:d)))
+        f[i,1,:] .= u[i,2:end-1]
+        f[i,2:end-1,:] .= SMatrix{d,d}(u[i,m+1]*V[n] + I[m,n]*p 
+            for m in 1:d, n in 1:d)
+        f[i,end,:] .= (u[i,end] + p)*V
     end
 end
 
 """Lax-Friedrichs/Rusanov flux for the Euler equations"""
-function numerical_flux(
+function numerical_flux!(f_star::AbstractMatrix{Float64},
     conservation_law::EulerType{d},
     numerical_flux::LaxFriedrichsNumericalFlux, 
     u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
-    n::NTuple{d, Vector{Float64}}) where {d}
+    n_f::NTuple{d, Vector{Float64}}) where {d}
 
-    (; γ, N_c) = conservation_law
-    (; λ) = numerical_flux
+    @assert size(u_in) == size(u_out) "Number of nodes on each side must match."
+    for i in axes(u_in, 1)
+        V_in = SVector{d}(u_in[i,m+1] / u_in[i,1] for m in 1:d)
+        p_in = (conservation_law.γ-1) * (u_in[i,end] - (0.5/u_in[i,1]) * 
+         (sum(u_in[i,m+1]^2 for m in 1:d)))
+        f_in = vcat(SMatrix{1,d}(u_in[i,2:end-1]),
+                    SMatrix{d,d}(u_in[i,m+1]*V_in[n] + I[m,n]*p_in 
+                        for m in 1:d, n in 1:d),
+                    SMatrix{1,d}((u_in[i,end] + p_in)*V_in))
 
-    ρ_in = @view u_in[:,1]
-    V_in = velocity(conservation_law, u_in)
-    p_in = pressure(conservation_law, u_in)
-    f_in = Array{Float64}(undef, size(u_in)..., d)
-    physical_flux!(f_in, conservation_law, u_in)
+        V_out = SVector{d}(u_out[i,m+1] / u_out[i,1] for m in 1:d)
+        p_out = (conservation_law.γ-1) * (u_out[i,end] - (0.5/u_out[i,1]) * 
+         (sum(u_out[i,m+1]^2 for m in 1:d)))
+         f_out = vcat(SMatrix{1,d}(u_out[i,2:end-1]),
+            SMatrix{d,d}(u_out[i,m+1]*V_out[n] + I[m,n]*p_out
+                for m in 1:d, n in 1:d),
+            SMatrix{1,d}((u_out[i,end] + p_out)*V_out))
 
-    ρ_out = @view u_out[:,1]
-    V_out = velocity(conservation_law, u_out)
-    p_out = pressure(conservation_law, u_out)
-    f_out = Array{Float64}(undef, size(u_out)..., d)
-    physical_flux!(f_out, conservation_law, u_out)
-
-    Vn_in = sum(V_in[:,m] .* n[m] for m in 1:d)
-    Vn_out = sum(V_out[:,m] .* n[m] for m in 1:d)
-    c_in = sqrt.(abs.(γ*p_in ./ ρ_in))
-    c_out = sqrt.(abs.(γ*p_out ./ ρ_out))
-
-    a = max.(abs.(Vn_in), abs.(Vn_out)) .+ max.(c_in, c_out)
-
-    return 0.5*(hcat([sum((f_in[:,e,m] .+ f_out[:,e,m]) .* n[m] for m in 1:d)
-            for e in 1:N_c]...) .- λ*a.*(u_out .- u_in))
+        Vn_in = sum(V_in[m] * n_f[m][i] for m in 1:d) 
+        Vn_out = sum(V_out[m] * n_f[m][i] for m in 1:d)
+        c_in = sqrt(conservation_law.γ*p_in / u_in[i,1])
+        c_out = sqrt(conservation_law.γ*p_out / u_out[i,1])
+        a = max(abs(Vn_in), abs(Vn_out)) + max(c_in, c_out)
+        
+        f_star[i,:] .= 0.5 *
+            (sum((f_in[:,m] .+ f_out[:,m])*n_f[m][i] for m in 1:d) .-
+            numerical_flux.λ*a*(u_out[i,:] .- u_in[i,:]))
+    end
 end
 
 """
@@ -145,14 +146,14 @@ function evaluate(f::IsentropicVortex, x::NTuple{2,Float64},t::Float64=0.0)
     vel = SVector(v1, v2)
     p = 25.0
 
-    rt = p / rho                  # ideal gas equation
+    rt = p / rho                  
     t_loc = 0.0
-    cent = inicenter + vel*t_loc      # advection of center
-    cent = SVector(x) - cent # distance to center point
+    cent = inicenter + vel*t_loc
+    cent = SVector(x) - cent 
     cent = SVector(-cent[2], cent[1])
     r2 = cent[1]^2 + cent[2]^2
-    du = iniamplitude / (2*π) * exp(0.5 * (1 - r2)) # vel. perturbation
-    dtemp = -(gamma - 1) / (2 * gamma * rt) * du^2 # isentropic
+    du = iniamplitude / (2*π) * exp(0.5 * (1 - r2))
+    dtemp = -(gamma - 1) / (2 * gamma * rt) * du^2
     rho = rho * (1 + dtemp)^(1 / (gamma - 1))
     vel = vel + du * cent
     v1, v2 = vel

@@ -41,22 +41,20 @@ end
 
 const BurgersType{d} = Union{InviscidBurgersEquation{d}, ViscousBurgersEquation{d}}
 
-function InviscidBurgersEquation()
-    return InviscidBurgersEquation((1.0,))
-end
-
-function ViscousBurgersEquation(b::Float64)
-    return ViscousBurgersEquation((1.0,), b)
-end
+InviscidBurgersEquation() = InviscidBurgersEquation((1.0,))
+ViscousBurgersEquation(b::Float64) = ViscousBurgersEquation((1.0,), b)
 
 """
 Evaluate the flux for the inviscid Burgers' equation
 
 `F(u) = a ½u^2`
 """
-@inline function physical_flux(conservation_law::BurgersType{d}, 
+function physical_flux!(f::AbstractArray{Float64,3},
+    conservation_law::BurgersType{d}, 
     u::AbstractMatrix{Float64}) where {d}
-    return Tuple(conservation_law.a[m] * 0.5.*u.^2 for m in 1:d)
+    @inbounds for m in 1:d
+        f[:,:,m] .= 0.5* conservation_law.a[m] * u.^2
+    end
 end
 
 """
@@ -64,24 +62,29 @@ Evaluate the flux for the viscous Burgers' equation
 
 `F(u,q) = a ½u^2 - bq`
 """
-@inline function physical_flux(conservation_law::ViscousBurgersEquation{d},
+function physical_flux!(f::AbstractArray{Float64,3},
+    conservation_law::ViscousBurgersEquation{d},
     u::AbstractMatrix{Float64}, q::NTuple{d,AbstractMatrix{Float64}}) where {d}
-    return Tuple(conservation_law.a[m]*0.5.*u.^2 - 
-        conservation_law.b*q[m] for m in 1:d)
+    @inbounds for m in 1:d
+        f[:,:,m] .= 0.5*conservation_law.a[m] * u.^2 .- 
+            conservation_law.b .* q[:,:,m]
+    end
 end
 
 """
 Evaluate the Lax-Friedrichs flux for Burgers' equation
 `F*(u⁻, u⁺, n) = ½a⋅n(½(u⁻)² + ½(u⁺)²) + ½λ max(|au⁻⋅n|,|au⁺⋅n|)(u⁺ - u⁻)`
 """
-@inline function numerical_flux(
+function numerical_flux!(
+    f_star::AbstractMatrix{Float64},
     conservation_law::BurgersType{d}, numerical_flux::LaxFriedrichsNumericalFlux, 
     u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
     n::NTuple{d, Vector{Float64}}) where {d}
 
     a_n = sum(conservation_law.a[m].*n[m] for m in 1:d)
-    return (0.25*a_n.*(u_in.^2 + u_out.^2) - 
-        numerical_flux.λ*0.5*max.(abs.(a_n.*u_out),abs.(a_n.*u_in)).*(u_out - u_in))
+    f_star .= 0.25*a_n.*(u_in.^2 .+ u_out.^2) .- 
+        numerical_flux.λ*0.5 * 
+        max.(abs.(a_n*u_out),abs.(a_n*u_in)) .* (u_out .- u_in)
 end
 
 """
@@ -89,14 +92,16 @@ Evaluate the interface normal solution for the viscous Burgers' equation using t
 
 `U*(u⁻, u⁺, n) = ½(u⁻ + u⁺)n`
 """
-@inline function numerical_flux(::ViscousBurgersEquation{d},
-    ::BR1,u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
+function numerical_flux!(u_nstar::AbstractArray{Float64,3},
+    ::ViscousBurgersEquation{d},
+    ::BR1, u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
     n::NTuple{d, Vector{Float64}}) where {d}
 
-    # average both sides
-    u_avg = 0.5*(u_in + u_out)
+    u_avg = 0.5*(u_in .+ u_out)
 
-    return Tuple(u_avg.*n[m] for m in 1:d)
+    @inbounds for m in 1:d
+        u_nstar[:,:,m] .= u_avg.*n[m]
+    end
 end
 
 """
@@ -104,18 +109,15 @@ Evaluate the numerical flux for the viscous Burgers' equation using the BR1 appr
 
 F*(u⁻, u⁺, q⁻, q⁺, n) = ½(F²(u⁻,q⁻) + F²(u⁺, q⁺))⋅n
 """
-@inline function numerical_flux(conservation_law::ViscousBurgersEquation{d},
+function numerical_flux!(f_star::AbstractMatrix{Float64},
+    conservation_law::ViscousBurgersEquation{d},
     ::BR1, u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
-    q_in::NTuple{d,AbstractMatrix{Float64}}, q_out::NTuple{d,AbstractMatrix{Float64}}, 
+    q_in::AbstractArray{Float64,3}, q_out::AbstractArray{Float64,3}, 
     n::NTuple{d, Vector{Float64}}) where {d}
 
     # average both sides
-    q_avg = Tuple(0.5*(q_in[m] + q_out[m]) for m in 1:d)
-
-    # Note that if you give it scaled normal nJf, 
-    # the flux will be appropriately scaled by Jacobian too
-    # returns vector of length N_f 
-    return -1.0*sum(conservation_law.b*q_avg[m] .* n[m] for m in 1:d)
+    minus_q_avg = -0.5*(q_in .+ q_out)
+    f_star .+= sum(conservation_law.b * minus_q_avg[:,:,m] .* n[m] for m in 1:d)
 end
 
 function evaluate(

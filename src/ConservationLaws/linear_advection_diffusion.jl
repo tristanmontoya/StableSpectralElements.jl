@@ -81,14 +81,15 @@ end
 Evaluate the upwind/blended/central advective numerical flux
 `F*(u⁻, u⁺, n) = ½a⋅n(u⁻ + u⁺) + ½λ|a⋅n|(u⁺ - u⁻)`
 """
-function numerical_flux(conservation_law::AdvectionType{d},
+function numerical_flux!(f_star::AbstractMatrix{Float64},
+    conservation_law::AdvectionType{d},
     numerical_flux::LaxFriedrichsNumericalFlux,
     u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
     n::NTuple{d, Vector{Float64}}) where {d}
 
     a_n = sum(conservation_law.a[m].*n[m] for m in 1:d)
     
-    return 0.5.*(a_n.*(u_in .+ u_out) .- 
+    f_star .= 0.5.*(a_n.*(u_in .+ u_out) .- 
         numerical_flux.λ.*abs.(a_n).*(u_out .- u_in))
 end
 
@@ -97,13 +98,14 @@ Evaluate the central advective numerical flux
 
 `F*(u⁻, u⁺, n) = ½a⋅n(u⁻ + u⁺)`
 """
-function numerical_flux(conservation_law::AdvectionType{d},
+function numerical_flux!(
+    f_star::AbstractMatrix{Float64},
+    conservation_law::AdvectionType{d},
     ::EntropyConservativeFlux,
     u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
     n::NTuple{d, Vector{Float64}}) where {d}
 
-    a_n = sum(conservation_law.a[m].*n[m] for m in 1:d)
-    return 0.5*a_n.*(u_in .+ u_out)
+    f_star .= 0.5*sum(conservation_law.a[m].*n[m] for m in 1:d)*(u_in .+ u_out)
 end
 
 """
@@ -121,15 +123,14 @@ function numerical_flux!(u_nstar::AbstractArray{Float64,3},
     @inbounds for m in 1:d
         u_nstar[:,:,m] .= u_avg.*n[m]
     end
-    return u_nstar
 end
 
 """
-Evaluate the numerical flux for the (advection-)diffusion equation using the BR1 approach
+Evaluate the numerical flux for the (advection-)diffusion equation using the BR1 approach (note that this gets added to the f_star from the advective flux)
 
 `F*(u⁻, u⁺, q⁻, q⁺, n) = ½(F²(u⁻,q⁻) + F²(u⁺, q⁺))⋅n`
 """
-function numerical_flux(
+function numerical_flux!(f_star::AbstractMatrix{Float64},
     conservation_law::LinearAdvectionDiffusionEquation{d},
     ::BR1, u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
     q_in::AbstractArray{Float64,3}, q_out::AbstractArray{Float64,3}, 
@@ -137,7 +138,7 @@ function numerical_flux(
 
     # average both sides
     minus_q_avg = -0.5*(q_in .+ q_out)
-    return sum(conservation_law.b * minus_q_avg[:,:,m] .* n[m] for m in 1:d)
+    f_star .+= sum(conservation_law.b * minus_q_avg[:,:,m] .* n[m] for m in 1:d)
 end
 
 function evaluate(

@@ -18,8 +18,9 @@ Evaluate semi-discrete residual for a first-order problem
     @views @timeit "eval residual" Threads.@threads for k in 1:N_e
         physical_flux!(f_q[:,:,:,k], conservation_law, u_q[:,:,k])
 
-        f_f[:,:,k] .= numerical_flux(conservation_law, inviscid_numerical_flux, 
-            u_f[:,k,:], u_f[CI[connectivity[:,k]],:], operators.n_f[k])
+        numerical_flux!(f_f[:,:,k],
+            conservation_law, inviscid_numerical_flux, u_f[:,k,:], 
+            u_f[CI[connectivity[:,k]],:], operators.n_f[k])
 
         fill!(dudt[:,:,k],0.0)
 
@@ -52,8 +53,9 @@ end
     @views @timeit "eval residual" Threads.@threads for k in 1:N_e
         physical_flux!(f_q[:,:,:,k], conservation_law, u_q[:,:,k])
 
-        f_f[:,:,k] .= numerical_flux(conservation_law, inviscid_numerical_flux, 
-            u_f[:,k,:], u_f[CI[connectivity[:,k]],:], n_f[k])
+        numerical_flux!(f_f[:,:,k],
+            conservation_law, inviscid_numerical_flux, u_f[:,k,:], 
+            u_f[CI[connectivity[:,k]],:], n_f[k])
 
         fill!(r_q[:,:,k],0.0)
         @inbounds for n in 1:d
