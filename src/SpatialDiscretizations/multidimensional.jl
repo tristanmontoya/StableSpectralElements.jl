@@ -58,7 +58,7 @@ function ReferenceApproximation(
 
     (; rstq, rstf, rstp, wq) = reference_element
 
-    VDM, ∇VDM... = basis(element_type, p, rstq...) 
+    VDM, ∇VDM... = basis(element_type, approx_type.p, rstq...) 
     ∇V = Tuple(LinearMap(∇VDM[m]) for m in 1:d)
     V = LinearMap(I, length(wq))
     V_plot = LinearMap(vandermonde(element_type, approx_type.p, rstp...)) 

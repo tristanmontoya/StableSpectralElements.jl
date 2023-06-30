@@ -25,6 +25,7 @@ using BenchmarkTools
         u_f[CI[connectivity[:,k]],:], operators.n_f[k])
     
     @timeit "fill w zeros" fill!(view(dudt,:,:,k),0.0)
+    
     @inbounds for m in 1:d
         @timeit "volume operators" begin
             mul!(view(temp,:,:,k),operators.VOL[k][m],f_q[:,:,m,k])
