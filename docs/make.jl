@@ -10,9 +10,9 @@ makedocs(
     authors = "Tristan Montoya",
     pages = [
         "Home" => "index.md",
-        "`ConservationLaws`" => "ConservationLaws.md",
-        "`SpatialDiscretizations`" => "SpatialDiscretizations.md"
-    ],
+        "Reference" => ["`ConservationLaws`" => "ConservationLaws.md",
+            "`SpatialDiscretizations`" => "SpatialDiscretizations.md"]
+        ],
     format = Documenter.HTML(
         prettyurls = get(ENV, "CI", nothing) == "true",
         assets = ["assets/favicon.ico"],

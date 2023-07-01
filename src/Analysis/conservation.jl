@@ -66,6 +66,21 @@ function EnergyConservationAnalysis(results_path::String,
         mass_solver, N_c, N_e, V ,results_path, "energy.jld2")
 end
 
+function PrimaryConservationAnalysis(       
+    conservation_law::AbstractConservationLaw, 
+    spatial_discretization::SpatialDiscretization)
+    return PrimaryConservationAnalysis("./", conservation_law, 
+        spatial_discretization)
+end
+
+function EnergyConservationAnalysis(       
+    conservation_law::AbstractConservationLaw, 
+    spatial_discretization::SpatialDiscretization,
+    mass_solver=WeightAdjustedSolver(spatial_discretization))
+    return EnergyConservationAnalysis("./", conservation_law, 
+        spatial_discretization, mass_solver)
+end
+
 function evaluate_conservation(
     analysis::PrimaryConservationAnalysis, 
     u::Array{Float64,3})

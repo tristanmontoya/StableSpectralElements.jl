@@ -8,11 +8,18 @@ struct ErrorAnalysis{d} <: AbstractAnalysis
     results_path::String
 end
 
+function ErrorAnalysis(conservation_law::AbstractConservationLaw,
+    spatial_discretization::SpatialDiscretization,
+    error_quadrature_rule=nothing)
+    return ErrorAnalysis("./", conservation_law,
+        spatial_discretization,
+        error_quadrature_rule)
+end
+
 function ErrorAnalysis(results_path::String, 
     conservation_law::AbstractConservationLaw,
     spatial_discretization::SpatialDiscretization{d},
-    error_quadrature_rule=nothing, 
-    normalize=false) where {d}
+    error_quadrature_rule=nothing) where {d}
 
     (; N_e) = spatial_discretization
     (; xyzq) = spatial_discretization.mesh
@@ -52,7 +59,7 @@ end
 function analyze(analysis::ErrorAnalysis{d}, 
     sol::Array{Float64,3}, 
     exact_solution::AbstractGridFunction{d},
-    t::Float64=0.0; normalize=false) where {d}
+    t::Float64=0.0; normalize=false, write_to_file=true) where {d}
 
     (; N_c, N_e, WJ_err, V_err, x_err, total_volume, results_path) = analysis 
 
@@ -69,8 +76,10 @@ function analyze(analysis::ErrorAnalysis{d},
         error = sqrt.(squared_error)
     end
 
-    save(string(results_path, "error.jld2"), 
-        Dict("error_analysis" => analysis, "error" => error))
-    
+    if write_to_file
+        save(string(results_path, "error.jld2"), 
+            Dict("error_analysis" => analysis, "error" => error))
+    end
+
     return error
 end

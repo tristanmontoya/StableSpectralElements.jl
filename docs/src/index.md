@@ -18,20 +18,13 @@ StableSpectralElements.jl is a registered Julia package (compatible with Julia v
 using Pkg; Pkg.add("StableSpectralElements")
 ```
 
-## Basic Usage
+## Examples
 
 We recommend that users refer to the following Jupyter notebooks (included in the `examples` directory) for examples of how to use StableSpectralElements.jl:
 * [Linear advection-diffusion equation in 1D](https://github.com/tristanmontoya/StableSpectralElements.jl/tree/main/examples/advection_diffusion_1d.ipynb)
 * [Linear advection equation in 2D](https://github.com/tristanmontoya/StableSpectralElements.jl/tree/main/examples/advection_2d.ipynb)
+* [Isentropic Euler vortex in 2D](https://github.com/tristanmontoya/StableSpectralElements.jl/tree/main/examples/euler_vortex_2d.ipynb)
 * [Linear advection equation in 3D](https://github.com/tristanmontoya/StableSpectralElements.jl/tree/main/examples/advection_3d.ipynb)
-
-## Modules
-StableSpectralElements.jl is structured as several submodules, which are exported with the top-level module `StableSpectralElements`; below is a list of those most important for new users to familiarize themselves with:
-* [`ConservationLaws`](ConservationLaws.md)
-* [`SpatialDiscretizations`](SpatialDiscretizations.md)
-* `Solvers`
-* `Visualize`
-* `Analysis`
 
 ## License
 This software is released under the [GPLv3 license](https://www.gnu.org/licenses/gpl-3.0.en.html).
