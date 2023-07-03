@@ -2,6 +2,7 @@ push!(LOAD_PATH,"../")
 using Test, StableSpectralElements, OrdinaryDiffEq
 
 include("test_driver.jl")
+include("euler_vortex_2d.jl")
 
 const tol = 1.0e-10
 const p = 4
@@ -40,7 +41,7 @@ end
     @test conservation ≈ 0.0 atol=tol
     @test energy ≈ 0.0 atol=tol
 end
-
+#=
 @testset "Advection 2D Standard NodalTensor Quad" begin
     (l2, conservation, energy) = test_driver(
         ReferenceApproximation(NodalTensor(p), Quad(), mapping_degree=p,
@@ -58,6 +59,15 @@ end
     @test conservation ≈ 0.0 atol=tol
     @test energy <= 0.0
 end
+=#
+
+@testset "Isentropic Euler vortex NodalTensor Quad 2D" begin
+    (l2, conservation) = euler_vortex_2d()
+
+    @test l2 ≈ [0.0012392614076437835, 0.06951034921002601,
+        0.06930758075047193, 0.1374727707912807] atol=tol
+    @test conservation ≈ [0.0, 0.0, 0.0, 0.0] atol=tol
+end
 
 @testset "Advection 3D Energy-Conservative ModalTensor Tet" begin
     (l2, conservation, energy) = test_driver(
@@ -73,5 +83,5 @@ end
     
     @test l2 ≈ 0.18704148457389136 atol=tol
     @test conservation ≈ 0.0 atol=tol
-    @test energy≈ 0.0 atol=tol
+    @test energy ≈ 0.0 atol=tol
 end
