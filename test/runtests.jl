@@ -41,7 +41,7 @@ end
     @test conservation ≈ 0.0 atol=tol
     @test energy ≈ 0.0 atol=tol
 end
-#=
+
 @testset "Advection 2D Standard NodalTensor Quad" begin
     (l2, conservation, energy) = test_driver(
         ReferenceApproximation(NodalTensor(p), Quad(), mapping_degree=p,
@@ -59,7 +59,6 @@ end
     @test conservation ≈ 0.0 atol=tol
     @test energy <= 0.0
 end
-=#
 
 @testset "Isentropic Euler vortex NodalTensor Quad 2D" begin
     (l2, conservation) = euler_vortex_2d()
