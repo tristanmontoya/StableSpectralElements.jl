@@ -51,11 +51,11 @@ function semidiscretize(
     if PDEType == SecondOrder && strategy isa ReferenceOperator
         @warn "Reference-operator approach only implemented for first-order equations. Using physical-operator formulation."
         return semidiscretize(Solver(conservation_law,spatial_discretization,
-            form,PhysicalOperator(),operator_algorithm,mass_matrix_solver),
+            form, PhysicalOperator(), operator_algorithm, mass_matrix_solver),
             u0, tspan)
     else
         return semidiscretize(Solver(conservation_law,spatial_discretization,
-        form,strategy,operator_algorithm,mass_matrix_solver),u0, tspan)
+        form,strategy,operator_algorithm,mass_matrix_solver), u0, tspan)
     end
 end
 

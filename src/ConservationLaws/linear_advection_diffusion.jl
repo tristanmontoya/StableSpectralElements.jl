@@ -141,6 +141,13 @@ function numerical_flux!(f_star::AbstractMatrix{Float64},
     f_star .+= sum(conservation_law.b * minus_q_avg[:,:,m] .* n[m] for m in 1:d)
 end
 
+function compute_two_point_flux(conservation_law::AdvectionType{d}, 
+    ::EntropyConservativeFlux, u_L::AbstractVector{Float64}, 
+    u_R::AbstractVector{Float64}) where {d}
+    flux_1d = (u_L[1]+ u_R[1])/2
+    return SMatrix{1,d}(conservation_law.a[m]*flux_1d for m in 1:d)
+end
+
 function evaluate(
     exact_solution::ExactSolution{d,LinearAdvectionEquation{d}, <:AbstractGridFunction{d},NoSourceTerm{d}},
     x::NTuple{d,Float64},t::Float64=0.0) where {d}

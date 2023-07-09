@@ -50,8 +50,7 @@ Evaluate the flux for the inviscid Burgers' equation
 `F(u) = a ½u^2`
 """
 function physical_flux!(f::AbstractArray{Float64,3},
-    conservation_law::BurgersType{d}, 
-    u::AbstractMatrix{Float64}) where {d}
+    conservation_law::BurgersType{d}, u::AbstractMatrix{Float64}) where {d}
     @inbounds for m in 1:d
         f[:,:,m] .= 0.5* conservation_law.a[m] * u.^2
     end
@@ -118,6 +117,13 @@ function numerical_flux!(f_star::AbstractMatrix{Float64},
     # average both sides
     minus_q_avg = -0.5*(q_in .+ q_out)
     f_star .+= sum(conservation_law.b * minus_q_avg[:,:,m] .* n[m] for m in 1:d)
+end
+
+function compute_two_point_flux(conservation_law::BurgersType{d}, 
+    ::EntropyConservativeFlux, u_L::AbstractVector{Float64}, 
+    u_R::AbstractVector{Float64}) where {d}
+    flux_1d = (u_L[1]^2 + u_L[1]*u_R[1] + u_R[1]^2)/6
+    return SMatrix{1,d}(conservation_law.a[m]*flux_1d for m in 1:d)
 end
 
 function evaluate(
