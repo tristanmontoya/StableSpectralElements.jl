@@ -42,22 +42,21 @@ end
     @test energy ≈ 0.0 atol=tol
 end
 
-@testset "Advection 2D Standard NodalTensor Quad" begin
+@testset "Advection 2D FluxDiff NodalTensor Quad" begin
     (l2, conservation, energy) = test_driver(
         ReferenceApproximation(NodalTensor(p), Quad(), mapping_degree=p,
         volume_quadrature_rule=LGLQuadrature(p), facet_quadrature_rule=LGLQuadrature(p)), 
         LinearAdvectionEquation((1.0,1.0)),
         InitialDataSine(1.0,(2*π, 2*π)),
-        StandardForm(
-            mapping_form=StandardMapping(),
+        FluxDifferencingForm(
             inviscid_numerical_flux=LaxFriedrichsNumericalFlux(1.0)),
         BLASAlgorithm(),
-        PhysicalOperator(), 1.0, 2, 1.0, 1.0/100.0, 0.1,
-        "test_advection_2d_dgsem_standard")
+        ReferenceOperator(), 1.0, 2, 1.0, 1.0/100.0, 0.1,
+        "test_advection_2d_dgsem_fluxdiff")
     
-    @test l2 ≈ 0.04930951393074396 atol=tol
+    @test l2 ≈ 0.04790536605026519 atol=tol
     @test conservation ≈ 0.0 atol=tol
-    @test energy <= 0.0
+    @test energy <= tol
 end
 
 @testset "Isentropic Euler vortex NodalTensor Quad 2D" begin
@@ -77,10 +76,10 @@ end
             mapping_form=SkewSymmetricMapping(),
             inviscid_numerical_flux=LaxFriedrichsNumericalFlux(0.0)),
         DefaultOperatorAlgorithm(),
-        ReferenceOperator(), 1.0, 2, 1.0, 1.0/100.0, 0.1,
+        ReferenceOperator(), 1.0, 2, 1.0, 1.0/50.0, 0.1,
         "test_advection_3d_collapsed_econ")
     
-    @test l2 ≈ 0.18704148457389136 atol=tol
+    @test l2 ≈ 0.18683083992263985 atol=tol
     @test conservation ≈ 0.0 atol=tol
     @test energy ≈ 0.0 atol=tol
 end

@@ -18,13 +18,12 @@ function euler_vortex_2d()
 
     spatial_discretization = SpatialDiscretization(mesh, reference_approximation)
 
-
     results_path = save_project(conservation_law,
         spatial_discretization, exact_solution, form, (0.0, T),
         "results/euler_vortex_2d/", overwrite=true, clear=true);
 
     ode = semidiscretize(conservation_law, spatial_discretization, 
-        exact_solution, form, (0.0, T));
+        exact_solution, form, (0.0, T), PhysicalOperator());
 
     dt = T/1000
     sol = solve(ode, CarpenterKennedy2N54(williamson_condition=false),
