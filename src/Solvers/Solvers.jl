@@ -89,17 +89,6 @@ module Solvers
         q_f::Union{Nothing,Array{Float64,4}}
     end
 
-    struct PreAllocatedArraysFluxDifferencing{d,N_p,N_q,N_f,N_c,N_e} <: AbstractPreallocatedArrays{d,FirstOrder,N_p,N_q,N_f,N_c,N_e}
-        F_q::Array{Float64,5}
-        f_f::Array{Float64,3}
-        f_n::Array{Float64,3}
-        u_q::Array{Float64,3}
-        r_q::Array{Float64,3}
-        u_f::Array{Float64,3}
-        temp::Array{Float64,3}
-        CI::CartesianIndices
-    end
-
     struct Solver{d,ResidualForm,PDEType,OperatorType,N_p,N_q,N_f,N_c,N_e}
         conservation_law::AbstractConservationLaw{d,PDEType}
         operators::OperatorType
@@ -109,8 +98,7 @@ module Solvers
         preallocated_arrays::AbstractPreallocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}
     end
 
-    function PreAllocatedArrays{d,FirstOrder,N_p,N_q,N_f,N_c,N_e}(
-        temp_size::Int=N_p) where {d,N_p,N_q,N_f,N_c,N_e}
+    function PreAllocatedArrays{d,FirstOrder,N_p,N_q,N_f,N_c,N_e}() where {d,N_p,N_q,N_f,N_c,N_e}
         return PreAllocatedArrays{d,FirstOrder,N_p,N_q,N_f,N_c,N_e}(
             Array{Float64}(undef,N_q, N_c, d, N_e),
             Array{Float64}(undef,N_f, N_c, N_e),
@@ -118,12 +106,11 @@ module Solvers
             Array{Float64}(undef,N_q, N_c, N_e),
             Array{Float64}(undef,N_q, N_c, N_e),
             Array{Float64}(undef,N_f, N_e, N_c), #note switched order
-            Array{Float64}(undef,temp_size, N_c, N_e),
+            Array{Float64}(undef,N_q, N_c, N_e),
             CartesianIndices((N_f,N_e)), nothing, nothing, nothing)
     end
 
-    function PreAllocatedArrays{d,SecondOrder,N_p,N_q,N_f,N_c,N_e}(
-        temp_size::Int=N_p) where {d,N_p,N_q,N_f,N_c,N_e}
+    function PreAllocatedArrays{d,SecondOrder,N_p,N_q,N_f,N_c,N_e}() where {d,N_p,N_q,N_f,N_c,N_e}
         return PreAllocatedArrays{d,SecondOrder,N_p,N_q,N_f,N_c,N_e}(
             Array{Float64}(undef,N_q, N_c, d, N_e),
             Array{Float64}(undef,N_f, N_c, N_e),
@@ -131,24 +118,11 @@ module Solvers
             Array{Float64}(undef,N_q, N_c, N_e),
             Array{Float64}(undef,N_q, N_c, N_e),
             Array{Float64}(undef,N_f, N_e, N_c), #note switched order
-            Array{Float64}(undef,temp_size, N_c, N_e),
+            Array{Float64}(undef,N_q, N_c, N_e),
             CartesianIndices((N_f,N_e)),
             Array{Float64}(undef,N_f, N_c, d, N_e),
             Array{Float64}(undef,N_q, N_c, d, N_e),
             Array{Float64}(undef,N_f, N_e, N_c, d)) #note switched order
-    end
-
-    function PreAllocatedArraysFluxDifferencing{d,N_p,N_q,N_f,N_c,N_e}(
-        temp_size::Int=N_p) where {d,N_p,N_q,N_f,N_c,N_e}
-        return PreAllocatedArraysFluxDifferencing{d,N_p,N_q,N_f,N_c,N_e}(
-            Array{Float64}(undef,N_q, N_q, N_c, d, N_e),
-            Array{Float64}(undef,N_f, N_c, N_e),
-            Array{Float64}(undef,N_f, N_c, N_e),
-            Array{Float64}(undef,N_q, N_c, N_e),
-            Array{Float64}(undef,N_q, N_c, N_e),
-            Array{Float64}(undef,N_f, N_e, N_c), #note switched order
-            Array{Float64}(undef,temp_size, N_c, N_e),
-            CartesianIndices((N_f,N_e)))
     end
 
     function Solver(conservation_law::AbstractConservationLaw{d,PDEType},     
@@ -168,7 +142,7 @@ module Solvers
         return Solver{d,ResidualForm,PDEType,PhysicalOperators{d}, N_p, N_q, N_f, N_c, N_e}(
             conservation_law, operators, mass_solver, 
             spatial_discretization.mesh.mapP, form,
-            PreAllocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}(N_q))
+            PreAllocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}())
     end
     
     function Solver(conservation_law::AbstractConservationLaw{d,PDEType},     
@@ -205,7 +179,7 @@ module Solvers
         return Solver{d,ResidualForm,PDEType,ReferenceOperators{d}, N_p, N_q, N_f, N_c, N_e}(
             conservation_law, operators, mass_solver, 
             spatial_discretization.mesh.mapP, form,
-            PreAllocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}(N_q))
+            PreAllocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}())
     end    
 
     function Solver(conservation_law::AbstractConservationLaw{d,PDEType},     
@@ -237,7 +211,7 @@ module Solvers
     
         return Solver{d,ResidualForm,PDEType,FluxDifferencingOperators{d},N_p,N_q,N_f, N_c, N_e}(conservation_law, operators, mass_solver,
             spatial_discretization.mesh.mapP,form, 
-            PreAllocatedArraysFluxDifferencing{d,N_p,N_q,N_f,N_c,N_e}(N_q))
+            PreAllocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}())
     end    
 
     @inline function get_dof(spatial_discretization::SpatialDiscretization{d}, 

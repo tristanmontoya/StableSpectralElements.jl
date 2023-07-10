@@ -8,8 +8,7 @@
 
     fill!(r_q, 0.0)
     for i in axes(u_q,1)
-        for j in axes(u_q,1)
-        #for j in (i+1):size(u,1)
+        for j in (i+1):size(u_q,1)
             Λ_ij = SMatrix{d,d}(0.5*(Λ_q[i,:,:] .+ Λ_q[j,:,:]))
             F_ij = compute_two_point_flux(conservation_law,
                 two_point_flux, u_q[i,:],u_q[j,:])
@@ -17,7 +16,7 @@
                 diff_ij = S[m].lmap[i,j] * sum(Λ_ij[m,n] * F_ij[:,n] 
                     for n in 1:d)
                 r_q[i,:] .-= diff_ij
-                #r_q[j,:] .-= diff_ij
+                r_q[j,:] .+= diff_ij
             end
         end
     end
