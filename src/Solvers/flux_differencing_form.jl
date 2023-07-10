@@ -1,19 +1,4 @@
-function flux_matrix!(
-    F::AbstractArray{Float64,4}, # N_q x N_q x d x N_c (maybe use Static arrays)
-    conservation_law::AbstractConservationLaw,
-    two_point_flux::AbstractTwoPointFlux,
-    u::AbstractMatrix{Float64})
-
-    # compute lower triangular part of flux matrix
-    for i in axes(u,1)
-        for j in i:size(u,1)
-            F[i,j,:,:] .= compute_two_point_flux(conservation_law,
-                two_point_flux, u[i,:],u[j,:])
-        end
-    end
-end
-
-function flux_difference!(
+@inline @views function flux_difference!(
     r_q::AbstractMatrix{Float64}, # N_q x N_c 
     S::NTuple{d,<:LinearMap{Float64}}, # N_q x N_q
     conservation_law::AbstractConservationLaw{d},
@@ -28,7 +13,7 @@ function flux_difference!(
             Λ_ij = SMatrix{d,d}(0.5*(Λ_q[i,:,:] .+ Λ_q[j,:,:]))
             F_ij = compute_two_point_flux(conservation_law,
                 two_point_flux, u_q[i,:],u_q[j,:])
-            for m in 1:d
+            @inbounds for m in 1:d
                 diff_ij = S[m].lmap[i,j] * sum(Λ_ij[m,n] * F_ij[:,n] 
                     for n in 1:d)
                 r_q[i,:] .-= diff_ij
