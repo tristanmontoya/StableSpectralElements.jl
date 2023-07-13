@@ -13,7 +13,7 @@ struct InviscidBurgersEquation{d} <: AbstractConservationLaw{d,FirstOrder}
     N_c::Int
 
     function InviscidBurgersEquation(a::NTuple{d,Float64}, 
-        source_term::AbstractGridFunction{d}=NoSourceTerm()) where {d}
+        source_term::AbstractGridFunction{d}=NoSourceTerm{d}()) where {d}
         return new{d}(a, source_term, 1)
     end
 end
@@ -34,7 +34,7 @@ struct ViscousBurgersEquation{d} <: AbstractConservationLaw{d,SecondOrder}
     N_c::Int
 
     function ViscousBurgersEquation(a::NTuple{d,Float64}, b::Float64, 
-        source_term::AbstractGridFunction{d}=NoSourceTerm()) where {d}
+        source_term::AbstractGridFunction{d}=NoSourceTerm{d}()) where {d}
         return new{d}(a, b, source_term, 1)
     end
 end
@@ -49,8 +49,9 @@ Evaluate the flux for the inviscid Burgers' equation
 
 `F(u) = a ½u^2`
 """
-function physical_flux!(f::AbstractArray{Float64,3},
-    conservation_law::BurgersType{d}, u::AbstractMatrix{Float64}) where {d}
+function physical_flux!(f::AbstractArray{Float64,3}, 
+    conservation_law::InviscidBurgersEquation{d}, 
+    u::AbstractMatrix{Float64}) where {d}
     @inbounds for m in 1:d
         f[:,:,m] .= 0.5* conservation_law.a[m] * u.^2
     end
@@ -63,10 +64,10 @@ Evaluate the flux for the viscous Burgers' equation
 """
 function physical_flux!(f::AbstractArray{Float64,3},
     conservation_law::ViscousBurgersEquation{d},
-    u::AbstractMatrix{Float64}, q::NTuple{d,AbstractMatrix{Float64}}) where {d}
+    u::AbstractMatrix{Float64}, q::AbstractArray{Float64,3}) where {d}
     @inbounds for m in 1:d
         f[:,:,m] .= 0.5*conservation_law.a[m] * u.^2 .- 
-            conservation_law.b .* q[:,:,m]
+            conservation_law.b * q[:,:,m]
     end
 end
 
@@ -76,14 +77,31 @@ Evaluate the Lax-Friedrichs flux for Burgers' equation
 """
 function numerical_flux!(
     f_star::AbstractMatrix{Float64},
-    conservation_law::BurgersType{d}, numerical_flux::LaxFriedrichsNumericalFlux, 
+    conservation_law::BurgersType{d}, 
+    numerical_flux::LaxFriedrichsNumericalFlux, 
     u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
     n::NTuple{d, Vector{Float64}}) where {d}
 
     a_n = sum(conservation_law.a[m].*n[m] for m in 1:d)
-    f_star .= 0.25*a_n.*(u_in.^2 .+ u_out.^2) .- 
+    f_star .= 0.25*a_n.*(u_in.^2 .+ u_out.^2) .-
         numerical_flux.λ*0.5 * 
-        max.(abs.(a_n*u_out),abs.(a_n*u_in)) .* (u_out .- u_in)
+        max.(abs.(a_n.*u_out),abs.(a_n.*u_in)) .* (u_out .- u_in)
+end
+
+"""
+Evaluate the entropy-conservative interface flux for Burgers' equation
+`F*(u⁻, u⁺, n) = ½a⋅n(½(u⁻)² + ½(u⁺)²) + ½λ max(|au⁻⋅n|,|au⁺⋅n|)(u⁺ - u⁻)`
+"""
+function numerical_flux!(
+    f_star::AbstractMatrix{Float64},
+    conservation_law::BurgersType{d}, 
+    ::EntropyConservativeNumericalFlux, 
+    u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
+    n::NTuple{d, Vector{Float64}}) where {d}
+
+    a_n = sum(conservation_law.a[m].*n[m] for m in 1:d)
+    f_star .= 0.25*a_n.*(u_in.^2 .+ u_out.^2) .-
+        (1.0/12.0)*(a_n.*(u_out .- u_in).^2)
 end
 
 """
