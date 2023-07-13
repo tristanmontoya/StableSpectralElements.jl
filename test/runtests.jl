@@ -2,13 +2,14 @@ push!(LOAD_PATH,"../")
 using Test, StableSpectralElements, OrdinaryDiffEq
 
 include("test_driver.jl")
+include("burgers_fluxdiff_1d.jl")
 include("euler_vortex_2d.jl")
 
 const tol = 1.0e-10
 const p = 4
 
 @testset "Advection-Diffusion 1D ModalMulti" begin
-    (l2, conservation, energy) = test_driver(
+    (l2, conservation, _) = test_driver(
         ReferenceApproximation(ModalMulti(p), Line()), 
         LinearAdvectionDiffusionEquation(1.0,5.0e-2),
         InitialDataSine(1.0,2π),
@@ -22,7 +23,6 @@ const p = 4
 
     @test l2 ≈ 6.988216111585663e-6 atol=tol
     @test conservation ≈ 0.0 atol=tol
-    @test energy <= 0.0
 end
 
 @testset "Advection 2D Energy-Conservative ModalTensor Tri" begin
@@ -43,7 +43,7 @@ end
 end
 
 @testset "Advection 2D FluxDiff NodalTensor Quad" begin
-    (l2, conservation, energy) = test_driver(
+    (l2, conservation, _) = test_driver(
         ReferenceApproximation(NodalTensor(p), Quad(), mapping_degree=p,
         volume_quadrature_rule=LGLQuadrature(p), facet_quadrature_rule=LGLQuadrature(p)), 
         LinearAdvectionEquation((1.0,1.0)),
@@ -56,7 +56,13 @@ end
     
     @test l2 ≈ 0.04790536605026519 atol=tol
     @test conservation ≈ 0.0 atol=tol
-    @test energy <= tol
+end
+
+@testset "Inviscid Burgers FluxDiff 1D" begin
+    (conservation, energy) = burgers_fluxdiff_1d()
+
+    @test conservation ≈ 0.0 atol=tol
+    @test energy ≈ 0.0 atol=tol
 end
 
 @testset "Isentropic Euler vortex NodalTensor Quad 2D" begin

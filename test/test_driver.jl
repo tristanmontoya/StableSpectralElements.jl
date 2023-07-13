@@ -51,5 +51,5 @@ function test_driver(
         load_time_steps(results_path))
 
     return (error..., maximum(abs.(conservation.dEdt[:,1])), 
-        maximum(energy.dEdt[:,1]))
+        maximum(abs.(energy.dEdt[:,1])))
 end
