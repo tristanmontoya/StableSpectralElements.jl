@@ -103,6 +103,8 @@ function numerical_flux!(f_star::AbstractMatrix{Float64},
     f_star .+= sum(conservation_law.b * minus_q_avg[:,:,m] .* n[m] for m in 1:d)
 end
 
+@inline conservative_to_primitive(::BurgersType, u) = u
+
 @inline function wave_speed(conservation_law::BurgersType{d},
     u_in::AbstractVector{Float64}, u_out::AbstractVector{Float64},
     n::NTuple{d, Float64}) where {d}

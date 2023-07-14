@@ -48,7 +48,8 @@ end
 
 const EulerType{d} = Union{EulerEquations{d}, NavierStokesEquations{d}}
 
-function conservative_to_primitive(u::AbstractVector{Float64})
+@inline function conservative_to_primitive(conservation_law::EulerType{d},
+    u::AbstractVector{Float64}) where {d}
     return vcat(u[1], SVector{d}(u[m+1] / u[1] for m in 1:d),
         (conservation_law.γ-1) * (u[end] - (0.5/u[1]) * 
         (sum(u[m+1]^2 for m in 1:d))))
