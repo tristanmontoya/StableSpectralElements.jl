@@ -5,7 +5,7 @@ module ConservationLaws
     using LinearAlgebra: mul!, I
     import ..GridFunctions: AbstractGridFunction, NoSourceTerm, InitialDataSine, InitialDataGaussian, InitialDataGassner, SourceTermGassner, evaluate
 
-    export physical_flux!, numerical_flux!, compute_two_point_flux, AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, NoInviscidFlux, NoViscousFlux, LaxFriedrichsNumericalFlux, RoeNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, EntropyConservativeFlux, NoTwoPointFlux, ExactSolution
+    export physical_flux!, numerical_flux!, compute_two_point_flux, wave_speed,AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, NoInviscidFlux, NoViscousFlux, LaxFriedrichsNumericalFlux, RoeNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, EntropyConservativeFlux, NoTwoPointFlux, ExactSolution
 
     abstract type AbstractConservationLaw{d, PDEType} end
     abstract type AbstractPDEType end
@@ -44,6 +44,40 @@ module ConservationLaws
     struct ConservativeFlux <: AbstractTwoPointFlux end
     struct EntropyConservativeFlux <: AbstractTwoPointFlux end
     struct NoTwoPointFlux <: AbstractTwoPointFlux end
+
+    function numerical_flux!(
+        f_star::AbstractMatrix{Float64},
+        conservation_law::AbstractConservationLaw{d}, 
+        numerical_flux::LaxFriedrichsNumericalFlux,
+        u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
+        n::NTuple{d, Vector{Float64}},
+        two_point_flux::AbstractTwoPointFlux=ConservativeFlux()) where {d}
+        
+        @views for i in axes(u_in, 1)
+            f_s = compute_two_point_flux(conservation_law, two_point_flux,
+                u_in[i,:], u_out[i,:])
+            f_star[i,:] .= sum(f_s[:,m]*n[m][i] for m in 1:d) .- 
+                numerical_flux.λ*0.5 * 
+                wave_speed(conservation_law, u_in[i,:], u_out[i,:], 
+                    Tuple(n[m][i] for m in 1:d)) .* 
+                    (u_out[i,:] .- u_in[i,:])
+        end
+    end
+
+    function numerical_flux!(
+        f_star::AbstractMatrix{Float64},
+        conservation_law::AbstractConservationLaw{d}, 
+        ::EntropyConservativeNumericalFlux,
+        u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
+        n::NTuple{d, Vector{Float64}},
+        two_point_flux::AbstractTwoPointFlux=ConservativeFlux()) where {d}
+        
+        @views for i in axes(u_in, 1)
+            f_s = compute_two_point_flux(conservation_law, two_point_flux,
+                u_in[i,:], u_out[i,:])
+            f_star[i,:] .= sum(f_s[:,m]*n[m][i] for m in 1:d)
+        end
+    end
 
     """Generic structure for exact solution to PDE (may be deprecated in future versions)"""
     struct ExactSolution{d,ConservationLaw,InitialData,SourceTerm} <: AbstractGridFunction{d}

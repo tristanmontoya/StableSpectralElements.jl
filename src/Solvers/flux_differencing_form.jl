@@ -41,7 +41,7 @@ end
     @views @timeit "eval residual" Threads.@threads for k in 1:N_e
         numerical_flux!(f_f[:,:,k],
             conservation_law, inviscid_numerical_flux, u_f[:,k,:], 
-            u_f[CI[connectivity[:,k]],:], n_f[k])
+            u_f[CI[connectivity[:,k]],:], n_f[k], two_point_flux)
 
         flux_difference!(r_q[:,:,k], S, conservation_law, 
             two_point_flux, Λ_q[:,:,:,k], u_q[:,:,k])

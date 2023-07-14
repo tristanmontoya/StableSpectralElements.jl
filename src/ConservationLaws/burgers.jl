@@ -72,39 +72,6 @@ function physical_flux!(f::AbstractArray{Float64,3},
 end
 
 """
-Evaluate the Lax-Friedrichs flux for Burgers' equation
-`F*(u⁻, u⁺, n) = ½a⋅n(½(u⁻)² + ½(u⁺)²) + ½λ max(|au⁻⋅n|,|au⁺⋅n|)(u⁺ - u⁻)`
-"""
-function numerical_flux!(
-    f_star::AbstractMatrix{Float64},
-    conservation_law::BurgersType{d}, 
-    numerical_flux::LaxFriedrichsNumericalFlux, 
-    u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
-    n::NTuple{d, Vector{Float64}}) where {d}
-
-    a_n = sum(conservation_law.a[m].*n[m] for m in 1:d)
-    f_star .= 0.25*a_n.*(u_in.^2 .+ u_out.^2) .-
-        numerical_flux.λ*0.5 * 
-        max.(abs.(a_n.*u_out),abs.(a_n.*u_in)) .* (u_out .- u_in)
-end
-
-"""
-Evaluate the entropy-conservative interface flux for Burgers' equation
-`F*(u⁻, u⁺, n) = ½a⋅n(½(u⁻)² + ½(u⁺)²) + ½λ max(|au⁻⋅n|,|au⁺⋅n|)(u⁺ - u⁻)`
-"""
-function numerical_flux!(
-    f_star::AbstractMatrix{Float64},
-    conservation_law::BurgersType{d}, 
-    ::EntropyConservativeNumericalFlux, 
-    u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
-    n::NTuple{d, Vector{Float64}}) where {d}
-
-    a_n = sum(conservation_law.a[m].*n[m] for m in 1:d)
-    f_star .= 0.25*a_n.*(u_in.^2 .+ u_out.^2) .-
-        (1.0/12.0)*(a_n.*(u_out .- u_in).^2)
-end
-
-"""
 Evaluate the interface normal solution for the viscous Burgers' equation using the BR1 approach
 
 `U*(u⁻, u⁺, n) = ½(u⁻ + u⁺)n`
@@ -132,15 +99,28 @@ function numerical_flux!(f_star::AbstractMatrix{Float64},
     q_in::AbstractArray{Float64,3}, q_out::AbstractArray{Float64,3}, 
     n::NTuple{d, Vector{Float64}}) where {d}
 
-    # average both sides
     minus_q_avg = -0.5*(q_in .+ q_out)
     f_star .+= sum(conservation_law.b * minus_q_avg[:,:,m] .* n[m] for m in 1:d)
 end
 
-function compute_two_point_flux(conservation_law::BurgersType{d}, 
+@inline function wave_speed(conservation_law::BurgersType{d},
+    u_in::AbstractVector{Float64}, u_out::AbstractVector{Float64},
+    n::NTuple{d, Float64}) where {d}
+    a_n = sum(conservation_law.a[m]*n[m] for m in 1:d)
+    return max.(abs.(a_n*u_in),abs.(a_n*u_out))
+end
+
+@inline function compute_two_point_flux(conservation_law::BurgersType{d}, 
     ::EntropyConservativeFlux, u_L::AbstractVector{Float64}, 
     u_R::AbstractVector{Float64}) where {d}
     flux_1d = (u_L[1]^2 + u_L[1]*u_R[1] + u_R[1]^2)/6
+    return SMatrix{1,d}(conservation_law.a[m]*flux_1d for m in 1:d)
+end
+
+@inline function compute_two_point_flux(conservation_law::BurgersType{d}, 
+    ::ConservativeFlux, u_L::AbstractVector{Float64}, 
+    u_R::AbstractVector{Float64}) where {d}
+    flux_1d = (u_L[1]^2 + u_R[1]^2)/4.0
     return SMatrix{1,d}(conservation_law.a[m]*flux_1d for m in 1:d)
 end
 

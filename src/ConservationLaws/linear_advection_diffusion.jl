@@ -78,37 +78,6 @@ function physical_flux!(f::AbstractArray{Float64,3},
 end
 
 """
-Evaluate the upwind/blended/central advective numerical flux
-`F*(u⁻, u⁺, n) = ½a⋅n(u⁻ + u⁺) + ½λ|a⋅n|(u⁺ - u⁻)`
-"""
-function numerical_flux!(f_star::AbstractMatrix{Float64},
-    conservation_law::AdvectionType{d},
-    numerical_flux::LaxFriedrichsNumericalFlux,
-    u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
-    n::NTuple{d, Vector{Float64}}) where {d}
-
-    a_n = sum(conservation_law.a[m].*n[m] for m in 1:d)
-    
-    f_star .= 0.5.*(a_n.*(u_in .+ u_out) .- 
-        numerical_flux.λ.*abs.(a_n).*(u_out .- u_in))
-end
-
-"""
-Evaluate the central advective numerical flux
-
-`F*(u⁻, u⁺, n) = ½a⋅n(u⁻ + u⁺)`
-"""
-function numerical_flux!(
-    f_star::AbstractMatrix{Float64},
-    conservation_law::AdvectionType{d},
-    ::EntropyConservativeFlux,
-    u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
-    n::NTuple{d, Vector{Float64}}) where {d}
-
-    f_star .= 0.5*sum(conservation_law.a[m].*n[m] for m in 1:d)*(u_in .+ u_out)
-end
-
-"""
 Evaluate the interface normal solution for the (advection-)diffusion equation using the BR1 approach
 
 `U*(u⁻, u⁺, n) = ½(u⁻ + u⁺)n`
@@ -141,9 +110,15 @@ function numerical_flux!(f_star::AbstractMatrix{Float64},
     f_star .+= sum(conservation_law.b * minus_q_avg[:,:,m] .* n[m] for m in 1:d)
 end
 
-function compute_two_point_flux(conservation_law::AdvectionType{d}, 
-    ::EntropyConservativeFlux, u_L::AbstractVector{Float64}, 
-    u_R::AbstractVector{Float64}) where {d}
+@inline function wave_speed(conservation_law::AdvectionType{d},
+    ::AbstractVector{Float64}, ::AbstractVector{Float64}, 
+    n::NTuple{d, Float64}) where {d}
+    return abs(sum(conservation_law.a[m]*n[m] for m in 1:d))
+end
+
+@inline function compute_two_point_flux(conservation_law::AdvectionType{d}, 
+    ::Union{EntropyConservativeFlux,ConservativeFlux},
+    u_L::AbstractVector{Float64}, u_R::AbstractVector{Float64}) where {d}
     flux_1d = (u_L[1]+ u_R[1])/2
     return SMatrix{1,d}(conservation_law.a[m]*flux_1d for m in 1:d)
 end
@@ -156,7 +131,9 @@ function evaluate(
     
     if !exact_solution.periodic 
         z = Tuple(x[m] - conservation_law.a[m]*t for m in 1:d)
-    else z = x end
+    else 
+        z = x 
+    end
 
     return evaluate(initial_data,z)
 end
@@ -180,7 +157,7 @@ function evaluate(
     exact_solution::ExactSolution{d,LinearAdvectionDiffusionEquation{d}, InitialDataSine{d},NoSourceTerm{d}},
     x::NTuple{d,Float64},t::Float64=0.0) where {d}
     
-    (; A, k) = exact_solution.initial_data
+    (; k) = exact_solution.initial_data
     (; a, b) = exact_solution.conservation_law
 
     if !exact_solution.periodic z = Tuple(x[m] - a[m]*t for m in 1:d)

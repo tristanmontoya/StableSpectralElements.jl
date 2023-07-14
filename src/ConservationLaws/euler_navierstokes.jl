@@ -48,20 +48,10 @@ end
 
 const EulerType{d} = Union{EulerEquations{d}, NavierStokesEquations{d}}
 
-function pressure(conservation_law::EulerType{d}, 
-    u::AbstractMatrix{Float64}) where {d}
-    (; γ) = conservation_law
-    ρ = @view u[:,1]
-    ρV = @view u[:,2:end-1]
-    E = @view u[:,end]
-    return (γ-1) .* (E .- (0.5./ρ) .* (sum(ρV[:,m].^2 for m in 1:d)))
-end
-
-function velocity(conservation_law::EulerType{d}, 
-    u::AbstractMatrix{Float64}) where {d}
-    ρ = @view u[:,1]
-    ρV = @view u[:,2:end-1]
-    return hcat([ρV[:,m] ./ ρ for m in 1:d]...)
+function conservative_to_primitive(u::AbstractVector{Float64})
+    return vcat(u[1], SVector{d}(u[m+1] / u[1] for m in 1:d),
+        (conservation_law.γ-1) * (u[end] - (0.5/u[1]) * 
+        (sum(u[m+1]^2 for m in 1:d))))
 end
 
 """
@@ -82,41 +72,44 @@ function physical_flux!(f::AbstractArray{Float64,3},
     end
 end
 
-"""Lax-Friedrichs/Rusanov flux for the Euler equations"""
-function numerical_flux!(f_star::AbstractMatrix{Float64},
-    conservation_law::EulerType{d},
-    numerical_flux::LaxFriedrichsNumericalFlux, 
-    u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
-    n_f::NTuple{d, Vector{Float64}}) where {d}
+@inline function wave_speed(conservation_law::EulerType{d},
+    u_in::AbstractVector{Float64}, u_out::AbstractVector{Float64},
+    n_f::NTuple{d, Float64}) where {d}
 
-    @assert size(u_in) == size(u_out) "Number of nodes on each side must match."
-    for i in axes(u_in, 1)
-        V_in = SVector{d}(u_in[i,m+1] / u_in[i,1] for m in 1:d)
-        p_in = (conservation_law.γ-1) * (u_in[i,end] - (0.5/u_in[i,1]) * 
-         (sum(u_in[i,m+1]^2 for m in 1:d)))
-        f_in = vcat(SMatrix{1,d}(u_in[i,2:end-1]),
-                    SMatrix{d,d}(u_in[i,m+1]*V_in[n] + I[m,n]*p_in 
-                        for m in 1:d, n in 1:d),
-                    SMatrix{1,d}((u_in[i,end] + p_in)*V_in))
+    V_in = SVector{d}(u_in[m+1] / u_in[1] for m in 1:d)
+    p_in = (conservation_law.γ-1) * (u_in[end] - (0.5/u_in[1]) * 
+     (sum(u_in[m+1]^2 for m in 1:d)))
+    V_out = SVector{d}(u_out[m+1] / u_out[1] for m in 1:d)
+    p_out = (conservation_law.γ-1) * (u_out[end] - (0.5/u_out[1]) * 
+     (sum(u_out[m+1]^2 for m in 1:d)))
+    Vn_in = sum(V_in[m] * n_f[m] for m in 1:d) 
+    Vn_out = sum(V_out[m] * n_f[m] for m in 1:d)
+    c_in = sqrt(conservation_law.γ*p_in / u_in[1])
+    c_out = sqrt(conservation_law.γ*p_out / u_out[1])
 
-        V_out = SVector{d}(u_out[i,m+1] / u_out[i,1] for m in 1:d)
-        p_out = (conservation_law.γ-1) * (u_out[i,end] - (0.5/u_out[i,1]) * 
-         (sum(u_out[i,m+1]^2 for m in 1:d)))
-         f_out = vcat(SMatrix{1,d}(u_out[i,2:end-1]),
-            SMatrix{d,d}(u_out[i,m+1]*V_out[n] + I[m,n]*p_out
+    return max(abs(Vn_in), abs(Vn_out)) + max(c_in, c_out)
+end
+
+@inline function compute_two_point_flux(conservation_law::EulerType{d}, 
+    ::ConservativeFlux, u_L::AbstractVector{Float64}, 
+    u_R::AbstractVector{Float64}) where {d}
+    
+    V_L = SVector{d}(u_L[m+1] / u_L[1] for m in 1:d)
+    p_L = (conservation_law.γ-1) * (u_L[end] - (0.5/u_L[1]) * 
+     (sum(u_L[m+1]^2 for m in 1:d)))
+    V_R = SVector{d}(u_R[m+1] / u_R[1] for m in 1:d)
+    p_R = (conservation_law.γ-1) * (u_R[end] - (0.5/u_R[1]) * 
+     (sum(u_R[m+1]^2 for m in 1:d)))
+
+     return 0.5*
+        (vcat(SMatrix{1,d}(u_L[2:end-1]),
+            SMatrix{d,d}(u_L[m+1]*V_L[n] + I[m,n]*p_L 
                 for m in 1:d, n in 1:d),
-            SMatrix{1,d}((u_out[i,end] + p_out)*V_out))
-
-        Vn_in = sum(V_in[m] * n_f[m][i] for m in 1:d) 
-        Vn_out = sum(V_out[m] * n_f[m][i] for m in 1:d)
-        c_in = sqrt(conservation_law.γ*p_in / u_in[i,1])
-        c_out = sqrt(conservation_law.γ*p_out / u_out[i,1])
-        a = max(abs(Vn_in), abs(Vn_out)) + max(c_in, c_out)
-        
-        f_star[i,:] .= 0.5 *
-            (sum((f_in[:,m] .+ f_out[:,m])*n_f[m][i] for m in 1:d) .-
-            numerical_flux.λ*a*(u_out[i,:] .- u_in[i,:]))
-    end
+            SMatrix{1,d}((u_L[end] + p_L)*V_L)) +
+        vcat(SMatrix{1,d}(u_R[2:end-1]),
+            SMatrix{d,d}(u_R[m+1]*V_R[n] + I[m,n]*p_R
+                for m in 1:d, n in 1:d),
+            SMatrix{1,d}((u_R[end] + p_R)*V_R)))
 end
 
 """
