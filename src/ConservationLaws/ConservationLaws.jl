@@ -5,7 +5,7 @@ module ConservationLaws
     using LinearAlgebra: mul!, I
     import ..GridFunctions: AbstractGridFunction, NoSourceTerm, InitialDataSine, InitialDataGaussian, InitialDataGassner, SourceTermGassner, evaluate
 
-    export physical_flux!, numerical_flux!, entropy, conservative_to_primitive, conservative_to_entropy, entropy_to_conservative, compute_two_point_flux, wave_speed, logmean, AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, NoInviscidFlux, NoViscousFlux, LaxFriedrichsNumericalFlux, RoeNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, EntropyConservativeFlux, NoTwoPointFlux, ExactSolution
+    export physical_flux!, numerical_flux!, entropy, conservative_to_primitive, conservative_to_entropy, entropy_to_conservative, compute_two_point_flux, wave_speed, logmean, AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, NoInviscidFlux, NoViscousFlux, LaxFriedrichsNumericalFlux, RoeNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, ConservativeFlux, EntropyConservativeFlux, NoTwoPointFlux, ExactSolution
 
     abstract type AbstractConservationLaw{d, PDEType} end
     abstract type AbstractPDEType end

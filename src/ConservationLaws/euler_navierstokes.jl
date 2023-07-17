@@ -118,7 +118,7 @@ end
     p_R = (conservation_law.γ-1) * (u_R[end] - (0.5/u_R[1]) * 
      (sum(u_R[m+1]^2 for m in 1:d)))
 
-     return 0.5*
+    return 0.5*
         (vcat(SMatrix{1,d}(u_L[2:end-1]),
             SMatrix{d,d}(u_L[m+1]*V_L[n] + I[m,n]*p_L 
                 for m in 1:d, n in 1:d),
@@ -127,6 +127,36 @@ end
             SMatrix{d,d}(u_R[m+1]*V_R[n] + I[m,n]*p_R
                 for m in 1:d, n in 1:d),
             SMatrix{1,d}((u_R[end] + p_R)*V_R)))
+end
+
+"""
+Entropy-conservative, kinetic-energy-preserving, and pressure-equilibrium-preserving numerical flux from Ranocha (see his 2018 PhD thesis)
+"""
+@inline function compute_two_point_flux(conservation_law::EulerType{d}, 
+    ::EntropyConservativeFlux, u_L::AbstractVector{Float64}, 
+    u_R::AbstractVector{Float64}) where {d}
+    (; γ) = conservation_law
+
+    # velocities and pressure
+    V_L = SVector{d}(u_L[m+1] / u_L[1] for m in 1:d)
+    V_R = SVector{d}(u_R[m+1] / u_R[1] for m in 1:d)
+    p_L = (conservation_law.γ-1) * (u_L[end] - (0.5/u_L[1]) * 
+     (sum(u_L[m+1]^2 for m in 1:d)))
+    p_R = (conservation_law.γ-1) * (u_R[end] - (0.5/u_R[1]) * 
+     (sum(u_R[m+1]^2 for m in 1:d)))
+
+    # mean quantities
+    V_avg = 0.5*(V_L .+ V_R)
+    p_avg = 0.5*(p_L .+ p_R)
+    C = 0.5*sum(V_L[m]*V_R[m] for m in 1:d) +
+        1.0/((γ-1)*logmean(u_L[1]/p_L, u_R[1]/p_R))
+
+    # flux tensor
+    f_ρ = SMatrix{1,d}(logmean(u_L[1], u_R[1]).*V_avg)
+    f_ρV = SMatrix{d,d}(f_ρ[m]*V_avg[n] + I[m,n]*p_avg for m in 1:d, n in 1:d)
+    f_E = SMatrix{1,d}(f_ρ[m]*C + 0.5*(p_L*V_R[m] + p_R*V_L[m]) for m in 1:d)
+
+    return vcat(f_ρ, f_ρV, f_E)
 end
 
 """

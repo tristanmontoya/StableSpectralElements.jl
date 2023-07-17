@@ -7,7 +7,8 @@ function burgers_fluxdiff_1d()
 
     M = 20
     p = 7
-    form = FluxDifferencingForm(inviscid_numerical_flux=EntropyConservativeNumericalFlux())
+    form = FluxDifferencingForm(
+        inviscid_numerical_flux=EntropyConservativeNumericalFlux())
 
     reference_approximation = ReferenceApproximation(NodalTensor(p), Line())
 

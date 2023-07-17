@@ -8,13 +8,15 @@ function euler_vortex_2d()
     p = 3
     M = 4
 
-    form = StandardForm()
+    form = FluxDifferencingForm(
+        inviscid_numerical_flux=EntropyConservativeNumericalFlux())
 
     reference_approximation = ReferenceApproximation(
         NodalTensor(p), Quad(), volume_quadrature_rule=LGLQuadrature(p),
         facet_quadrature_rule=LGLQuadrature(p))
 
-    mesh = uniform_periodic_mesh(reference_approximation, ((-L/2, L/2),(-L/2, L/2)), (M,M))
+    mesh = uniform_periodic_mesh(reference_approximation, 
+        ((-L/2, L/2),(-L/2, L/2)), (M,M))
 
     spatial_discretization = SpatialDiscretization(mesh, reference_approximation)
 
@@ -27,17 +29,22 @@ function euler_vortex_2d()
 
     dt = T/1000
     sol = solve(ode, CarpenterKennedy2N54(williamson_condition=false),
-                dt=dt, adaptive=false, save_everystep=false, callback=save_callback(results_path, (0.0,T),  
+                dt=dt, adaptive=false, save_everystep=false,
+                callback=save_callback(results_path, (0.0,T),  
             floor(Int, T/(dt*50))))
 
     error_analysis = ErrorAnalysis(results_path, conservation_law, 
         spatial_discretization, LGQuadrature(3*p))
-    error_results = analyze(error_analysis, last(sol.u), exact_solution, T, normalize=true)
+    error_results = analyze(error_analysis, last(sol.u), exact_solution, T,
+        normalize=true)
 
     conservation_analysis = PrimaryConservationAnalysis(results_path, 
         conservation_law, spatial_discretization)
     conservation_results = analyze(conservation_analysis, 
         load_time_steps(results_path))
+    entropy_analysis = EntropyConservationAnalysis(results_path, 
+        conservation_law, spatial_discretization)
+    entropy_results = analyze(entropy_analysis, load_time_steps(results_path))
 
-    return error_results, conservation_results.E[end,:] - conservation_results.E[1,:]
+    return error_results, conservation_results.E[end,:] - conservation_results.E[1,:], maximum(abs.(entropy_results.dEdt[:,1]))
 end

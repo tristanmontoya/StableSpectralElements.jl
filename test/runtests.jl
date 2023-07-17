@@ -65,12 +65,13 @@ end
     @test energy ≈ 0.0 atol=tol
 end
 
-@testset "Isentropic Euler vortex NodalTensor Quad 2D" begin
-    (l2, conservation) = euler_vortex_2d()
+@testset "Isentropic Euler vortex FluxDiff NodalTensor Quad 2D" begin
+    (l2, conservation, entropy) = euler_vortex_2d()
 
-    @test l2 ≈ [0.0012392614076437835, 0.06951034921002601,
-        0.06930758075047193, 0.1374727707912807] atol=tol
+    @test l2 ≈ [0.004741291979358405, 0.10346265859644528, 0.10168232125253537,
+        0.4339693000910734] atol=tol
     @test conservation ≈ [0.0, 0.0, 0.0, 0.0] atol=tol
+    @test entropy ≈ 0.0 atol=tol
 end
 
 @testset "Advection 3D Energy-Conservative ModalTensor Tet" begin
