@@ -48,13 +48,6 @@ end
 
 const EulerType{d} = Union{EulerEquations{d}, NavierStokesEquations{d}}
 
-@inline function conservative_to_primitive(conservation_law::EulerType{d},
-    u::AbstractVector{Float64}) where {d}
-    return vcat(u[1], SVector{d}(u[m+1] / u[1] for m in 1:d),
-        (conservation_law.γ-1) * (u[end] - (0.5/u[1]) * 
-        (sum(u[m+1]^2 for m in 1:d))))
-end
-
 """
 Evaluate the flux for the Euler equations
 """
@@ -71,6 +64,29 @@ function physical_flux!(f::AbstractArray{Float64,3},
             for m in 1:d, n in 1:d)
         f[i,end,:] .= (u[i,end] + p)*V
     end
+end
+
+@inline function entropy(conservation_law::EulerType{d}, 
+    u::AbstractVector{Float64}) where {d}
+    p = (conservation_law.γ-1) * (u[end] - (0.5/u[1]) * 
+        (sum(u[m+1]^2 for m in 1:d)))
+    return -u[1]*log(p/u[1]^conservation_law.γ)/(conservation_law.γ-1)
+end
+
+@inline function conservative_to_primitive(conservation_law::EulerType{d},
+    u::AbstractVector{Float64}) where {d}
+    return vcat(u[1], SVector{d}(u[m+1] / u[1] for m in 1:d),
+        (conservation_law.γ-1) * (u[end] - (0.5/u[1]) * 
+        (sum(u[m+1]^2 for m in 1:d))))
+end
+
+@inline function conservative_to_entropy(conservation_law::EulerType{d}, 
+    u::AbstractVector{Float64}) where {d}
+    (; γ) = conservation_law
+    k = (0.5/u[1]) * (sum(u[m+1]^2 for m in 1:d))
+    p = (γ-1) * (u[end] - k)
+    return vcat((γ-log(p/(u[1]^γ)))/(γ-1) - k/p,
+        SVector{d}(u[m+1] / p for m in 1:d), -u[1]/p)
 end
 
 @inline function wave_speed(conservation_law::EulerType{d},

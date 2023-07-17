@@ -104,6 +104,8 @@ function numerical_flux!(f_star::AbstractMatrix{Float64},
 end
 
 @inline conservative_to_primitive(::BurgersType, u) = u
+@inline entropy(::BurgersType, u) = 0.5*u[1]^2
+@inline conservative_to_entropy(::BurgersType, u) = u
 
 @inline function wave_speed(conservation_law::BurgersType{d},
     u_in::AbstractVector{Float64}, u_out::AbstractVector{Float64},

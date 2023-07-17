@@ -25,6 +25,17 @@ struct EnergyConservationAnalysis <: ConservationAnalysis
     dict_name::String
 end
 
+struct EntropyConservationAnalysis <: ConservationAnalysis
+    mass_solver::AbstractMassMatrixSolver
+    WJ::Vector{Diagonal}
+    conservation_law::AbstractConservationLaw
+    N_c::Int
+    N_e::Int
+    V::LinearMap
+    results_path::String
+    dict_name::String
+end
+
 struct ConservationAnalysisResults <:AbstractConservationAnalysisResults
     t::Vector{Float64}
     E::Matrix{Float64}
@@ -58,9 +69,8 @@ function EnergyConservationAnalysis(results_path::String,
 
     _, N_c, N_e = get_dof(spatial_discretization, conservation_law)
 
-    (; W, V) =  spatial_discretization.reference_approximation
-    (; mesh, N_e) = spatial_discretization
-    (; J_q) = spatial_discretization.geometric_factors
+    (; V) =  spatial_discretization.reference_approximation
+    (; N_e) = spatial_discretization
 
     return EnergyConservationAnalysis(
         mass_solver, N_c, N_e, V ,results_path, "energy.jld2")
@@ -81,6 +91,22 @@ function EnergyConservationAnalysis(
         spatial_discretization, mass_solver)
 end
 
+function EntropyConservationAnalysis(results_path::String,
+    conservation_law::AbstractConservationLaw, 
+    spatial_discretization::SpatialDiscretization{d},
+    mass_solver=WeightAdjustedSolver(spatial_discretization)) where {d}
+
+    _, N_c, N_e = get_dof(spatial_discretization, conservation_law)
+  
+    (; W, V) =  spatial_discretization.reference_approximation
+    (; geometric_factors, mesh, N_e) = spatial_discretization
+    
+    WJ = [Diagonal(W .* geometric_factors.J_q[:,k]) for k in 1:N_e]
+
+    return EntropyConservationAnalysis(mass_solver, WJ, conservation_law, 
+        N_c, N_e, V, results_path, "entropy.jld2")
+end
+
 function evaluate_conservation(
     analysis::PrimaryConservationAnalysis, 
     u::Array{Float64,3})
@@ -88,6 +114,20 @@ function evaluate_conservation(
 
     return [sum(sum(WJ[k]*V*u[:,e,k]) 
         for k in 1:N_e) for e in 1:N_c]
+end
+
+function evaluate_conservation(
+    analysis::EntropyConservationAnalysis, 
+    u::Array{Float64,3})
+    (; WJ, conservation_law, N_e, V) = analysis 
+    S = 0.0
+    @views for k in 1:N_e
+        u_q = V*u[:,:,k]
+        for i in axes(u,1)
+            S += WJ[k][i,i]*entropy(conservation_law, u_q[i,:])
+        end
+    end
+    return [S]
 end
 
 function evaluate_conservation(
@@ -132,11 +172,62 @@ function evaluate_conservation_residual(
     return dEdt
 end
 
+function evaluate_conservation_residual(
+    analysis::EntropyConservationAnalysis, 
+    u::Array{Float64,3},
+    dudt::Array{Float64,3})
+    (; mass_solver, conservation_law, N_c, N_e, V, WJ) = analysis 
+
+    u_q = Matrix{Float64}(undef,size(V,1),N_c)
+    w_q = Matrix{Float64}(undef,size(V,1),N_c)
+    w = Matrix{Float64}(undef,size(u,1),N_c)
+    r = Matrix{Float64}(undef,size(u,1),N_c)
+    dEdt = 0.0
+    for k in 1:N_e
+        M = mass_matrix(mass_solver, k)
+        mul!(u_q,V,u[:,:,k])
+        for i in axes(u,1)
+            w_q[i,:] .= conservative_to_entropy(conservation_law, u_q[i,:])
+        end
+        P = mass_matrix_inverse(mass_solver, k) * V' * WJ[k]
+        for e in 1:N_c
+            dEdt += (P*w_q[:,e])'*M*dudt[:,e,k]
+        end
+    end
+    return [dEdt]
+
+end
+
+function analyze(analysis::EntropyConservationAnalysis,
+    time_steps::Vector{Int})
+
+    (; results_path, dict_name) = analysis
+    N_t = length(time_steps)
+    t = Vector{Float64}(undef,N_t)
+    E = Matrix{Float64}(undef,N_t, 1)
+    dEdt = Matrix{Float64}(undef,N_t, 1)
+
+    for i in 1:N_t
+        u, dudt, t[i] = load_solution(results_path, time_steps[i], load_du=true)
+        E[i,:] = evaluate_conservation(analysis, u)
+        dEdt[i,:] = evaluate_conservation_residual(analysis, u, dudt)
+    end
+
+    results = ConservationAnalysisResults(t,E)
+
+    save(string(results_path, dict_name), 
+    Dict("conservation_analysis" => analysis,
+        "conservation_results" => results))
+
+    return ConservationAnalysisResultsWithDerivative(t, E, dEdt)
+end
+
+
 function analyze(analysis::ConservationAnalysis, 
     initial_time_step::Union{Int,String}=0, 
     final_time_step::Union{Int,String}="final")
     
-    (; results_path, dict_name) = analysis
+    (; results_path) = analysis
 
     u_0, _ = load_solution(results_path, initial_time_step)
     u_f, _ = load_solution(results_path, final_time_step)
@@ -246,7 +337,6 @@ end
         label --> labels[2]
         results.t, results.dEdt[:,e]
     end
-   
 end
 
 function plot_evolution(analysis::ConservationAnalysis, 
