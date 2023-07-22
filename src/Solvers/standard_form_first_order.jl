@@ -9,21 +9,21 @@ Evaluate semi-discrete residual for a first-order problem
     (; conservation_law, operators, connectivity, form) = solver
     (; inviscid_numerical_flux) = form
     (; f_q, f_f, u_q, u_f, temp, CI) = solver.preallocated_arrays
-    
+
     @views @timeit "reconstruct nodal solution" Threads.@threads for k in 1:N_e
         mul!(u_q[:,:,k], operators.V[k], u[:,:,k])
         mul!(u_f[:,k,:], operators.R[k], u_q[:,:,k])
     end
 
     @views @timeit "eval residual" Threads.@threads for k in 1:N_e
+
         physical_flux!(f_q[:,:,:,k], conservation_law, u_q[:,:,k])
 
         numerical_flux!(f_f[:,:,k],
             conservation_law, inviscid_numerical_flux, u_f[:,k,:], 
             u_f[CI[connectivity[:,k]],:], operators.n_f[k])
-
+        
         fill!(dudt[:,:,k],0.0)
-
         @inbounds for m in 1:d
             mul!(temp[:,:,k],operators.VOL[k][m],f_q[:,:,m,k])
             dudt[:,:,k] .+= temp[:,:,k]

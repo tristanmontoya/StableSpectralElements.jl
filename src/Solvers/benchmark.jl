@@ -98,3 +98,71 @@ end
         solver.mass_solver, k, dudt[:,:,k], u_q[:,:,k])
     return dudt
 end
+
+@timeit "du/dt" function rhs_volume!(
+    dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
+    solver::Solver{d, <:StandardForm, FirstOrder, PhysicalOperators{d}, N_p,N_q,N_f,N_c,N_e},
+    t::Float64) where {d,N_p,N_q,N_f,N_c,N_e}
+
+    (; conservation_law, operators, connectivity, form) = solver
+    (; inviscid_numerical_flux) = form
+    (; f_q, f_f, u_q, u_f, temp, CI) = solver.preallocated_arrays
+    
+    @timeit "reconstruct nodal solution" for k in 1:N_e
+        for e in 1:N_c
+            u_q[:,e,k] = operators.V[k]*u[:,e,k]
+            u_f[:,k,e] = operators.R[k]*u_q[:,e,k]
+        end
+    end
+
+    @views @timeit "eval residual" for k in 1:N_e
+        physical_flux!(f_q[:,:,:,k], conservation_law, u_q[:,:,k])
+
+        numerical_flux!(f_f[:,:,k],
+            conservation_law, inviscid_numerical_flux, u_f[:,k,:], 
+            u_f[CI[connectivity[:,k]],:], operators.n_f[k])
+
+        fill!(dudt[:,:,k],0.0)
+        for e in 1:N_c
+            @inbounds for m in 1:d
+                dudt[:,e,k] = dudt[:,e,k] + operators.VOL[k][m]*u_q[:,e,k]
+            end
+            #dudt[:,e,k] = dudt[:,e,k] + operators.FAC[k]*f_f[:,e,k]
+        end
+    end
+    return dudt
+end
+
+@timeit "du/dt" function rhs_facet!(
+    dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
+    solver::Solver{d, <:StandardForm, FirstOrder, PhysicalOperators{d}, N_p,N_q,N_f,N_c,N_e},
+    t::Float64) where {d,N_p,N_q,N_f,N_c,N_e}
+
+    (; conservation_law, operators, connectivity, form) = solver
+    (; inviscid_numerical_flux) = form
+    (; f_q, f_f, u_q, u_f, temp, CI) = solver.preallocated_arrays
+    
+    @timeit "reconstruct nodal solution" for k in 1:N_e
+        for e in 1:N_c
+            u_q[:,e,k] = operators.V[k]*u[:,e,k]
+            u_f[:,k,e] = operators.R[k]*u_q[:,e,k]
+        end
+    end
+
+    @views @timeit "eval residual" for k in 1:N_e
+        physical_flux!(f_q[:,:,:,k], conservation_law, u_q[:,:,k])
+
+        numerical_flux!(f_f[:,:,k],
+            conservation_law, inviscid_numerical_flux, u_f[:,k,:], 
+            u_f[CI[connectivity[:,k]],:], operators.n_f[k])
+
+        fill!(dudt[:,:,k],0.0)
+        for e in 1:N_c
+            #@inbounds for m in 1:d
+            #    dudt[:,e,k] = dudt[:,e,k] + operators.VOL[k][m]*f_q[:,e,m,k]
+            #end
+            dudt[:,e,k] = dudt[:,e,k] + operators.FAC[k]*f_f[:,e,k]
+        end
+    end
+    return dudt
+end

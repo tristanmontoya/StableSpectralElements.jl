@@ -36,7 +36,7 @@ function warp_mesh(mesh::MeshData{2},
     (; factor, L) = mesh_warping
 
     x_new = x .+ L[1]*factor*sin.(π*x./L[1]).*sin.(π*y/L[2])
-    y_new = y .+ L[2]*factor*exp.((1.0.-y)/L[2]).*sin.(π*x/L[1]).*
+    y_new = y .+ L[2]*factor*exp.(1.0.-y/L[2]).*sin.(π*x/L[1]).*
         sin.(π*y/L[2])
     return MeshData(reference_element, mesh, x_new, y_new)
 end
@@ -201,6 +201,26 @@ function cartesian_mesh(::Tri,  M::NTuple{2,Int}, ::ZigZag)
     return (VX, VY), EtoV
 end
 
+
+function metrics(dxdr::SMatrix{1,1})
+    J = dxdr[1,1]
+    Λ = SMatrix{1,1}(1.0) 
+    return J, Λ
+end
+
+function metrics(dxdr::SMatrix{2,2})
+    J = dxdr[1,1]*dxdr[2,2] - dxdr[1,2]*dxdr[2,1]
+    Λ = SMatrix{2,2}([dxdr[2,2] -dxdr[1,2]; -dxdr[2,1] dxdr[1,1]]) 
+    return J, Λ
+end
+
+function metrics(dxdr::SMatrix{3,3})
+    J = det(dxdr)
+    Λ = J*inv(dxdr)
+    return J, Λ
+end
+
+
 function GeometricFactors(mesh::MeshData{d}, 
     reference_element::RefElemData{d}) where {d}
 
@@ -232,18 +252,14 @@ function GeometricFactors(mesh::MeshData{d},
 
         # loops over slower indices
         @inbounds for i in 1:N_q
-            J_q[i,k] = det(dxdr_q[i,:,:,k])
-            # can do this in a more specialized way for 2D and 3D etc.
-            Λ_q[i,:,:,k] = J_q[i,k]*inv(dxdr_q[i,:,:,k])
+            J_q[i,k], Λ_q[i,:,:,k] = metrics(SMatrix{d,d}(dxdr_q[i,:,:,k]))
         end
     
         # get scaled normal vectors - this includes scaling for ref. quadrature weights on long side of right-angled triangle.
         @inbounds for i in 1:N_f
-            Jdrdx_f = det(dxdr_f[i,:,:,k]) *
-                inv(dxdr_f[i,:,:,k])
+            _, Jdrdx_f = metrics(SMatrix{d,d}(dxdr_f[i,:,:,k]))
             @inbounds for m in 1:d
-                nJf[m][i,k] = sum(
-                    Jdrdx_f[n,m]*reference_element.nrstJ[n][i] 
+                nJf[m][i,k] = sum(Jdrdx_f[n,m]*reference_element.nrstJ[n][i] 
                         for n in 1:d)
             end
             J_f[i,k] = sqrt(sum(nJf[m][i,k]^2 for m in 1:d))
@@ -251,7 +267,6 @@ function GeometricFactors(mesh::MeshData{d},
     end
     return GeometricFactors{d}(J_q, Λ_q, J_f, nJf)
 end
-
 
 function uniform_periodic_mesh(
     reference_approximation::ReferenceApproximation{3, Tet, <:Union{NodalTensor,ModalTensor}},

@@ -51,33 +51,50 @@ const EulerType{d} = Union{EulerEquations{d}, NavierStokesEquations{d}}
 """
 Evaluate the flux for the Euler equations
 """
-function physical_flux!(f::AbstractArray{Float64,3},    
+@inline function physical_flux(conservation_law::EulerType{d}, 
+    u::AbstractVector{Float64}) where {d}
+    V = SVector{d}(u[m+1] / u[1] for m in 1:d)
+    p = (conservation_law.γ-1.0) * (u[end] - 0.5* 
+     (sum(u[m+1]*V[m] for m in 1:d)))
+    h_t = u[end] + p
+    return vcat(
+        SMatrix{1,d}(u[n+1] for n in 1:d),
+        SMatrix{d,d}(u[m+1]*V[n] + I[m,n]*p for m in 1:d, n in 1:d),
+        SMatrix{1,d}(h_t*V[n] for n in 1:d))
+end
+
+@inline function physical_flux(conservation_law::EulerType{d}, 
+    u::AbstractVector{Float64}, n::NTuple{d, Float64}) where {d}
+    V = SVector{d}(u[m+1] / u[1] for m in 1:d)
+    p = (conservation_law.γ-1.0) * (u[end] - 0.5*u[1]* 
+     (sum(V[m]^2 for m in 1:d)))
+    h_t = u[end] + p
+    V_n = sum(V[m]*n[m] for m in 1:d)
+    
+    return [u[1]*V_n, [u[1]*V_n*V[m] + p*n[m] for m in 1:d]..., h_t*V_n]
+end
+
+@inline @views function physical_flux!(f::AbstractArray{Float64,3},    
     conservation_law::EulerType{d}, 
     u::AbstractMatrix{Float64}) where {d}
 
     @inbounds for i in axes(u,1)
-        V = SVector{d}(u[i,m+1] / u[i,1] for m in 1:d)
-        p = (conservation_law.γ-1) * (u[i,end] - (0.5/u[i,1]) * 
-         (sum(u[i,m+1]^2 for m in 1:d)))
-        f[i,1,:] .= u[i,2:end-1]
-        f[i,2:end-1,:] .= SMatrix{d,d}(u[i,m+1]*V[n] + I[m,n]*p 
-            for m in 1:d, n in 1:d)
-        f[i,end,:] .= (u[i,end] + p)*V
+        f[i,:,:] .= physical_flux(conservation_law, u[i,:])
     end
 end
 
 @inline function entropy(conservation_law::EulerType{d}, 
     u::AbstractVector{Float64}) where {d}
-    p = (conservation_law.γ-1) * (u[end] - (0.5/u[1]) * 
-        (sum(u[m+1]^2 for m in 1:d)))
-    return -u[1]*log(p/u[1]^conservation_law.γ)/(conservation_law.γ-1)
+    (; γ) = conservation_law
+    p = (γ-1) * (u[end] - (0.5/u[1]) * (sum(u[m+1]^2 for m in 1:d)))
+    return -u[1]*log(p/u[1]^γ)/(γ-1)
 end
 
 @inline function conservative_to_primitive(conservation_law::EulerType{d},
     u::AbstractVector{Float64}) where {d}
+    (; γ) = conservation_law
     return vcat(u[1], SVector{d}(u[m+1] / u[1] for m in 1:d),
-        (conservation_law.γ-1) * (u[end] - (0.5/u[1]) * 
-        (sum(u[m+1]^2 for m in 1:d))))
+        (γ-1) * (u[end] - (0.5/u[1]) * (sum(u[m+1]^2 for m in 1:d))))
 end
 
 @inline function conservative_to_entropy(conservation_law::EulerType{d}, 
@@ -111,22 +128,16 @@ end
     ::ConservativeFlux, u_L::AbstractVector{Float64}, 
     u_R::AbstractVector{Float64}) where {d}
     
-    V_L = SVector{d}(u_L[m+1] / u_L[1] for m in 1:d)
-    p_L = (conservation_law.γ-1) * (u_L[end] - (0.5/u_L[1]) * 
-     (sum(u_L[m+1]^2 for m in 1:d)))
-    V_R = SVector{d}(u_R[m+1] / u_R[1] for m in 1:d)
-    p_R = (conservation_law.γ-1) * (u_R[end] - (0.5/u_R[1]) * 
-     (sum(u_R[m+1]^2 for m in 1:d)))
+    return 0.5*(physical_flux(conservation_law, u_L) .+ 
+        physical_flux(conservation_law, u_R))
+end
 
-    return 0.5*
-        (vcat(SMatrix{1,d}(u_L[2:end-1]),
-            SMatrix{d,d}(u_L[m+1]*V_L[n] + I[m,n]*p_L 
-                for m in 1:d, n in 1:d),
-            SMatrix{1,d}((u_L[end] + p_L)*V_L)) +
-        vcat(SMatrix{1,d}(u_R[2:end-1]),
-            SMatrix{d,d}(u_R[m+1]*V_R[n] + I[m,n]*p_R
-                for m in 1:d, n in 1:d),
-            SMatrix{1,d}((u_R[end] + p_R)*V_R)))
+@inline function compute_two_point_flux(conservation_law::EulerType{d}, 
+    ::ConservativeFlux, u_L::AbstractVector{Float64}, 
+    u_R::AbstractVector{Float64}, n::NTuple{d, Float64}) where {d}
+    
+    return 0.5*(physical_flux(conservation_law, u_L, n) .+ 
+        physical_flux(conservation_law, u_R, n))
 end
 
 """
@@ -137,24 +148,25 @@ Entropy-conservative, kinetic-energy-preserving, and pressure-equilibrium-preser
     u_R::AbstractVector{Float64}) where {d}
     (; γ) = conservation_law
 
-    # velocities and pressure
+    # velocities and pressures
     V_L = SVector{d}(u_L[m+1] / u_L[1] for m in 1:d)
     V_R = SVector{d}(u_R[m+1] / u_R[1] for m in 1:d)
-    p_L = (conservation_law.γ-1) * (u_L[end] - (0.5/u_L[1]) * 
-     (sum(u_L[m+1]^2 for m in 1:d)))
-    p_R = (conservation_law.γ-1) * (u_R[end] - (0.5/u_R[1]) * 
-     (sum(u_R[m+1]^2 for m in 1:d)))
+    p_L = (conservation_law.γ-1) * (u_L[end] - 0.5*u_L[1]* 
+     (sum(V_L[m]^2 for m in 1:d)))
+    p_R = (conservation_law.γ-1) * (u_R[end] - 0.5*u_R[1]* 
+     (sum(V_R[m]^2 for m in 1:d)))
 
     # mean quantities
-    V_avg = 0.5*(V_L .+ V_R)
-    p_avg = 0.5*(p_L .+ p_R)
-    C = 0.5*sum(V_L[m]*V_R[m] for m in 1:d) +
+    ρ_avg = logmean(u_L[1], u_R[1])
+    V_avg = 0.5*(V_L + V_R)
+    p_avg = 0.5*(p_L + p_R)
+    C = 0.5*sum(V_L[m]*V_R[m] for m in 1:d) + 
         1.0/((γ-1)*logmean(u_L[1]/p_L, u_R[1]/p_R))
 
     # flux tensor
-    f_ρ = SMatrix{1,d}(logmean(u_L[1], u_R[1]).*V_avg)
+    f_ρ = SMatrix{1,d}(ρ_avg*V_avg[n] for n in 1:d)
     f_ρV = SMatrix{d,d}(f_ρ[m]*V_avg[n] + I[m,n]*p_avg for m in 1:d, n in 1:d)
-    f_E = SMatrix{1,d}(f_ρ[m]*C + 0.5*(p_L*V_R[m] + p_R*V_L[m]) for m in 1:d)
+    f_E = SMatrix{1,d}(f_ρ[n]*C + 0.5*(p_L*V_R[n] + p_R*V_L[n]) for n in 1:d)
 
     return vcat(f_ρ, f_ρV, f_E)
 end
@@ -164,17 +176,17 @@ Isentropic vortex problem, taken verbatim from the Trixi.jl examples (https://gi
 
 Domain should be [-10,10] × [-10,10].
 """
-struct IsentropicVortex <: AbstractGridFunction{2} 
+struct TrixiIsentropicVortex <: AbstractGridFunction{2} 
     γ::Float64
     strength::Float64
     N_c::Int
-    function IsentropicVortex(conservation_law::EulerEquations{2}, 
+    function TrixiIsentropicVortex(conservation_law::EulerEquations{2}, 
         strength::Float64=5.0)
         return new(conservation_law.γ,strength,4)
     end
 end
 
-function evaluate(f::IsentropicVortex, x::NTuple{2,Float64},t::Float64=0.0)
+function evaluate(f::TrixiIsentropicVortex, x::NTuple{2,Float64},t::Float64=0.0)
     inicenter = SVector(0.0, 0.0)
     iniamplitude = f.strength
 
@@ -199,7 +211,38 @@ function evaluate(f::IsentropicVortex, x::NTuple{2,Float64},t::Float64=0.0)
     v1, v2 = vel
     p = p * (1 + dtemp)^(gamma / (gamma - 1))
     return [rho, rho*v1, rho*v2, p/(gamma-1) + 0.5*rho*(v1^2 + v2^2)]
-  end
+end
+
+struct IsentropicVortex <: AbstractGridFunction{2} 
+    γ::Float64
+    Ma::Float64 
+    θ::Float64
+    R::Float64
+    β::Float64
+    σ²::Float64
+    x_0::NTuple{2,Float64}
+    N_c::Int
+    
+    function IsentropicVortex(conservation_law::EulerEquations{2}; 
+        Ma::Float64=0.4, θ::Float64=π/4, R::Float64=1.0, 
+        β::Float64=1.0, σ::Float64=1.0, x_0::NTuple{2,Float64}=(0.0,0.0))
+        return new(conservation_law.γ,Ma, θ, R, β, σ^2, x_0, 4)
+    end
+end
+
+function evaluate(f::IsentropicVortex, x::NTuple{2,Float64},t::Float64=0.0)
+    (; γ, Ma, θ, R, β, σ², x_0) = f
+    x_rel = ((x[1] - x_0[1])/R, (x[2] - x_0[2])/R)
+    Ω = β*exp(-0.5/σ² * (x_rel[1]^2 + x_rel[2]^2))
+    dv = (-x_rel[2]*Ω, x_rel[1]*Ω)
+    dT = -0.5*(γ-1)*Ω^2
+    ρ = (1+dT)^(1/(γ-1))
+    v = (Ma*cos(θ) + dv[1], Ma*sin(θ) + dv[2])
+    p = (ρ^γ)/γ
+    E = p/(γ-1) + 0.5*ρ*(v[1]^2 + v[2]^2)
+    return [ρ, ρ*v[1], ρ*v[2], E]
+end
+
 
 """
 Periodic wave test case used in the following papers:
@@ -223,7 +266,7 @@ function evaluate(f::EulerPeriodicTest{d},
     x::NTuple{d,Float64},t::Float64=0.0) where {d}
 
     ρ = 1.0 + f.strength*sin(π*sum(x[m] for m in 1:d))
-    return [ρ, fill(ρ,d)..., 1.0/(1.0-f.γ) + 0.5*ρ*d]
+    return [ρ, fill(ρ,d)..., 1.0/(f.γ-1.0) + 0.5*ρ*d]
 end
 
 """Inviscid 3D Taylor-Green vortex, I think I got this version of it from Shadpey and Zingg, "Entropy-Stable Multidimensional Summation-by-Parts Discretizations on hp-Adaptive Curvilinear Grids for Hyperbolic Conservation Laws," JSC 2020.
@@ -248,5 +291,5 @@ function evaluate(f::TaylorGreenVortex,  x::NTuple{3,Float64}, t::Float64=0.0)
     u = sin(x[1])*cos(x[2])*cos(x[3])
     v = -cos(x[1])*sin(x[2])*cos(x[3])
 
-    return [1.0, u, v, 0.0,  p/(1.0-f.γ) + 0.5*ρ*(u^2 + v^2)]
+    return [1.0, u, v, 0.0,  p/(f.γ-1.0) + 0.5*ρ*(u^2 + v^2)]
 end

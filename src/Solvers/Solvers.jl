@@ -98,7 +98,8 @@ module Solvers
         preallocated_arrays::AbstractPreallocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}
     end
 
-    function PreAllocatedArrays{d,FirstOrder,N_p,N_q,N_f,N_c,N_e}() where {d,N_p,N_q,N_f,N_c,N_e}
+    function PreAllocatedArrays{d,FirstOrder,N_p,N_q,N_f,N_c,N_e}(
+        temp_size::Int=N_q) where {d,N_p,N_q,N_f,N_c,N_e}
         return PreAllocatedArrays{d,FirstOrder,N_p,N_q,N_f,N_c,N_e}(
             Array{Float64}(undef,N_q, N_c, d, N_e),
             Array{Float64}(undef,N_f, N_c, N_e),
@@ -106,11 +107,12 @@ module Solvers
             Array{Float64}(undef,N_q, N_c, N_e),
             Array{Float64}(undef,N_q, N_c, N_e),
             Array{Float64}(undef,N_f, N_e, N_c), #note switched order
-            Array{Float64}(undef,N_q, N_c, N_e),
+            Array{Float64}(undef,temp_size, N_c, N_e),
             CartesianIndices((N_f,N_e)), nothing, nothing, nothing)
     end
 
-    function PreAllocatedArrays{d,SecondOrder,N_p,N_q,N_f,N_c,N_e}() where {d,N_p,N_q,N_f,N_c,N_e}
+    function PreAllocatedArrays{d,SecondOrder,N_p,N_q,N_f,N_c,N_e}(     
+        temp_size::Int=N_q) where {d,N_p,N_q,N_f,N_c,N_e}
         return PreAllocatedArrays{d,SecondOrder,N_p,N_q,N_f,N_c,N_e}(
             Array{Float64}(undef,N_q, N_c, d, N_e),
             Array{Float64}(undef,N_f, N_c, N_e),
@@ -118,7 +120,7 @@ module Solvers
             Array{Float64}(undef,N_q, N_c, N_e),
             Array{Float64}(undef,N_q, N_c, N_e),
             Array{Float64}(undef,N_f, N_e, N_c), #note switched order
-            Array{Float64}(undef,N_q, N_c, N_e),
+            Array{Float64}(undef,temp_size, N_c, N_e),
             CartesianIndices((N_f,N_e)),
             Array{Float64}(undef,N_f, N_c, d, N_e),
             Array{Float64}(undef,N_q, N_c, d, N_e),
@@ -142,7 +144,7 @@ module Solvers
         return Solver{d,ResidualForm,PDEType,PhysicalOperators{d}, N_p, N_q, N_f, N_c, N_e}(
             conservation_law, operators, mass_solver, 
             spatial_discretization.mesh.mapP, form,
-            PreAllocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}())
+            PreAllocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}(N_p))
     end
     
     function Solver(conservation_law::AbstractConservationLaw{d,PDEType},     
@@ -238,6 +240,6 @@ module Solvers
     export LinearResidual
     include("linear.jl")
 
-    export rhs_benchmark!
+    export rhs_benchmark!, rhs_volume!, rhs_facet!
     include("benchmark.jl")
 end

@@ -40,7 +40,7 @@ module Analysis
     export LinearAnalysis, DynamicalAnalysisResults, KoopmanAnalysis, AbstractKoopmanAlgorithm, StandardDMD, ExtendedDMD, KernelDMD, KernelResDMD, ExtendedResDMD, GeneratorDMD, AbstractSamplingAlgorithmx, GaussianSampling, analyze_running, forecast, monomial_basis, monomial_derivatives, make_dmd_matrices, dmd, generate_samples
     include("dynamics.jl")
 
-    export ConservationAnalysis, PrimaryConservationAnalysis, EnergyConservationAnalysis, EntropyConservationAnalysis, ConservationAnalysisResults, ConservationAnalysisResultsWithDerivative, plot_evolution
+    export ConservationAnalysis, PrimaryConservationAnalysis, EnergyConservationAnalysis, EntropyConservationAnalysis, ConservationAnalysisResults, ConservationAnalysisResultsWithDerivative, plot_evolution, evaluate_conservation, evaluate_conservation_residual
     include("conservation.jl")
 
     export RefinementAnalysis, RefinementErrorAnalysis, RefinementAnalysisResults, RefinementErrorAnalysisResults, run_refinement, get_tickslogscale

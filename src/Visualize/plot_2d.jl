@@ -46,7 +46,6 @@ function postprocess_vtk_high_order(
     (; x_plot, N_e) = spatial_discretization
     (; rstp) = reference_element
 
-
     points = permutedims(hcat(vec(x_plot[1]), vec(x_plot[2])))
     N_plot = size(V_plot,1)
     

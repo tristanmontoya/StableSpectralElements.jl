@@ -1,27 +1,16 @@
 module ConservationLaws
 
     using LinearMaps: LinearMap
+    using MuladdMacro
     using StaticArrays: SVector, SMatrix, MVector
     using LinearAlgebra: mul!, I
     import ..GridFunctions: AbstractGridFunction, NoSourceTerm, InitialDataSine, InitialDataGaussian, InitialDataGassner, SourceTermGassner, evaluate
 
-    export physical_flux!, numerical_flux!, entropy, conservative_to_primitive, conservative_to_entropy, entropy_to_conservative, compute_two_point_flux, wave_speed, logmean, AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, NoInviscidFlux, NoViscousFlux, LaxFriedrichsNumericalFlux, RoeNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, ConservativeFlux, EntropyConservativeFlux, NoTwoPointFlux, ExactSolution
+    export physical_flux, physical_flux!, numerical_flux!, entropy, conservative_to_primitive, conservative_to_entropy, entropy_to_conservative, compute_two_point_flux, wave_speed, logmean, AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, NoInviscidFlux, NoViscousFlux, LaxFriedrichsNumericalFlux, CentralNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, ConservativeFlux, EntropyConservativeFlux, NoTwoPointFlux, ExactSolution
 
     abstract type AbstractConservationLaw{d, PDEType} end
     abstract type AbstractPDEType end
-
-    """
-    First-order conservation law:
-
-    `∂ₜu + ∇⋅F(u) = s`
-    """
     struct FirstOrder <: AbstractPDEType end
-    
-    """
-    Second-order conservation law:
-
-    `∂ₜu + ∇⋅(F¹(u) + F²(u,q)) = s, q = ∇u`
-    """
     struct SecondOrder <: AbstractPDEType end
 
     """First-order numerical fluxes"""
@@ -31,7 +20,7 @@ module ConservationLaws
         λ::Float64
     end
     struct EntropyConservativeNumericalFlux <: AbstractInviscidNumericalFlux end
-    struct RoeNumericalFlux <: AbstractInviscidNumericalFlux end
+    struct CentralNumericalFlux <: AbstractInviscidNumericalFlux end
     LaxFriedrichsNumericalFlux() = LaxFriedrichsNumericalFlux(1.0)
     
     """Second-order numerical fluxes"""
@@ -45,7 +34,7 @@ module ConservationLaws
     struct EntropyConservativeFlux <: AbstractTwoPointFlux end
     struct NoTwoPointFlux <: AbstractTwoPointFlux end
 
-    function numerical_flux!(
+    @inline function numerical_flux!(
         f_star::AbstractMatrix{Float64},
         conservation_law::AbstractConservationLaw{d}, 
         numerical_flux::LaxFriedrichsNumericalFlux,
@@ -53,7 +42,7 @@ module ConservationLaws
         n::NTuple{d, Vector{Float64}},
         two_point_flux::AbstractTwoPointFlux=ConservativeFlux()) where {d}
         
-        @views for i in axes(u_in, 1)
+        for i in axes(u_in, 1)
             f_s = compute_two_point_flux(conservation_law, two_point_flux,
                 u_in[i,:], u_out[i,:])
             f_star[i,:] .= sum(f_s[:,m]*n[m][i] for m in 1:d) .- 
@@ -64,23 +53,35 @@ module ConservationLaws
         end
     end
 
-    function numerical_flux!(
+    @inline function numerical_flux!(
         f_star::AbstractMatrix{Float64},
         conservation_law::AbstractConservationLaw{d}, 
         ::EntropyConservativeNumericalFlux,
         u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
         n::NTuple{d, Vector{Float64}},
-        two_point_flux::AbstractTwoPointFlux=ConservativeFlux()) where {d}
+        two_point_flux::AbstractTwoPointFlux=EntropyConservativeFlux()) where {d}
         
-        @views for i in axes(u_in, 1)
+        for i in axes(u_in, 1)
             f_s = compute_two_point_flux(conservation_law, two_point_flux,
                 u_in[i,:], u_out[i,:])
             f_star[i,:] .= sum(f_s[:,m]*n[m][i] for m in 1:d)
         end
     end
 
+    @inline function numerical_flux!(
+        f_star::AbstractMatrix{Float64},
+        conservation_law::AbstractConservationLaw{d}, 
+        ::CentralNumericalFlux,
+        u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
+        n::NTuple{d, Vector{Float64}}) where {d}
+        
+        numerical_flux!(f_star,conservation_law, 
+            EntropyConservativeNumericalFlux(),
+            u_in, u_out, n, ConservativeFlux())
+    end
+
     """ 
-        Algorithm based on the Taylor series trick from Ismail and Roe (2009). There are further optimizations that could be made, but let's leave it like this for now.
+    Algorithm based on the Taylor series trick from Ismail and Roe (2009). There are further optimizations that could be made, but let's leave it like this for now.
     """
     @inline function logmean(x::Float64, y::Float64)
         # f = (y/x - 1) / (y/x + 1)
@@ -120,7 +121,7 @@ module ConservationLaws
     export InviscidBurgersEquation, ViscousBurgersEquation
     include("burgers.jl")
 
-    export EulerEquations, NavierStokesEquations, EulerPeriodicTest, TaylorGreenVortex, IsentropicVortex
+    export EulerEquations, NavierStokesEquations, EulerPeriodicTest, TaylorGreenVortex, IsentropicVortex, TrixiIsentropicVortex
     include("euler_navierstokes.jl")
 
 end

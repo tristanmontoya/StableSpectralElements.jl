@@ -3,7 +3,7 @@ function euler_vortex_2d()
     T = 20.0  # end time
 
     conservation_law = EulerEquations{2}(1.4)
-    exact_solution = IsentropicVortex(conservation_law);
+    exact_solution = TrixiIsentropicVortex(conservation_law);
 
     p = 3
     M = 4
@@ -25,7 +25,7 @@ function euler_vortex_2d()
         "results/euler_vortex_2d/", overwrite=true, clear=true);
 
     ode = semidiscretize(conservation_law, spatial_discretization, 
-        exact_solution, form, (0.0, T), PhysicalOperator());
+        exact_solution, form, (0.0, T));
 
     dt = T/1000
     sol = solve(ode, CarpenterKennedy2N54(williamson_condition=false),

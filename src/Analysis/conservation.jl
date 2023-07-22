@@ -54,7 +54,7 @@ function PrimaryConservationAnalysis(results_path::String,
     _, N_c, N_e = get_dof(spatial_discretization, conservation_law)
   
     (; W, V) =  spatial_discretization.reference_approximation
-    (; geometric_factors, mesh, N_e) = spatial_discretization
+    (; geometric_factors, N_e) = spatial_discretization
     
     WJ = [Diagonal(W .* geometric_factors.J_q[:,k]) for k in 1:N_e]
 
@@ -99,7 +99,7 @@ function EntropyConservationAnalysis(results_path::String,
     _, N_c, N_e = get_dof(spatial_discretization, conservation_law)
   
     (; W, V) =  spatial_discretization.reference_approximation
-    (; geometric_factors, mesh, N_e) = spatial_discretization
+    (; geometric_factors, N_e) = spatial_discretization
     
     WJ = [Diagonal(W .* geometric_factors.J_q[:,k]) for k in 1:N_e]
 
@@ -176,12 +176,10 @@ function evaluate_conservation_residual(
     analysis::EntropyConservationAnalysis, 
     u::Array{Float64,3},
     dudt::Array{Float64,3})
-    (; mass_solver, conservation_law, N_c, N_e, V, WJ) = analysis 
+    (; mass_solver, conservation_law, N_c, N_e, V, WJ) = analysis
 
     u_q = Matrix{Float64}(undef,size(V,1),N_c)
     w_q = Matrix{Float64}(undef,size(V,1),N_c)
-    w = Matrix{Float64}(undef,size(u,1),N_c)
-    r = Matrix{Float64}(undef,size(u,1),N_c)
     dEdt = 0.0
     for k in 1:N_e
         M = mass_matrix(mass_solver, k)
@@ -199,7 +197,7 @@ function evaluate_conservation_residual(
 end
 
 function analyze(analysis::EntropyConservationAnalysis,
-    time_steps::Vector{Int})
+    time_steps::Vector{Int}; normalize=false)
 
     (; results_path, dict_name) = analysis
     N_t = length(time_steps)
@@ -207,10 +205,17 @@ function analyze(analysis::EntropyConservationAnalysis,
     E = Matrix{Float64}(undef,N_t, 1)
     dEdt = Matrix{Float64}(undef,N_t, 1)
 
+    if normalize
+        u_0, _ = load_solution(results_path, time_steps[1])
+        factor = abs.(evaluate_conservation(analysis,u_0))
+    else
+        factor = 1.0
+    end
+        
     for i in 1:N_t
         u, dudt, t[i] = load_solution(results_path, time_steps[i], load_du=true)
-        E[i,:] = evaluate_conservation(analysis, u)
-        dEdt[i,:] = evaluate_conservation_residual(analysis, u, dudt)
+        E[i,:] = evaluate_conservation(analysis, u) ./ factor
+        dEdt[i,:] = evaluate_conservation_residual(analysis, u, dudt) ./ factor
     end
 
     results = ConservationAnalysisResults(t,E)
@@ -218,7 +223,7 @@ function analyze(analysis::EntropyConservationAnalysis,
     save(string(results_path, dict_name), 
     Dict("conservation_analysis" => analysis,
         "conservation_results" => results))
-
+    
     return ConservationAnalysisResultsWithDerivative(t, E, dEdt)
 end
 
@@ -240,7 +245,7 @@ function analyze(analysis::ConservationAnalysis,
 end
 
 function analyze(analysis::ConservationAnalysis,
-    time_steps::Vector{Int})
+    time_steps::Vector{Int}; normalize=false)
 
     (; results_path, N_c, dict_name) = analysis
     N_t = length(time_steps)
@@ -248,10 +253,17 @@ function analyze(analysis::ConservationAnalysis,
     E = Matrix{Float64}(undef,N_t, N_c)
     dEdt = Matrix{Float64}(undef,N_t, N_c)
 
+    if normalize
+        u_0, _ = load_solution(results_path, time_steps[1])
+        factor = abs.(evaluate_conservation(analysis,u_0))
+    else
+        factor = 1.0
+    end
+        
     for i in 1:N_t
         u, dudt, t[i] = load_solution(results_path, time_steps[i], load_du=true)
-        E[i,:] = evaluate_conservation(analysis, u)
-        dEdt[i,:] = evaluate_conservation_residual(analysis, u, dudt)
+        E[i,:] = evaluate_conservation(analysis, u) ./ factor
+        dEdt[i,:] = evaluate_conservation_residual(analysis, u, dudt) ./ factor
     end
 
     results = ConservationAnalysisResults(t,E)

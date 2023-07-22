@@ -1,6 +1,6 @@
 module SpatialDiscretizations
 
-    using StaticArrays: SArray
+    using StaticArrays: SArray, SMatrix, SVector
     using LinearAlgebra: I, inv, Diagonal, diagm, kron, transpose, det, eigvals
     using Random: rand, shuffle
     using LinearMaps: LinearMap, ⊗
@@ -245,7 +245,7 @@ module SpatialDiscretizations
     export reference_geometric_factors, operators_1d
     include("tensor_simplex.jl")
 
-    export GeometricFactors, uniform_periodic_mesh, warp_mesh, cartesian_mesh, Uniform, ZigZag, DelReyWarping, ChanWarping
+    export GeometricFactors, metrics, uniform_periodic_mesh, warp_mesh, cartesian_mesh, Uniform, ZigZag, DelReyWarping, ChanWarping
     include("mesh.jl")
 
 end
