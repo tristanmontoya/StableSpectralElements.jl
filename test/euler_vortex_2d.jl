@@ -1,22 +1,27 @@
 function euler_vortex_2d()
-    L = 20.0  # domain length
-    T = 20.0  # end time
 
-    conservation_law = EulerEquations{2}(1.4)
-    exact_solution = TrixiIsentropicVortex(conservation_law);
-
+    mach_number = 0.4
+    angle = 0.0
+    L = 1.0
+    γ=1.4
+    T = L/mach_number # end time
+    strength = sqrt(2/(γ-1)*(1-0.75^(γ-1))) # for central value of ρ=0.5
+    
+    conservation_law = EulerEquations{2}(γ)
+    exact_solution = IsentropicVortex(conservation_law, θ=angle,
+        Ma=mach_number, β=strength, R=1.0/10.0, x_0=(L/2,L/2));
     p = 3
     M = 4
 
-    form = FluxDifferencingForm(
-        inviscid_numerical_flux=EntropyConservativeNumericalFlux())
+    form = FluxDifferencingForm(inviscid_numerical_flux=EntropyConservativeNumericalFlux())
 
-    reference_approximation = ReferenceApproximation(
-        NodalTensor(p), Quad(), volume_quadrature_rule=LGLQuadrature(p),
-        facet_quadrature_rule=LGLQuadrature(p))
+    reference_approximation = ReferenceApproximation(NodalMultiDiagE(p), 
+        Tri(), mapping_degree=p, N_plot=25)
 
-    mesh = uniform_periodic_mesh(reference_approximation, 
-        ((-L/2, L/2),(-L/2, L/2)), (M,M))
+    uniform_mesh = uniform_periodic_mesh(reference_approximation, ((0.0,L),(0.0,L)), (M,M))
+
+    mesh = warp_mesh(uniform_mesh, reference_approximation, 
+        ChanWarping(1.0/16.0, (L,L)))
 
     spatial_discretization = SpatialDiscretization(mesh, reference_approximation)
 
@@ -25,7 +30,8 @@ function euler_vortex_2d()
         "results/euler_vortex_2d/", overwrite=true, clear=true);
 
     ode = semidiscretize(conservation_law, spatial_discretization, 
-        exact_solution, form, (0.0, T));
+        exact_solution, form, (0.0, T), ReferenceOperator(),
+        mass_matrix_solver=DiagonalSolver(spatial_discretization));
 
     dt = T/1000
     sol = solve(ode, CarpenterKennedy2N54(williamson_condition=false),
@@ -34,9 +40,8 @@ function euler_vortex_2d()
             floor(Int, T/(dt*50))))
 
     error_analysis = ErrorAnalysis(results_path, conservation_law, 
-        spatial_discretization, LGQuadrature(3*p))
-    error_results = analyze(error_analysis, last(sol.u), exact_solution, T,
-        normalize=true)
+        spatial_discretization)
+    error_results = analyze(error_analysis, last(sol.u), exact_solution, T)
 
     conservation_analysis = PrimaryConservationAnalysis(results_path, 
         conservation_law, spatial_discretization)

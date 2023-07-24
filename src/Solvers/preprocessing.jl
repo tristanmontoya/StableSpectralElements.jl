@@ -32,7 +32,7 @@ function semidiscretize(
     tspan::NTuple{2,Float64}, 
     strategy::AbstractStrategy=ReferenceOperator(),
     operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm();
-    mass_matrix_solver::AbstractMassMatrixSolver=CholeskySolver(spatial_discretization),
+    mass_matrix_solver::AbstractMassMatrixSolver=WeightAdjustedSolver(spatial_discretization),
     periodic_connectivity_check::Bool=true,
     tol::Float64=1e-12) where {d, PDEType}
 

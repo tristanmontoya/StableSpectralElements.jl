@@ -156,7 +156,7 @@ function warped_product(::Tet, p, η1D::NTuple{3,Vector{Float64}})
         SArray{Tuple{p+1,p+1,p+1}}(σₒ))
 end
 
-function operators_1d(
+function operators_1d( 
     quadrature_rule::NTuple{d,AbstractQuadratureRule}) where {d}
 
     η_1D, w_1D, q, V_1D, D_1D, I_1D, R_L, R_R = fill((),8)

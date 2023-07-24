@@ -4,16 +4,16 @@ module SpatialDiscretizations
     using LinearAlgebra: I, inv, Diagonal, diagm, kron, transpose, det, eigvals
     using Random: rand, shuffle
     using LinearMaps: LinearMap, ⊗
-    using StartUpDG: MeshData, basis, vandermonde, grad_vandermonde, quad_nodes, NodesAndModes.quad_nodes_tri, NodesAndModes.quad_nodes_tet, face_vertices, nodes, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial, jacobiP, match_coordinate_vectors,uniform_mesh, make_periodic, jaskowiec_sukumar_quad_nodes
+    using StartUpDG: MeshData, basis, vandermonde, grad_vandermonde, diagE_sbp_nodes, quad_nodes, NodesAndModes.quad_nodes_tri, NodesAndModes.quad_nodes_tet, face_vertices, nodes, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial, jacobiP, match_coordinate_vectors,uniform_mesh, make_periodic, jaskowiec_sukumar_quad_nodes, Hicken
     
     using Jacobi: zgrjm, wgrjm, zgj, wgj, zglj, wglj
 
     using ..MatrixFreeOperators: TensorProductMap2D, TensorProductMap3D, WarpedTensorProductMap2D, WarpedTensorProductMap3D, SelectionMap
 
     using Reexport
-    @reexport using StartUpDG: RefElemData, AbstractElemShape, Line, Quad, Tri, Tet, Hex
+    @reexport using StartUpDG: RefElemData, AbstractElemShape, Line, Quad, Tri, Tet, Hex, SBP
 
-    export AbstractApproximationType, NodalTensor, ModalTensor, ModalMulti, NodalMulti, AbstractReferenceMapping, NoMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, trace_constant, dim, χ, warped_product
+    export AbstractApproximationType, NodalTensor, ModalTensor, ModalMulti, NodalMulti, NodalMultiDiagE, AbstractReferenceMapping, NoMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, trace_constant, dim, χ, warped_product
     
     abstract type AbstractApproximationType end
 
@@ -21,7 +21,6 @@ module SpatialDiscretizations
     struct NodalTensor <: AbstractApproximationType 
         p::Int
     end
-
 
     """Modal approximation using tensor-product operators"""
     struct ModalTensor <: AbstractApproximationType
@@ -36,6 +35,11 @@ module SpatialDiscretizations
 
     """Nodal approximation using multidimensional operators"""
     struct NodalMulti <: AbstractApproximationType
+        p::Int
+    end
+
+    """Nodal approximation using diagonal-E SBP operators"""
+    struct NodalMultiDiagE <: AbstractApproximationType
         p::Int
     end
 

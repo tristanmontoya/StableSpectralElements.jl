@@ -65,11 +65,10 @@ end
     @test energy ≈ 0.0 atol=tol
 end
 
-@testset "Isentropic Euler vortex FluxDiff NodalTensor Quad 2D" begin
+@testset "Isentropic Euler vortex FluxDiff NodalMultiDiagE Tri 2D" begin
     (l2, conservation, entropy) = euler_vortex_2d()
 
-    @test l2 ≈ [0.004741291979358405, 0.10346265859644528, 0.10168232125253537,
-        0.4339693000910734] atol=tol
+    @test l2 ≈ [0.03590766990615721, 0.06742249914084399, 0.06824665400591982, 0.08389828379848713] atol=tol
     @test conservation ≈ [0.0, 0.0, 0.0, 0.0] atol=tol
     @test entropy ≈ 0.0 atol=tol
 end
