@@ -106,6 +106,16 @@ end
         SVector{d}(u[m+1] / p for m in 1:d), -u[1]/p)
 end
 
+@inline function entropy_to_conservative(conservation_law::EulerType{d}, 
+    w::AbstractVector{Float64}) where {d}
+    (; γ) = conservation_law
+    w = w * (γ-1)
+    k = sum(w[m+1]^2 for m in 1:d)/(2*w[end])
+    s = γ - w[1] + k
+    ρe = ((γ-1)/((-w[end])^γ))^(1/(γ-1))*exp(-s/(γ-1))
+    return vcat(-w[end]*ρe, SVector{d}(w[m+1] * ρe for m in 1:d), ρe*(1-k))
+end
+
 @inline function wave_speed(conservation_law::EulerType{d},
     u_in::AbstractVector{Float64}, u_out::AbstractVector{Float64},
     n_f::NTuple{d, Float64}) where {d}

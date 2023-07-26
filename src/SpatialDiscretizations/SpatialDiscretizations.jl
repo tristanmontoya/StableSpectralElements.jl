@@ -13,7 +13,7 @@ module SpatialDiscretizations
     using Reexport
     @reexport using StartUpDG: RefElemData, AbstractElemShape, Line, Quad, Tri, Tet, Hex, SBP
 
-    export AbstractApproximationType, NodalTensor, ModalTensor, ModalMulti, NodalMulti, NodalMultiDiagE, AbstractReferenceMapping, NoMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, trace_constant, dim, χ, warped_product
+    export AbstractApproximationType, NodalTensor, ModalTensor, ModalMulti, NodalMulti, ModalMultiDiagE, NodalMultiDiagE, AbstractReferenceMapping, NoMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, trace_constant, dim, χ, warped_product
     
     abstract type AbstractApproximationType end
 
@@ -35,6 +35,11 @@ module SpatialDiscretizations
 
     """Nodal approximation using multidimensional operators"""
     struct NodalMulti <: AbstractApproximationType
+        p::Int
+    end
+
+    """Modal approximation using diagonal-E SBP operators"""
+    struct ModalMultiDiagE <: AbstractApproximationType
         p::Int
     end
 

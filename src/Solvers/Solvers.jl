@@ -9,11 +9,11 @@ module Solvers
     using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
     
     using ..MatrixFreeOperators: AbstractOperatorAlgorithm,  DefaultOperatorAlgorithm, make_operator
-    using ..ConservationLaws: AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, AbstractTwoPointFlux, NoInviscidFlux, NoViscousFlux, NoTwoPointFlux, NoSourceTerm, physical_flux!, numerical_flux!, compute_two_point_flux, LaxFriedrichsNumericalFlux, BR1, EntropyConservativeFlux
+    using ..ConservationLaws: AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, AbstractTwoPointFlux, NoInviscidFlux, NoViscousFlux, NoTwoPointFlux, NoSourceTerm, physical_flux!, numerical_flux!, compute_two_point_flux, LaxFriedrichsNumericalFlux, BR1, EntropyConservativeFlux, entropy_to_conservative, conservative_to_entropy
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization, check_facet_nodes, check_normals
     using ..GridFunctions: AbstractGridFunction, AbstractGridFunction, NoSourceTerm, evaluate
     
-    export AbstractResidualForm, StandardForm, FluxDifferencingForm, AbstractMappingForm, AbstractStrategy, AbstractDiscretizationOperators, AbstractPreallocatedArrays, AbstractMassMatrixSolver, PhysicalOperators, FluxDifferencingOperators, PreAllocatedArrays,  PreAllocatedArraysFluxDifferencing, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, get_dof, rhs!, rhs_static!, make_operators, StandardForm
+    export AbstractResidualForm, StandardForm, FluxDifferencingForm, AbstractMappingForm, AbstractStrategy, AbstractDiscretizationOperators, AbstractPreallocatedArrays, AbstractMassMatrixSolver, PhysicalOperators, FluxDifferencingOperators, PreAllocatedArrays,  PreAllocatedArraysFluxDifferencing, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, get_dof, rhs!, rhs_static!, make_operators, get_nodal_values!
 
     abstract type AbstractResidualForm{MappingForm, TwoPointFlux} end
     abstract type AbstractMappingForm end
@@ -42,6 +42,7 @@ module Solvers
         viscous_numerical_flux::AbstractViscousNumericalFlux = BR1()
         two_point_flux::TwoPointFlux = EntropyConservativeFlux()
         facet_correction::Bool = false
+        entropy_projection::Bool = false
     end
 
     struct ReferenceOperators{d} <: AbstractDiscretizationOperators{d}
@@ -70,6 +71,7 @@ module Solvers
         R::LinearMap
         W::Diagonal
         B::Diagonal
+        WJ::Vector{Diagonal}
         Λ_q::Array{Float64,4} # N_q x d x d x N_e
         BJf::Vector{Diagonal}
         n_f::Vector{NTuple{d, Vector{Float64}}}
@@ -193,14 +195,16 @@ module Solvers
             spatial_discretization)) where {d, PDEType,ResidualForm<:FluxDifferencingForm}
     
         (; N_p, N_q, N_f, D, V, W, R, B) = spatial_discretization.reference_approximation
-        (; Λ_q, nJf, J_f) = spatial_discretization.geometric_factors
+        (; J_q, Λ_q, nJf, J_f) = spatial_discretization.geometric_factors
         (; N_e) = spatial_discretization
         (; N_c) = conservation_law
     
+        WJ = Vector{Diagonal}(undef, N_e)
         BJf = Vector{Diagonal}(undef, N_e)
         n_f = Vector{NTuple{d, Vector{Float64}}}(undef,N_e)
     
         Threads.@threads for k in 1:N_e
+            WJ[k] = Diagonal(W .* J_q[:,k])
             BJf[k] = Diagonal(B .* J_f[:,k])
             n_f[k] = Tuple(nJf[m][:,k] ./ J_f[:,k] for m in 1:d)
         end
@@ -209,7 +213,7 @@ module Solvers
 
         operators = FluxDifferencingOperators{d}(S, 
             make_operator(V, alg), make_operator(R, alg), 
-            W, B, Λ_q, BJf, n_f)
+            W, B, WJ, Λ_q, BJf, n_f)
     
         return Solver{d,ResidualForm,PDEType,FluxDifferencingOperators{d},N_p,N_q,N_f, N_c, N_e}(conservation_law, operators, mass_solver,
             spatial_discretization.mesh.mapP,form, 

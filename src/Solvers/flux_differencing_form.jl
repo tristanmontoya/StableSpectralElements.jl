@@ -20,7 +20,80 @@
             end
         end
     end
+end
 
+# specialized for no entropy projection 
+# (only provably stable for diagonal-E nodal)
+@inline function get_nodal_values!(
+    ::AbstractMassMatrixSolver,
+    ::AbstractConservationLaw,
+    u_q::AbstractMatrix, 
+    u_f::AbstractMatrix, 
+    ::AbstractMatrix,
+    ::AbstractMatrix,
+    V::LinearMap, R::LinearMap, ::Diagonal,
+    u::AbstractMatrix, ::Int,
+    ::Val{false})
+    mul!(u_q, V, u)
+    mul!(u_f, R, u_q)
+end
+
+# specialized for nodal schemes (not necessarily diagonal-E)
+@inline function get_nodal_values!(
+    ::AbstractMassMatrixSolver,
+    conservation_law::AbstractConservationLaw,
+    u_q::AbstractMatrix, 
+    u_f::AbstractMatrix, 
+    w_q::AbstractMatrix,
+    w_f::AbstractMatrix,
+    V::UniformScalingMap, R::LinearMap, WJ::Diagonal,
+    u::AbstractMatrix, ::Int,
+    ::Val{true})
+    
+    mul!(u_q, V, u)
+    for i in axes(u, 1)
+        w_q[i,:] .= conservative_to_entropy(conservation_law,u_q[i,:])
+    end
+    mul!(w_f, R, w_q)
+    for i in axes(u_f, 1)
+        u_f[i,:] .= entropy_to_conservative(conservation_law,w_f[i,:])
+    end
+end
+
+# general (i.e. suitable for modal) approach
+@inline function get_nodal_values!(
+    mass_solver::AbstractMassMatrixSolver,
+    conservation_law::AbstractConservationLaw,
+    u_q::AbstractMatrix, 
+    u_f::AbstractMatrix, 
+    w_q::AbstractMatrix,
+    w_f::AbstractMatrix,
+    V::LinearMap, R::LinearMap, WJ::Diagonal,
+    u::AbstractMatrix, k::Int,
+    ::Val{true})
+    
+    # evaluate entropy variables in terms of nodal conservative variables
+    mul!(u_q, V, u)
+    for i in axes(u_q, 1)
+        w_q[i,:] .= conservative_to_entropy(conservation_law,u_q[i,:])
+    end
+    w = similar(u)
+    # project entropy variables and store modal coeffs in w
+    lmul!(WJ, w_q)
+    mul!(w, V', w_q)
+    mass_matrix_solve!(mass_solver, k, w, u_q) 
+
+    # get nodal values of projected entropy variables
+    mul!(w_q, V, w)
+    mul!(w_f, R, w_q)
+
+    # convert back to conservative variables
+    for i in axes(u_q, 1)
+        u_q[i,:] .= entropy_to_conservative(conservation_law,w_q[i,:])
+    end
+    for i in axes(u_f, 1)
+        u_f[i,:] .= entropy_to_conservative(conservation_law, w_f[i,:])
+    end
 end
 
 @timeit "du/dt" function rhs!(
@@ -28,14 +101,15 @@ end
     solver::Solver{d, <:FluxDifferencingForm, FirstOrder, FluxDifferencingOperators{d}, N_p,N_q,N_f,N_c,N_e},
     t::Float64) where {d,N_p,N_q,N_f,N_c,N_e}
 
-    (; conservation_law, connectivity, form) = solver
-    (; inviscid_numerical_flux, two_point_flux) = form
+    (; conservation_law, connectivity, form, mass_solver) = solver
+    (; inviscid_numerical_flux, two_point_flux, entropy_projection) = form
     (; f_f, u_q, r_q, u_f, CI) = solver.preallocated_arrays
-    (; S, V, R, Λ_q, BJf, n_f) = solver.operators
+    (; S, V, R, WJ, Λ_q, BJf, n_f) = solver.operators
 
     @views @timeit "reconstruct nodal solution" Threads.@threads for k in 1:N_e
-        mul!(u_q[:,:,k], V, u[:,:,k])
-        mul!(u_f[:,k,:], R, u_q[:,:,k])
+        get_nodal_values!(mass_solver, conservation_law, u_q[:,:,k], 
+            u_f[:,k,:], r_q[:,:,k], f_f[:,:,k], V, R, WJ[k], u[:,:,k], 
+            k, Val(entropy_projection))
     end
 
     @views @timeit "eval residual" Threads.@threads for k in 1:N_e
@@ -53,7 +127,7 @@ end
 
         # solve for time derivative
         mul!(dudt[:,:,k], V', r_q[:,:,k])
-        mass_matrix_solve!(solver.mass_solver, k, dudt[:,:,k], u_q[:,:,k])
+        mass_matrix_solve!(mass_solver, k, dudt[:,:,k], u_q[:,:,k])
     end
     return dudt
 end

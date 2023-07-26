@@ -122,7 +122,7 @@ function evaluate_conservation(
     (; WJ, conservation_law, N_e, V) = analysis 
     S = 0.0
     @views for k in 1:N_e
-        u_q = V*u[:,:,k]
+        u_q = Matrix(V*u[:,:,k])
         for i in axes(u,1)
             S += WJ[k][i,i]*entropy(conservation_law, u_q[i,:])
         end

@@ -70,6 +70,34 @@ function ReferenceApproximation(
 end
 
 function ReferenceApproximation(
+    approx_type::ModalMultiDiagE, 
+    element_type::AbstractElemShape;
+    sbp_type::SBP=SBP{Hicken}(),
+    mapping_degree::Int=1, N_plot::Int=10)
+
+    d = dim(element_type)
+
+    volume_quadrature_rule, facet_quadrature_rule = diagE_sbp_nodes(
+        element_type, sbp_type, approx_type.p)
+    
+    reference_element = RefElemData(element_type, mapping_degree, 
+        quad_rule_vol=volume_quadrature_rule,
+        quad_rule_face=facet_quadrature_rule, Nplot=N_plot)
+
+    sbp_element = RefElemData(element_type, sbp_type, approx_type.p)
+
+    (; rstq, rstp) = reference_element
+
+    V = LinearMap(vandermonde(element_type, approx_type.p, rstq...))
+    V_plot = LinearMap(vandermonde(element_type, approx_type.p, rstp...)) 
+    R = LinearMap(sbp_element.Vf)
+
+    return ReferenceApproximation(approx_type, 
+        reference_element, Tuple(LinearMap(sbp_element.Drst[m]) for m in 1:d), 
+        V, R*V, R, V_plot)
+end
+
+function ReferenceApproximation(
     approx_type::NodalMultiDiagE, 
     element_type::AbstractElemShape;
     sbp_type::SBP=SBP{Hicken}(),
