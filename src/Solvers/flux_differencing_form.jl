@@ -23,7 +23,6 @@
 end
 
 # specialized for no entropy projection 
-# (only provably stable for diagonal-E nodal)
 @inline function get_nodal_values!(
     ::AbstractMassMatrixSolver,
     ::AbstractConservationLaw,
@@ -39,6 +38,7 @@ end
 end
 
 # specialized for nodal schemes (not necessarily diagonal-E)
+# this is really an "entropy extrapolation" and not "projection"
 @inline function get_nodal_values!(
     ::AbstractMassMatrixSolver,
     conservation_law::AbstractConservationLaw,
@@ -61,6 +61,7 @@ end
 end
 
 # general (i.e. suitable for modal) approach
+# uses a full entropy projection
 @inline function get_nodal_values!(
     mass_solver::AbstractMassMatrixSolver,
     conservation_law::AbstractConservationLaw,
@@ -77,11 +78,12 @@ end
     for i in axes(u_q, 1)
         w_q[i,:] .= conservative_to_entropy(conservation_law,u_q[i,:])
     end
-    w = similar(u)
+
     # project entropy variables and store modal coeffs in w
+    w = similar(u)
     lmul!(WJ, w_q)
     mul!(w, V', w_q)
-    mass_matrix_solve!(mass_solver, k, w, u_q) 
+    mass_matrix_solve!(mass_solver, k, w, w_q)
 
     # get nodal values of projected entropy variables
     mul!(w_q, V, w)
@@ -89,7 +91,7 @@ end
 
     # convert back to conservative variables
     for i in axes(u_q, 1)
-        u_q[i,:] .= entropy_to_conservative(conservation_law,w_q[i,:])
+        u_q[i,:] .= entropy_to_conservative(conservation_law, w_q[i,:])
     end
     for i in axes(u_f, 1)
         u_f[i,:] .= entropy_to_conservative(conservation_law, w_f[i,:])
