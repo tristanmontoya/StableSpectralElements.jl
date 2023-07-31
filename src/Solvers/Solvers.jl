@@ -13,7 +13,7 @@ module Solvers
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization, check_facet_nodes, check_normals
     using ..GridFunctions: AbstractGridFunction, AbstractGridFunction, NoSourceTerm, evaluate
     
-    export AbstractResidualForm, StandardForm, FluxDifferencingForm, AbstractMappingForm, AbstractStrategy, AbstractDiscretizationOperators, AbstractPreallocatedArrays, AbstractMassMatrixSolver, PhysicalOperators, FluxDifferencingOperators, PreAllocatedArrays,  PreAllocatedArraysFluxDifferencing, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, get_dof, rhs!, rhs_static!, make_operators, get_nodal_values!
+    export AbstractResidualForm, StandardForm, FluxDifferencingForm, AbstractMappingForm, AbstractStrategy, AbstractDiscretizationOperators, AbstractPreallocatedArrays, AbstractMassMatrixSolver, PhysicalOperators, FluxDifferencingOperators, PreAllocatedArrays,  PreAllocatedArraysFluxDifferencing, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, get_dof, rhs!, rhs_static!, make_operators, get_nodal_values!, facet_correction!
 
     abstract type AbstractResidualForm{MappingForm, TwoPointFlux} end
     abstract type AbstractMappingForm end
@@ -64,7 +64,6 @@ module Solvers
         R::Vector{LinearMap}
         n_f::Vector{NTuple{d, Vector{Float64}}}
     end
-
     struct FluxDifferencingOperators{d} <: AbstractDiscretizationOperators{d}
         S::NTuple{d,LinearMap}
         V::LinearMap
@@ -75,6 +74,8 @@ module Solvers
         Λ_q::Array{Float64,4} # N_q x d x d x N_e
         BJf::Vector{Diagonal}
         n_f::Vector{NTuple{d, Vector{Float64}}}
+        Rmat::LinearMap # will get rid of when there's proper dispatch implemented on tensor-product operators
+        S_h::NTuple{d,LinearMap}
     end
 
     struct PreAllocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e} <: AbstractPreallocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}
@@ -210,10 +211,12 @@ module Solvers
         end
     
         S = Tuple(make_operator(Matrix(W*D[m] - D[m]'*W), alg) for m in 1:d)
+        S_h = Tuple(make_operator([Matrix(W*D[m] - D[m]'*W) Matrix(R'*Diagonal(n_f[1][m])*B);
+            Matrix(-Diagonal(n_f[1][m])*B*R) zeros(size(B))], alg) for m in 1:d)
 
-        operators = FluxDifferencingOperators{d}(S, 
+        operators = FluxDifferencingOperators{d}(S,
             make_operator(V, alg), make_operator(R, alg), 
-            W, B, WJ, Λ_q, BJf, n_f)
+            W, B, WJ, Λ_q, BJf, n_f, make_operator(Matrix(R), alg), S_h)
     
         return Solver{d,ResidualForm,PDEType,FluxDifferencingOperators{d},N_p,N_q,N_f, N_c, N_e}(conservation_law, operators, mass_solver,
             spatial_discretization.mesh.mapP,form, 
