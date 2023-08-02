@@ -15,9 +15,10 @@ function euler_vortex_2d()
     M = 4
 
     form = FluxDifferencingForm(
-        inviscid_numerical_flux=EntropyConservativeNumericalFlux())
+        inviscid_numerical_flux=EntropyConservativeNumericalFlux(),
+        entropy_projection=true)
 
-    reference_approximation = ReferenceApproximation(NodalMultiDiagE(p), 
+    reference_approximation = ReferenceApproximation(ModalMultiDiagE(p), 
         Tri(), mapping_degree=p, N_plot=25)
 
     uniform_mesh = uniform_periodic_mesh(reference_approximation, ((0.0,L),(0.0,L)), (M,M))

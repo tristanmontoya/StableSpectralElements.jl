@@ -3,6 +3,7 @@ using Test, StableSpectralElements, OrdinaryDiffEq
 
 include("test_driver.jl")
 include("burgers_fluxdiff_1d.jl")
+include("euler_1d_gauss.jl")
 include("euler_vortex_2d.jl")
 
 const tol = 1.0e-10
@@ -58,17 +59,25 @@ end
     @test conservation ≈ 0.0 atol=tol
 end
 
-@testset "Inviscid Burgers FluxDiff 1D" begin
+@testset "Inviscid Burgers NodalTensor FluxDiff 1D" begin
     (conservation, energy) = burgers_fluxdiff_1d()
 
     @test conservation ≈ 0.0 atol=tol
     @test energy ≈ 0.0 atol=tol
 end
 
-@testset "Isentropic Euler vortex FluxDiff NodalMultiDiagE Tri 2D" begin
+@testset "Euler 1D Gauss collocation 1D" begin
+    (l2, conservation, entropy) = euler_1d_gauss()
+
+    @test l2 ≈ [3.5808560177567635e-5, 5.2129828619609155e-5, 0.00012637647535378534] atol=tol
+    @test conservation ≈ [0.0, 0.0, 0.0] atol=tol
+    @test entropy ≈ 0.0 atol=tol
+end
+
+@testset "Isentropic Euler vortex FluxDiff ModalMultiDiagE Tri 2D" begin
     (l2, conservation, entropy) = euler_vortex_2d()
 
-    @test l2 ≈ [0.03590766990615721, 0.06742249914084399, 0.06824665400591982, 0.08389828379848713] atol=tol
+    @test l2 ≈ [0.027954049350458362, 0.06348081075345663, 0.05546371956547186, 0.060874070799289914] atol=tol
     @test conservation ≈ [0.0, 0.0, 0.0, 0.0] atol=tol
     @test entropy ≈ 0.0 atol=tol
 end

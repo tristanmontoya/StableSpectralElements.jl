@@ -253,7 +253,6 @@ function evaluate(f::IsentropicVortex, x::NTuple{2,Float64},t::Float64=0.0)
     return [ρ, ρ*v[1], ρ*v[2], E]
 end
 
-
 """
 Periodic wave test case used in the following papers:
 - Veilleux et al., "Stable Spectral Difference approach using Raviart-Thomas elements for 3D computations on tetrahedral grids," JSC 2022.

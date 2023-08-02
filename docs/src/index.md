@@ -23,8 +23,9 @@ using Pkg; Pkg.add("StableSpectralElements")
 We recommend that users refer to the following Jupyter notebooks (included in the `examples` directory) for examples of how to use StableSpectralElements.jl:
 * [Linear advection-diffusion equation in 1D](https://github.com/tristanmontoya/StableSpectralElements.jl/tree/main/examples/advection_diffusion_1d.ipynb)
 * [Inviscid Burgers' equation in 1D with energy-conservative scheme](https://github.com/tristanmontoya/StableSpectralElements.jl/tree/main/examples/burgers_1d.ipynb)
+* [Euler equations in 1D with entropy-conservative Gauss collocation methods](https://github.com/tristanmontoya/StableSpectralElements.jl/tree/main/examples/euler_1d_gauss_collocation.ipynb)
 * [Linear advection equation in 2D](https://github.com/tristanmontoya/StableSpectralElements.jl/tree/main/examples/advection_2d.ipynb)
-* [Isentropic Euler vortex in 2D with entropy-conservative scheme](https://github.com/tristanmontoya/StableSpectralElements.jl/tree/main/examples/euler_vortex_2d.ipynb)
+* [Isentropic Euler vortex in 2D with entropy-stable modal scheme on triangles](https://github.com/tristanmontoya/StableSpectralElements.jl/tree/main/examples/euler_vortex_2d.ipynb)
 * [Linear advection equation in 3D](https://github.com/tristanmontoya/StableSpectralElements.jl/tree/main/examples/advection_3d.ipynb)
 
 ## License
