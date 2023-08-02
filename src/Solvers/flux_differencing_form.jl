@@ -32,6 +32,7 @@ end
     n_f::NTuple{d,Vector{Float64}},
     u_q::AbstractMatrix{Float64},
     u_f::AbstractMatrix{Float64}, ::Val{false}) where {d}
+    # do nothing
 end
 
 @inline function facet_correction!(
@@ -54,22 +55,7 @@ end
             f_f[j,:] .-= R.lmap[j,i] * Fn_ij
         end
     end
-#=
-    tmp = zeros(size(f_f))
-    for i in axes(u_f, 1)
-        for j in axes(u_q, 1)
-            F_ij = compute_two_point_flux(conservation_law,
-                two_point_flux, u_f[i,:],u_q[j,:])
-            Fn_ij = sum(n_f[m][i] * F_ij[:,m] for m in 1:d)
-            tmp[i,:] .+= BJf[i,i] * R.lmap[i,j] * Fn_ij
-          #  println("i = ", i, ", j = ", j)
-          #  println("Bi = ", BJf[i], ", Rij = ", R.lmap[i,j], ", Fn_ij = ",Fn_ij)
-          #  display(tmp)
-        end
-    end
 
-    r_q .+= (R.lmap)'*tmp
-    =#
 end
 
 # specialized for no entropy projection 
@@ -189,6 +175,5 @@ end
         mass_matrix_solve!(mass_solver, k, dudt[:,:,k], u_q[:,:,k])
     end
 
-    #error("TRISTAN_END")
     return dudt
 end

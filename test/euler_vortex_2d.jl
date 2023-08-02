@@ -5,15 +5,17 @@ function euler_vortex_2d()
     L = 1.0
     γ=1.4
     T = L/mach_number # end time
-    strength = sqrt(2/(γ-1)*(1-0.75^(γ-1))) # for central value of ρ=0.5
+    strength = sqrt(2/(γ-1)*(1-0.75^(γ-1))) # for central value of ρ=0.75
     
     conservation_law = EulerEquations{2}(γ)
     exact_solution = IsentropicVortex(conservation_law, θ=angle,
-        Ma=mach_number, β=strength, R=1.0/10.0, x_0=(L/2,L/2));
+        Ma=mach_number, β=strength, R=1.0/10.0, x_0=(L/2,L/2))
+    
     p = 3
     M = 4
 
-    form = FluxDifferencingForm(inviscid_numerical_flux=EntropyConservativeNumericalFlux())
+    form = FluxDifferencingForm(
+        inviscid_numerical_flux=EntropyConservativeNumericalFlux())
 
     reference_approximation = ReferenceApproximation(NodalMultiDiagE(p), 
         Tri(), mapping_degree=p, N_plot=25)

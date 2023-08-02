@@ -123,7 +123,7 @@ function evaluate_conservation(
     S = 0.0
     @views for k in 1:N_e
         u_q = Matrix(V*u[:,:,k])
-        for i in axes(u,1)
+        for i in axes(u_q,1)
             S += WJ[k][i,i]*entropy(conservation_law, u_q[i,:])
         end
     end
@@ -184,8 +184,8 @@ function evaluate_conservation_residual(
     for k in 1:N_e
         M = mass_matrix(mass_solver, k)
         mul!(u_q,V,u[:,:,k])
-        for i in axes(u,1)
-            w_q[i,:] .= conservative_to_entropy(conservation_law, u_q[i,:])
+        for i in axes(u_q,1)
+            w_q[i,:] = conservative_to_entropy(conservation_law, u_q[i,:])
         end
         P = mass_matrix_inverse(mass_solver, k) * V' * WJ[k]
         for e in 1:N_c
