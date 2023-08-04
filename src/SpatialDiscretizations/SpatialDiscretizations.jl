@@ -213,9 +213,9 @@ module SpatialDiscretizations
                 0.5 * R' * B * Diagonal(nJf[n][:,k]) * R) for n in 1:d)
 
         E = Tuple(R' * B * Diagonal(nJf[n][:,k]) * R for n in 1:d)
-            
-        return Tuple(maximum(abs.(convert(Matrix,
-            S[n] + S[n]' - E[n]))) for n in 1:d)
+
+        return Tuple(maximum(abs.(convert(Matrix, S[n] + S[n]' - E[n]))) 
+            for n in 1:d)
     end
 
     """

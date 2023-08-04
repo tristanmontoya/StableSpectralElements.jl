@@ -1,4 +1,4 @@
-function euler_vortex_2d()
+function euler_vortex_2d_diage()
 
     mach_number = 0.4
     angle = 0.0
@@ -15,26 +15,29 @@ function euler_vortex_2d()
     M = 4
 
     form = FluxDifferencingForm(
-        inviscid_numerical_flux=EntropyConservativeNumericalFlux(),
-        entropy_projection=true)
+        inviscid_numerical_flux=EntropyConservativeNumericalFlux())
 
-    reference_approximation = ReferenceApproximation(ModalMultiDiagE(p), 
-        Tri(), mapping_degree=p, N_plot=25)
+    reference_approximation = ReferenceApproximation(NodalMultiDiagE(p), 
+        Tri(), mapping_degree=p)
 
-    uniform_mesh = uniform_periodic_mesh(reference_approximation, ((0.0,L),(0.0,L)), (M,M))
+    uniform_mesh = uniform_periodic_mesh(reference_approximation, 
+        ((0.0,L),(0.0,L)), (M,M))
 
     mesh = warp_mesh(uniform_mesh, reference_approximation, 
         ChanWarping(1.0/16.0, (L,L)))
 
-    spatial_discretization = SpatialDiscretization(mesh, reference_approximation)
+    spatial_discretization = SpatialDiscretization(mesh, 
+        reference_approximation)
 
     results_path = save_project(conservation_law,
         spatial_discretization, exact_solution, form, (0.0, T),
         "results/euler_vortex_2d/", overwrite=true, clear=true);
 
+    mass_solver = DiagonalSolver(spatial_discretization)
+
     ode = semidiscretize(conservation_law, spatial_discretization, 
         exact_solution, form, (0.0, T), ReferenceOperator(),
-        mass_matrix_solver=DiagonalSolver(spatial_discretization));
+        mass_matrix_solver=mass_solver);
 
     dt = T/1000
     sol = solve(ode, CarpenterKennedy2N54(williamson_condition=false),
@@ -51,7 +54,7 @@ function euler_vortex_2d()
     conservation_results = analyze(conservation_analysis, 
         load_time_steps(results_path))
     entropy_analysis = EntropyConservationAnalysis(results_path, 
-        conservation_law, spatial_discretization)
+        conservation_law, spatial_discretization, mass_solver)
     entropy_results = analyze(entropy_analysis, load_time_steps(results_path))
 
     return error_results, conservation_results.E[end,:] - conservation_results.E[1,:], maximum(abs.(entropy_results.dEdt[:,1]))

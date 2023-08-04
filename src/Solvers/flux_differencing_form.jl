@@ -28,40 +28,15 @@ end
     R::LinearMap, # N_f x N_q
     conservation_law::AbstractConservationLaw{d},
     two_point_flux::AbstractTwoPointFlux,
-    BJf::Diagonal, # N_q
+    Λ_q::AbstractArray{Float64,3},
+    B::Diagonal, # N_f
+    Jf::Diagonal,
     n_f::NTuple{d,Vector{Float64}},
+    n_ref::NTuple{d,Vector{Float64}},
     u_q::AbstractMatrix{Float64},
     u_f::AbstractMatrix{Float64}, ::Val{false}) where {d}
-    # do nothing
 end
 
-# only for affine
-@inline function facet_correction!(
-    r_q::AbstractMatrix{Float64}, # N_q x N_c 
-    f_f::AbstractMatrix{Float64}, # N_f x N_c
-    R::LinearMap, # N_f x N_q
-    conservation_law::AbstractConservationLaw{d},
-    two_point_flux::AbstractTwoPointFlux,
-    BJf::Diagonal, # N_q
-    n_f::NTuple{d,Vector{Float64}},
-    u_q::AbstractMatrix{Float64},
-    u_f::AbstractMatrix{Float64}, ::Val{true}) where {d}
-
-    # this does not work for curved meshes
-    for i in axes(u_q,1)
-        for j in axes(u_f,1)
-            F_ij = compute_two_point_flux(conservation_law,
-                two_point_flux, u_q[i,:], u_f[j,:])
-            @inbounds for m in 1:d
-                diff_ij = R.lmap[j,i] * BJf[j,j] * n_f[m][j] * F_ij[:,m]
-                r_q[i,:] .-= diff_ij
-                f_f[j,:] .-= diff_ij
-            end
-        end
-    end
-end
-
-# curvilinear version
 @inline function facet_correction!(
     r_q::AbstractMatrix{Float64}, # N_q x N_c 
     f_f::AbstractMatrix{Float64}, # N_f x N_c
@@ -198,7 +173,6 @@ end
             two_point_flux, Λ_q[:,:,:,k], u_q[:,:,k])
 
         # facet correction term
-        
         facet_correction!(r_q[:,:,k], f_f[:,:,k], Rmat, conservation_law,
             two_point_flux, Λ_q[:,:,:,k], B, BJf[k]/B, n_f[k], n_ref, 
             u_q[:,:,k], u_f[:,k,:], Val(facet_correction))

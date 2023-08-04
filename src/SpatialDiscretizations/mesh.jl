@@ -260,7 +260,7 @@ function GeometricFactors(mesh::MeshData{d},
             _, Jdrdx_f = metrics(SMatrix{d,d}(dxdr_f[i,:,:,k]))
             @inbounds for m in 1:d
                 nJf[m][i,k] = sum(Jdrdx_f[n,m]*reference_element.nrstJ[n][i] 
-                        for n in 1:d)
+                    for n in 1:d)
             end
             J_f[i,k] = sqrt(sum(nJf[m][i,k]^2 for m in 1:d))
         end
