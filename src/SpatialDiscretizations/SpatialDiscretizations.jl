@@ -32,7 +32,6 @@ module SpatialDiscretizations
         p::Int
     end
 
-
     """Nodal approximation using multidimensional operators"""
     struct NodalMulti <: AbstractApproximationType
         p::Int

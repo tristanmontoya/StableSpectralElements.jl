@@ -75,7 +75,7 @@ module Solvers
         BJf::Vector{Diagonal}
         n_f::Vector{NTuple{d, Vector{Float64}}}
         Rmat::LinearMap # will get rid of when there's proper dispatch implemented on tensor-product operators
-        S_h::NTuple{d,LinearMap}
+        n_ref::NTuple{d,Vector{Float64}}
     end
 
     struct PreAllocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e} <: AbstractPreallocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}
@@ -199,10 +199,11 @@ module Solvers
         (; J_q, Λ_q, nJf, J_f) = spatial_discretization.geometric_factors
         (; N_e) = spatial_discretization
         (; N_c) = conservation_law
+        (; nrstJ) = spatial_discretization.reference_approximation.reference_element
     
         WJ = Vector{Diagonal}(undef, N_e)
         BJf = Vector{Diagonal}(undef, N_e)
-        n_f = Vector{NTuple{d, Vector{Float64}}}(undef,N_e)
+        n_f = Vector{NTuple{d, Vector{Float64}}}(undef, N_e)
     
         Threads.@threads for k in 1:N_e
             WJ[k] = Diagonal(W .* J_q[:,k])
@@ -211,12 +212,12 @@ module Solvers
         end
     
         S = Tuple(make_operator(Matrix(W*D[m] - D[m]'*W), alg) for m in 1:d)
-        S_h = Tuple(make_operator([Matrix(W*D[m] - D[m]'*W) Matrix(R'*Diagonal(n_f[1][m])*B);
-            Matrix(-Diagonal(n_f[1][m])*B*R) zeros(size(B))], alg) for m in 1:d)
-
+        nscl = sqrt.(sum(nrstJ[m].^2 for m in 1:d))
         operators = FluxDifferencingOperators{d}(S,
             make_operator(V, alg), make_operator(R, alg), 
-            W, B, WJ, Λ_q, BJf, n_f, make_operator(Matrix(R), alg), S_h)
+            W, B, WJ, Λ_q, BJf, n_f, make_operator(Matrix(R), alg), 
+            nrstJ)
+            #Tuple(nrstJ[m] ./ nscl for m in 1:d))
     
         return Solver{d,ResidualForm,PDEType,FluxDifferencingOperators{d},N_p,N_q,N_f, N_c, N_e}(conservation_law, operators, mass_solver,
             spatial_discretization.mesh.mapP,form, 
