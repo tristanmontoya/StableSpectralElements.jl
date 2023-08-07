@@ -4,7 +4,7 @@ module SpatialDiscretizations
     using LinearAlgebra: I, inv, Diagonal, diagm, kron, transpose, det, eigvals
     using Random: rand, shuffle
     using LinearMaps: LinearMap, ⊗
-    using StartUpDG: MeshData, basis, vandermonde, grad_vandermonde, diagE_sbp_nodes, quad_nodes, NodesAndModes.quad_nodes_tri, NodesAndModes.quad_nodes_tet, face_vertices, nodes, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial, jacobiP, match_coordinate_vectors,uniform_mesh, make_periodic, jaskowiec_sukumar_quad_nodes, Hicken
+    using StartUpDG: MeshData, basis, vandermonde, grad_vandermonde, diagE_sbp_nodes, quad_nodes, NodesAndModes.quad_nodes_tri, NodesAndModes.quad_nodes_tet, face_vertices, nodes, num_faces, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial, jacobiP, match_coordinate_vectors,uniform_mesh, make_periodic, jaskowiec_sukumar_quad_nodes, Hicken
     
     using Jacobi: zgrjm, wgrjm, zgj, wgj, zglj, wglj
 
@@ -98,6 +98,8 @@ module SpatialDiscretizations
     
         # d-tuple of matrices, where first is node index, second is element
         nJf::NTuple{d, Matrix{Float64}}
+
+        nJq::Array{Float64,4}
     end
     
     """Data for constructing the global spatial discretization"""
@@ -119,20 +121,20 @@ module SpatialDiscretizations
         N_e = size(mesh.xyz[1])[2]
         geometric_factors = apply_reference_mapping(GeometricFactors(mesh,
             reference_element), reference_mapping)
-        (; J_q, Λ_q, J_f, nJf) = geometric_factors
+        (; J_q, Λ_q, J_f, nJf, nJq) = geometric_factors
 
         if project_jacobian
             J_proj = similar(J_q)
             Minv = inv(Matrix(V'*W*V))
             for k in 1:N_e 
-                J_proj[:,k] = V * Minv * V' * W * J_q[:,k] 
+                J_proj[:,k] = V * Minv * V' * W * J_q[:,k]
             end
         else 
-            J_proj = J_q 
+            J_proj = J_q
         end
 
         return SpatialDiscretization{d}(mesh, N_e, reference_approximation, 
-            GeometricFactors(J_proj, Λ_q, J_f, nJf),
+            GeometricFactors(J_proj, Λ_q, J_f, nJf, nJq),
             [Matrix(V' * Diagonal(W * J_proj[:,k]) * V) for k in 1:N_e],
             Tuple(reference_element.Vp * mesh.xyz[m] for m in 1:d))
     end
@@ -143,7 +145,7 @@ module SpatialDiscretizations
     """Express all metric terms in terms of collapsed coordinates"""
     function apply_reference_mapping(geometric_factors::GeometricFactors,
         reference_mapping::ReferenceMapping)
-        (; J_q, Λ_q, J_f, nJf) = geometric_factors
+        (; J_q, Λ_q, J_f, nJf, nJq) = geometric_factors
         (; J_ref, Λ_ref) = reference_mapping
         (N_q, N_e) = size(J_q)
         d = size(Λ_q, 2)
@@ -154,7 +156,7 @@ module SpatialDiscretizations
                 for l in 1:d)
         end
         
-        return GeometricFactors{d}(J_q, Λ_η, J_f, nJf)
+        return GeometricFactors{d}(J_q, Λ_η, J_f, nJf, nJq)
     end
 
     """

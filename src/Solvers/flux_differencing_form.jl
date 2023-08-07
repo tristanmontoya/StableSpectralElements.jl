@@ -32,9 +32,11 @@ end
     B::Diagonal, # N_f
     Jf::Diagonal,
     n_f::NTuple{d,Vector{Float64}},
-    n_ref::NTuple{d,Vector{Float64}},
+    nJq::AbstractArray{Float64,3},
     u_q::AbstractMatrix{Float64},
-    u_f::AbstractMatrix{Float64}, ::Val{false}) where {d}
+    u_f::AbstractMatrix{Float64},
+    nodes_per_face::Int,
+    ::Val{false}) where {d}
 end
 
 @inline function facet_correction!(
@@ -47,20 +49,20 @@ end
     B::Diagonal, # N_f
     Jf::Diagonal,
     n_f::NTuple{d,Vector{Float64}},
-    n_ref::NTuple{d,Vector{Float64}},
+    nJq::AbstractArray{Float64,3},
     u_q::AbstractMatrix{Float64},
-    u_f::AbstractMatrix{Float64}, ::Val{true}) where {d}
+    u_f::AbstractMatrix{Float64},
+    nodes_per_face::Int,
+    ::Val{true}) where {d}
 
     for i in axes(u_q,1)
         for j in axes(u_f,1)
+            f = (j-1)÷nodes_per_face + 1
             F_ij = compute_two_point_flux(conservation_law,
                 two_point_flux, u_q[i,:], u_f[j,:])
             @inbounds for n in 1:d
-                # this fails for collapsed scheme, 
-                # because of combining geometric factors
-                nJf_ij = 0.5*(n_f[n][j]*Jf[j,j] + 
-                  sum(n_ref[m][j]*Λ_q[i,m,n] for m in 1:d))
-                diff_ij = R.lmap[j,i] * B[j,j] * nJf_ij * F_ij[:,n]
+                diff_ij = R.lmap[j,i] * B[j,j] *
+                     0.5*(n_f[n][j]*Jf[j,j] + nJq[n,f,i]) * F_ij[:,n]
                 r_q[i,:] .-= diff_ij
                 f_f[j,:] .-= diff_ij
             end
@@ -153,7 +155,8 @@ end
     (; inviscid_numerical_flux, two_point_flux, 
         entropy_projection, facet_correction) = form
     (; f_f, u_q, r_q, u_f, CI) = solver.preallocated_arrays
-    (; S, V, R, B, WJ, Λ_q, BJf, Rmat, n_ref, n_f) = solver.operators
+    (; S, V, R, B, WJ, Λ_q, BJf, Rmat, nJq, n_f,
+        nodes_per_face) = solver.operators
 
     @views @timeit "reconstruct nodal solution" Threads.@threads for k in 1:N_e
         get_nodal_values!(mass_solver, conservation_law, u_q[:,:,k], 
@@ -162,20 +165,22 @@ end
     end
 
     @views @timeit "eval residual" Threads.@threads for k in 1:N_e
-        numerical_flux!(f_f[:,:,k],
-            conservation_law, inviscid_numerical_flux, u_f[:,k,:], 
-            u_f[CI[connectivity[:,k]],:], n_f[k], two_point_flux)
+        # interface flux
+        numerical_flux!(f_f[:,:,k],conservation_law, 
+            inviscid_numerical_flux, u_f[:,k,:], u_f[CI[connectivity[:,k]],:],
+            n_f[k], two_point_flux)
         
+        # scale by quadrature weights
         lmul!(BJf[k], f_f[:,:,k])
 
         # flux differencing term
         flux_difference!(r_q[:,:,k], S, conservation_law, 
             two_point_flux, Λ_q[:,:,:,k], u_q[:,:,k])
 
-        # facet correction term
+        # facet correction term (for operators w/o boundary nodes)
         facet_correction!(r_q[:,:,k], f_f[:,:,k], Rmat, conservation_law,
-            two_point_flux, Λ_q[:,:,:,k], B, BJf[k]/B, n_f[k], n_ref, 
-            u_q[:,:,k], u_f[:,k,:], Val(facet_correction))
+            two_point_flux, Λ_q[:,:,:,k], B, BJf[k]/B, n_f[k], nJq[:,:,:,k], 
+            u_q[:,:,k], u_f[:,k,:], nodes_per_face, Val(facet_correction))
 
         # apply facet operators
         mul!(u_q[:,:,k], R', f_f[:,:,k])
@@ -184,8 +189,6 @@ end
         # solve for time derivative
         mul!(dudt[:,:,k], V', r_q[:,:,k])
         mass_matrix_solve!(mass_solver, k, dudt[:,:,k], u_q[:,:,k])
-
-        #error("end")
     end
 
     return dudt

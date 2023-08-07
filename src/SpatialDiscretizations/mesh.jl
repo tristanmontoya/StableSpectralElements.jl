@@ -224,21 +224,30 @@ end
 function GeometricFactors(mesh::MeshData{d}, 
     reference_element::RefElemData{d}) where {d}
 
+    (; nrstJ) = reference_element
+
     # note, here we assume that mesh is same N_q, N_f every element
     N_q = size(mesh.xyzq[1],1)
     N_f = size(mesh.xyzf[1],1)
     N_e = size(mesh.xyzq[1],2)
 
+    # here we assume same number of nodes per face
+    N_fac = num_faces(reference_element.element_type)
+    nodes_per_face = N_f ÷ N_fac
+
     J_q = Matrix{Float64}(undef, N_q, N_e)
     J_f = Matrix{Float64}(undef, N_f, N_e)
     nJf = Tuple(Matrix{Float64}(undef, N_f, N_e) for m in 1:d)
+
+         
+    nJq = Array{Float64, 4}(undef, d, N_fac, N_q, N_e)
 
     # first dimension is node index, 
     # second and third are matrix indices mn,
     # fourth is element index.
     dxdr_q = Array{Float64, 4}(undef, N_q, d, d, N_e)
     Λ_q = Array{Float64, 4}(undef, N_q, d, d, N_e)
-    dxdr_f = Array{Float64, 4}(undef, N_f, d, d, N_e)        
+    dxdr_f = Array{Float64, 4}(undef, N_f, d, d, N_e)   
 
     for k in 1:N_e
         @inbounds for m in 1:d, n in 1:d
@@ -253,19 +262,27 @@ function GeometricFactors(mesh::MeshData{d},
         # loops over slower indices
         @inbounds for i in 1:N_q
             J_q[i,k], Λ_q[i,:,:,k] = metrics(SMatrix{d,d}(dxdr_q[i,:,:,k]))
+            for f in 1:N_fac
+                #Jf_ref = sqrt(sum(nrstJ[m][nodes_per_face*f]^2 for m in 1:d))
+                n_ref = Tuple(nrstJ[m][nodes_per_face*(f-1)+1] for m in 1:d)
+                #println("n_ref = ", n_ref)
+                for n in 1:d
+                    nJq[n,f,i,k] = sum(Λ_q[i,m,n,k]*n_ref[m] for m in 1:d)
+                end
+            end
         end
+
     
         # get scaled normal vectors - this includes scaling for ref. quadrature weights on long side of right-angled triangle.
         @inbounds for i in 1:N_f
             _, Jdrdx_f = metrics(SMatrix{d,d}(dxdr_f[i,:,:,k]))
             @inbounds for m in 1:d
-                nJf[m][i,k] = sum(Jdrdx_f[n,m]*reference_element.nrstJ[n][i] 
-                    for n in 1:d)
+                nJf[m][i,k] = sum(Jdrdx_f[n,m]*nrstJ[n][i] for n in 1:d)
             end
             J_f[i,k] = sqrt(sum(nJf[m][i,k]^2 for m in 1:d))
         end
     end
-    return GeometricFactors{d}(J_q, Λ_q, J_f, nJf)
+    return GeometricFactors{d}(J_q, Λ_q, J_f, nJf, nJq)
 end
 
 function uniform_periodic_mesh(

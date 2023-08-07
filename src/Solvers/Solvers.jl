@@ -7,7 +7,7 @@ module Solvers
     using TimerOutputs
     using LinearMaps: LinearMap, UniformScalingMap
     using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
-    
+    using StartUpDG: num_faces
     using ..MatrixFreeOperators: AbstractOperatorAlgorithm,  DefaultOperatorAlgorithm, make_operator
     using ..ConservationLaws: AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, AbstractTwoPointFlux, NoInviscidFlux, NoViscousFlux, NoTwoPointFlux, NoSourceTerm, physical_flux!, numerical_flux!, compute_two_point_flux, LaxFriedrichsNumericalFlux, BR1, EntropyConservativeFlux, entropy_to_conservative, conservative_to_entropy
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization, check_facet_nodes, check_normals
@@ -62,7 +62,7 @@ module Solvers
         FAC::Vector{LinearMap}
         V::Vector{LinearMap}
         R::Vector{LinearMap}
-        n_f::Vector{NTuple{d, Vector{Float64}}}
+        n_f::Vector{NTuple{d,Vector{Float64}}}
     end
     struct FluxDifferencingOperators{d} <: AbstractDiscretizationOperators{d}
         S::NTuple{d,LinearMap}
@@ -75,7 +75,8 @@ module Solvers
         BJf::Vector{Diagonal}
         n_f::Vector{NTuple{d, Vector{Float64}}}
         Rmat::LinearMap # will get rid of when there's proper dispatch implemented on tensor-product operators
-        n_ref::NTuple{d,Vector{Float64}}
+        nJq::Array{Float64,4}
+        nodes_per_face::Int
     end
 
     struct PreAllocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e} <: AbstractPreallocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}
@@ -196,11 +197,11 @@ module Solvers
             spatial_discretization)) where {d, PDEType,ResidualForm<:FluxDifferencingForm}
     
         (; N_p, N_q, N_f, D, V, W, R, B) = spatial_discretization.reference_approximation
-        (; J_q, Λ_q, nJf, J_f) = spatial_discretization.geometric_factors
+        (; J_q, Λ_q, nJf, nJq, J_f) = spatial_discretization.geometric_factors
         (; N_e) = spatial_discretization
         (; N_c) = conservation_law
-        (; nrstJ) = spatial_discretization.reference_approximation.reference_element
-    
+        (; element_type) = spatial_discretization.reference_approximation.reference_element
+
         WJ = Vector{Diagonal}(undef, N_e)
         BJf = Vector{Diagonal}(undef, N_e)
         n_f = Vector{NTuple{d, Vector{Float64}}}(undef, N_e)
@@ -212,15 +213,13 @@ module Solvers
         end
     
         S = Tuple(make_operator(Matrix(W*D[m] - D[m]'*W), alg) for m in 1:d)
-        nscl = sqrt.(sum(nrstJ[m].^2 for m in 1:d))
-        operators = FluxDifferencingOperators{d}(S,
-            make_operator(V, alg), make_operator(R, alg), 
-            W, B, WJ, Λ_q, BJf, n_f, make_operator(Matrix(R), alg), 
-            nrstJ)
-            #Tuple(nrstJ[m] ./ nscl for m in 1:d))
+
+        operators = FluxDifferencingOperators{d}(S, make_operator(V, alg),
+            make_operator(R, alg), W, B, WJ, Λ_q, BJf, n_f, 
+            make_operator(Matrix(R), alg), nJq, N_f÷num_faces(element_type))
     
         return Solver{d,ResidualForm,PDEType,FluxDifferencingOperators{d},N_p,N_q,N_f, N_c, N_e}(conservation_law, operators, mass_solver,
-            spatial_discretization.mesh.mapP,form, 
+            spatial_discretization.mesh.mapP, form, 
             PreAllocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}())
     end    
 
