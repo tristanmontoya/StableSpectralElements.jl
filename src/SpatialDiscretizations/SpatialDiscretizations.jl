@@ -85,7 +85,7 @@ module SpatialDiscretizations
         end
     end
 
-    struct GeometricFactors{d}
+    struct GeometricFactors
         # first dimension is node index, second is element
         J_q::Matrix{Float64}
     
@@ -96,8 +96,7 @@ module SpatialDiscretizations
         # first dimension is node index, second is element
         J_f::Matrix{Float64}
     
-        # d-tuple of matrices, where first is node index, second is element
-        nJf::NTuple{d, Matrix{Float64}}
+        nJf::Array{Float64,3}
 
         nJq::Array{Float64,4}
     end
@@ -107,7 +106,7 @@ module SpatialDiscretizations
         mesh::MeshData{d}
         N_e::Int
         reference_approximation::ReferenceApproximation{d}
-        geometric_factors::GeometricFactors{d}
+        geometric_factors::GeometricFactors
         M::Vector{AbstractMatrix}
         x_plot::NTuple{d, Matrix{Float64}}
     end
@@ -156,7 +155,7 @@ module SpatialDiscretizations
                 for l in 1:d)
         end
         
-        return GeometricFactors{d}(J_q, Λ_η, J_f, nJf, nJq)
+        return GeometricFactors(J_q, Λ_η, J_f, nJf, nJq)
     end
 
     """
@@ -165,8 +164,8 @@ module SpatialDiscretizations
     function check_normals(
         spatial_discretization::SpatialDiscretization{d}) where {d}
         (; geometric_factors, mesh, N_e) = spatial_discretization
-        return Tuple([maximum(abs.(geometric_factors.nJf[m][:,k] + 
-                geometric_factors.nJf[m][mesh.mapP[:,k]])) for k in 1:N_e]
+        return Tuple([maximum(abs.(geometric_factors.nJf[m,:,k] + 
+                geometric_factors.nJf[m,:,:][mesh.mapP[:,k]])) for k in 1:N_e]
                 for m in 1:d)
     end
 
@@ -212,9 +211,9 @@ module SpatialDiscretizations
 
         S = Tuple((sum( 0.5 * D[m]' * W * Diagonal(Λ_q[:,m,n,k]) -
                         0.5 * Diagonal(Λ_q[:,m,n,k]) * W * D[m] for m in 1:d) + 
-                0.5 * R' * B * Diagonal(nJf[n][:,k]) * R) for n in 1:d)
+                0.5 * R' * B * Diagonal(nJf[n,:,k]) * R) for n in 1:d)
 
-        E = Tuple(R' * B * Diagonal(nJf[n][:,k]) * R for n in 1:d)
+        E = Tuple(R' * B * Diagonal(nJf[n,:,k]) * R for n in 1:d)
 
         return Tuple(maximum(abs.(convert(Matrix, S[n] + S[n]' - E[n]))) 
             for n in 1:d)

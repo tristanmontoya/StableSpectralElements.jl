@@ -7,17 +7,23 @@
     u_q::AbstractMatrix{Float64}) where {d}
 
     fill!(r_q, 0.0)
-    for i in axes(u_q,1)
-        for j in (i+1):size(u_q,1)
-            Λ_ij = SMatrix{d,d}(0.5*(Λ_q[i,:,:] .+ Λ_q[j,:,:]))
+    @inbounds for i in axes(u_q,1)
+        @inbounds for j in (i+1):size(u_q,1)
+            # evaluate two-point flux
             F_ij = compute_two_point_flux(conservation_law,
                 two_point_flux, u_q[i,:],u_q[j,:])
+            
+            # apply flux-differencing operator
+            diff_ij = zeros(typeof(similar(F_ij[:,1])))
             @inbounds for m in 1:d
-                diff_ij = S[m].lmap[i,j] * sum(Λ_ij[m,n] * F_ij[:,n] 
-                    for n in 1:d)
-                r_q[i,:] .-= diff_ij
-                r_q[j,:] .+= diff_ij
+                Fm_ij = zeros(typeof(similar(F_ij[:,1])))
+                @inbounds for n in 1:d
+                    Fm_ij .+= (Λ_q[i,m,n] + Λ_q[j,m,n]) * F_ij[:,n]
+                end
+                diff_ij .+= S[m].lmap[i,j] * Fm_ij 
             end
+            r_q[i,:] .-= diff_ij
+            r_q[j,:] .+= diff_ij
         end
     end
 end
@@ -25,48 +31,44 @@ end
 @inline function facet_correction!(
     r_q::AbstractMatrix{Float64}, # N_q x N_c 
     f_f::AbstractMatrix{Float64}, # N_f x N_c
-    R::LinearMap, # N_f x N_q
+    CORR::LinearMap, # N_f x N_q
     conservation_law::AbstractConservationLaw{d},
     two_point_flux::AbstractTwoPointFlux,
-    Λ_q::AbstractArray{Float64,3},
-    B::Diagonal, # N_f
-    Jf::Diagonal,
-    n_f::NTuple{d,Vector{Float64}},
-    nJq::AbstractArray{Float64,3},
+    halfnJf::AbstractMatrix{Float64},
+    halfnJq::AbstractArray{Float64,3},
     u_q::AbstractMatrix{Float64},
     u_f::AbstractMatrix{Float64},
     nodes_per_face::Int,
     ::Val{false}) where {d}
 end
 
-@inline function facet_correction!(
+@inline @views function facet_correction!(
     r_q::AbstractMatrix{Float64}, # N_q x N_c 
     f_f::AbstractMatrix{Float64}, # N_f x N_c
-    R::LinearMap, # N_f x N_q
+    CORR::LinearMap, # N_f x N_q
     conservation_law::AbstractConservationLaw{d},
     two_point_flux::AbstractTwoPointFlux,
-    Λ_q::AbstractArray{Float64,3},
-    B::Diagonal, # N_f
-    Jf::Diagonal,
-    n_f::NTuple{d,Vector{Float64}},
-    nJq::AbstractArray{Float64,3},
+    halfnJf::AbstractMatrix{Float64},
+    halfnJq::AbstractArray{Float64,3},
     u_q::AbstractMatrix{Float64},
     u_f::AbstractMatrix{Float64},
     nodes_per_face::Int,
     ::Val{true}) where {d}
 
-    for i in axes(u_q,1)
-        for j in axes(u_f,1)
-            f = (j-1)÷nodes_per_face + 1
-            F_ij = compute_two_point_flux(conservation_law,
-                two_point_flux, u_q[i,:], u_f[j,:])
-            @inbounds for n in 1:d
-                diff_ij = R.lmap[j,i] * B[j,j] *
-                     0.5*(n_f[n][j]*Jf[j,j] + nJq[n,f,i]) * F_ij[:,n]
-                r_q[i,:] .-= diff_ij
-                f_f[j,:] .-= diff_ij
-            end
+    @inbounds for i in axes(u_q,1), j in axes(u_f,1)
+
+        F_ij = compute_two_point_flux(conservation_law,
+            two_point_flux, u_q[i,:], u_f[j,:])
+    
+        f = (j-1)÷nodes_per_face + 1
+        F_dot_n_ij = zeros(typeof(similar(F_ij[:,1])))
+        @inbounds for n in 1:d 
+            F_dot_n_ij .+= (halfnJf[n,j] + halfnJq[n,f,i]) * F_ij[:,n]
         end
+        diff_ij = CORR.lmap[i,j] * F_dot_n_ij
+
+        r_q[i,:] .-= diff_ij
+        f_f[j,:] .-= diff_ij
     end
 end
 
@@ -99,11 +101,11 @@ end
     ::Val{true})
     
     mul!(u_q, V, u)
-    for i in axes(u, 1)
+    @simd for i in axes(u, 1)
         w_q[i,:] .= conservative_to_entropy(conservation_law,u_q[i,:])
     end
     mul!(w_f, R, w_q)
-    for i in axes(u_f, 1)
+    @simd for i in axes(u_f, 1)
         u_f[i,:] .= entropy_to_conservative(conservation_law,w_f[i,:])
     end
 end
@@ -123,7 +125,7 @@ end
     
     # evaluate entropy variables in terms of nodal conservative variables
     mul!(u_q, V, u)
-    for i in axes(u_q, 1)
+    @simd for i in axes(u_q, 1)
         w_q[i,:] .= conservative_to_entropy(conservation_law, u_q[i,:])
     end
 
@@ -138,10 +140,10 @@ end
     mul!(w_f, R, w_q)
 
     # convert back to conservative variables
-    for i in axes(u_q, 1)
+    @simd for i in axes(u_q, 1)
         u_q[i,:] .= entropy_to_conservative(conservation_law, w_q[i,:])
     end
-    for i in axes(u_f, 1)
+    @simd for i in axes(u_f, 1)
         u_f[i,:] .= entropy_to_conservative(conservation_law, w_f[i,:])
     end
 end
@@ -155,31 +157,33 @@ end
     (; inviscid_numerical_flux, two_point_flux, 
         entropy_projection, facet_correction) = form
     (; f_f, u_q, r_q, u_f, CI) = solver.preallocated_arrays
-    (; S, V, R, B, WJ, Λ_q, BJf, Rmat, nJq, n_f,
+    (; S, V, R, WJ, Λ_q, BJf, CORR, halfnJq, halfnJf, n_f,
         nodes_per_face) = solver.operators
-
+    
+    # get the nodal solution using the entropy projection if specified
     @views @timeit "reconstruct nodal solution" Threads.@threads for k in 1:N_e
         get_nodal_values!(mass_solver, conservation_law, u_q[:,:,k], 
-            u_f[:,k,:], r_q[:,:,k], f_f[:,:,k], V, Rmat, WJ[k], u[:,:,k], 
+            u_f[:,k,:], r_q[:,:,k], f_f[:,:,k], V, R, WJ[k], u[:,:,k], 
             k, Val(entropy_projection))
     end
 
+    # compute the local residual
     @views @timeit "eval residual" Threads.@threads for k in 1:N_e
-        # interface flux
-        numerical_flux!(f_f[:,:,k],conservation_law, 
-            inviscid_numerical_flux, u_f[:,k,:], u_f[CI[connectivity[:,k]],:],
-            n_f[k], two_point_flux)
+
+        # evaluate interface numerical flux
+        numerical_flux!(f_f[:,:,k],conservation_law, inviscid_numerical_flux, 
+            u_f[:,k,:], u_f[CI[connectivity[:,k]],:], n_f[k], two_point_flux)
         
-        # scale by quadrature weights
+        # scale numerical flux by quadrature weights
         lmul!(BJf[k], f_f[:,:,k])
 
-        # flux differencing term
+        # volume flux differencing term
         flux_difference!(r_q[:,:,k], S, conservation_law, 
             two_point_flux, Λ_q[:,:,:,k], u_q[:,:,k])
 
-        # facet correction term (for operators w/o boundary nodes)
-        facet_correction!(r_q[:,:,k], f_f[:,:,k], Rmat, conservation_law,
-            two_point_flux, Λ_q[:,:,:,k], B, BJf[k]/B, n_f[k], nJq[:,:,:,k], 
+        # apply facet correction term (for operators w/o boundary nodes)
+        facet_correction!(r_q[:,:,k], f_f[:,:,k], CORR, conservation_law,
+            two_point_flux, halfnJf[:,:,k], halfnJq[:,:,:,k], 
             u_q[:,:,k], u_f[:,k,:], nodes_per_face, Val(facet_correction))
 
         # apply facet operators
@@ -189,6 +193,7 @@ end
         # solve for time derivative
         mul!(dudt[:,:,k], V', r_q[:,:,k])
         mass_matrix_solve!(mass_solver, k, dudt[:,:,k], u_q[:,:,k])
+
     end
 
     return dudt

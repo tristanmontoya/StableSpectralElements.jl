@@ -74,8 +74,9 @@ module Solvers
         Λ_q::Array{Float64,4} # N_q x d x d x N_e
         BJf::Vector{Diagonal}
         n_f::Vector{NTuple{d, Vector{Float64}}}
-        Rmat::LinearMap # will get rid of when there's proper dispatch implemented on tensor-product operators
-        nJq::Array{Float64,4}
+        CORR::LinearMap
+        halfnJf::Array{Float64,3}
+        halfnJq::Array{Float64,4}
         nodes_per_face::Int
     end
 
@@ -171,10 +172,10 @@ module Solvers
         Threads.@threads for k in 1:N_e
             halfWΛ[:,:,k] = [Diagonal(0.5 * W * Λ_q[:,m,n,k]) 
                 for m in 1:d, n in 1:d]
-            halfN[:,k] = [Diagonal(0.5 * nJf[m][:,k] ./ J_f[:,k]) 
+            halfN[:,k] = [Diagonal(0.5 * nJf[m,:,k] ./ J_f[:,k]) 
                 for m in 1:d]
             BJf[k] = Diagonal(B .* J_f[:,k])
-            n_f[k] = Tuple(nJf[m][:,k] ./ J_f[:,k] for m in 1:d)
+            n_f[k] = Tuple(nJf[m,:,k] ./ J_f[:,k] for m in 1:d)
         end
     
         operators = ReferenceOperators{d}(
@@ -209,14 +210,15 @@ module Solvers
         Threads.@threads for k in 1:N_e
             WJ[k] = Diagonal(W .* J_q[:,k])
             BJf[k] = Diagonal(B .* J_f[:,k])
-            n_f[k] = Tuple(nJf[m][:,k] ./ J_f[:,k] for m in 1:d)
+            n_f[k] = Tuple(nJf[m,:,k] ./ J_f[:,k] for m in 1:d)
         end
     
-        S = Tuple(make_operator(Matrix(W*D[m] - D[m]'*W), alg) for m in 1:d)
+        S = Tuple(make_operator(0.5*Matrix(W*D[m] - D[m]'*W), alg) for m in 1:d)
 
         operators = FluxDifferencingOperators{d}(S, make_operator(V, alg),
-            make_operator(R, alg), W, B, WJ, Λ_q, BJf, n_f, 
-            make_operator(Matrix(R), alg), nJq, N_f÷num_faces(element_type))
+            make_operator(R, alg), W, B, WJ, Λ_q, BJf, n_f,
+            make_operator(Matrix(R'*B), alg), 0.5*nJf, 0.5*nJq, 
+            N_f÷num_faces(element_type))
     
         return Solver{d,ResidualForm,PDEType,FluxDifferencingOperators{d},N_p,N_q,N_f, N_c, N_e}(conservation_law, operators, mass_solver,
             spatial_discretization.mesh.mapP, form, 

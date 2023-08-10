@@ -3,7 +3,7 @@ function initialize(initial_data::AbstractGridFunction{d},
     spatial_discretization::SpatialDiscretization{d}) where {d}
 
     (; geometric_factors) = spatial_discretization
-    (; N_q, V, W) = spatial_discretization.reference_approximation
+    (; V, W) = spatial_discretization.reference_approximation
     (; xyzq) = spatial_discretization.mesh
     N_p, N_c, N_e = get_dof(spatial_discretization, conservation_law)
 
