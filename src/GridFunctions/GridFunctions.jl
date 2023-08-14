@@ -154,7 +154,7 @@ module GridFunctions
     function evaluate(f::AbstractGridFunction{d}, x::NTuple{d,Matrix{Float64}},t::Float64=0.0) where {d}
         N, N_e = size(x[1])
         u0 = Array{Float64}(undef, N, f.N_c, N_e)
-        @inbounds for k in 1:N_e
+        @inbounds Threads.@threads for k in 1:N_e
             u0[:,:,k] .= evaluate(f, Tuple(x[m][:,k] for m in 1:d),t)
         end
         return u0

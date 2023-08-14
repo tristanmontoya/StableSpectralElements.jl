@@ -76,7 +76,7 @@ module ConservationLaws
         n::NTuple{d, Vector{Float64}}) where {d}
         
         numerical_flux!(f_star,conservation_law, 
-            EntropyConservativeNumericalFlux(),
+            EntropyConservativeNumericalFlux(), 
             u_in, u_out, n, ConservativeFlux())
     end
 

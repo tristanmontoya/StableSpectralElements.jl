@@ -13,7 +13,7 @@
             F_ij = compute_two_point_flux(conservation_law,
                 two_point_flux, u_q[i,:],u_q[j,:])
             
-            # apply flux-differencing operator
+            # apply flux-differencing operator to flux tensor
             diff_ij = zeros(typeof(similar(F_ij[:,1])))
             @inbounds for m in 1:d
                 Fm_ij = zeros(typeof(similar(F_ij[:,1])))
@@ -22,6 +22,8 @@
                 end
                 diff_ij .+= S[m].lmap[i,j] * Fm_ij 
             end
+
+            # add to residual in a skew-symmetric manner
             r_q[i,:] .-= diff_ij
             r_q[j,:] .+= diff_ij
         end
@@ -56,17 +58,17 @@ end
     ::Val{true}) where {d}
 
     @inbounds for i in axes(u_q,1), j in axes(u_f,1)
-
-        F_ij = compute_two_point_flux(conservation_law,
+        F_ij = compute_two_point_flux(conservation_law, 
             two_point_flux, u_q[i,:], u_f[j,:])
     
         f = (j-1)÷nodes_per_face + 1
         F_dot_n_ij = zeros(typeof(similar(F_ij[:,1])))
+
         @inbounds for n in 1:d 
             F_dot_n_ij .+= (halfnJf[n,j] + halfnJq[n,f,i]) * F_ij[:,n]
         end
-        diff_ij = CORR.lmap[i,j] * F_dot_n_ij
 
+        diff_ij = CORR.lmap[i,j] * F_dot_n_ij
         r_q[i,:] .-= diff_ij
         f_f[j,:] .-= diff_ij
     end
@@ -101,11 +103,11 @@ end
     ::Val{true})
     
     mul!(u_q, V, u)
-    @simd for i in axes(u, 1)
+    @inbounds @simd for i in axes(u, 1)
         w_q[i,:] .= conservative_to_entropy(conservation_law,u_q[i,:])
     end
     mul!(w_f, R, w_q)
-    @simd for i in axes(u_f, 1)
+    @inbounds @simd for i in axes(u_f, 1)
         u_f[i,:] .= entropy_to_conservative(conservation_law,w_f[i,:])
     end
 end
@@ -125,7 +127,7 @@ end
     
     # evaluate entropy variables in terms of nodal conservative variables
     mul!(u_q, V, u)
-    @simd for i in axes(u_q, 1)
+    @inbounds for i in axes(u_q, 1)
         w_q[i,:] .= conservative_to_entropy(conservation_law, u_q[i,:])
     end
 
@@ -140,10 +142,10 @@ end
     mul!(w_f, R, w_q)
 
     # convert back to conservative variables
-    @simd for i in axes(u_q, 1)
+    @inbounds for i in axes(u_q, 1)
         u_q[i,:] .= entropy_to_conservative(conservation_law, w_q[i,:])
     end
-    @simd for i in axes(u_f, 1)
+    @inbounds for i in axes(u_f, 1)
         u_f[i,:] .= entropy_to_conservative(conservation_law, w_f[i,:])
     end
 end
@@ -161,17 +163,17 @@ end
         nodes_per_face) = solver.operators
     
     # get the nodal solution using the entropy projection if specified
-    @views @timeit "reconstruct nodal solution" Threads.@threads for k in 1:N_e
+    @inbounds @views @timeit "get nodal vals" Threads.@threads for k in 1:N_e
         get_nodal_values!(mass_solver, conservation_law, u_q[:,:,k], 
             u_f[:,k,:], r_q[:,:,k], f_f[:,:,k], V, R, WJ[k], u[:,:,k], 
             k, Val(entropy_projection))
     end
 
     # compute the local residual
-    @views @timeit "eval residual" Threads.@threads for k in 1:N_e
+    @inbounds @views @timeit "eval residual" Threads.@threads for k in 1:N_e
 
         # evaluate interface numerical flux
-        numerical_flux!(f_f[:,:,k],conservation_law, inviscid_numerical_flux, 
+        numerical_flux!(f_f[:,:,k], conservation_law, inviscid_numerical_flux, 
             u_f[:,k,:], u_f[CI[connectivity[:,k]],:], n_f[k], two_point_flux)
         
         # scale numerical flux by quadrature weights
@@ -193,7 +195,6 @@ end
         # solve for time derivative
         mul!(dudt[:,:,k], V', r_q[:,:,k])
         mass_matrix_solve!(mass_solver, k, dudt[:,:,k], u_q[:,:,k])
-
     end
 
     return dudt

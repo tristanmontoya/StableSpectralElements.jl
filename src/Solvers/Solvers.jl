@@ -1,6 +1,7 @@
 module Solvers
     
     import LinearAlgebra
+    using Polyester
     using GFlops
     using StaticArrays
     using LinearAlgebra: Diagonal, eigvals, inv, mul!, lmul!, diag, diagm, factorize, cholesky, ldiv!, Factorization, Cholesky, Symmetric, I, UniformScaling
@@ -9,7 +10,7 @@ module Solvers
     using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
     using StartUpDG: num_faces
     using ..MatrixFreeOperators: AbstractOperatorAlgorithm,  DefaultOperatorAlgorithm, make_operator
-    using ..ConservationLaws: AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, AbstractTwoPointFlux, NoInviscidFlux, NoViscousFlux, NoTwoPointFlux, NoSourceTerm, physical_flux!, numerical_flux!, compute_two_point_flux, LaxFriedrichsNumericalFlux, BR1, EntropyConservativeFlux, entropy_to_conservative, conservative_to_entropy
+    using ..ConservationLaws
     using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization, check_facet_nodes, check_normals
     using ..GridFunctions: AbstractGridFunction, AbstractGridFunction, NoSourceTerm, evaluate
     
