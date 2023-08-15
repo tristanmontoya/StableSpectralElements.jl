@@ -7,14 +7,12 @@ Define a linear advection equation of the form
 ```
 with a constant advection velocity $\bm{a} \in \R^d$. A specialized constructor `LinearAdvectionEquation(a::Float64)` is provided for the one-dimensional case.
 """
-struct LinearAdvectionEquation{d} <: AbstractConservationLaw{d,FirstOrder}
+struct LinearAdvectionEquation{d} <: AbstractConservationLaw{d,FirstOrder,1}
     a::NTuple{d,Float64} 
     source_term::AbstractGridFunction{d}
-    N_c::Int
-
     function LinearAdvectionEquation(a::NTuple{d,Float64}, 
         source_term::AbstractGridFunction{d}=NoSourceTerm{d}()) where {d}
-        return new{d}(a, source_term, 1)
+        return new{d}(a, source_term)
     end
 end
 
@@ -27,16 +25,15 @@ Define a linear advection-diffusion equation of the form
 ```
 with a constant advection velocity $\bm{a} \in \R^d$ and diffusion coefficient $b \in \R^+$. A specialized constructor `LinearAdvectionDiffusionEquation(a::Float64, b::Float64)` is provided for the one-dimensional case.
 """
-struct LinearAdvectionDiffusionEquation{d} <: AbstractConservationLaw{d,SecondOrder}
+struct LinearAdvectionDiffusionEquation{d} <: AbstractConservationLaw{d,SecondOrder,1}
     a::NTuple{d,Float64}
     b::Float64
     source_term::AbstractGridFunction{d}
-    N_c::Int
 
     function LinearAdvectionDiffusionEquation(
         a::NTuple{d,Float64}, b::Float64, 
         source_term::AbstractGridFunction{d}=NoSourceTerm{d}()) where {d}
-        return new{d}(a, b, source_term, 1)
+        return new{d}(a, b, source_term)
     end
 end
 

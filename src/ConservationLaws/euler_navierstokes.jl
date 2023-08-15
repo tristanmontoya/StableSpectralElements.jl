@@ -23,26 +23,24 @@ P(\bm{x},t) = (\gamma - 1)\Big(E(\bm{x},t) - \frac{1}{2}\rho(\bm{x},t) \lVert \b
 ```
 The specific heat ratio is specified as a parameter `γ::Float64`, which must be greater than unity.
 """
-struct EulerEquations{d} <: AbstractConservationLaw{d,FirstOrder}
+struct EulerEquations{d,N_c} <: AbstractConservationLaw{d,FirstOrder,N_c}
     γ::Float64
     source_term::AbstractGridFunction{d}
-    N_c::Int
 
     function EulerEquations{d}(γ::Float64=1.4, 
         source_term::AbstractGridFunction{d}=NoSourceTerm{d}()) where {d}
-        return new{d}(γ,source_term, d+2)
+        return new{d,d+2}(γ,source_term)
     end
 end
 
-struct NavierStokesEquations{d} <: AbstractConservationLaw{d,SecondOrder} 
+struct NavierStokesEquations{d,N_c} <: AbstractConservationLaw{d,SecondOrder,N_c} 
     γ::Float64
     source_term::AbstractGridFunction{d}
-    N_c::Int
 
     function NavierStokesEquations{d}(γ::Float64=1.4, 
         source_term::AbstractGridFunction{d}=NoSourceTerm{d}()) where {d}
         @error "Navier-Stokes not implemented."
-        return new{d}(γ,source_term, d+2)
+        return new{d,N_c}(γ,source_term)
     end
 end
 
@@ -71,7 +69,8 @@ end
     h_t = u[end] + p
     V_n = sum(V[m]*n[m] for m in 1:d)
     
-    return [u[1]*V_n, [u[1]*V_n*V[m] + p*n[m] for m in 1:d]..., h_t*V_n]
+    return SVector{d+2}(
+        [u[1]*V_n, [u[1]*V_n*V[m] + p*n[m] for m in 1:d]..., h_t*V_n])
 end
 
 @inline @views function physical_flux!(f::AbstractArray{Float64,3},    
@@ -265,6 +264,7 @@ struct EulerPeriodicTest{d} <: AbstractGridFunction{d}
     γ::Float64
     strength::Float64
     N_c::Int
+
     function EulerPeriodicTest(conservation_law::EulerEquations{d}, 
         strength::Float64=0.2) where {d}
         return new{d}(conservation_law.γ,strength,d+2)

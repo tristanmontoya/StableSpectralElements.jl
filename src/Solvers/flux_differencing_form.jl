@@ -1,10 +1,10 @@
 @inline @views function flux_difference!(
     r_q::AbstractMatrix{Float64}, # N_q x N_c 
     S::NTuple{d,<:LinearMap{Float64}}, # N_q x N_q
-    conservation_law::AbstractConservationLaw{d},
+    conservation_law::AbstractConservationLaw{d,FirstOrder,N_c},
     two_point_flux::AbstractTwoPointFlux,
     Λ_q::AbstractArray{Float64,3}, # N_q x d x d
-    u_q::AbstractMatrix{Float64}) where {d}
+    u_q::AbstractMatrix{Float64}) where {d,N_c}
 
     fill!(r_q, 0.0)
     @inbounds for i in axes(u_q,1)
@@ -14,18 +14,19 @@
                 two_point_flux, u_q[i,:],u_q[j,:])
             
             # apply flux-differencing operator to flux tensor
-            diff_ij = zeros(typeof(similar(F_ij[:,1])))
-            @inbounds for m in 1:d
-                Fm_ij = zeros(typeof(similar(F_ij[:,1])))
-                @inbounds for n in 1:d
-                    Fm_ij .+= (Λ_q[i,m,n] + Λ_q[j,m,n]) * F_ij[:,n]
+            @inbounds for e in 1:N_c
+                diff_ij = 0.0
+                @inbounds for m in 1:d
+                    Fm_ij = 0.0
+                    @inbounds for n in 1:d
+                        Λ_ij = Λ_q[i,m,n] + Λ_q[j,m,n]
+                        @muladd Fm_ij = Fm_ij + Λ_ij * F_ij[e,n]
+                    end
+                    @muladd diff_ij = diff_ij + S[m].lmap[i,j] * Fm_ij
                 end
-                diff_ij .+= S[m].lmap[i,j] * Fm_ij 
+                r_q[i,e] -= diff_ij
+                r_q[j,e] += diff_ij
             end
-
-            # add to residual in a skew-symmetric manner
-            r_q[i,:] .-= diff_ij
-            r_q[j,:] .+= diff_ij
         end
     end
 end
@@ -48,29 +49,33 @@ end
     r_q::AbstractMatrix{Float64}, # N_q x N_c 
     f_f::AbstractMatrix{Float64}, # N_f x N_c
     CORR::LinearMap, # N_f x N_q
-    conservation_law::AbstractConservationLaw{d},
+    conservation_law::AbstractConservationLaw{d,FirstOrder,N_c},
     two_point_flux::AbstractTwoPointFlux,
     halfnJf::AbstractMatrix{Float64},
     halfnJq::AbstractArray{Float64,3},
     u_q::AbstractMatrix{Float64},
     u_f::AbstractMatrix{Float64},
     nodes_per_face::Int,
-    ::Val{true}) where {d}
+    ::Val{true}) where {d, N_c}
 
-    @inbounds for i in axes(u_q,1), j in axes(u_f,1)
-        F_ij = compute_two_point_flux(conservation_law, 
-            two_point_flux, u_q[i,:], u_f[j,:])
-    
-        f = (j-1)÷nodes_per_face + 1
-        F_dot_n_ij = zeros(typeof(similar(F_ij[:,1])))
+    @inbounds for i in axes(u_q,1)
+        @inbounds for j in axes(u_f,1)
+            F_ij = compute_two_point_flux(conservation_law, 
+                two_point_flux, u_q[i,:], u_f[j,:])
+        
+            f = (j-1)÷nodes_per_face + 1
 
-        @inbounds for n in 1:d 
-            F_dot_n_ij .+= (halfnJf[n,j] + halfnJq[n,f,i]) * F_ij[:,n]
+            @inbounds for e in 1:N_c
+                F_dot_n_ij = 0.0
+                @inbounds for n in 1:d
+                    nJ_ij = halfnJf[n,j] + halfnJq[n,f,i]
+                    @muladd F_dot_n_ij = F_dot_n_ij + nJ_ij * F_ij[e,n]
+                end
+                diff_ij = CORR.lmap[i,j] * F_dot_n_ij
+                r_q[i,e] -= diff_ij
+                f_f[j,e] -= diff_ij
+            end
         end
-
-        diff_ij = CORR.lmap[i,j] * F_dot_n_ij
-        r_q[i,:] .-= diff_ij
-        f_f[j,:] .-= diff_ij
     end
 end
 
@@ -80,6 +85,7 @@ end
     ::AbstractConservationLaw,
     u_q::AbstractMatrix, 
     u_f::AbstractMatrix, 
+    ::AbstractMatrix,
     ::AbstractMatrix,
     ::AbstractMatrix,
     V::LinearMap, R::LinearMap, ::Diagonal,
@@ -98,16 +104,17 @@ end
     u_f::AbstractMatrix, 
     w_q::AbstractMatrix,
     w_f::AbstractMatrix,
+    w::AbstractMatrix,
     V::UniformScalingMap, R::LinearMap, WJ::Diagonal,
     u::AbstractMatrix, ::Int,
     ::Val{true})
     
     mul!(u_q, V, u)
-    @inbounds @simd for i in axes(u, 1)
+    @inbounds for i in axes(u, 1)
         w_q[i,:] .= conservative_to_entropy(conservation_law,u_q[i,:])
     end
     mul!(w_f, R, w_q)
-    @inbounds @simd for i in axes(u_f, 1)
+    @inbounds for i in axes(u_f, 1)
         u_f[i,:] .= entropy_to_conservative(conservation_law,w_f[i,:])
     end
 end
@@ -121,6 +128,7 @@ end
     u_f::AbstractMatrix, 
     w_q::AbstractMatrix,
     w_f::AbstractMatrix,
+    w::AbstractMatrix,
     V::LinearMap, R::LinearMap, WJ::Diagonal,
     u::AbstractMatrix, k::Int,
     ::Val{true})
@@ -132,7 +140,6 @@ end
     end
 
     # project entropy variables and store modal coeffs in w
-    w = similar(u)
     lmul!(WJ, w_q)
     mul!(w, V', w_q)
     mass_matrix_solve!(mass_solver, k, w, w_q)
@@ -158,15 +165,15 @@ end
     (; conservation_law, connectivity, form, mass_solver) = solver
     (; inviscid_numerical_flux, two_point_flux, 
         entropy_projection, facet_correction) = form
-    (; f_f, u_q, r_q, u_f, CI) = solver.preallocated_arrays
+    (; f_f, u_q, r_q, u_f, temp, CI) = solver.preallocated_arrays
     (; S, V, R, WJ, Λ_q, BJf, CORR, halfnJq, halfnJf, n_f,
         nodes_per_face) = solver.operators
     
     # get the nodal solution using the entropy projection if specified
     @inbounds @views @timeit "get nodal vals" Threads.@threads for k in 1:N_e
         get_nodal_values!(mass_solver, conservation_law, u_q[:,:,k], 
-            u_f[:,k,:], r_q[:,:,k], f_f[:,:,k], V, R, WJ[k], u[:,:,k], 
-            k, Val(entropy_projection))
+            u_f[:,k,:], r_q[:,:,k], f_f[:,:,k], temp[:,:,k], 
+            V, R, WJ[k], u[:,:,k], k, Val(entropy_projection))
     end
 
     # compute the local residual

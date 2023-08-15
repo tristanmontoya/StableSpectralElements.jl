@@ -1,9 +1,9 @@
 module Solvers
     
     import LinearAlgebra
-    using Polyester
     using GFlops
     using StaticArrays
+    using MuladdMacro
     using LinearAlgebra: Diagonal, eigvals, inv, mul!, lmul!, diag, diagm, factorize, cholesky, ldiv!, Factorization, Cholesky, Symmetric, I, UniformScaling
     using TimerOutputs
     using LinearMaps: LinearMap, UniformScalingMap
@@ -133,16 +133,16 @@ module Solvers
             Array{Float64}(undef,N_f, N_e, N_c, d)) #note switched order
     end
 
-    function Solver(conservation_law::AbstractConservationLaw{d,PDEType},     
+    function Solver(conservation_law::AbstractConservationLaw{d,PDEType, N_c},     
         spatial_discretization::SpatialDiscretization{d},
         form::ResidualForm,
         ::PhysicalOperator,
         operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm(),
-        mass_solver::AbstractMassMatrixSolver=WeightAdjustedSolver(spatial_discretization)) where {d, PDEType, ResidualForm<:StandardForm}
+        mass_solver::AbstractMassMatrixSolver=WeightAdjustedSolver(spatial_discretization)) where {d, PDEType, N_c,
+            ResidualForm<:StandardForm}
 
         (; N_e) = spatial_discretization
         (; N_p, N_q, N_f) = spatial_discretization.reference_approximation
-        (; N_c) = conservation_law
 
         operators = make_operators(spatial_discretization, form,
             operator_algorithm, mass_solver)
@@ -153,17 +153,18 @@ module Solvers
             PreAllocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}(N_p))
     end
     
-    function Solver(conservation_law::AbstractConservationLaw{d,PDEType},     
+    function Solver(
+        conservation_law::AbstractConservationLaw{d,PDEType,N_c},     
         spatial_discretization::SpatialDiscretization{d},
         form::ResidualForm,
         ::ReferenceOperator,
         alg::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm(),
-        mass_solver::AbstractMassMatrixSolver=WeightAdjustedSolver(spatial_discretization)) where {d, PDEType, ResidualForm<:StandardForm}
+        mass_solver::AbstractMassMatrixSolver=WeightAdjustedSolver(spatial_discretization)) where {d, PDEType, N_c,
+            ResidualForm<:StandardForm}
     
         (; N_p, N_q, N_f, D, V, W, R, B) = spatial_discretization.reference_approximation
         (; Λ_q, nJf, J_f) = spatial_discretization.geometric_factors
         (; N_e) = spatial_discretization
-        (; N_c) = conservation_law
 
         halfWΛ = Array{Diagonal,3}(undef, d, d, N_e)
         halfN = Matrix{Diagonal}(undef, d, N_e)
@@ -190,18 +191,18 @@ module Solvers
             PreAllocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}())
     end    
 
-    function Solver(conservation_law::AbstractConservationLaw{d,PDEType},     
+    function Solver(
+        conservation_law::AbstractConservationLaw{d,PDEType,N_c},     
         spatial_discretization::SpatialDiscretization{d},
         form::ResidualForm,
         ::AbstractStrategy,
         alg::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm(),
         mass_solver::AbstractMassMatrixSolver=WeightAdjustedSolver(
-            spatial_discretization)) where {d, PDEType,ResidualForm<:FluxDifferencingForm}
+            spatial_discretization)) where {d, PDEType, N_c,ResidualForm<:FluxDifferencingForm}
     
         (; N_p, N_q, N_f, D, V, W, R, B) = spatial_discretization.reference_approximation
         (; J_q, Λ_q, nJf, nJq, J_f) = spatial_discretization.geometric_factors
         (; N_e) = spatial_discretization
-        (; N_c) = conservation_law
         (; element_type) = spatial_discretization.reference_approximation.reference_element
 
         WJ = Vector{Diagonal}(undef, N_e)
@@ -223,13 +224,13 @@ module Solvers
     
         return Solver{d,ResidualForm,PDEType,FluxDifferencingOperators{d},N_p,N_q,N_f, N_c, N_e}(conservation_law, operators, mass_solver,
             spatial_discretization.mesh.mapP, form, 
-            PreAllocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}())
+            PreAllocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}(N_p))
     end    
 
     @inline function get_dof(spatial_discretization::SpatialDiscretization{d}, 
-        conservation_law::AbstractConservationLaw{d}) where {d}
-        return (spatial_discretization.reference_approximation.N_p, 
-            conservation_law.N_c, spatial_discretization.N_e)
+        ::AbstractConservationLaw{d,PDEType,N_c}) where {d, PDEType,N_c}
+        return (spatial_discretization.reference_approximation.N_p, N_c, 
+            spatial_discretization.N_e)
     end
 
     export CholeskySolver, WeightAdjustedSolver, DiagonalSolver, mass_matrix, mass_matrix_inverse, mass_matrix_solve!

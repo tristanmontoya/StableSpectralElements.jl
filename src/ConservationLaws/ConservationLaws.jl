@@ -8,7 +8,7 @@ module ConservationLaws
 
     export physical_flux, physical_flux!, numerical_flux!, entropy, conservative_to_primitive, conservative_to_entropy, entropy_to_conservative, compute_two_point_flux, wave_speed, logmean, AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, NoInviscidFlux, NoViscousFlux, LaxFriedrichsNumericalFlux, CentralNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, ConservativeFlux, EntropyConservativeFlux, NoTwoPointFlux, ExactSolution
 
-    abstract type AbstractConservationLaw{d, PDEType} end
+    abstract type AbstractConservationLaw{d, PDEType, N_c} end
     abstract type AbstractPDEType end
     struct FirstOrder <: AbstractPDEType end
     struct SecondOrder <: AbstractPDEType end
@@ -34,37 +34,49 @@ module ConservationLaws
     struct EntropyConservativeFlux <: AbstractTwoPointFlux end
     struct NoTwoPointFlux <: AbstractTwoPointFlux end
 
-    @inline function numerical_flux!(
+    @inline @views function numerical_flux!(
         f_star::AbstractMatrix{Float64},
-        conservation_law::AbstractConservationLaw{d}, 
+        conservation_law::AbstractConservationLaw{d,PDEType,N_c}, 
         numerical_flux::LaxFriedrichsNumericalFlux,
         u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
         n::NTuple{d, Vector{Float64}},
-        two_point_flux::AbstractTwoPointFlux=ConservativeFlux()) where {d}
+        two_point_flux::AbstractTwoPointFlux=ConservativeFlux()) where {d, PDEType, N_c}
         
-        for i in axes(u_in, 1)
+        @inbounds for i in axes(u_in, 1)
             f_s = compute_two_point_flux(conservation_law, two_point_flux,
                 u_in[i,:], u_out[i,:])
-            f_star[i,:] .= sum(f_s[:,m]*n[m][i] for m in 1:d) .- 
-                numerical_flux.λ*0.5 * 
-                wave_speed(conservation_law, u_in[i,:], u_out[i,:], 
-                    Tuple(n[m][i] for m in 1:d)) .* 
-                    (u_out[i,:] .- u_in[i,:])
+            a = numerical_flux.λ*wave_speed(
+                conservation_law, u_in[i,:], u_out[i,:], 
+                Tuple(n[m][i] for m in 1:d))
+            @inbounds for e in 1:N_c
+                temp = 0.0
+                du = u_out[i,e] - u_in[i,e]
+                @inbounds for m in 1:d
+                    temp = temp + f_s[e,m]*n[m][i]
+                end
+                f_star[i,e] = temp - a * du
+            end
         end
     end
 
-    @inline function numerical_flux!(
+    @inline @views function numerical_flux!(
         f_star::AbstractMatrix{Float64},
-        conservation_law::AbstractConservationLaw{d}, 
+        conservation_law::AbstractConservationLaw{d,PDEType,N_c}, 
         ::EntropyConservativeNumericalFlux,
         u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
         n::NTuple{d, Vector{Float64}},
-        two_point_flux::AbstractTwoPointFlux=EntropyConservativeFlux()) where {d}
-        
-        for i in axes(u_in, 1)
+        two_point_flux::AbstractTwoPointFlux=EntropyConservativeFlux()) where {d,PDEType,N_c}
+         
+        @inbounds for i in axes(u_in, 1)
             f_s = compute_two_point_flux(conservation_law, two_point_flux,
                 u_in[i,:], u_out[i,:])
-            f_star[i,:] .= sum(f_s[:,m]*n[m][i] for m in 1:d)
+            @inbounds for e in 1:N_c
+                temp = 0.0
+                @inbounds for m in 1:d
+                    @muladd temp = temp + f_s[e,m]*n[m][i]
+                end
+               f_star[i,e] = temp
+            end
         end
     end
 
@@ -92,7 +104,6 @@ module ConservationLaws
             return (x + y) * 105 / (210 + f² * (70 + f² * (42 + f² * 30)))
             # faster factorized way to compute
             # (x + y) / (2 + 2/3 * f^2 + 2/5 * f^4 + 2/7 * f^6)
-            # see https://trixi-framework.github.io/Trixi.jl/stable/reference-trixi/#Trixi.ln_mean
         else
             return (y - x) / log(y/x)
         end
@@ -106,12 +117,12 @@ module ConservationLaws
         N_c::Int
 
         function ExactSolution(
-            conservation_law::AbstractConservationLaw{d,PDEType},
+            conservation_law::AbstractConservationLaw{d,PDEType,N_c},
             initial_data::AbstractGridFunction{d};
-            periodic::Bool=false) where {d, PDEType}
+            periodic::Bool=false) where {d, PDEType, N_c}
 
             return new{d,typeof(conservation_law),typeof(initial_data),typeof(conservation_law.source_term)}(
-                conservation_law, initial_data,periodic,conservation_law.N_c)
+                conservation_law, initial_data, periodic, N_c)
         end
     end
 

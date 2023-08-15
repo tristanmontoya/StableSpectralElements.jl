@@ -7,14 +7,13 @@ Define an inviscid Burgers' equation of the form
 ```
 where $\bm{a} \in \R^d$. A specialized constructor `InviscidBurgersEquation()` is provided for the one-dimensional case with `a = (1.0,)`.
 """
-struct InviscidBurgersEquation{d} <: AbstractConservationLaw{d,FirstOrder}
+struct InviscidBurgersEquation{d} <: AbstractConservationLaw{d,FirstOrder,1}
     a::NTuple{d,Float64} 
     source_term::AbstractGridFunction{d}
-    N_c::Int
 
     function InviscidBurgersEquation(a::NTuple{d,Float64}, 
         source_term::AbstractGridFunction{d}=NoSourceTerm{d}()) where {d}
-        return new{d}(a, source_term, 1)
+        return new{d}(a, source_term)
     end
 end
 
@@ -27,15 +26,14 @@ Define a viscous Burgers' equation of the form
 ```
 where $\bm{a} \in \R^d$ and $b \in \R^+$. A specialized constructor `ViscousBurgersEquation(b::Float64)` is provided for the one-dimensional case with `a = (1.0,)`.
 """
-struct ViscousBurgersEquation{d} <: AbstractConservationLaw{d,SecondOrder}
+struct ViscousBurgersEquation{d} <: AbstractConservationLaw{d,SecondOrder,1}
     a::NTuple{d,Float64}
     b::Float64
     source_term::AbstractGridFunction{d}
-    N_c::Int
 
     function ViscousBurgersEquation(a::NTuple{d,Float64}, b::Float64, 
         source_term::AbstractGridFunction{d}=NoSourceTerm{d}()) where {d}
-        return new{d}(a, b, source_term, 1)
+        return new{d}(a, b, source_term)
     end
 end
 
@@ -76,7 +74,7 @@ Evaluate the interface normal solution for the viscous Burgers' equation using t
 
 `U*(u⁻, u⁺, n) = ½(u⁻ + u⁺)n`
 """
-function numerical_flux!(u_nstar::AbstractArray{Float64,3},
+@inline function numerical_flux!(u_nstar::AbstractArray{Float64,3},
     ::ViscousBurgersEquation{d},
     ::BR1, u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
     n::NTuple{d, Vector{Float64}}) where {d}
@@ -93,7 +91,7 @@ Evaluate the numerical flux for the viscous Burgers' equation using the BR1 appr
 
 F*(u⁻, u⁺, q⁻, q⁺, n) = ½(F²(u⁻,q⁻) + F²(u⁺, q⁺))⋅n
 """
-function numerical_flux!(f_star::AbstractMatrix{Float64},
+@inline function numerical_flux!(f_star::AbstractMatrix{Float64},
     conservation_law::ViscousBurgersEquation{d},
     ::BR1, u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
     q_in::AbstractArray{Float64,3}, q_out::AbstractArray{Float64,3}, 
