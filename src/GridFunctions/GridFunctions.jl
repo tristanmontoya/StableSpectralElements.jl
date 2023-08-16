@@ -1,6 +1,6 @@
 module GridFunctions
     
-    export AbstractGridFunction, SumOfFunctions, ConstantFunction, InitialDataSine, InitialDataCosine, InitialDataGaussian, InitialDataGassner, BurgersSolution, SourceTermGassner, GaussianNoise, NoSourceTerm, evaluate
+    export AbstractGridFunction, SumOfFunctions, ConstantFunction, InitialDataSine, InitialDataCosine, InitialDataGaussian, InitialDataSinCos, DerivativeSinCos, InitialDataGassner, BurgersSolution, SourceTermGassner, GaussianNoise, NoSourceTerm, evaluate
     
     abstract type AbstractGridFunction{d} end
 
@@ -76,6 +76,29 @@ module GridFunctions
             return new(k,ϵ,1)
         end
     end
+
+
+    struct InitialDataSinCos <: AbstractGridFunction{2}
+        A::Float64  # amplitude
+        k::NTuple{2,Float64}  # wave number in each direction
+        N_c::Int
+
+        function InitialDataSinCos(A::Float64,
+            k::NTuple{2,Float64})
+            return new(A,k,1)
+        end
+    end
+
+    struct DerivativeSinCos <: AbstractGridFunction{2}
+        A::Float64  # amplitude
+        k::NTuple{2,Float64}  # wave number in each direction
+        N_c::Int
+
+        function DerivativeSinCos(A::Float64,
+            k::NTuple{2,Float64})
+            return new(A,k,1)
+        end
+end
     struct GaussianNoise{d} <: AbstractGridFunction{d}
         σ::Float64
         N_c::Int
@@ -142,7 +165,8 @@ module GridFunctions
         return [f.σ*randn() for e in 1:f.N_c]
     end
 
-    @inline function evaluate(f::AbstractGridFunction{d}, x::NTuple{d,Vector{Float64}}, t::Float64=0.0) where {d}
+    @inline function evaluate(f::AbstractGridFunction{d}, 
+        x::NTuple{d,AbstractVector{Float64}}, t::Float64=0.0) where {d}
         N = length(x[1])
         u0 = Matrix{Float64}(undef, N, f.N_c)
         @inbounds for i in 1:N
@@ -151,7 +175,9 @@ module GridFunctions
         return u0
     end
 
-    function evaluate(f::AbstractGridFunction{d}, x::NTuple{d,Matrix{Float64}},t::Float64=0.0) where {d}
+    function evaluate(f::AbstractGridFunction{d}, 
+        x::NTuple{d,AbstractMatrix{Float64}},
+        t::Float64=0.0) where {d}
         N, N_e = size(x[1])
         u0 = Array{Float64}(undef, N, f.N_c, N_e)
         @inbounds Threads.@threads for k in 1:N_e
@@ -160,7 +186,19 @@ module GridFunctions
         return u0
     end
 
-    function evaluate(::NoSourceTerm{d}, ::NTuple{d,Vector{Float64}}, ::Float64) where {d}
+    @inline function evaluate(::NoSourceTerm{d}, 
+        ::NTuple{d,Vector{Float64}}, ::Float64) where {d}
         return nothing
     end
+
+    @inline function evaluate(f::InitialDataSinCos, 
+        x::NTuple{2,Float64},t::Float64=0.0)
+        return f.A*sin(f.k[1]*x[1])*cos(f.k[2]*x[2])
+    end
+    
+    @inline function evaluate(f::DerivativeSinCos, 
+        x::NTuple{2,Float64},t::Float64=0.0)
+        return f.A*f.k[1]*cos(f.k[1]*x[1])*cos(f.k[2]*x[2])
+    end
 end
+

@@ -45,16 +45,16 @@ module ConservationLaws
         @inbounds for i in axes(u_in, 1)
             f_s = compute_two_point_flux(conservation_law, two_point_flux,
                 u_in[i,:], u_out[i,:])
-            a = numerical_flux.λ*wave_speed(
+            a = 0.5*numerical_flux.λ*wave_speed(
                 conservation_law, u_in[i,:], u_out[i,:], 
                 Tuple(n[m][i] for m in 1:d))
             @inbounds for e in 1:N_c
                 temp = 0.0
                 du = u_out[i,e] - u_in[i,e]
                 @inbounds for m in 1:d
-                    temp = temp + f_s[e,m]*n[m][i]
+                    @muladd temp = temp + f_s[e,m]*n[m][i]
                 end
-                f_star[i,e] = temp - a * du
+                @muladd f_star[i,e] = temp - a * du
             end
         end
     end

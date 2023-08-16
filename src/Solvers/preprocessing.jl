@@ -1,25 +1,25 @@
-function initialize(initial_data::AbstractGridFunction{d},
-    conservation_law::AbstractConservationLaw,
+@inline @views function initialize(initial_data::AbstractGridFunction{d},
     spatial_discretization::SpatialDiscretization{d}) where {d}
 
-    (; geometric_factors) = spatial_discretization
-    (; V, W) = spatial_discretization.reference_approximation
+    (; geometric_factors, N_e) = spatial_discretization
+    (; V, W, N_p) = spatial_discretization.reference_approximation
     (; xyzq) = spatial_discretization.mesh
-    N_p, N_c, N_e = get_dof(spatial_discretization, conservation_law)
+    (; N_c) = initial_data
+
+    u0 = Array{Float64}(undef, N_p, N_c, N_e)
 
     if V isa UniformScalingMap
-        u0 = Array{Float64}(undef, N_p, N_c, N_e)
         Threads.@threads for k in 1:N_e
-            u0[:,:,k] .= evaluate(initial_data, Tuple(xyzq[m][:,k] for m in 1:d),0.0)
+            u0[:,:,k] .= evaluate(
+                initial_data, Tuple(xyzq[m][:,k] for m in 1:d),0.0)
         end
     else
-        u0 = Array{Float64}(undef, N_p, N_c, N_e)
         Threads.@threads for k in 1:N_e
-            M =  Matrix(V' * W * Diagonal(geometric_factors.J_q[:,k]) * V)
-            rhs = similar(u0[:,:,k])
-            mul!(rhs, V' * W * Diagonal(geometric_factors.J_q[:,k]), 
+            M = Matrix(V' * W * Diagonal(geometric_factors.J_q[:,k]) * V)
+            factorization = cholesky(Symmetric(M))
+            mul!(u0[:,:,k], V' * W * Diagonal(geometric_factors.J_q[:,k]), 
                 evaluate(initial_data, Tuple(xyzq[m][:,k] for m in 1:d),0.0))
-            u0[:,:,k] .= M \ rhs
+            ldiv!(factorization, u0[:,:,k])
         end
     end
     return u0
@@ -46,7 +46,7 @@ function semidiscretize(
         end
     end
 
-    u0 = initialize(initial_data, conservation_law, spatial_discretization)
+    u0 = initialize(initial_data, spatial_discretization)
 
     if PDEType == SecondOrder && strategy isa ReferenceOperator
         @warn "Reference-operator approach only implemented for first-order equations. Using physical-operator formulation."
