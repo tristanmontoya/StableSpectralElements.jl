@@ -4,6 +4,7 @@ module Solvers
     using GFlops
     using StaticArrays
     using MuladdMacro
+    using SparseArrays
     using LinearAlgebra: Diagonal, eigvals, inv, mul!, lmul!, diag, diagm, factorize, cholesky, ldiv!, Factorization, Cholesky, Symmetric, I, UniformScaling
     using TimerOutputs
     using LinearMaps: LinearMap, UniformScalingMap
@@ -11,10 +12,10 @@ module Solvers
     using StartUpDG: num_faces
     using ..MatrixFreeOperators: AbstractOperatorAlgorithm,  DefaultOperatorAlgorithm, make_operator
     using ..ConservationLaws
-    using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization, check_facet_nodes, check_normals
+    using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization, check_facet_nodes, check_normals, NodalTensor, ModalTensor
     using ..GridFunctions: AbstractGridFunction, AbstractGridFunction, NoSourceTerm, evaluate
     
-    export AbstractResidualForm, StandardForm, FluxDifferencingForm, AbstractMappingForm, AbstractStrategy, AbstractDiscretizationOperators, AbstractPreallocatedArrays, AbstractMassMatrixSolver, PhysicalOperators, FluxDifferencingOperators, PreAllocatedArrays,  PreAllocatedArraysFluxDifferencing, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, get_dof, rhs!, rhs_static!, make_operators, get_nodal_values!, facet_correction!
+    export AbstractResidualForm, StandardForm, FluxDifferencingForm, AbstractMappingForm, AbstractStrategy, AbstractDiscretizationOperators, AbstractPreallocatedArrays, AbstractMassMatrixSolver, PhysicalOperators, FluxDifferencingOperators, PreAllocatedArrays,  PreAllocatedArraysFluxDifferencing, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, get_dof, rhs!, rhs_static!, make_operators, get_nodal_values!, facet_correction!, flux_differencing_operators
 
     abstract type AbstractResidualForm{MappingForm, TwoPointFlux} end
     abstract type AbstractMappingForm end
@@ -66,7 +67,8 @@ module Solvers
         n_f::Vector{NTuple{d,Vector{Float64}}}
     end
     struct FluxDifferencingOperators{d} <: AbstractDiscretizationOperators{d}
-        S::NTuple{d,LinearMap}
+        S::NTuple{d,AbstractMatrix}
+        C::AbstractMatrix
         V::LinearMap
         R::LinearMap
         W::Diagonal
@@ -75,7 +77,6 @@ module Solvers
         Λ_q::Array{Float64,4} # N_q x d x d x N_e
         BJf::Vector{Diagonal}
         n_f::Vector{NTuple{d, Vector{Float64}}}
-        CORR::LinearMap
         halfnJf::Array{Float64,3}
         halfnJq::Array{Float64,4}
         nodes_per_face::Int
@@ -138,7 +139,7 @@ module Solvers
         form::ResidualForm,
         ::PhysicalOperator,
         operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm(),
-        mass_solver::AbstractMassMatrixSolver=WeightAdjustedSolver(spatial_discretization)) where {d, PDEType, N_c,
+        mass_solver::AbstractMassMatrixSolver=WeightAdjustedSolver(spatial_discretization,operator_algorithm)) where {d, PDEType, N_c,
             ResidualForm<:StandardForm}
 
         (; N_e) = spatial_discretization
@@ -159,12 +160,13 @@ module Solvers
         form::ResidualForm,
         ::ReferenceOperator,
         alg::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm(),
-        mass_solver::AbstractMassMatrixSolver=WeightAdjustedSolver(spatial_discretization)) where {d, PDEType, N_c,
+        mass_solver::AbstractMassMatrixSolver=WeightAdjustedSolver(
+            spatial_discretization,operator_algorithm)) where {d, PDEType, N_c,
             ResidualForm<:StandardForm}
     
         (; N_p, N_q, N_f, D, V, W, R, B) = spatial_discretization.reference_approximation
         (; Λ_q, nJf, J_f) = spatial_discretization.geometric_factors
-        (; N_e) = spatial_discretization
+        (; N_e, mesh) = spatial_discretization
 
         halfWΛ = Array{Diagonal,3}(undef, d, d, N_e)
         halfN = Matrix{Diagonal}(undef, d, N_e)
@@ -174,8 +176,7 @@ module Solvers
         Threads.@threads for k in 1:N_e
             halfWΛ[:,:,k] = [Diagonal(0.5 * W * Λ_q[:,m,n,k]) 
                 for m in 1:d, n in 1:d]
-            halfN[:,k] = [Diagonal(0.5 * nJf[m,:,k] ./ J_f[:,k]) 
-                for m in 1:d]
+            halfN[:,k] = [Diagonal(0.5 * nJf[m,:,k] ./ J_f[:,k]) for m in 1:d]
             BJf[k] = Diagonal(B .* J_f[:,k])
             n_f[k] = Tuple(nJf[m,:,k] ./ J_f[:,k] for m in 1:d)
         end
@@ -186,24 +187,22 @@ module Solvers
             W, B, halfWΛ, halfN, BJf, n_f)
     
         return Solver{d,ResidualForm,PDEType,ReferenceOperators{d}, N_p, N_q, N_f, N_c, N_e}(
-            conservation_law, operators, mass_solver, 
-            spatial_discretization.mesh.mapP, form,
+            conservation_law, operators, mass_solver, mesh.mapP, form,
             PreAllocatedArrays{d,PDEType,N_p,N_q,N_f,N_c,N_e}())
-    end    
+    end
 
     function Solver(
         conservation_law::AbstractConservationLaw{d,PDEType,N_c},     
         spatial_discretization::SpatialDiscretization{d},
         form::ResidualForm,
-        ::AbstractStrategy,
+        ::ReferenceOperator,
         alg::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm(),
         mass_solver::AbstractMassMatrixSolver=WeightAdjustedSolver(
-            spatial_discretization)) where {d, PDEType, N_c,ResidualForm<:FluxDifferencingForm}
-    
-        (; N_p, N_q, N_f, D, V, W, R, B) = spatial_discretization.reference_approximation
+            spatial_discretization,operator_algorithm)) where {d, PDEType, N_c,ResidualForm<:FluxDifferencingForm}
+        (; reference_approximation, N_e) = spatial_discretization
+        (; N_p, N_q, N_f, V, W, R, B) = reference_approximation
         (; J_q, Λ_q, nJf, nJq, J_f) = spatial_discretization.geometric_factors
-        (; N_e) = spatial_discretization
-        (; element_type) = spatial_discretization.reference_approximation.reference_element
+        (; element_type) = reference_approximation.reference_element
 
         WJ = Vector{Diagonal}(undef, N_e)
         BJf = Vector{Diagonal}(undef, N_e)
@@ -214,13 +213,12 @@ module Solvers
             BJf[k] = Diagonal(B .* J_f[:,k])
             n_f[k] = Tuple(nJf[m,:,k] ./ J_f[:,k] for m in 1:d)
         end
-    
-        S = Tuple(make_operator(0.5*Matrix(W*D[m] - D[m]'*W), alg) for m in 1:d)
+        
+        S, C = flux_differencing_operators(reference_approximation)
 
-        operators = FluxDifferencingOperators{d}(S, make_operator(V, alg),
-            make_operator(R, alg), W, B, WJ, Λ_q, BJf, n_f,
-            make_operator(Matrix(R'*B), alg), 0.5*nJf, 0.5*nJq, 
-            N_f÷num_faces(element_type))
+        operators = FluxDifferencingOperators{d}(S, C, make_operator(V, alg),
+            make_operator(R, alg), W, B, WJ, Λ_q, BJf, n_f, 0.5*nJf, 
+            0.5*nJq, N_f÷num_faces(element_type))
     
         return Solver{d,ResidualForm,PDEType,FluxDifferencingOperators{d},N_p,N_q,N_f, N_c, N_e}(conservation_law, operators, mass_solver,
             spatial_discretization.mesh.mapP, form, 
@@ -233,19 +231,29 @@ module Solvers
             spatial_discretization.N_e)
     end
 
+    function flux_differencing_operators(
+        reference_approximation::ReferenceApproximation{d}) where {d}
+
+        (; D, W, R, B, approx_type) = reference_approximation
+
+        S = Tuple(0.5*Matrix(W*D[m] - D[m]'*W) for m in 1:d)
+        C = Matrix(R'*B)
+        
+        if approx_type isa Union{NodalTensor,ModalTensor}
+            return Tuple(sparse(S[m]) for m in 1:d), C
+        else
+            return S, C
+        end
+    end
+
     export CholeskySolver, WeightAdjustedSolver, DiagonalSolver, mass_matrix, mass_matrix_inverse, mass_matrix_solve!
     include("mass_matrix.jl") 
 
-    export initialize, semidiscretize, precompute
+    export initialize, semidiscretize
     include("preprocessing.jl")
 
-    include("make_operators.jl")
-    
-    export diff_with_extrap_flux!
     include("standard_form_first_order.jl")
     include("standard_form_second_order.jl")
-
-    export flux_matrix!
     include("flux_differencing_form.jl")
 
     export LinearResidual

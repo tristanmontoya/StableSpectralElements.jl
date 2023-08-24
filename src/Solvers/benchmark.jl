@@ -176,7 +176,7 @@ end
     (; inviscid_numerical_flux, two_point_flux, 
         entropy_projection, facet_correction) = form
     (; f_f, u_q, r_q, u_f, temp, CI) = solver.preallocated_arrays
-    (; S, V, R, WJ, Λ_q, BJf, CORR, halfnJq, halfnJf, n_f,
+    (; S, V, R, WJ, Λ_q, BJf, C, halfnJq, halfnJf, n_f,
         nodes_per_face) = solver.operators
     
     # get the nodal solution using the entropy projection if specified
@@ -190,8 +190,9 @@ end
     @inbounds @views @timeit "eval residual" for k in 1:N_e
         
         # evaluate interface numerical flux
-        @timeit "num flux" numerical_flux!(f_f[:,:,k], conservation_law, inviscid_numerical_flux, 
-            u_f[:,k,:], u_f[CI[connectivity[:,k]],:], n_f[k], two_point_flux)
+        @timeit "num flux" numerical_flux!(f_f[:,:,k], conservation_law,
+            inviscid_numerical_flux, u_f[:,k,:], u_f[CI[connectivity[:,k]],:], 
+            n_f[k], two_point_flux)
         
         # scale numerical flux by quadrature weights
         @timeit "fac quadrature scale" lmul!(BJf[k], f_f[:,:,k])
@@ -201,7 +202,7 @@ end
             two_point_flux, Λ_q[:,:,:,k], u_q[:,:,k])
 
         # apply facet correction term (for operators w/o boundary nodes)
-        @timeit "facet corr" facet_correction!(r_q[:,:,k], f_f[:,:,k], CORR,
+        @timeit "facet corr" facet_correction!(r_q[:,:,k], f_f[:,:,k], C,
             conservation_law, two_point_flux, halfnJf[:,:,k], halfnJq[:,:,:,k], 
             u_q[:,:,k], u_f[:,k,:], nodes_per_face, Val(facet_correction))
 

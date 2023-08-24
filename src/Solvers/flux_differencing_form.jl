@@ -1,18 +1,18 @@
 @inline @views function flux_difference!(
     r_q::AbstractMatrix{Float64}, # N_q x N_c 
-    S::NTuple{d,<:LinearMap{Float64}}, # N_q x N_q
+    S::NTuple{d,Matrix{Float64}}, # N_q x N_q
     conservation_law::AbstractConservationLaw{d,FirstOrder,N_c},
     two_point_flux::AbstractTwoPointFlux,
     Λ_q::AbstractArray{Float64,3}, # N_q x d x d
     u_q::AbstractMatrix{Float64}) where {d,N_c}
-
+    #count = 0
     fill!(r_q, 0.0)
     @inbounds for i in axes(u_q,1)
         @inbounds for j in (i+1):size(u_q,1)
             # evaluate two-point flux
             F_ij = compute_two_point_flux(conservation_law,
                 two_point_flux, u_q[i,:],u_q[j,:])
-            
+            #count = count+1
             # apply flux-differencing operator to flux tensor
             @inbounds for e in 1:N_c
                 diff_ij = 0.0
@@ -22,10 +22,51 @@
                         Λ_ij = Λ_q[i,m,n] + Λ_q[j,m,n]
                         @muladd Fm_ij = Fm_ij + Λ_ij * F_ij[e,n]
                     end
-                    @muladd diff_ij = diff_ij + S[m].lmap[i,j] * Fm_ij
+                    @muladd diff_ij = diff_ij + S[m][i,j] * Fm_ij
+                    
                 end
                 r_q[i,e] -= diff_ij
                 r_q[j,e] += diff_ij
+            end
+        end
+    end
+    #println("count = ", count)
+end
+
+@inline @views function flux_difference!(
+    r_q::AbstractMatrix{Float64}, # N_q x N_c 
+    S::NTuple{d,SparseMatrixCSC{Float64}}, # N_q x N_q
+    conservation_law::AbstractConservationLaw{d,FirstOrder,N_c},
+    two_point_flux::AbstractTwoPointFlux,
+    Λ_q::AbstractArray{Float64,3}, # N_q x d x d
+    u_q::AbstractMatrix{Float64}) where {d,N_c}
+
+    #count = 0
+    fill!(r_q, 0.0)
+    @inbounds for m in 1:d
+        Sm_nz = nonzeros(S[m])
+        row_index = rowvals(S[m])
+        @inbounds for j in axes(u_q,1)
+            @inbounds for ii in nzrange(S[m],j)
+                i = row_index[ii]
+                if i < j 
+                    # evaluate two-point flux
+                    F_ij = compute_two_point_flux(conservation_law,
+                        two_point_flux, u_q[i,:], u_q[j,:])
+                    Sm_ij = Sm_nz[ii]
+                    
+                    # apply flux-differencing operator to flux tensor
+                    @inbounds for e in 1:N_c
+                        Fm_ij = 0.0
+                        @inbounds for n in 1:d
+                            Λ_ij = Λ_q[i,m,n] + Λ_q[j,m,n]
+                            @muladd Fm_ij = Fm_ij + Λ_ij * F_ij[e,n]
+                        end
+                        diff_ij = Sm_ij * Fm_ij
+                        r_q[i,e] -= diff_ij
+                        r_q[j,e] += diff_ij
+                    end
+                end
             end
         end
     end
@@ -34,7 +75,7 @@ end
 @inline function facet_correction!(
     r_q::AbstractMatrix{Float64}, # N_q x N_c 
     f_f::AbstractMatrix{Float64}, # N_f x N_c
-    CORR::LinearMap, # N_f x N_q
+    CORR::AbstractMatrix{Float64}, # N_f x N_q
     conservation_law::AbstractConservationLaw{d},
     two_point_flux::AbstractTwoPointFlux,
     halfnJf::AbstractMatrix{Float64},
@@ -48,7 +89,7 @@ end
 @inline @views function facet_correction!(
     r_q::AbstractMatrix{Float64}, # N_q x N_c 
     f_f::AbstractMatrix{Float64}, # N_f x N_c
-    CORR::LinearMap, # N_f x N_q
+    C::AbstractMatrix{Float64}, # N_f x N_q
     conservation_law::AbstractConservationLaw{d,FirstOrder,N_c},
     two_point_flux::AbstractTwoPointFlux,
     halfnJf::AbstractMatrix{Float64},
@@ -71,7 +112,7 @@ end
                     nJ_ij = halfnJf[n,j] + halfnJq[n,f,i]
                     @muladd F_dot_n_ij = F_dot_n_ij + nJ_ij * F_ij[e,n]
                 end
-                diff_ij = CORR.lmap[i,j] * F_dot_n_ij
+                diff_ij = C[i,j] * F_dot_n_ij
                 r_q[i,e] -= diff_ij
                 f_f[j,e] -= diff_ij
             end
@@ -166,7 +207,7 @@ end
     (; inviscid_numerical_flux, two_point_flux, 
         entropy_projection, facet_correction) = form
     (; f_f, u_q, r_q, u_f, temp, CI) = solver.preallocated_arrays
-    (; S, V, R, WJ, Λ_q, BJf, CORR, halfnJq, halfnJf, n_f,
+    (; S, C, V, R, WJ, Λ_q, BJf, halfnJq, halfnJf, n_f,
         nodes_per_face) = solver.operators
     
     # get the nodal solution using the entropy projection if specified
@@ -191,7 +232,7 @@ end
             two_point_flux, Λ_q[:,:,:,k], u_q[:,:,k])
 
         # apply facet correction term (for operators w/o boundary nodes)
-        facet_correction!(r_q[:,:,k], f_f[:,:,k], CORR, conservation_law,
+        facet_correction!(r_q[:,:,k], f_f[:,:,k], C, conservation_law,
             two_point_flux, halfnJf[:,:,k], halfnJq[:,:,:,k], 
             u_q[:,:,k], u_f[:,k,:], nodes_per_face, Val(facet_correction))
 

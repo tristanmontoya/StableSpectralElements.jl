@@ -160,10 +160,8 @@ Entropy-conservative, kinetic-energy-preserving, and pressure-equilibrium-preser
     # velocities and pressures
     V_L = SVector{d}(u_L[m+1] / u_L[1] for m in 1:d)
     V_R = SVector{d}(u_R[m+1] / u_R[1] for m in 1:d)
-    p_L = (conservation_law.γ-1) * (u_L[end] - 0.5*u_L[1]* 
-     (sum(V_L[m]^2 for m in 1:d)))
-    p_R = (conservation_law.γ-1) * (u_R[end] - 0.5*u_R[1]* 
-     (sum(V_R[m]^2 for m in 1:d)))
+    p_L = (γ-1) * (u_L[end] - 0.5*u_L[1]*(sum(V_L[m]^2 for m in 1:d)))
+    p_R = (γ-1) * (u_R[end] - 0.5*u_R[1]*(sum(V_R[m]^2 for m in 1:d)))
 
     # mean quantities
     ρ_avg = logmean(u_L[1], u_R[1])

@@ -49,8 +49,8 @@ function DiagonalSolver(spatial_discretization::SpatialDiscretization)
     return DiagonalSolver(WJ⁻¹)
 end
 
-function WeightAdjustedSolver(spatial_discretization::SpatialDiscretization; 
-    operator_algorithm=DefaultOperatorAlgorithm(), assume_orthonormal=false,
+function WeightAdjustedSolver(spatial_discretization::SpatialDiscretization, 
+    operator_algorithm=DefaultOperatorAlgorithm(); assume_orthonormal=false,
     tol=1.0e-13)
     
     (; V, W) = spatial_discretization.reference_approximation

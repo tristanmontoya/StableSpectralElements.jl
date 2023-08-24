@@ -120,10 +120,24 @@ end
 end
 
 @inline function compute_two_point_flux(conservation_law::BurgersType{d}, 
+    ::EntropyConservativeFlux, u_L::AbstractVector{Float64}, 
+    u_R::AbstractVector{Float64}, n::NTuple{d,Float64}) where {d}
+    flux_1d = (u_L[1]^2 + u_L[1]*u_R[1] + u_R[1]^2)/6
+    return SVector{1}(n[m]*conservation_law.a[m]*flux_1d for m in 1:d)
+end
+
+@inline function compute_two_point_flux(conservation_law::BurgersType{d}, 
     ::ConservativeFlux, u_L::AbstractVector{Float64}, 
     u_R::AbstractVector{Float64}) where {d}
-    flux_1d = (u_L[1]^2 + u_R[1]^2)/4.0
+    flux_1d = (u_L[1]^2 + u_R[1]^2)*0.25
     return SMatrix{1,d}(conservation_law.a[m]*flux_1d for m in 1:d)
+end
+
+@inline function compute_two_point_flux(conservation_law::BurgersType{d}, 
+    ::ConservativeFlux, u_L::AbstractVector{Float64}, 
+    u_R::AbstractVector{Float64}, n::NTuple{d,Float64}) where {d}
+    flux_1d = (u_L[1]^2 + u_R[1]^2)*0.25
+    return SVector{1}(n[m]*conservation_law.a[m]*flux_1d for m in 1:d)
 end
 
 function evaluate(
