@@ -1,7 +1,7 @@
 module MatrixFreeOperators
 
     using LinearAlgebra, LinearMaps, MuladdMacro, GFlops, StaticArrays
-    export AbstractOperatorAlgorithm, BLASAlgorithm, GenericMatrixAlgorithm, GenericTensorProductAlgorithm, DefaultOperatorAlgorithm, make_operator, count_ops, flux_difference!
+    export AbstractOperatorAlgorithm, BLASAlgorithm, GenericMatrixAlgorithm, GenericTensorProductAlgorithm, DefaultOperatorAlgorithm, make_operator, count_ops
     
     abstract type AbstractOperatorAlgorithm end
     struct DefaultOperatorAlgorithm <: AbstractOperatorAlgorithm end
@@ -21,12 +21,29 @@ module MatrixFreeOperators
         return LinearMaps.WrappedMap(matrix)
     end
 
+    function make_operator(map::LinearMaps.UniformScalingMap, ::BLASAlgorithm)
+        return map
+    end
+
+    function make_operator(map::UniformScaling, ::BLASAlgorithm)
+        return LinearMap(map,size(map,1))
+    end
+
     function make_operator(map::LinearMap, ::BLASAlgorithm)
         return LinearMaps.WrappedMap(Matrix(map))
     end
 
     function make_operator(matrix::Matrix, ::GenericMatrixAlgorithm)
         return GenericMatrixMap(matrix)
+    end
+
+    function make_operator(map::LinearMaps.UniformScalingMap,
+        ::GenericMatrixAlgorithm)
+        return map
+    end
+
+    function make_operator(map::UniformScaling, ::GenericMatrixAlgorithm)
+        return LinearMap(map,size(map,1))
     end
 
     function make_operator(map::LinearMap, ::GenericMatrixAlgorithm)
@@ -53,17 +70,6 @@ module MatrixFreeOperators
         y = rand(size(map,1))
         cnt = @count_ops mul!(y,map,x)
         return cnt.muladd64 + cnt.add64 + cnt.mul64
-    end
-
-    function flux_difference!(y::AbstractVector{Float64}, 
-        A::AbstractMatrix{Float64}, F::AbstractMatrix{Float64})
-        @assert size(A) == size(F)
-        @assert size(y,1) == size(A,1)
-
-        for i in axes(y,1)
-            y[i] = dot(A[i,:], F[i,:])
-        end
-        
     end
 
     export TensorProductMap2D, TensorProductMap3D

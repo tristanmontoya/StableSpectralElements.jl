@@ -149,13 +149,13 @@ end
     V::UniformScalingMap, R::LinearMap, WJ::Diagonal,
     u::AbstractMatrix, ::Int,
     ::Val{true})
-    
-    mul!(u_q, V, u)
-    @inbounds for i in axes(u, 1)
+
+    @timeit "get cons vars at volume nodes" mul!(u_q, V, u)
+    @inbounds @timeit "conservative to entropy" for i in axes(u, 1)
         w_q[i,:] .= conservative_to_entropy(conservation_law,u_q[i,:])
     end
-    mul!(w_f, R, w_q)
-    @inbounds for i in axes(u_f, 1)
+    @timeit "extrap entropy variables" mul!(w_f, R, w_q)
+    @inbounds @timeit "entropy to conservative" for i in axes(u_f, 1)
         u_f[i,:] .= entropy_to_conservative(conservation_law,w_f[i,:])
     end
 end
@@ -177,7 +177,7 @@ end
     # evaluate entropy variables in terms of nodal conservative variables
     mul!(u_q, V, u)
     @inbounds for i in axes(u_q, 1)
-        w_q[i,:] .= conservative_to_entropy(conservation_law, u_q[i,:])
+        w_q[i,:] = conservative_to_entropy(conservation_law, view(u_q,i,:))
     end
 
     # project entropy variables and store modal coeffs in w
@@ -191,14 +191,14 @@ end
 
     # convert back to conservative variables
     @inbounds for i in axes(u_q, 1)
-        u_q[i,:] .= entropy_to_conservative(conservation_law, w_q[i,:])
+        u_q[i,:] = entropy_to_conservative(conservation_law, view(w_q,i,:))
     end
     @inbounds for i in axes(u_f, 1)
-        u_f[i,:] .= entropy_to_conservative(conservation_law, w_f[i,:])
+        u_f[i,:] = entropy_to_conservative(conservation_law, view(w_f,i,:))
     end
 end
 
-@timeit "du/dt" function rhs!(
+@views @timeit "du/dt" function rhs!(
     dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
     solver::Solver{d, <:FluxDifferencingForm, FirstOrder, FluxDifferencingOperators{d}, N_p,N_q,N_f,N_c,N_e},
     t::Float64) where {d,N_p,N_q,N_f,N_c,N_e}
@@ -211,14 +211,14 @@ end
         nodes_per_face) = solver.operators
     
     # get the nodal solution using the entropy projection if specified
-    @inbounds @views @timeit "get nodal vals" Threads.@threads for k in 1:N_e
+    @inbounds @timeit "get nodal vals" Threads.@threads for k in 1:N_e
         get_nodal_values!(mass_solver, conservation_law, u_q[:,:,k], 
             u_f[:,k,:], r_q[:,:,k], f_f[:,:,k], temp[:,:,k], 
             V, R, WJ[k], u[:,:,k], k, Val(entropy_projection))
     end
 
     # compute the local residual
-    @inbounds @views @timeit "eval residual" Threads.@threads for k in 1:N_e
+    @inbounds @timeit "eval residual" Threads.@threads for k in 1:N_e
 
         # evaluate interface numerical flux
         numerical_flux!(f_f[:,:,k], conservation_law, inviscid_numerical_flux, 

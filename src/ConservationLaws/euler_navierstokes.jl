@@ -25,22 +25,26 @@ The specific heat ratio is specified as a parameter `γ::Float64`, which must be
 """
 struct EulerEquations{d,N_c} <: AbstractConservationLaw{d,FirstOrder,N_c}
     γ::Float64
+    γ_minus_1::Float64
+    inv_γ_minus_1::Float64
     source_term::AbstractGridFunction{d}
 
     function EulerEquations{d}(γ::Float64=1.4, 
         source_term::AbstractGridFunction{d}=NoSourceTerm{d}()) where {d}
-        return new{d,d+2}(γ,source_term)
+        return new{d,d+2}(γ,γ-1,1/(γ-1),source_term)
     end
 end
 
 struct NavierStokesEquations{d,N_c} <: AbstractConservationLaw{d,SecondOrder,N_c} 
     γ::Float64
+    γ_minus_1::Float64
+    inv_γ_minus_1::Float64
     source_term::AbstractGridFunction{d}
 
     function NavierStokesEquations{d}(γ::Float64=1.4, 
         source_term::AbstractGridFunction{d}=NoSourceTerm{d}()) where {d}
         @error "Navier-Stokes not implemented."
-        return new{d,N_c}(γ,source_term)
+        return new{d,N_c}(γ,γ-1,1/(γ-1),source_term)
     end
 end
 
@@ -51,21 +55,24 @@ Evaluate the flux for the Euler equations
 """
 @inline function physical_flux(conservation_law::EulerType{d}, 
     u::AbstractVector{Float64}) where {d}
+
+    (; γ_minus_1) = conservation_law
+
     V = SVector{d}(u[m+1] / u[1] for m in 1:d)
-    p = (conservation_law.γ-1.0) * (u[end] - 0.5* 
-     (sum(u[m+1]*V[m] for m in 1:d)))
+    p = γ_minus_1 * (u[end] - 0.5*(sum(u[m+1]*V[m] for m in 1:d)))
     h_t = u[end] + p
-    return vcat(
-        SMatrix{1,d}(u[n+1] for n in 1:d),
+    return vcat(SMatrix{1,d}(u[n+1] for n in 1:d),
         SMatrix{d,d}(u[m+1]*V[n] + I[m,n]*p for m in 1:d, n in 1:d),
         SMatrix{1,d}(h_t*V[n] for n in 1:d))
 end
 
 @inline function physical_flux(conservation_law::EulerType{d}, 
     u::AbstractVector{Float64}, n::NTuple{d, Float64}) where {d}
+
+    (; γ_minus_1) = conservation_law
+
     V = SVector{d}(u[m+1] / u[1] for m in 1:d)
-    p = (conservation_law.γ-1.0) * (u[end] - 0.5*u[1]* 
-     (sum(V[m]^2 for m in 1:d)))
+    p = γ_minus_1 * (u[end] - 0.5*u[1]* (sum(V[m]^2 for m in 1:d)))
     h_t = u[end] + p
     V_n = sum(V[m]*n[m] for m in 1:d)
     
@@ -91,27 +98,28 @@ end
 
 @inline function conservative_to_primitive(conservation_law::EulerType{d},
     u::AbstractVector{Float64}) where {d}
-    (; γ) = conservation_law
+    (; γ_minus_1) = conservation_law
     return vcat(u[1], SVector{d}(u[m+1] / u[1] for m in 1:d),
-        (γ-1) * (u[end] - (0.5/u[1]) * (sum(u[m+1]^2 for m in 1:d))))
+        γ_minus_1 * (u[end] - (0.5/u[1]) * (sum(u[m+1]^2 for m in 1:d))))
 end
 
 @inline function conservative_to_entropy(conservation_law::EulerType{d}, 
     u::AbstractVector{Float64}) where {d}
-    (; γ) = conservation_law
+    (; γ, γ_minus_1, inv_γ_minus_1) = conservation_law
     k = (0.5/u[1]) * (sum(u[m+1]^2 for m in 1:d))
-    p = (γ-1) * (u[end] - k)
-    return vcat((γ-log(p/(u[1]^γ)))/(γ-1) - k/p,
-        SVector{d}(u[m+1] / p for m in 1:d), -u[1]/p)
+    p = γ_minus_1 * (u[end] - k)
+    inv_p = 1.0/p
+    return vcat(inv_γ_minus_1*(γ-log(p/(u[1]^γ))) - k*inv_p,
+        SVector{d}(u[m+1]*inv_p for m in 1:d), -u[1]*inv_p)
 end
 
 @inline function entropy_to_conservative(conservation_law::EulerType{d}, 
     w::AbstractVector{Float64}) where {d}
-    (; γ) = conservation_law
-    w = w * (γ-1)
+    (; γ, γ_minus_1, inv_γ_minus_1) = conservation_law
+    w = w * γ_minus_1
     k = sum(w[m+1]^2 for m in 1:d)/(2*w[end])
     s = γ - w[1] + k
-    ρe = ((γ-1)/((-w[end])^γ))^(1/(γ-1))*exp(-s/(γ-1))
+    ρe = (γ_minus_1/((-w[end])^γ))^inv_γ_minus_1*exp(-s*inv_γ_minus_1)
     return vcat(-w[end]*ρe, SVector{d}(w[m+1] * ρe for m in 1:d), ρe*(1-k))
 end
 
@@ -119,16 +127,18 @@ end
     u_in::AbstractVector{Float64}, u_out::AbstractVector{Float64},
     n_f::NTuple{d, Float64}) where {d}
 
+    (; γ, γ_minus_1) = conservation_law
+
     V_in = SVector{d}(u_in[m+1] / u_in[1] for m in 1:d)
-    p_in = (conservation_law.γ-1) * (u_in[end] - (0.5/u_in[1]) * 
+    p_in = γ_minus_1 * (u_in[end] - (0.5/u_in[1]) * 
      (sum(u_in[m+1]^2 for m in 1:d)))
     V_out = SVector{d}(u_out[m+1] / u_out[1] for m in 1:d)
-    p_out = (conservation_law.γ-1) * (u_out[end] - (0.5/u_out[1]) * 
+    p_out = γ_minus_1 * (u_out[end] - (0.5/u_out[1]) * 
      (sum(u_out[m+1]^2 for m in 1:d)))
     Vn_in = sum(V_in[m] * n_f[m] for m in 1:d) 
     Vn_out = sum(V_out[m] * n_f[m] for m in 1:d)
-    c_in = sqrt(conservation_law.γ*p_in / u_in[1])
-    c_out = sqrt(conservation_law.γ*p_out / u_out[1])
+    c_in = sqrt(γ*p_in / u_in[1])
+    c_out = sqrt(γ*p_out / u_out[1])
 
     return max(abs(Vn_in), abs(Vn_out)) + max(c_in, c_out)
 end
@@ -155,20 +165,20 @@ Entropy-conservative, kinetic-energy-preserving, and pressure-equilibrium-preser
 @inline function compute_two_point_flux(conservation_law::EulerType{d}, 
     ::EntropyConservativeFlux, u_L::AbstractVector{Float64}, 
     u_R::AbstractVector{Float64}) where {d}
-    (; γ) = conservation_law
+    (; γ, γ_minus_1) = conservation_law
 
     # velocities and pressures
     V_L = SVector{d}(u_L[m+1] / u_L[1] for m in 1:d)
     V_R = SVector{d}(u_R[m+1] / u_R[1] for m in 1:d)
-    p_L = (γ-1) * (u_L[end] - 0.5*u_L[1]*(sum(V_L[m]^2 for m in 1:d)))
-    p_R = (γ-1) * (u_R[end] - 0.5*u_R[1]*(sum(V_R[m]^2 for m in 1:d)))
+    p_L = γ_minus_1 * (u_L[end] - 0.5*u_L[1]*(sum(V_L[m]^2 for m in 1:d)))
+    p_R = γ_minus_1 * (u_R[end] - 0.5*u_R[1]*(sum(V_R[m]^2 for m in 1:d)))
 
     # mean quantities
     ρ_avg = logmean(u_L[1], u_R[1])
     V_avg = 0.5*(V_L + V_R)
     p_avg = 0.5*(p_L + p_R)
     C = 0.5*sum(V_L[m]*V_R[m] for m in 1:d) + 
-        1.0/((γ-1)*logmean(u_L[1]/p_L, u_R[1]/p_R))
+        1.0/(γ_minus_1*logmean(u_L[1]/p_L, u_R[1]/p_R))
 
     # flux tensor
     f_ρ = SMatrix{1,d}(ρ_avg*V_avg[n] for n in 1:d)

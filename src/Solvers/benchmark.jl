@@ -1,5 +1,6 @@
 using BenchmarkTools
 
+"""We define a benchmark version of rhs! so that threading etc. doesn't get in the way"""
 @views @timeit "du/dt" function rhs_benchmark!(
     dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
     solver::Solver{d, <:StandardForm, FirstOrder, PhysicalOperators{d},N_p,N_q,N_f,N_c,N_e},
