@@ -66,20 +66,6 @@ Evaluate the flux for the Euler equations
         SMatrix{1,d}(h_t*V[n] for n in 1:d))
 end
 
-@inline function physical_flux(conservation_law::EulerType{d}, 
-    u::AbstractVector{Float64}, n::NTuple{d, Float64}) where {d}
-
-    (; γ_minus_1) = conservation_law
-
-    V = SVector{d}(u[m+1] / u[1] for m in 1:d)
-    p = γ_minus_1 * (u[end] - 0.5*u[1]* (sum(V[m]^2 for m in 1:d)))
-    h_t = u[end] + p
-    V_n = sum(V[m]*n[m] for m in 1:d)
-    
-    return SVector{d+2}(
-        [u[1]*V_n, [u[1]*V_n*V[m] + p*n[m] for m in 1:d]..., h_t*V_n])
-end
-
 @inline @views function physical_flux!(f::AbstractArray{Float64,3},    
     conservation_law::EulerType{d}, 
     u::AbstractMatrix{Float64}) where {d}
@@ -91,9 +77,9 @@ end
 
 @inline function entropy(conservation_law::EulerType{d}, 
     u::AbstractVector{Float64}) where {d}
-    (; γ) = conservation_law
-    p = (γ-1) * (u[end] - (0.5/u[1]) * (sum(u[m+1]^2 for m in 1:d)))
-    return -u[1]*log(p/u[1]^γ)/(γ-1)
+    (; γ, γ_minus_1, inv_γ_minus_1) = conservation_law
+    p = γ_minus_1 * (u[end] - (0.5/u[1]) * (sum(u[m+1]^2 for m in 1:d)))
+    return -u[1]*log(p/u[1]^γ)*inv_γ_minus_1
 end
 
 @inline function conservative_to_primitive(conservation_law::EulerType{d},
@@ -137,6 +123,7 @@ end
      (sum(u_out[m+1]^2 for m in 1:d)))
     Vn_in = sum(V_in[m] * n_f[m] for m in 1:d) 
     Vn_out = sum(V_out[m] * n_f[m] for m in 1:d)
+    
     c_in = sqrt(γ*p_in / u_in[1])
     c_out = sqrt(γ*p_out / u_out[1])
 
@@ -165,7 +152,8 @@ Entropy-conservative, kinetic-energy-preserving, and pressure-equilibrium-preser
 @inline function compute_two_point_flux(conservation_law::EulerType{d}, 
     ::EntropyConservativeFlux, u_L::AbstractVector{Float64}, 
     u_R::AbstractVector{Float64}) where {d}
-    (; γ, γ_minus_1) = conservation_law
+    
+    (; γ_minus_1) = conservation_law
 
     # velocities and pressures
     V_L = SVector{d}(u_L[m+1] / u_L[1] for m in 1:d)
@@ -184,7 +172,6 @@ Entropy-conservative, kinetic-energy-preserving, and pressure-equilibrium-preser
     f_ρ = SMatrix{1,d}(ρ_avg*V_avg[n] for n in 1:d)
     f_ρV = SMatrix{d,d}(f_ρ[m]*V_avg[n] + I[m,n]*p_avg for m in 1:d, n in 1:d)
     f_E = SMatrix{1,d}(f_ρ[n]*C + 0.5*(p_L*V_R[n] + p_R*V_L[n]) for n in 1:d)
-
     return vcat(f_ρ, f_ρV, f_E)
 end
 

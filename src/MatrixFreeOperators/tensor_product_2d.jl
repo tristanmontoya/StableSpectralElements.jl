@@ -47,7 +47,7 @@ or L = A ⊗ B. The action of this matrix on a vector x is
                 = ∑_{β1} A[α1,β1] (∑_{β2} B[α2,β2] x[σᵢ[β1,β2]]) 
                 = ∑_{β1} A[α1,β1] Z[α2,β1] 
 """
-function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
+@inline function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
     L::TensorProductMap2D{<:AbstractMatrix{Float64},<:AbstractMatrix{Float64}},
     x::AbstractVector{Float64})
     
@@ -85,7 +85,7 @@ or L = A ⊗ I_{M2}. The action of this matrix on a vector x is
 (Lx)[σₒ[α1,α2]] = ∑_{β1,β2} A[α1,β1] δ_{α2,β2} x[σᵢ[β1,β2]] 
                 = ∑_{β1} A[α1,β1] x[σᵢ[β1,α2]] 
 """
-function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
+@inline function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
     L::TensorProductMap2D{<:AbstractMatrix{Float64},<:UniformScaling},
     x::AbstractVector{Float64})
 
@@ -112,7 +112,7 @@ or L = I_{M1} ⊗ B. The action of this matrix on a vector x is
 (Lx)[σₒ[α1,α2]] = ∑_{β1,β2} δ_{α1,β1} B[α2,β2] x[σᵢ[β1,β2]] 
                 = ∑_{β2} B[α2,β2] x[σᵢ[α1,β2]]) 
 """
-function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
+@inline function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
     L::TensorProductMap2D{<:UniformScaling,<:AbstractMatrix{Float64}},
     x::AbstractVector{Float64})
 

@@ -36,7 +36,7 @@ Evaluate the matrix-vector product
                    = ∑_{β1} A[α1,β1] (∑_{β2} B[α2,β1,β2] Z[β1,β2,α3])
                    = ∑_{β1} A[α1,β1] W[β1,α2,α3]
 """
-function LinearAlgebra.mul!(y::AbstractVector, 
+@inline function LinearAlgebra.mul!(y::AbstractVector, 
     L::WarpedTensorProductMap3D, x::AbstractVector)
     
     LinearMaps.check_dim_mul(y, L, x)
@@ -86,7 +86,7 @@ Evaluate the matrix-vector product
                    = ∑_{α3} C[α3,β1,β2,β3] (∑_{α2} B[α2,β1,β2] W[β1,α2,α3])
                    = ∑_{α3} C[α3,β1,β2,β3] Z[β1,β2,α3]
 """
-function LinearMaps._unsafe_mul!(y::AbstractVector, 
+@inline function LinearMaps._unsafe_mul!(y::AbstractVector, 
     L::LinearMaps.TransposeMap{Float64, <:WarpedTensorProductMap3D},
     x::AbstractVector)
     

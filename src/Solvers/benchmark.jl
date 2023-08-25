@@ -177,14 +177,14 @@ end
     (; inviscid_numerical_flux, two_point_flux, 
         entropy_projection, facet_correction) = form
     (; f_f, u_q, r_q, u_f, temp, CI) = solver.preallocated_arrays
-    (; S, V, R, WJ, Λ_q, BJf, C, halfnJq, halfnJf, n_f,
+    (; S, V, Vᵀ, R, Rᵀ, WJ, Λ_q, BJf, C, halfnJq, halfnJf, n_f,
         nodes_per_face) = solver.operators
     
     # get the nodal solution using the entropy projection if specified
     @inbounds @views @timeit "get nodal vals" for k in 1:N_e
         get_nodal_values!(mass_solver, conservation_law, u_q[:,:,k], 
             u_f[:,k,:], r_q[:,:,k], f_f[:,:,k], temp[:,:,k], 
-            V, R, WJ[k], u[:,:,k], k, Val(entropy_projection))
+            V, Vᵀ, R, WJ[k], u[:,:,k], k, Val(entropy_projection))
     end
 
     # compute the local residual
@@ -208,13 +208,10 @@ end
             u_q[:,:,k], u_f[:,k,:], nodes_per_face, Val(facet_correction))
 
         # apply facet operators
-        @timeit "facet operator" begin
-            mul!(u_q[:,:,k], R', f_f[:,:,k])
-            r_q[:,:,k] .-= u_q[:,:,k]
-        end
+        @timeit "facet operator" mul!(r_q[:,:,k], Rᵀ, f_f[:,:,k], 1, -1)
 
         # solve for time derivative
-        @timeit "trans. VDM" mul!(dudt[:,:,k], V', r_q[:,:,k])
+        @timeit "trans. VDM" mul!(dudt[:,:,k], Vᵀ, r_q[:,:,k])
         @timeit "mass solve" mass_matrix_solve!(
             mass_solver, k, dudt[:,:,k], u_q[:,:,k])
     end

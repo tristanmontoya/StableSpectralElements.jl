@@ -70,7 +70,9 @@ module Solvers
         S::NTuple{d,AbstractMatrix}
         C::AbstractMatrix
         V::LinearMap
+        Vᵀ::LinearMap
         R::LinearMap
+        Rᵀ::LinearMap
         W::Diagonal
         B::Diagonal
         WJ::Vector{Diagonal}
@@ -217,7 +219,7 @@ module Solvers
         S, C = flux_differencing_operators(reference_approximation)
 
         operators = FluxDifferencingOperators{d}(S, C, make_operator(V, alg),
-            make_operator(R, alg), W, B, WJ, Λ_q, BJf, n_f, 0.5*nJf, 
+            transpose(make_operator(V, alg)), make_operator(R, alg), transpose(make_operator(R, alg)), W, B, WJ, Λ_q, BJf, n_f, 0.5*nJf, 
             0.5*nJq, N_f÷num_faces(element_type))
     
         return Solver{d,ResidualForm,PDEType,FluxDifferencingOperators{d},N_p,N_q,N_f, N_c, N_e}(conservation_law, operators, mass_solver,

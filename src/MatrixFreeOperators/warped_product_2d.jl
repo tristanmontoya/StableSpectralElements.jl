@@ -27,7 +27,7 @@ Evaluate the matrix-vector product
                 = ∑_{β1} A[α1,β1] (∑_{β2} B[α2,β1,β2] x[σᵢ[β1,β2]]) 
                 = ∑_{β1} A[α1,β1] Z[β1,α2]
 """
-function LinearAlgebra.mul!(y::AbstractVector, 
+@inline function LinearAlgebra.mul!(y::AbstractVector, 
     L::WarpedTensorProductMap2D, x::AbstractVector)
     LinearMaps.check_dim_mul(y, L, x)
     (; A, B, σᵢ, σₒ, N2) = L
@@ -59,7 +59,7 @@ Evaluate the matrix-vector product
                 = ∑_{α2} B[α2,β1,β2] (∑_{α1} A[α1,β1] x[σₒ[α1,α2]] )
                 = ∑_{α2} B[α2,β1,β2] Z[β1,α2])
 """
-function LinearMaps._unsafe_mul!(y::AbstractVector, 
+@inline function LinearMaps._unsafe_mul!(y::AbstractVector, 
     L::LinearMaps.TransposeMap{Float64, <:WarpedTensorProductMap2D},
     x::AbstractVector)
 

@@ -46,7 +46,7 @@ function LinearAlgebra.transpose(L::TensorProductMap3D)
         transpose(L.C), L.σₒ, L.σᵢ)
 end
 
-function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
+@inline function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
     L::TensorProductMap3D{<:AbstractMatrix{Float64},<:AbstractMatrix{Float64},<:AbstractMatrix{Float64}},
     x::AbstractVector{Float64})
     
@@ -83,7 +83,7 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
     return y
 end
 
-function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
+@inline function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
     L::TensorProductMap3D{<:AbstractMatrix{Float64},<:UniformScaling,<:UniformScaling},
     x::AbstractVector{Float64})
 
@@ -101,7 +101,7 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
     return lmul!(B*C,y)
 end
 
-function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
+@inline function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
     L::TensorProductMap3D{<:UniformScaling,<:AbstractMatrix{Float64},<:UniformScaling},
     x::AbstractVector{Float64})
 
@@ -119,7 +119,7 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
     return lmul!(A*C,y)
 end
 
-function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
+@inline function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
     L::TensorProductMap3D{<:UniformScaling,<:UniformScaling,<:AbstractMatrix{Float64}},
     x::AbstractVector{Float64})
 
@@ -137,7 +137,7 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
     return lmul!(A*B,y)
 end
 
-function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
+@inline function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
     L::TensorProductMap3D{<:AbstractMatrix{Float64},<:AbstractMatrix{Float64},<:UniformScaling},
     x::AbstractVector{Float64})
     
@@ -165,7 +165,7 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
     return lmul!(C,y)
 end
 
-function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
+@inline function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
     L::TensorProductMap3D{<:AbstractMatrix{Float64},<:UniformScaling,<:AbstractMatrix{Float64}},
     x::AbstractVector{Float64})
     
@@ -193,7 +193,7 @@ function LinearAlgebra.mul!(y::AbstractVector{Float64},
     return lmul!(B, y)
 end
 
-function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
+@inline function LinearAlgebra.mul!(y::AbstractVector{Float64}, 
     L::TensorProductMap3D{<:UniformScaling,<:AbstractMatrix{Float64},<:AbstractMatrix{Float64}},
     x::AbstractVector{Float64})
     

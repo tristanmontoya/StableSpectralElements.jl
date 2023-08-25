@@ -5,14 +5,15 @@
     two_point_flux::AbstractTwoPointFlux,
     Λ_q::AbstractArray{Float64,3}, # N_q x d x d
     u_q::AbstractMatrix{Float64}) where {d,N_c}
-    #count = 0
+
     fill!(r_q, 0.0)
     @inbounds for i in axes(u_q,1)
         @inbounds for j in (i+1):size(u_q,1)
-            # evaluate two-point flux
+
+            # evaluate two-point flux (must be symmetric)
             F_ij = compute_two_point_flux(conservation_law,
-                two_point_flux, u_q[i,:],u_q[j,:])
-            #count = count+1
+                two_point_flux, u_q[i,:], u_q[j,:])
+
             # apply flux-differencing operator to flux tensor
             @inbounds for e in 1:N_c
                 diff_ij = 0.0
@@ -23,14 +24,12 @@
                         @muladd Fm_ij = Fm_ij + Λ_ij * F_ij[e,n]
                     end
                     @muladd diff_ij = diff_ij + S[m][i,j] * Fm_ij
-                    
                 end
                 r_q[i,e] -= diff_ij
                 r_q[j,e] += diff_ij
             end
         end
     end
-    #println("count = ", count)
 end
 
 @inline @views function flux_difference!(
@@ -41,7 +40,6 @@ end
     Λ_q::AbstractArray{Float64,3}, # N_q x d x d
     u_q::AbstractMatrix{Float64}) where {d,N_c}
 
-    #count = 0
     fill!(r_q, 0.0)
     @inbounds for m in 1:d
         Sm_nz = nonzeros(S[m])
@@ -121,7 +119,7 @@ end
 end
 
 # specialized for no entropy projection 
-@inline function get_nodal_values!(
+@inline @views function get_nodal_values!(
     ::AbstractMassMatrixSolver,
     ::AbstractConservationLaw,
     u_q::AbstractMatrix, 
@@ -129,7 +127,9 @@ end
     ::AbstractMatrix,
     ::AbstractMatrix,
     ::AbstractMatrix,
-    V::LinearMap, R::LinearMap, ::Diagonal,
+    V::LinearMap,
+    ::LinearMap,
+    R::LinearMap, ::Diagonal,
     u::AbstractMatrix, ::Int,
     ::Val{false})
     mul!(u_q, V, u)
@@ -138,7 +138,7 @@ end
 
 # specialized for nodal schemes (not necessarily diagonal-E)
 # this is really an "entropy extrapolation" and not "projection"
-@inline function get_nodal_values!(
+@inline @views function get_nodal_values!(
     ::AbstractMassMatrixSolver,
     conservation_law::AbstractConservationLaw,
     u_q::AbstractMatrix, 
@@ -146,7 +146,9 @@ end
     w_q::AbstractMatrix,
     w_f::AbstractMatrix,
     w::AbstractMatrix,
-    V::UniformScalingMap, R::LinearMap, WJ::Diagonal,
+    V::UniformScalingMap, 
+    ::LinearMap,
+    R::LinearMap, ::Diagonal,
     u::AbstractMatrix, ::Int,
     ::Val{true})
 
@@ -162,7 +164,7 @@ end
 
 # general (i.e. suitable for modal) approach
 # uses a full entropy projection
-@inline function get_nodal_values!(
+@inline @views function get_nodal_values!(
     mass_solver::AbstractMassMatrixSolver,
     conservation_law::AbstractConservationLaw,
     u_q::AbstractMatrix, 
@@ -170,19 +172,21 @@ end
     w_q::AbstractMatrix,
     w_f::AbstractMatrix,
     w::AbstractMatrix,
-    V::LinearMap, R::LinearMap, WJ::Diagonal,
+    V::LinearMap,
+    Vᵀ::LinearMap,
+    R::LinearMap, WJ::Diagonal,
     u::AbstractMatrix, k::Int,
     ::Val{true})
     
     # evaluate entropy variables in terms of nodal conservative variables
     mul!(u_q, V, u)
     @inbounds for i in axes(u_q, 1)
-        w_q[i,:] = conservative_to_entropy(conservation_law, view(u_q,i,:))
+        w_q[i,:] .= conservative_to_entropy(conservation_law, u_q[i,:])
     end
 
     # project entropy variables and store modal coeffs in w
     lmul!(WJ, w_q)
-    mul!(w, V', w_q)
+    mul!(w, Vᵀ, w_q)
     mass_matrix_solve!(mass_solver, k, w, w_q)
 
     # get nodal values of projected entropy variables
@@ -191,10 +195,10 @@ end
 
     # convert back to conservative variables
     @inbounds for i in axes(u_q, 1)
-        u_q[i,:] = entropy_to_conservative(conservation_law, view(w_q,i,:))
+        u_q[i,:] .= entropy_to_conservative(conservation_law, w_q[i,:])
     end
     @inbounds for i in axes(u_f, 1)
-        u_f[i,:] = entropy_to_conservative(conservation_law, view(w_f,i,:))
+        u_f[i,:] .= entropy_to_conservative(conservation_law, w_f[i,:])
     end
 end
 
@@ -207,14 +211,14 @@ end
     (; inviscid_numerical_flux, two_point_flux, 
         entropy_projection, facet_correction) = form
     (; f_f, u_q, r_q, u_f, temp, CI) = solver.preallocated_arrays
-    (; S, C, V, R, WJ, Λ_q, BJf, halfnJq, halfnJf, n_f,
+    (; S, C, V, Vᵀ, R, Rᵀ, WJ, Λ_q, BJf, halfnJq, halfnJf, n_f,
         nodes_per_face) = solver.operators
     
     # get the nodal solution using the entropy projection if specified
     @inbounds @timeit "get nodal vals" Threads.@threads for k in 1:N_e
         get_nodal_values!(mass_solver, conservation_law, u_q[:,:,k], 
             u_f[:,k,:], r_q[:,:,k], f_f[:,:,k], temp[:,:,k], 
-            V, R, WJ[k], u[:,:,k], k, Val(entropy_projection))
+            V, Vᵀ, R, WJ[k], u[:,:,k], k, Val(entropy_projection))
     end
 
     # compute the local residual
@@ -237,11 +241,10 @@ end
             u_q[:,:,k], u_f[:,k,:], nodes_per_face, Val(facet_correction))
 
         # apply facet operators
-        mul!(u_q[:,:,k], R', f_f[:,:,k])
-        r_q[:,:,k] .-= u_q[:,:,k]
+        mul!(r_q[:,:,k], Rᵀ, f_f[:,:,k], -1, 1)
 
         # solve for time derivative
-        mul!(dudt[:,:,k], V', r_q[:,:,k])
+        mul!(dudt[:,:,k], Vᵀ, r_q[:,:,k])
         mass_matrix_solve!(mass_solver, k, dudt[:,:,k], u_q[:,:,k])
     end
 

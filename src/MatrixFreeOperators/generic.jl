@@ -11,12 +11,13 @@ function LinearAlgebra.transpose(L::GenericMatrixMap)
     return GenericMatrixMap(transpose(L.lmap))
 end
 
-function LinearAlgebra.mul!(y::AbstractVector{Float64},
+@inline function LinearAlgebra.mul!(y::AbstractVector{Float64},
     L::GenericMatrixMap, x::AbstractVector{Float64})
 
-    for i in eachindex(y)
+    LinearMaps.check_dim_mul(y, L, x)
+    @inbounds for i in eachindex(y)
         temp = 0.0
-        @simd for j in eachindex(x)
+        @inbounds @simd for j in eachindex(x)
             @muladd temp = temp + L.lmap[i,j]*x[j]
         end
         y[i] = temp
