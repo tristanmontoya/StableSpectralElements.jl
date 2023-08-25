@@ -136,7 +136,8 @@ module Solvers
             Array{Float64}(undef,N_f, N_e, N_c, d)) #note switched order
     end
 
-    function Solver(conservation_law::AbstractConservationLaw{d,PDEType, N_c},     
+    function Solver(
+        conservation_law::AbstractConservationLaw{d,PDEType, N_c},     
         spatial_discretization::SpatialDiscretization{d},
         form::ResidualForm,
         ::PhysicalOperator,
@@ -241,8 +242,8 @@ module Solvers
         S = Tuple(0.5*Matrix(W*D[m] - D[m]'*W) for m in 1:d)
         C = Matrix(R'*B)
         
-        if approx_type isa Union{NodalTensor,ModalTensor}
-            return Tuple(sparse(S[m]) for m in 1:d), C
+        if (approx_type isa Union{NodalTensor,ModalTensor}) && (d > 1)
+            return Tuple(sparse(S[m]) for m in 1:d), sparse(C)
         else
             return S, C
         end

@@ -87,7 +87,7 @@ end
 @inline @views function facet_correction!(
     r_q::AbstractMatrix{Float64}, # N_q x N_c 
     f_f::AbstractMatrix{Float64}, # N_f x N_c
-    C::AbstractMatrix{Float64}, # N_f x N_q
+    C::Matrix{Float64}, # N_f x N_q
     conservation_law::AbstractConservationLaw{d,FirstOrder,N_c},
     two_point_flux::AbstractTwoPointFlux,
     halfnJf::AbstractMatrix{Float64},
@@ -111,6 +111,47 @@ end
                     @muladd F_dot_n_ij = F_dot_n_ij + nJ_ij * F_ij[e,n]
                 end
                 diff_ij = C[i,j] * F_dot_n_ij
+                r_q[i,e] -= diff_ij
+                f_f[j,e] -= diff_ij
+            end
+        end
+    end
+end
+
+@inline @views function facet_correction!(
+    r_q::AbstractMatrix{Float64}, # N_q x N_c 
+    f_f::AbstractMatrix{Float64}, # N_f x N_c
+    C::SparseMatrixCSC{Float64}, # N_f x N_q
+    conservation_law::AbstractConservationLaw{d,FirstOrder,N_c},
+    two_point_flux::AbstractTwoPointFlux,
+    halfnJf::AbstractMatrix{Float64},
+    halfnJq::AbstractArray{Float64,3},
+    u_q::AbstractMatrix{Float64},
+    u_f::AbstractMatrix{Float64},
+    nodes_per_face::Int,
+    ::Val{true}) where {d, N_c}
+
+    C_nz = nonzeros(C)
+    row_index = rowvals(C)
+
+    @inbounds for j in axes(u_f,1)
+        @inbounds for ii in nzrange(C,j)
+            i = row_index[ii]
+
+            # evaluate two-point flux
+            F_ij = compute_two_point_flux(conservation_law, 
+                two_point_flux, u_q[i,:], u_f[j,:])
+            C_ij = C_nz[ii]
+            
+            f = (j-1)÷nodes_per_face + 1
+
+            @inbounds for e in 1:N_c
+                F_dot_n_ij = 0.0
+                @inbounds for n in 1:d
+                    nJ_ij = halfnJf[n,j] + halfnJq[n,f,i]
+                    @muladd F_dot_n_ij = F_dot_n_ij + nJ_ij * F_ij[e,n]
+                end
+                diff_ij = C_ij * F_dot_n_ij
                 r_q[i,e] -= diff_ij
                 f_f[j,e] -= diff_ij
             end

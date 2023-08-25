@@ -18,7 +18,7 @@ function euler_vortex_2d_modal()
         inviscid_numerical_flux=EntropyConservativeNumericalFlux(),
         entropy_projection=true, facet_correction=true)
 
-    reference_approximation = ReferenceApproximation(ModalMulti(p), 
+    reference_approximation = ReferenceApproximation(ModalTensor(p), 
         Tri(), mapping_degree=p)
 
     uniform_mesh = uniform_periodic_mesh(reference_approximation, 
