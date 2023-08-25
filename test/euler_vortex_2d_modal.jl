@@ -28,7 +28,7 @@ function euler_vortex_2d_modal()
         ChanWarping(1.0/16.0, (L,L)))
 
     spatial_discretization = SpatialDiscretization(mesh, 
-        reference_approximation, project_jacobian=true)
+        reference_approximation, ChanWilcoxMetrics())
 
     results_path = save_project(conservation_law,
         spatial_discretization, exact_solution, form, (0.0, T),

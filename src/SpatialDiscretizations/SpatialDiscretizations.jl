@@ -1,10 +1,10 @@
 module SpatialDiscretizations
 
     using StaticArrays: SArray, SMatrix, SVector
-    using LinearAlgebra: I, inv, Diagonal, diagm, kron, transpose, det, eigvals
+    using LinearAlgebra: I, inv, Diagonal, diagm, kron, transpose, det, eigvals, mul!
     using Random: rand, shuffle
     using LinearMaps: LinearMap, ⊗
-    using StartUpDG: MeshData, basis, vandermonde, grad_vandermonde, diagE_sbp_nodes, quad_nodes, NodesAndModes.quad_nodes_tri, NodesAndModes.quad_nodes_tet, face_vertices, nodes, num_faces, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial, jacobiP, match_coordinate_vectors,uniform_mesh, make_periodic, jaskowiec_sukumar_quad_nodes, Hicken
+    using StartUpDG: MeshData, basis, vandermonde, grad_vandermonde, diagE_sbp_nodes, quad_nodes, NodesAndModes.quad_nodes_tri, NodesAndModes.quad_nodes_tet, face_vertices, nodes, num_faces, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial, jacobiP, match_coordinate_vectors,uniform_mesh, make_periodic, jaskowiec_sukumar_quad_nodes, Hicken, geometric_factors
     
     using Jacobi: zgrjm, wgrjm, zgj, wgj, zglj, wglj
 
@@ -13,7 +13,7 @@ module SpatialDiscretizations
     using Reexport
     @reexport using StartUpDG: RefElemData, AbstractElemShape, Line, Quad, Tri, Tet, Hex, SBP
 
-    export AbstractApproximationType, NodalTensor, ModalTensor, ModalMulti, NodalMulti, ModalMultiDiagE, NodalMultiDiagE, AbstractReferenceMapping, NoMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, trace_constant, dim, χ, warped_product
+    export AbstractApproximationType, NodalTensor, ModalTensor, ModalMulti, NodalMulti, ModalMultiDiagE, NodalMultiDiagE, AbstractReferenceMapping, AbstractMetrics, ExactMetrics, ChanWilcoxMetrics, NoMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, trace_constant, dim, χ, warped_product
     
     abstract type AbstractApproximationType end
 
@@ -54,6 +54,10 @@ module SpatialDiscretizations
         J_ref::Vector{Float64}
         Λ_ref::Array{Float64, 3}
     end
+
+    abstract type AbstractMetrics end
+    struct ExactMetrics <: AbstractMetrics end
+    struct ChanWilcoxMetrics <: AbstractMetrics end
 
     """Operators for local approximation on reference element"""
     struct ReferenceApproximation{d, ElemShape, ApproxType}
@@ -112,16 +116,20 @@ module SpatialDiscretizations
     end
 
     function SpatialDiscretization(mesh::MeshData{d},
-        reference_approximation::ReferenceApproximation{d};
+        reference_approximation::ReferenceApproximation{d},
+        metric_type::AbstractMetrics=ExactMetrics();
         project_jacobian::Bool=false) where {d}
 
         (; reference_element, reference_mapping, W, V) = reference_approximation
 
         N_e = size(mesh.xyz[1])[2]
         geometric_factors = apply_reference_mapping(GeometricFactors(mesh,
-            reference_element), reference_mapping)
+            reference_element, metric_type), reference_mapping)
         (; J_q, Λ_q, J_f, nJf, nJq) = geometric_factors
 
+        # this is used in the SISC paper
+        # Chan and Wilcox metrics interpolate on mapping nodes so 
+        # this isn't needed in that case.
         if project_jacobian
             J_proj = similar(J_q)
             Minv = inv(Matrix(V'*W*V))

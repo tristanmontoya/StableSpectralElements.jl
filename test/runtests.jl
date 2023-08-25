@@ -89,8 +89,7 @@ end
 @testset "Isentropic Euler vortex FluxDiff ModalTensor Tri 2D" begin
     (l2, conservation, entropy) = euler_vortex_2d_modal()
 
-    @test l2 ≈ [0.03825292331035699, 0.07925155101252927, 0.0620385177947498,
-        0.07343736875234497] atol=tol
+    @test l2 ≈ [0.03822890160626357, 0.07947671056700828, 0.062137209182366294, 0.07349571479329776] atol=tol
     @test conservation ≈ [0.0, 0.0, 0.0, 0.0] atol=tol
     @test entropy ≈ 0.0 atol=tol
 end
