@@ -143,6 +143,8 @@ end
                 two_point_flux, u_q[i,:], u_f[j,:])
             C_ij = C_nz[ii]
             
+            # get facet index 
+            # (note this won't work if different number of nodes per facet)
             f = (j-1)÷nodes_per_face + 1
 
             @inbounds for e in 1:N_c
