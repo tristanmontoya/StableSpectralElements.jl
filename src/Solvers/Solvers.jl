@@ -12,7 +12,7 @@ module Solvers
     using StartUpDG: num_faces
     using ..MatrixFreeOperators: AbstractOperatorAlgorithm,  DefaultOperatorAlgorithm, make_operator
     using ..ConservationLaws
-    using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization, check_facet_nodes, check_normals, NodalTensor, ModalTensor
+    using ..SpatialDiscretizations: ReferenceApproximation, SpatialDiscretization, apply_reference_mapping, reference_derivative_operators, check_facet_nodes, check_normals, NodalTensor, ModalTensor
     using ..GridFunctions: AbstractGridFunction, AbstractGridFunction, NoSourceTerm, evaluate
     
     export AbstractResidualForm, StandardForm, FluxDifferencingForm, AbstractMappingForm, AbstractStrategy, AbstractDiscretizationOperators, AbstractPreallocatedArrays, AbstractMassMatrixSolver, PhysicalOperators, FluxDifferencingOperators, PreAllocatedArrays,  PreAllocatedArraysFluxDifferencing, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, get_dof, rhs!, rhs_static!, make_operators, get_nodal_values!, facet_correction!, flux_differencing_operators
@@ -49,8 +49,11 @@ module Solvers
 
     struct ReferenceOperators{d} <: AbstractDiscretizationOperators{d}
         D::NTuple{d,LinearMap}
+        Dᵀ::NTuple{d,LinearMap}
         V::LinearMap
+        Vᵀ::LinearMap
         R::LinearMap
+        Rᵀ::LinearMap
         W::Diagonal
         B::Diagonal
         halfWΛ::Array{Diagonal,3} # d x d x N_e
@@ -167,9 +170,11 @@ module Solvers
             spatial_discretization,operator_algorithm)) where {d, PDEType, N_c,
             ResidualForm<:StandardForm}
     
-        (; N_p, N_q, N_f, D, V, W, R, B) = spatial_discretization.reference_approximation
-        (; Λ_q, nJf, J_f) = spatial_discretization.geometric_factors
-        (; N_e, mesh) = spatial_discretization
+        (; reference_approximation, geometric_factors, 
+            N_e, mesh) = spatial_discretization
+        (; N_p, N_q, N_f, D, V, W, R, B) = reference_approximation
+        (; Λ_q, nJf, J_f) = apply_reference_mapping(geometric_factors,
+            reference_approximation.reference_mapping)
 
         halfWΛ = Array{Diagonal,3}(undef, d, d, N_e)
         halfN = Matrix{Diagonal}(undef, d, N_e)
@@ -186,7 +191,9 @@ module Solvers
     
         operators = ReferenceOperators{d}(
             Tuple(make_operator(D[m], alg) for m in 1:d), 
-            make_operator(V, alg), make_operator(R, alg), 
+            Tuple(transpose(make_operator(D[m], alg)) for m in 1:d), 
+            make_operator(V, alg), transpose(make_operator(V, alg)),
+            make_operator(R, alg), transpose(make_operator(R, alg)),
             W, B, halfWΛ, halfN, BJf, n_f)
     
         return Solver{d,ResidualForm,PDEType,ReferenceOperators{d}, N_p, N_q, N_f, N_c, N_e}(
@@ -237,9 +244,11 @@ module Solvers
     function flux_differencing_operators(
         reference_approximation::ReferenceApproximation{d}) where {d}
 
-        (; D, W, R, B, approx_type) = reference_approximation
+        (; D, W, R, B, approx_type, reference_mapping) = reference_approximation
 
-        S = Tuple(0.5*Matrix(W*D[m] - D[m]'*W) for m in 1:d)
+        D_ξ = reference_derivative_operators(D, reference_mapping)
+
+        S = Tuple(0.5*Matrix(W*D_ξ[m] - D_ξ[m]'*W) for m in 1:d)
         C = Matrix(R'*B)
         
         if (approx_type isa Union{NodalTensor,ModalTensor}) && (d > 1)

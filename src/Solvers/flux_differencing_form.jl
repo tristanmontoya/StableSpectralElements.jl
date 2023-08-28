@@ -284,7 +284,8 @@ end
             u_q[:,:,k], u_f[:,k,:], nodes_per_face, Val(facet_correction))
 
         # apply facet operators
-        mul!(r_q[:,:,k], Rᵀ, f_f[:,:,k], -1, 1)
+        mul!(u_q[:,:,k], Rᵀ, f_f[:,:,k])
+        r_q[:,:,k] .-= u_q[:,:,k]
 
         # solve for time derivative
         mul!(dudt[:,:,k], Vᵀ, r_q[:,:,k])

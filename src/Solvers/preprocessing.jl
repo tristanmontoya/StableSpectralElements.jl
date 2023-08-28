@@ -105,9 +105,11 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     alg::AbstractOperatorAlgorithm,
     mass_solver::AbstractMassMatrixSolver) where {d}
 
-    (; N_e, reference_approximation) = spatial_discretization
+    (; N_e, reference_approximation, geometric_factors) = spatial_discretization
     (; V, R, W, B, D) = reference_approximation
-    (; Λ_q, J_f, nJf) = spatial_discretization.geometric_factors
+
+    (; Λ_q, nJf, J_f) = apply_reference_mapping(geometric_factors,
+        reference_approximation.reference_mapping)
     
     VOL = Vector{NTuple{d,LinearMap}}(undef,N_e)
     FAC = Vector{LinearMap}(undef,N_e)
@@ -120,7 +122,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
         VOL[k] = Tuple(make_operator(M⁻¹ * Matrix(V' * 
             sum(D[m]' * Diagonal(W * Λ_q[:,m,n,k]) for m in 1:d)), alg) 
             for n in 1:d)
-        FAC[k] = make_operator(-M⁻¹* 
+        FAC[k] = make_operator(-M⁻¹ * 
             Matrix(V' * R' * Diagonal(B * J_f[:,k])), alg)
         V_ar[k] = make_operator(reference_approximation.V, alg)
         R_ar[k] = make_operator(reference_approximation.R, alg)
@@ -135,9 +137,10 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     alg::AbstractOperatorAlgorithm,
     mass_solver::AbstractMassMatrixSolver) where {d}
 
-    (; N_e, reference_approximation) = spatial_discretization
+    (; N_e, reference_approximation, geometric_factors) = spatial_discretization
     (; V, R, W, B, D) = reference_approximation
-    (; Λ_q, J_f, nJf) = spatial_discretization.geometric_factors
+    (; Λ_q, nJf, J_f) = apply_reference_mapping(geometric_factors,
+        reference_approximation.reference_mapping)
  
     VOL = Vector{NTuple{d,LinearMap}}(undef,N_e)
     FAC = Vector{LinearMap}(undef,N_e)

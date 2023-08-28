@@ -13,7 +13,7 @@ module SpatialDiscretizations
     using Reexport
     @reexport using StartUpDG: RefElemData, AbstractElemShape, Line, Quad, Tri, Tet, Hex, SBP
 
-    export AbstractApproximationType, NodalTensor, ModalTensor, ModalMulti, NodalMulti, ModalMultiDiagE, NodalMultiDiagE, AbstractReferenceMapping, AbstractMetrics, ExactMetrics, ChanWilcoxMetrics, NoMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, check_normals, check_facet_nodes, check_sbp_property, centroids, trace_constant, dim, χ, warped_product
+    export AbstractApproximationType, NodalTensor, ModalTensor, ModalMulti, NodalMulti, ModalMultiDiagE, NodalMultiDiagE, AbstractReferenceMapping, AbstractMetrics, ExactMetrics, ChanWilcoxMetrics, NoMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, apply_reference_mapping, reference_derivative_operators, check_normals, check_facet_nodes, check_sbp_property, centroids, trace_constant, dim, χ, warped_product
     
     abstract type AbstractApproximationType end
 
@@ -120,12 +120,11 @@ module SpatialDiscretizations
         metric_type::AbstractMetrics=ExactMetrics();
         project_jacobian::Bool=false) where {d}
 
-        (; reference_element, reference_mapping, W, V) = reference_approximation
+        (; reference_element, W, V) = reference_approximation
 
         N_e = size(mesh.xyz[1])[2]
-        geometric_factors = apply_reference_mapping(GeometricFactors(mesh,
-            reference_element, metric_type), reference_mapping)
-        (; J_q, Λ_q, J_f, nJf, nJq) = geometric_factors
+        (; J_q, Λ_q, J_f, nJf, nJq) = GeometricFactors(mesh,
+        reference_element, metric_type)
 
         # this is used in the SISC paper
         # Chan and Wilcox metrics interpolate on mapping nodes so 
@@ -158,12 +157,25 @@ module SpatialDiscretizations
         d = size(Λ_q, 2)
         Λ_η = similar(Λ_q)
 
-        for k in 1:N_e, i in 1:N_q, m in 1:d, n in 1:d
+        @inbounds for k in 1:N_e, i in 1:N_q, m in 1:d, n in 1:d
             Λ_η[i,m,n,k] = sum(Λ_ref[i,m,l] * Λ_q[i,l,n,k] ./ J_ref[i] 
                 for l in 1:d)
         end
         
         return GeometricFactors(J_q, Λ_η, J_f, nJf, nJq)
+    end
+
+    # get derivative operators in reference coordinates from collapsed
+    function reference_derivative_operators(D_η::NTuple{d, LinearMap},
+        reference_mapping::ReferenceMapping) where {d}
+        (; Λ_ref, J_ref) = reference_mapping
+        return Tuple(sum(Diagonal(Λ_ref[:,l,m]./J_ref) * D_η[l]
+            for l in 1:d) for m in 1:d)
+    end
+
+    function reference_derivative_operators(D_η::NTuple{d, LinearMap},    
+        ::NoMapping) where {d}
+        return D_η
     end
 
     """
@@ -196,16 +208,10 @@ module SpatialDiscretizations
         (; reference_mapping) = reference_approximation
         (; nrstJ) = reference_approximation.reference_element
 
-        if reference_mapping isa NoMapping
-            return Tuple(maximum(abs.(Matrix(W*D[m] + D[m]'*W - 
+        D_ξ = reference_derivative_operators(D, reference_mapping)
+
+        return Tuple(maximum(abs.(Matrix(W*D_ξ[m] + D_ξ[m]'*W - 
                 R'*B*Diagonal(nrstJ[m])*R))) for m in 1:d)
-        else
-            (; Λ_ref, J_ref) = reference_mapping
-            D_ξ = Tuple(sum(Diagonal(Λ_ref[:,l,m]./J_ref) * D[l]
-                for l in 1:d) for m in 1:d)
-            return Tuple(maximum(abs.(Matrix(W*D_ξ[m] + D_ξ[m]'*W - 
-                R'*B*Diagonal(nrstJ[m])*R))) for m in 1:d)
-        end
     end
 
     """
