@@ -66,6 +66,21 @@ Evaluate the flux for the Euler equations
         SMatrix{1,d}(h_t*V[n] for n in 1:d))
 end
 
+@inline function physical_flux(conservation_law::EulerType{d}, 
+    u::AbstractVector{Float64}, n::NTuple{d, Float64}) where {d}
+
+    (; γ_minus_1) = conservation_law
+
+    V = SVector{d}(u[m+1] / u[1] for m in 1:d)
+    Vₙ = sum(V[m]*n[m] for m in 1:d)
+
+    p = γ_minus_1 * (u[end] - 0.5*(sum(u[m+1]*V[m] for m in 1:d)))
+
+    return vcat(u[1]*Vₙ,
+        SVector{d}(u[m+1]*Vₙ + p*n[m] for m in 1:d), 
+        (u[end] + p)*Vₙ)
+end
+
 @inline @views function physical_flux!(f::AbstractArray{Float64,3},    
     conservation_law::EulerType{d}, 
     u::AbstractMatrix{Float64}) where {d}
@@ -142,7 +157,7 @@ end
     ::ConservativeFlux, u_L::AbstractVector{Float64}, 
     u_R::AbstractVector{Float64}, n::NTuple{d, Float64}) where {d}
     
-    return 0.5*(physical_flux(conservation_law, u_L, n) .+ 
+    return 0.5*(physical_flux(conservation_law, u_L, n) + 
         physical_flux(conservation_law, u_R, n))
 end
 
@@ -153,7 +168,7 @@ Entropy-conservative, kinetic-energy-preserving, and pressure-equilibrium-preser
     ::EntropyConservativeFlux, u_L::AbstractVector{Float64}, 
     u_R::AbstractVector{Float64}) where {d}
     
-    (; γ_minus_1) = conservation_law
+    (; γ_minus_1, inv_γ_minus_1) = conservation_law
 
     # velocities and pressures
     V_L = SVector{d}(u_L[m+1] / u_L[1] for m in 1:d)
@@ -166,7 +181,7 @@ Entropy-conservative, kinetic-energy-preserving, and pressure-equilibrium-preser
     V_avg = 0.5*(V_L + V_R)
     p_avg = 0.5*(p_L + p_R)
     C = 0.5*sum(V_L[m]*V_R[m] for m in 1:d) + 
-        1.0/(γ_minus_1*logmean(u_L[1]/p_L, u_R[1]/p_R))
+        inv_γ_minus_1*inv_logmean(u_L[1]/p_L, u_R[1]/p_R)
 
     # flux tensor
     f_ρ = SMatrix{1,d}(ρ_avg*V_avg[n] for n in 1:d)
@@ -174,6 +189,36 @@ Entropy-conservative, kinetic-energy-preserving, and pressure-equilibrium-preser
     f_E = SMatrix{1,d}(f_ρ[n]*C + 0.5*(p_L*V_R[n] + p_R*V_L[n]) for n in 1:d)
     return vcat(f_ρ, f_ρV, f_E)
 end
+
+@inline function compute_two_point_flux(conservation_law::EulerType{d}, 
+    ::EntropyConservativeFlux, u_L::AbstractVector{Float64}, 
+    u_R::AbstractVector{Float64}, n::NTuple{d,Float64}) where {d}
+    
+    (; γ_minus_1, inv_γ_minus_1) = conservation_law
+
+    # velocities and pressures
+    V_L = SVector{d}(u_L[m+1] / u_L[1] for m in 1:d)
+    V_R = SVector{d}(u_R[m+1] / u_R[1] for m in 1:d)
+    Vn_L = sum(V_L[m]*n[m] for m in 1:d)
+    Vn_R = sum(V_R[m]*n[m] for m in 1:d)
+    p_L = γ_minus_1 * (u_L[end] - 0.5*u_L[1]*(sum(V_L[m]^2 for m in 1:d)))
+    p_R = γ_minus_1 * (u_R[end] - 0.5*u_R[1]*(sum(V_R[m]^2 for m in 1:d)))
+
+    # mean quantities
+    ρ_avg = logmean(u_L[1], u_R[1])
+    V_avg = 0.5*(V_L + V_R)
+    Vn_avg = 0.5*(Vn_L + Vn_R)
+    p_avg = 0.5*(p_L + p_R)
+    C = 0.5*sum(V_L[m]*V_R[m] for m in 1:d) + 
+        inv_γ_minus_1*inv_logmean(u_L[1]/p_L, u_R[1]/p_R)
+
+    # flux vector
+    f_ρ = ρ_avg*Vn_avg
+    f_ρV = SVector{d}(f_ρ*V_avg[m] + p_avg*n[m] for m in 1:d)
+    f_E = f_ρ*C + 0.5*(p_L*Vn_R + p_R*Vn_L)
+    return vcat(f_ρ, f_ρV, f_E)
+end
+
 
 """
 Isentropic vortex problem, taken verbatim from the Trixi.jl examples (https://github.com/trixi-framework/Trixi.jl/blob/main/examples/tree_2d_dgsem/elixir_euler_vortex.jl).

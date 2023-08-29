@@ -48,6 +48,12 @@ function semidiscretize(
         end
     end
 
+    if Threads.nthreads() == 1
+        parallelism = Serial()
+    else
+        parallelism = Threaded()
+    end
+
     u0 = initialize(initial_data, spatial_discretization)
 
     if PDEType == SecondOrder && strategy isa ReferenceOperator
@@ -62,13 +68,14 @@ function semidiscretize(
             u0, tspan)
     else
         return semidiscretize(Solver(conservation_law,spatial_discretization,
-        form,strategy,operator_algorithm,mass_matrix_solver), u0, tspan)
+        form,strategy,operator_algorithm,mass_matrix_solver,parallelism), 
+        u0, tspan)
     end
 end
 
 function semidiscretize(solver::Solver, u0::Array{Float64,3},
     tspan::NTuple{2,Float64})
-    return ODEProblem(rhs!, u0, tspan, solver)
+    return ODEProblem(semi_discrete_residual!, u0, tspan, solver)
 end
 
 """
@@ -97,7 +104,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{1},
         R_ar[k] = make_operator(reference_approximation.R, alg)
         n_f[k] = (nJf[1,:,k],)
     end
-    return PhysicalOperators{1}(VOL, FAC, V_ar, R_ar, n_f)
+    return PhysicalOperators(VOL, FAC, V_ar, R_ar, n_f)
 end
 
 function make_operators(spatial_discretization::SpatialDiscretization{d}, 
@@ -129,7 +136,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
         n_f[k] = Tuple(nJf[m,:,k] ./ J_f[:,k] for m in 1:d)
     end
 
-    return PhysicalOperators{d}(VOL, FAC, V_ar, R_ar, n_f)
+    return PhysicalOperators(VOL, FAC, V_ar, R_ar, n_f)
 end
 
 function make_operators(spatial_discretization::SpatialDiscretization{d}, 
@@ -161,5 +168,5 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
         n_f[k] = Tuple(nJf[m,:,k] ./ J_f[:,k] for m in 1:d)
     end
 
-    return PhysicalOperators{d}(VOL, FAC, V_ar, R_ar, n_f)
+    return PhysicalOperators(VOL, FAC, V_ar, R_ar, n_f)
 end

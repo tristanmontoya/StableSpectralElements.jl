@@ -160,7 +160,7 @@ function evaluate_conservation_residual(
     analysis::EnergyConservationAnalysis, 
     u::Array{Float64,3},
     dudt::Array{Float64,3})
-    (; mass_solver, N_c, N_e, V) = analysis 
+    (; mass_solver, N_c, N_e) = analysis 
 
     dEdt = zeros(N_c)
     for k in 1:N_e

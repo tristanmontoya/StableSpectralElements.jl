@@ -17,7 +17,7 @@ struct InviscidBurgersEquation{d} <: AbstractConservationLaw{d,FirstOrder,1}
     end
 end
 
-@doc raw"""
+@doc raw"""x
     ViscousBurgersEquation(a::NTuple{d,Float64}, b::Float64) where {d}
 
 Define a viscous Burgers' equation of the form
@@ -103,6 +103,7 @@ end
 
 @inline conservative_to_primitive(::BurgersType, u) = u
 @inline entropy(::BurgersType, u) = 0.5*u[1]^2
+@inline entropy_to_conservative(::BurgersType, u) = u
 @inline conservative_to_entropy(::BurgersType, u) = u
 
 @inline function wave_speed(conservation_law::BurgersType{d},

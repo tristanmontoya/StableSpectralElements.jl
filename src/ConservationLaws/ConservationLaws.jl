@@ -6,7 +6,7 @@ module ConservationLaws
     using LinearAlgebra: mul!, I
     import ..GridFunctions: AbstractGridFunction, NoSourceTerm, InitialDataSine, InitialDataGaussian, InitialDataGassner, SourceTermGassner, evaluate
 
-    export physical_flux, physical_flux!, numerical_flux!, entropy, conservative_to_primitive, conservative_to_entropy, entropy_to_conservative, compute_two_point_flux, wave_speed, logmean, AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, NoInviscidFlux, NoViscousFlux, LaxFriedrichsNumericalFlux, CentralNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, ConservativeFlux, EntropyConservativeFlux, NoTwoPointFlux, ExactSolution
+    export physical_flux, physical_flux!, numerical_flux!, entropy, conservative_to_primitive, conservative_to_entropy, entropy_to_conservative, compute_two_point_flux, wave_speed, logmean, inv_logmean, AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, NoInviscidFlux, NoViscousFlux, LaxFriedrichsNumericalFlux, CentralNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, ConservativeFlux, EntropyConservativeFlux, NoTwoPointFlux, ExactSolution
 
     abstract type AbstractConservationLaw{d, PDEType, N_c} end
     abstract type AbstractPDEType end
@@ -107,7 +107,18 @@ module ConservationLaws
         else
             return (y - x) / log(y/x)
         end
-      end
+    end
+
+    @inline function inv_logmean(x::Float64, y::Float64)
+        f² = (x * (x - 2 * y) + y * y) / (x * (x + 2 * y) + y * y)
+        if f² < 1.0e-4
+            return (210 + f² * (70 + f² * (42 + f² * 30))) / ((x + y) * 105)
+            # faster factorized way to compute
+            # (x + y) / (2 + 2/3 * f^2 + 2/5 * f^4 + 2/7 * f^6)
+        else
+            return log(y/x)/(y - x)
+        end
+    end
 
     """Generic structure for exact solution to PDE (may be deprecated in future versions)"""
     struct ExactSolution{d,ConservationLaw,InitialData,SourceTerm} <: AbstractGridFunction{d}

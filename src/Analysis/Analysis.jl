@@ -18,7 +18,7 @@ module Analysis
     using ..ConservationLaws: AbstractConservationLaw, entropy, conservative_to_entropy
     using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation, uniform_periodic_mesh, quadrature
     using ..GridFunctions: AbstractGridFunction, evaluate
-    using ..Solvers: AbstractResidualForm, AbstractStrategy, Solver, AbstractMassMatrixSolver, WeightAdjustedSolver, mass_matrix,  mass_matrix_inverse, mass_matrix_solve!, semidiscretize, LinearResidual, get_dof, rhs!
+    using ..Solvers: AbstractResidualForm, AbstractStrategy, Solver, AbstractMassMatrixSolver, WeightAdjustedSolver, mass_matrix,  mass_matrix_inverse, mass_matrix_solve!, semidiscretize, LinearResidual, get_dof, semi_discrete_residual!
     using ..File: new_path, load_project, load_solution, load_time_steps, load_snapshots, load_snapshots_with_derivatives, load_solver, save_callback, save_solution, save_project
     using ..Visualize: Plotter
 

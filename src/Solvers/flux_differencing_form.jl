@@ -162,7 +162,7 @@ end
 end
 
 # specialized for no entropy projection 
-@inline @views function get_nodal_values!(
+@inline @views function entropy_projection!(
     ::AbstractMassMatrixSolver,
     ::AbstractConservationLaw,
     u_q::AbstractMatrix, 
@@ -181,7 +181,7 @@ end
 
 # specialized for nodal schemes (not necessarily diagonal-E)
 # this is really an "entropy extrapolation" and not "projection"
-@inline @views function get_nodal_values!(
+@inline @views function entropy_projection!(
     ::AbstractMassMatrixSolver,
     conservation_law::AbstractConservationLaw,
     u_q::AbstractMatrix, 
@@ -207,7 +207,7 @@ end
 
 # general (i.e. suitable for modal) approach
 # uses a full entropy projection
-@inline @views function get_nodal_values!(
+@inline @views function entropy_projection!(
     mass_solver::AbstractMassMatrixSolver,
     conservation_law::AbstractConservationLaw,
     u_q::AbstractMatrix, 
@@ -245,52 +245,55 @@ end
     end
 end
 
-@views @timeit "du/dt" function rhs!(
-    dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
-    solver::Solver{d, <:FluxDifferencingForm, FirstOrder, FluxDifferencingOperators{d}, N_p,N_q,N_f,N_c,N_e},
-    t::Float64) where {d,N_p,N_q,N_f,N_c,N_e}
+@inline @views function nodal_values!(u::AbstractArray{Float64,3},
+    solver::Solver{d,ResidualForm,FirstOrder,ConservationLawType,OperatorType,
+    MassSolverType,Parallelism,N_p,N_q,N_f,N_c,N_e}, k::Int) where {d,
+    ResidualForm<:FluxDifferencingForm, ConservationLawType,
+    OperatorType,MassSolverType,Parallelism,N_p,N_q,N_f,N_c,N_e}
 
-    (; conservation_law, connectivity, form, mass_solver) = solver
-    (; inviscid_numerical_flux, two_point_flux, 
-        entropy_projection, facet_correction) = form
-    (; f_f, u_q, r_q, u_f, temp, CI) = solver.preallocated_arrays
-    (; S, C, V, Vᵀ, R, Rᵀ, WJ, Λ_q, BJf, halfnJq, halfnJf, n_f,
+    (; conservation_law, form, preallocated_arrays, mass_solver) = solver
+    (; f_f, u_q, r_q, u_f, temp) = preallocated_arrays
+    (; entropy_projection) = form
+    (; V, Vᵀ, R, WJ) = solver.operators
+
+    entropy_projection!(mass_solver, conservation_law, u_q[:,:,k], 
+        u_f[:,k,:], r_q[:,:,k], f_f[:,:,k], temp[:,:,k], 
+        V, Vᵀ, R, WJ[k], u[:,:,k], k, Val(entropy_projection))
+end
+
+@inline @views function time_derivative!(dudt::AbstractArray{Float64,3},
+    solver::Solver{d,ResidualForm,FirstOrder,ConservationLawType,OperatorType,
+    MassSolverType,Parallelism,N_p,N_q,N_f,N_c,N_e}, k::Int) where {d, 
+    ResidualForm<:FluxDifferencingForm, ConservationLawType,
+    OperatorType, MassSolverType,Parallelism,N_p,N_q,N_f,N_c,N_e}
+
+     (; conservation_law, connectivity, form, mass_solver) = solver
+     (; inviscid_numerical_flux, two_point_flux, facet_correction) = form
+     (; f_f, u_q, r_q, u_f, CI) = solver.preallocated_arrays
+     (; S, C, Vᵀ, Rᵀ, Λ_q, BJf, halfnJq, halfnJf, n_f, 
         nodes_per_face) = solver.operators
-    
-    # get the nodal solution using the entropy projection if specified
-    @inbounds @timeit "get nodal vals" Threads.@threads for k in 1:N_e
-        get_nodal_values!(mass_solver, conservation_law, u_q[:,:,k], 
-            u_f[:,k,:], r_q[:,:,k], f_f[:,:,k], temp[:,:,k], 
-            V, Vᵀ, R, WJ[k], u[:,:,k], k, Val(entropy_projection))
-    end
 
-    # compute the local residual
-    @inbounds @timeit "eval residual" Threads.@threads for k in 1:N_e
+    # evaluate interface numerical flux
+    numerical_flux!(f_f[:,:,k], conservation_law, inviscid_numerical_flux, 
+        u_f[:,k,:], u_f[CI[connectivity[:,k]],:], n_f[k], two_point_flux)
+ 
+    # scale numerical flux by quadrature weights
+    lmul!(BJf[k], f_f[:,:,k])
 
-        # evaluate interface numerical flux
-        numerical_flux!(f_f[:,:,k], conservation_law, inviscid_numerical_flux, 
-            u_f[:,k,:], u_f[CI[connectivity[:,k]],:], n_f[k], two_point_flux)
-        
-        # scale numerical flux by quadrature weights
-        lmul!(BJf[k], f_f[:,:,k])
+    # volume flux differencing term
+    flux_difference!(r_q[:,:,k], S, conservation_law, 
+        two_point_flux, Λ_q[:,:,:,k], u_q[:,:,k])
 
-        # volume flux differencing term
-        flux_difference!(r_q[:,:,k], S, conservation_law, 
-            two_point_flux, Λ_q[:,:,:,k], u_q[:,:,k])
+    # apply facet correction term (for operators w/o boundary nodes)
+    facet_correction!(r_q[:,:,k], f_f[:,:,k], C, conservation_law,
+        two_point_flux, halfnJf[:,:,k], halfnJq[:,:,:,k], 
+        u_q[:,:,k], u_f[:,k,:], nodes_per_face, Val(facet_correction))
 
-        # apply facet correction term (for operators w/o boundary nodes)
-        facet_correction!(r_q[:,:,k], f_f[:,:,k], C, conservation_law,
-            two_point_flux, halfnJf[:,:,k], halfnJq[:,:,:,k], 
-            u_q[:,:,k], u_f[:,k,:], nodes_per_face, Val(facet_correction))
+    # apply facet operators
+    mul!(u_q[:,:,k], Rᵀ, f_f[:,:,k])
+    r_q[:,:,k] .-= u_q[:,:,k]
 
-        # apply facet operators
-        mul!(u_q[:,:,k], Rᵀ, f_f[:,:,k])
-        r_q[:,:,k] .-= u_q[:,:,k]
-
-        # solve for time derivative
-        mul!(dudt[:,:,k], Vᵀ, r_q[:,:,k])
-        mass_matrix_solve!(mass_solver, k, dudt[:,:,k], u_q[:,:,k])
-    end
-
-    return dudt
+    # solve for time derivative
+    mul!(dudt[:,:,k], Vᵀ, r_q[:,:,k])
+    mass_matrix_solve!(mass_solver, k, dudt[:,:,k], u_q[:,:,k])
 end

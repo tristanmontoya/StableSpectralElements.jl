@@ -121,7 +121,7 @@ end
 @inline function compute_two_point_flux(conservation_law::AdvectionType{d}, 
     ::Union{EntropyConservativeFlux,ConservativeFlux},
     u_L::AbstractVector{Float64}, u_R::AbstractVector{Float64}) where {d}
-    flux_1d = (u_L[1] + u_R[1])/2
+    flux_1d = 0.5*(u_L[1] + u_R[1])
     return SMatrix{1,d}(conservation_law.a[m]*flux_1d for m in 1:d)
 end
 
@@ -129,7 +129,7 @@ end
     ::Union{EntropyConservativeFlux,ConservativeFlux},
     u_L::AbstractVector{Float64}, u_R::AbstractVector{Float64},
     n::NTuple{d,Float64}) where {d}
-    flux_1d = (u_L[1] + u_R[1])/2
+    flux_1d = 0.5*(u_L[1] + u_R[1])
     return SVector{1}(sum(n[m]*conservation_law.a[m]*flux_1d for m in 1:d))
 end
 

@@ -7,7 +7,7 @@ module File
     using ..ConservationLaws: AbstractConservationLaw
     using ..SpatialDiscretizations: SpatialDiscretization
     using ..GridFunctions: AbstractGridFunction
-    using ..Solvers: AbstractResidualForm, Solver, get_dof, rhs!
+    using ..Solvers: AbstractResidualForm, Solver, get_dof, semi_discrete_residual!
 
     export new_path, save_callback, save_project, save_solution
     include("save.jl")

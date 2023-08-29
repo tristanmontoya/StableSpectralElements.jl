@@ -60,29 +60,32 @@ module SpatialDiscretizations
     struct ChanWilcoxMetrics <: AbstractMetrics end
 
     """Operators for local approximation on reference element"""
-    struct ReferenceApproximation{d, ElemShape, ApproxType}
+    struct ReferenceApproximation{d, ElemShape, 
+        ApproxType, D_type, V_type, Vf_type, R_type, V_plot_type, ReferenceMappingType}
         approx_type::ApproxType
         N_p::Int
         N_q::Int
         N_f::Int
         reference_element::RefElemData{d, ElemShape}
-        D::NTuple{d, LinearMap}
-        V::LinearMap
-        Vf::LinearMap
-        R::LinearMap
-        W::Diagonal
-        B::Diagonal
-        V_plot::LinearMap
-        reference_mapping::AbstractReferenceMapping
+        D::D_type
+        V::V_type
+        Vf::Vf_type
+        R::R_type
+        W::Diagonal{Float64, Vector{Float64}}
+        B::Diagonal{Float64, Vector{Float64}}
+        V_plot::V_plot_type
+        reference_mapping::ReferenceMappingType
 
         function ReferenceApproximation(approx_type::ApproxType,
             reference_element::RefElemData{d,ElemShape},  
-            D::NTuple{d, LinearMap}, V::LinearMap, Vf::LinearMap, 
-            R::LinearMap, V_plot::LinearMap, 
-            reference_mapping::AbstractReferenceMapping = NoMapping()
-            ) where {d, ElemShape, ApproxType}
+            D::D_type, V::V_type, Vf::Vf_type, 
+            R::R_type, V_plot::V_plot_type, 
+            reference_mapping::ReferenceMappingType = NoMapping()
+            ) where {d, ElemShape, 
+            ApproxType, D_type, V_type, Vf_type, R_type, V_plot_type, ReferenceMappingType}
 
-            return new{d, ElemShape, ApproxType}(approx_type, size(V,2), 
+            return new{d, ElemShape, 
+            ApproxType, D_type, V_type, Vf_type, R_type, V_plot_type, ReferenceMappingType}(approx_type, size(V,2), 
                 size(V,1), size(R,1), reference_element, D, V, Vf, R, 
                 Diagonal(reference_element.wq), Diagonal(reference_element.wf),
                 V_plot, reference_mapping)

@@ -58,7 +58,7 @@ function save_solution(integrator::ODEIntegrator,
         save(file_name, Dict(
                 "u" => integrator.u, 
                 "t" => integrator.t, 
-                "du" => rhs!(similar(integrator.u), 
+                "du" => semi_discrete_residual!(similar(integrator.u), 
                     integrator.u, integrator.p, integrator.t)))
 
         time_steps=load_object(string(results_path, "time_steps.jld2"))

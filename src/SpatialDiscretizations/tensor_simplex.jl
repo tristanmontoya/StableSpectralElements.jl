@@ -222,7 +222,7 @@ function ReferenceApproximation(
             (vandermonde(Line(),q[2],equi_nodes(Line(),N_plot))/V_1D[2])
         approx_type = NodalTensor(min(q[1],q[2]))
     end
-
+    
     return ReferenceApproximation(approx_type, reference_element, 
         (D_1D[1] ⊗ I_1D[2], I_1D[1] ⊗ D_1D[2]), V, R * V, R, 
         V_plot, ReferenceMapping(J_ref, Λ_ref))
