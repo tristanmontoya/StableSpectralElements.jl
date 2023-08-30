@@ -103,8 +103,11 @@ module SpatialDiscretizations
         # first dimension is node index, second is element
         J_f::Matrix{Float64}
     
+        # first dimension is node, second is cartesian component, third is element
         nJf::Array{Float64,3}
 
+        # first dimension is is node, second is vector index n
+        # fourth is element
         nJq::Array{Float64,4}
     end
     

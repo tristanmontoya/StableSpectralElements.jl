@@ -151,7 +151,7 @@ function uniform_periodic_mesh(
         # Second algorithm from Warburton's PhD thesis
         EtoV_new = Vector{Float64}(undef,4)
 
-        for k in 1:N_e
+        @inbounds for k in 1:N_e
             EtoV_new = sort(EtoV[k,:], rev=true)
             X = hcat([[VXY[1][EtoV_new[m]] - VXY[1][EtoV_new[1]];
                 VXY[2][EtoV_new[m]] - VXY[2][EtoV_new[1]];

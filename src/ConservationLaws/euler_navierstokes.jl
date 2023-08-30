@@ -125,8 +125,8 @@ end
 end
 
 @inline function wave_speed(conservation_law::EulerType{d},
-    u_in::AbstractVector{Float64}, u_out::AbstractVector{Float64},
-    n_f::NTuple{d, Float64}) where {d}
+    u_in::AbstractVector{Float64}, u_out::AbstractVector{Float64}, 
+    n_f) where {d}
 
     (; γ, γ_minus_1) = conservation_law
 

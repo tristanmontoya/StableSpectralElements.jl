@@ -15,33 +15,33 @@ module Solvers
     using ..SpatialDiscretizations: AbstractApproximationType, ReferenceApproximation, SpatialDiscretization, apply_reference_mapping, reference_derivative_operators, check_facet_nodes, check_normals, NodalTensor, ModalTensor
     using ..GridFunctions: AbstractGridFunction, AbstractGridFunction, NoSourceTerm, evaluate
     
-    export AbstractResidualForm, StandardForm, FluxDifferencingForm, AbstractMappingForm, AbstractStrategy, AbstractDiscretizationOperators, AbstractMassMatrixSolver, AbstractParallelism, PhysicalOperators, FluxDifferencingOperators, PreAllocatedArrays,  PreAllocatedArraysFluxDifferencing, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, Serial, Threaded, get_dof,  semi_discrete_residual!, auxiliary_variable!, make_operators, entropy_projection!, facet_correction!, nodal_values!, time_derivative!, flux_differencing_operators
+    export AbstractResidualForm, StandardForm, FluxDifferencingForm, AbstractMappingForm, AbstractStrategy, AbstractDiscretizationOperators, AbstractMassMatrixSolver, AbstractParallelism, ReferenceOperators, PhysicalOperators, FluxDifferencingOperators, PreAllocatedArrays, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, Serial, Threaded, get_dof, semi_discrete_residual!, auxiliary_variable!, make_operators, entropy_projection!, facet_correction!, nodal_values!, time_derivative!, flux_differencing_operators
 
     abstract type AbstractResidualForm{MappingForm, TwoPointFlux} end
     abstract type AbstractMappingForm end
     abstract type AbstractStrategy end
-    abstract type AbstractDiscretizationOperators{d} end
+    abstract type AbstractDiscretizationOperators end
     abstract type AbstractMassMatrixSolver end
     abstract type AbstractParallelism end
 
     struct StandardMapping <: AbstractMappingForm end
     struct SkewSymmetricMapping <: AbstractMappingForm end
-
     struct PhysicalOperator <: AbstractStrategy end
     struct ReferenceOperator <: AbstractStrategy end
-
     struct Serial <: AbstractParallelism end
     struct Threaded <: AbstractParallelism end
 
-    Base.@kwdef struct StandardForm{MappingForm,
-        InviscidNumericalFlux,ViscousNumericalFlux} <: AbstractResidualForm{MappingForm,NoTwoPointFlux}
+    Base.@kwdef struct StandardForm{MappingForm,InviscidNumericalFlux,
+        ViscousNumericalFlux} <: AbstractResidualForm{MappingForm,NoTwoPointFlux}
         mapping_form::MappingForm = SkewSymmetricMapping()
         inviscid_numerical_flux::InviscidNumericalFlux =
             LaxFriedrichsNumericalFlux()
         viscous_numerical_flux::ViscousNumericalFlux = BR1()
     end
 
-    Base.@kwdef struct FluxDifferencingForm{MappingForm,InviscidNumericalFlux,ViscousNumericalFlux,TwoPointFlux} <: AbstractResidualForm{MappingForm,TwoPointFlux}
+    Base.@kwdef struct FluxDifferencingForm{MappingForm,
+        InviscidNumericalFlux,ViscousNumericalFlux,
+        TwoPointFlux} <: AbstractResidualForm{MappingForm,TwoPointFlux}
         mapping_form::MappingForm = SkewSymmetricMapping()
         inviscid_numerical_flux::InviscidNumericalFlux =
             LaxFriedrichsNumericalFlux()
@@ -51,8 +51,8 @@ module Solvers
         entropy_projection::Bool = false
     end
 
-    struct ReferenceOperators{d, D_type, Dt_type, V_type, Vt_type,
-        R_type, Rt_type} <: AbstractDiscretizationOperators{d}
+    struct ReferenceOperators{D_type, Dt_type, V_type, Vt_type,
+        R_type, Rt_type} <: AbstractDiscretizationOperators
         D::D_type
         Dᵀ::Dt_type
         V::V_type
@@ -64,21 +64,21 @@ module Solvers
         halfWΛ::Array{Diagonal{Float64, Vector{Float64}},3} # d x d x N_e
         halfN::Matrix{Diagonal{Float64, Vector{Float64}}}
         BJf::Vector{Diagonal{Float64, Vector{Float64}}}
-        n_f::Vector{NTuple{d, Vector{Float64}}}
+        n_f::Array{Float64,3}
     end
 
     struct PhysicalOperators{d, VOL_type, FAC_type, V_type, 
-        R_type} <: AbstractDiscretizationOperators{d}
+        R_type} <: AbstractDiscretizationOperators
         VOL::Vector{NTuple{d,VOL_type}}
         FAC::Vector{FAC_type}
         V::Vector{V_type}
         R::Vector{R_type}
-        n_f::Vector{NTuple{d,Vector{Float64}}}
+        n_f::Array{Float64,3}
     end
 
-    struct FluxDifferencingOperators{d, S_type,
+    struct FluxDifferencingOperators{S_type,
         C_type, V_type, Vt_type, R_type, 
-        Rt_type} <: AbstractDiscretizationOperators{d}
+        Rt_type} <: AbstractDiscretizationOperators
         S::S_type
         C::C_type
         V::V_type
@@ -88,9 +88,9 @@ module Solvers
         W::Diagonal{Float64, Vector{Float64}}
         B::Diagonal{Float64, Vector{Float64}}
         WJ::Vector{Diagonal{Float64, Vector{Float64}}}
-        Λ_q::Array{Float64,4} # N_q x d x d x N_e
+        Λ_q::Array{Float64,4}
         BJf::Vector{Diagonal{Float64, Vector{Float64}}}
-        n_f::Vector{NTuple{d, Vector{Float64}}}
+        n_f::Array{Float64,3}
         halfnJf::Array{Float64,3}
         halfnJq::Array{Float64,4}
         nodes_per_face::Int
@@ -188,14 +188,15 @@ module Solvers
         halfWΛ = Array{Diagonal{Float64, Vector{Float64}},3}(undef, d, d, N_e)
         halfN = Matrix{Diagonal{Float64, Vector{Float64}}}(undef, d, N_e)
         BJf = Vector{Diagonal{Float64, Vector{Float64}}}(undef, N_e)
-        n_f = Vector{NTuple{d, Vector{Float64}}}(undef,N_e)
+        n_f = Array{Float64,3}(undef, d, N_f, N_e)
     
         @inbounds Threads.@threads for k in 1:N_e
-            halfWΛ[:,:,k] = [Diagonal(0.5 * W * Λ_q[:,m,n,k]) 
-                for m in 1:d, n in 1:d]
-            halfN[:,k] = [Diagonal(0.5 * nJf[m,:,k] ./ J_f[:,k]) for m in 1:d]
+            @inbounds for m in 1:d
+                halfWΛ[m,:,k] .= [Diagonal(0.5 * W * Λ_q[:,m,n,k]) for n in 1:d]
+                n_f[m,:,k] .= nJf[m,:,k] ./ J_f[:,k]
+                halfN[m,k] = Diagonal(0.5 * n_f[m,:,k])
+            end
             BJf[k] = Diagonal(B .* J_f[:,k])
-            n_f[k] = Tuple(nJf[m,:,k] ./ J_f[:,k] for m in 1:d)
         end
     
         operators = ReferenceOperators(
@@ -225,18 +226,21 @@ module Solvers
 
         WJ = Vector{Diagonal{Float64, Vector{Float64}}}(undef, N_e)
         BJf = Vector{Diagonal{Float64, Vector{Float64}}}(undef, N_e)
-        n_f = Vector{NTuple{d, Vector{Float64}}}(undef, N_e)
+        n_f = Array{Float64,3}(undef, d, N_f, N_e)
     
         @inbounds Threads.@threads for k in 1:N_e
             WJ[k] = Diagonal(W .* J_q[:,k])
             BJf[k] = Diagonal(B .* J_f[:,k])
-            n_f[k] = Tuple(nJf[m,:,k] ./ J_f[:,k] for m in 1:d)
+            @inbounds for m in 1:d
+                n_f[m,:,k] = nJf[m,:,k] ./ J_f[:,k]
+            end
         end
         
         S, C = flux_differencing_operators(reference_approximation)
 
         operators = FluxDifferencingOperators(S, C, make_operator(V, alg),
-            transpose(make_operator(V, alg)), make_operator(R, alg), transpose(make_operator(R, alg)), W, B, WJ, Λ_q, BJf, n_f, 0.5*nJf, 
+            transpose(make_operator(V, alg)), make_operator(R, alg), 
+            transpose(make_operator(R, alg)), W, B, WJ, Λ_q, BJf, n_f, 0.5*nJf, 
             0.5*nJq, N_f÷num_faces(element_type))
     
         return Solver(conservation_law, operators, mass_solver, mesh.mapP, form,
@@ -251,7 +255,6 @@ module Solvers
         (; D, W, R, B, reference_mapping) = reference_approximation
 
         D_ξ = reference_derivative_operators(D, reference_mapping)
-
         S = (0.5*Matrix(W*D_ξ[1] - D_ξ[1]'*W),)
         C = Matrix(R'*B)
 
@@ -281,9 +284,9 @@ module Solvers
         (; D, W, R, B, reference_mapping) = reference_approximation
 
         D_ξ = reference_derivative_operators(D, reference_mapping)
-
         S = Tuple(0.5*Matrix(W*D_ξ[m] - D_ξ[m]'*W) for m in 1:d)
         C = Matrix(R'*B)
+        
         return S, C
     end
 

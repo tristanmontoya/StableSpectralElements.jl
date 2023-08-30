@@ -10,7 +10,7 @@
     (; u_q, u_f, u_n, temp, CI, q_q, q_f) = solver.preallocated_arrays
 
     numerical_flux!(u_n[:,:,:,k], conservation_law, viscous_numerical_flux, 
-        u_f[:,k,:], u_f[CI[connectivity[:,k]],:], n_f[k])
+        u_f[:,k,:], u_f[CI[connectivity[:,k]],:], n_f[:,:,k])
         
     @inbounds for m in 1:d
         fill!(dudt[:,:,k],0.0)
@@ -39,11 +39,11 @@ end
     physical_flux!(f_q[:,:,:,k], conservation_law, u_q[:,:,k], q_q[:,:,:,k])
 
     numerical_flux!(f_f[:,:,k],conservation_law, inviscid_numerical_flux,
-            u_f[:,k,:], u_f[CI[connectivity[:,k]],:], n_f[k])
+            u_f[:,k,:], u_f[CI[connectivity[:,k]],:], n_f[:,:,k])
     
     numerical_flux!(f_f[:,:,k], conservation_law, viscous_numerical_flux, 
             u_f[:,k,:], u_f[CI[connectivity[:,k]],:], q_f[:,k,:,:], 
-            q_f[CI[connectivity[:,k]],:,:], n_f[k])
+            q_f[CI[connectivity[:,k]],:,:], n_f[:,:,k])
 
     fill!(dudt[:,:,k],0.0)
     @inbounds for m in 1:d

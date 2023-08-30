@@ -1,3 +1,4 @@
+"""This removes the threading and considers just one element. Note that this probably will not work with the Euler equations as the facet states at adjacent elements are left undefined and thus may lead to non-physical states when used to compute the fluxes"""
 @views @timeit "semi-disc. residual" function rhs_benchmark!(
     dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
     solver::Solver{d,ResidualForm,FirstOrder, ConservationLaw,Operators,
@@ -22,8 +23,7 @@
         conservation_law, u_q[:,:,k])
 
     @timeit "num flux" numerical_flux!(f_f[:,:,k],
-        conservation_law,
-        inviscid_numerical_flux, u_f[:,k,:], 
+        conservation_law, inviscid_numerical_flux, u_f[:,k,:], 
         u_f[CI[connectivity[:,k]],:], n_f[k])
 
     @timeit "fill w zeros" fill!(r_q[:,:,k],0.0)

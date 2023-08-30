@@ -82,12 +82,12 @@ Evaluate the interface normal solution for the (advection-)diffusion equation us
 function numerical_flux!(u_nstar::AbstractArray{Float64,3},
     ::LinearAdvectionDiffusionEquation{d},
     ::BR1, u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
-    n::NTuple{d, Vector{Float64}}) where {d}
+    n_f::AbstractMatrix{Float64}) where {d}
 
     u_avg = 0.5*(u_in .+ u_out)
 
     @inbounds for m in 1:d
-        u_nstar[:,:,m] .= u_avg.*n[m]
+        u_nstar[:,:,m] .= u_avg.*n_f[m,:]
     end
 end
 
@@ -100,11 +100,12 @@ function numerical_flux!(f_star::AbstractMatrix{Float64},
     conservation_law::LinearAdvectionDiffusionEquation{d},
     ::BR1, u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
     q_in::AbstractArray{Float64,3}, q_out::AbstractArray{Float64,3}, 
-    n::NTuple{d, Vector{Float64}}) where {d}
+    n_f::AbstractMatrix{Float64}) where {d}
 
     # average both sides
     minus_q_avg = -0.5*(q_in .+ q_out)
-    f_star .+= sum(conservation_law.b * minus_q_avg[:,:,m] .* n[m] for m in 1:d)
+    f_star .+= sum(conservation_law.b * minus_q_avg[:,:,m] .* n_f[m,:] 
+        for m in 1:d)
 end
 
 @inline conservative_to_primitive(::AdvectionType, u) = u
@@ -113,9 +114,8 @@ end
 @inline entropy(::AdvectionType, u) = 0.5*u[1]^2
 
 @inline function wave_speed(conservation_law::AdvectionType{d},
-    ::AbstractVector{Float64}, ::AbstractVector{Float64}, 
-    n::NTuple{d, Float64}) where {d}
-    return abs(sum(conservation_law.a[m]*n[m] for m in 1:d))
+    ::AbstractVector{Float64}, ::AbstractVector{Float64}, n_f) where {d}
+    return abs(sum(conservation_law.a[m]*n_f[m] for m in 1:d))
 end
 
 @inline function compute_two_point_flux(conservation_law::AdvectionType{d}, 

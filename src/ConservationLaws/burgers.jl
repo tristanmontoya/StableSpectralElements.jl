@@ -77,12 +77,12 @@ Evaluate the interface normal solution for the viscous Burgers' equation using t
 @inline function numerical_flux!(u_nstar::AbstractArray{Float64,3},
     ::ViscousBurgersEquation{d},
     ::BR1, u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
-    n::NTuple{d, Vector{Float64}}) where {d}
+    n_f::AbstractMatrix{Float64}) where {d}
 
     u_avg = 0.5*(u_in .+ u_out)
 
     @inbounds for m in 1:d
-        u_nstar[:,:,m] .= u_avg.*n[m]
+        u_nstar[:,:,m] .= u_avg.*n_f[m,:]
     end
 end
 
@@ -95,10 +95,11 @@ F*(u⁻, u⁺, q⁻, q⁺, n) = ½(F²(u⁻,q⁻) + F²(u⁺, q⁺))⋅n
     conservation_law::ViscousBurgersEquation{d},
     ::BR1, u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
     q_in::AbstractArray{Float64,3}, q_out::AbstractArray{Float64,3}, 
-    n::NTuple{d, Vector{Float64}}) where {d}
+    n_f::AbstractMatrix{Float64}) where {d}
 
     minus_q_avg = -0.5*(q_in .+ q_out)
-    f_star .+= sum(conservation_law.b * minus_q_avg[:,:,m] .* n[m] for m in 1:d)
+    f_star .+= sum(conservation_law.b * minus_q_avg[:,:,m] .* n_f[m,:] 
+        for m in 1:d)
 end
 
 @inline conservative_to_primitive(::BurgersType, u) = u
@@ -108,8 +109,8 @@ end
 
 @inline function wave_speed(conservation_law::BurgersType{d},
     u_in::AbstractVector{Float64}, u_out::AbstractVector{Float64},
-    n::NTuple{d, Float64}) where {d}
-    a_n = sum(conservation_law.a[m]*n[m] for m in 1:d)
+    n_f) where {d}
+    a_n = sum(conservation_law.a[m]*n_f[m] for m in 1:d)
     return max.(abs.(a_n*u_in),abs.(a_n*u_out))
 end
 

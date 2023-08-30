@@ -230,7 +230,7 @@ end
     # project entropy variables and store modal coeffs in w
     lmul!(WJ, w_q)
     mul!(w, Vᵀ, w_q)
-    mass_matrix_solve!(mass_solver, k, w, w_q)
+    mass_matrix_solve!(mass_solver, k, w, w_q) # w = M[k] \ w
 
     # get nodal values of projected entropy variables
     mul!(w_q, V, w)
@@ -275,7 +275,7 @@ end
 
     # evaluate interface numerical flux
     numerical_flux!(f_f[:,:,k], conservation_law, inviscid_numerical_flux, 
-        u_f[:,k,:], u_f[CI[connectivity[:,k]],:], n_f[k], two_point_flux)
+        u_f[:,k,:], u_f[CI[connectivity[:,k]],:], n_f[:,:,k], two_point_flux)
  
     # scale numerical flux by quadrature weights
     lmul!(BJf[k], f_f[:,:,k])

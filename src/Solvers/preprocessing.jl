@@ -94,7 +94,6 @@ function make_operators(spatial_discretization::SpatialDiscretization{1},
     FAC = Vector{LinearMap}(undef,N_e)
     V_ar = Vector{LinearMap}(undef,N_e)
     R_ar = Vector{LinearMap}(undef,N_e)
-    n_f = Vector{NTuple{1, Vector{Float64}}}(undef,N_e)
 
     Threads.@threads for k in 1:N_e
         M⁻¹ = mass_matrix_inverse(mass_solver, k)
@@ -102,9 +101,8 @@ function make_operators(spatial_discretization::SpatialDiscretization{1},
         FAC[k] = make_operator(-M⁻¹ * Matrix(V' * R' * B), alg)
         V_ar[k] = make_operator(reference_approximation.V, alg)
         R_ar[k] = make_operator(reference_approximation.R, alg)
-        n_f[k] = (nJf[1,:,k],)
     end
-    return PhysicalOperators(VOL, FAC, V_ar, R_ar, n_f)
+    return PhysicalOperators(VOL, FAC, V_ar, R_ar, nJf)
 end
 
 function make_operators(spatial_discretization::SpatialDiscretization{d}, 
@@ -122,7 +120,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     FAC = Vector{LinearMap}(undef,N_e)
     V_ar = Vector{LinearMap}(undef,N_e)
     R_ar = Vector{LinearMap}(undef,N_e)
-    n_f = Vector{NTuple{d, Vector{Float64}}}(undef,N_e)
+    n_f = Array{Float64,3}(undef, d, N_f, N_e)
 
     Threads.@threads for k in 1:N_e 
         M⁻¹ = mass_matrix_inverse(mass_solver, k)
@@ -133,7 +131,9 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
             Matrix(V' * R' * Diagonal(B * J_f[:,k])), alg)
         V_ar[k] = make_operator(reference_approximation.V, alg)
         R_ar[k] = make_operator(reference_approximation.R, alg)
-        n_f[k] = Tuple(nJf[m,:,k] ./ J_f[:,k] for m in 1:d)
+        @inbounds for m in 1:d
+            n_f[m,:,k] = nJf[m,:,k] ./ J_f[:,k]
+        end
     end
 
     return PhysicalOperators(VOL, FAC, V_ar, R_ar, n_f)
@@ -153,7 +153,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     FAC = Vector{LinearMap}(undef,N_e)
     V_ar = Vector{LinearMap}(undef,N_e)
     R_ar = Vector{LinearMap}(undef,N_e)
-    n_f = Vector{NTuple{d, Vector{Float64}}}(undef,N_e)
+    n_f = Array{Float64,3}(undef, d, N_f, N_e)
 
     Threads.@threads for k in 1:N_e
         M⁻¹ = mass_matrix_inverse(mass_solver, k)
@@ -165,7 +165,9 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
             Matrix(V' * R' * Diagonal(B * J_f[:,k])), alg)
         V_ar[k] = make_operator(reference_approximation.V, alg)
         R_ar[k] = make_operator(reference_approximation.R, alg)
-        n_f[k] = Tuple(nJf[m,:,k] ./ J_f[:,k] for m in 1:d)
+        @inbounds for m in 1:d
+            n_f[m,:,k] = nJf[m,:,k] ./ J_f[:,k]
+        end
     end
 
     return PhysicalOperators(VOL, FAC, V_ar, R_ar, n_f)

@@ -17,7 +17,10 @@ module ConservationLaws
     abstract type AbstractInviscidNumericalFlux end
     struct NoInviscidFlux <: AbstractInviscidNumericalFlux end
     struct LaxFriedrichsNumericalFlux <: AbstractInviscidNumericalFlux 
-        λ::Float64
+        halfλ::Float64
+        function LaxFriedrichsNumericalFlux(λ::Float64)
+            return new(0.5*λ)
+        end
     end
     struct EntropyConservativeNumericalFlux <: AbstractInviscidNumericalFlux end
     struct CentralNumericalFlux <: AbstractInviscidNumericalFlux end
@@ -39,22 +42,20 @@ module ConservationLaws
         conservation_law::AbstractConservationLaw{d,PDEType,N_c}, 
         numerical_flux::LaxFriedrichsNumericalFlux,
         u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
-        n::NTuple{d, Vector{Float64}},
-        two_point_flux::AbstractTwoPointFlux=ConservativeFlux()) where {d, PDEType, N_c}
+        n_f::AbstractMatrix{Float64},
+        two_point_flux=ConservativeFlux()) where {d, PDEType, N_c}
         
         @inbounds for i in axes(u_in, 1)
             f_s = compute_two_point_flux(conservation_law, two_point_flux,
                 u_in[i,:], u_out[i,:])
-            a = 0.5*numerical_flux.λ*wave_speed(
-                conservation_law, u_in[i,:], u_out[i,:], 
-                Tuple(n[m][i] for m in 1:d))
+            a = numerical_flux.halfλ*wave_speed(conservation_law, 
+                u_in[i,:], u_out[i,:], n_f[:,i])
             @inbounds for e in 1:N_c
-                temp = 0.0
-                du = u_out[i,e] - u_in[i,e]
+                f_n_avg = 0.0
                 @inbounds for m in 1:d
-                    @muladd temp = temp + f_s[e,m]*n[m][i]
+                    @muladd f_n_avg = f_n_avg + f_s[e,m]*n_f[m,i]
                 end
-                @muladd f_star[i,e] = temp - a * du
+                @muladd f_star[i,e] = f_n_avg + a * (u_in[i,e] - u_out[i,e])
             end
         end
     end
@@ -64,8 +65,8 @@ module ConservationLaws
         conservation_law::AbstractConservationLaw{d,PDEType,N_c}, 
         ::EntropyConservativeNumericalFlux,
         u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
-        n::NTuple{d, Vector{Float64}},
-        two_point_flux::AbstractTwoPointFlux=EntropyConservativeFlux()) where {d,PDEType,N_c}
+        n_f::AbstractMatrix{Float64},
+        two_point_flux=EntropyConservativeFlux()) where {d,PDEType,N_c}
          
         @inbounds for i in axes(u_in, 1)
             f_s = compute_two_point_flux(conservation_law, two_point_flux,
@@ -73,7 +74,7 @@ module ConservationLaws
             @inbounds for e in 1:N_c
                 temp = 0.0
                 @inbounds for m in 1:d
-                    @muladd temp = temp + f_s[e,m]*n[m][i]
+                    @muladd temp = temp + f_s[e,m]*n_f[m,i]
                 end
                f_star[i,e] = temp
             end
@@ -85,11 +86,11 @@ module ConservationLaws
         conservation_law::AbstractConservationLaw{d}, 
         ::CentralNumericalFlux,
         u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
-        n::NTuple{d, Vector{Float64}}) where {d}
+        n_f::NTuple{d, Vector{Float64}}) where {d}
         
         numerical_flux!(f_star,conservation_law, 
             EntropyConservativeNumericalFlux(), 
-            u_in, u_out, n, ConservativeFlux())
+            u_in, u_out, n_f, ConservativeFlux())
     end
 
     """ 

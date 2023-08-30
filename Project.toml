@@ -1,7 +1,7 @@
 name = "StableSpectralElements"
 uuid = "fb992021-99c7-4c2d-a14b-5e48ac4045b2"
 authors = ["Tristan Montoya <montoya.tristan@gmail.com>"]
-version = "0.2.1"
+version = "0.2.2"
 
 [deps]
 Arpack = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
@@ -19,6 +19,7 @@ LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LinearMaps = "7a12625a-238d-50fd-b39a-03d52299707e"
 Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
+MethodAnalysis = "85b6ec6f-f7df-4429-9514-a64bcd9ee824"
 MuladdMacro = "46d2c3a1-f734-5fdb-9937-b9b9aeba4221"
 NodesAndModes = "7aca2e03-f7e2-4192-9ec8-f4ca66d597fb"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
