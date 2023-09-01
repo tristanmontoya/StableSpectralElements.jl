@@ -1,6 +1,21 @@
-"""Returns an array of initial data as nodal or modal DOF"""
-@inline @views function initialize(initial_data::AbstractGridFunction{d},
-    spatial_discretization::SpatialDiscretization{d}) where {d}
+@inline function project_function!(u0::AbstractMatrix{Float64},
+    initial_data::AbstractGridFunction{d}, ::UniformScalingMap, ::Diagonal,
+    ::Vector{Float64}, x::NTuple{d,AbstractVector{Float64}}) where {d}
+    u0 .= evaluate(initial_data,x,0.0)
+end
+
+@inline function project_function!(u0::AbstractMatrix{Float64},
+    initial_data::AbstractGridFunction{d}, V::LinearMap, W::Diagonal,
+    J::Diagonal, x::NTuple{d,AbstractVector{Float64}}) where {d}
+    M = Matrix(V' * W * J * V)
+    factorization = cholesky(Symmetric(M))
+    mul!(u0, V' * W * J, evaluate(initial_data,x,0.0))
+    ldiv!(factorization, u0)
+end
+
+    """Returns an array of initial data as nodal or modal DOF"""
+@views function initialize(initial_data::AbstractGridFunction{d},
+    spatial_discretization::SpatialDiscretization{d}, ::Serial) where {d}
 
     (; geometric_factors, N_e) = spatial_discretization
     (; V, W, N_p) = spatial_discretization.reference_approximation
@@ -9,19 +24,28 @@
 
     u0 = Array{Float64}(undef, N_p, N_c, N_e)
 
-    if V isa UniformScalingMap
-        Threads.@threads for k in 1:N_e
-            u0[:,:,k] .= evaluate(
-                initial_data, Tuple(xyzq[m][:,k] for m in 1:d),0.0)
-        end
-    else
-        Threads.@threads for k in 1:N_e
-            M = Matrix(V' * W * Diagonal(geometric_factors.J_q[:,k]) * V)
-            factorization = cholesky(Symmetric(M))
-            mul!(u0[:,:,k], V' * W * Diagonal(geometric_factors.J_q[:,k]), 
-                evaluate(initial_data, Tuple(xyzq[m][:,k] for m in 1:d),0.0))
-            ldiv!(factorization, u0[:,:,k])
-        end
+    @inbounds for k in 1:N_e
+        project_function!(u0[:,:,k], initial_data, V, W, 
+            Diagonal(geometric_factors.J_q[:,k]), 
+            Tuple(xyzq[m][:,k] for m in 1:d))
+    end
+    return u0
+end
+
+@views function initialize(initial_data::AbstractGridFunction{d},
+    spatial_discretization::SpatialDiscretization{d}, ::Threaded) where {d}
+
+    (; geometric_factors, N_e) = spatial_discretization
+    (; V, W, N_p) = spatial_discretization.reference_approximation
+    (; xyzq) = spatial_discretization.mesh
+    (; N_c) = initial_data
+
+    u0 = Array{Float64}(undef, N_p, N_c, N_e)
+
+    @inbounds Threads.@threads for k in 1:N_e
+        project_function!(u0[:,:,k], initial_data, V, W, 
+            Diagonal(geometric_factors.J_q[:,k]),
+            Tuple(xyzq[m][:,k] for m in 1:d))
     end
     return u0
 end
@@ -35,7 +59,8 @@ function semidiscretize(
     strategy::AbstractStrategy=ReferenceOperator(),
     operator_algorithm::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm();
     mass_matrix_solver::AbstractMassMatrixSolver=WeightAdjustedSolver(spatial_discretization,operator_algorithm),
-    periodic_connectivity_check::Bool=true,
+    periodic_connectivity_check::Bool=false,
+    parallelism::AbstractParallelism=Threaded(),
     tol::Float64=1e-12) where {d, PDEType}
 
     if periodic_connectivity_check
@@ -50,11 +75,9 @@ function semidiscretize(
 
     if Threads.nthreads() == 1
         parallelism = Serial()
-    else
-        parallelism = Threaded()
     end
 
-    u0 = initialize(initial_data, spatial_discretization)
+    u0 = initialize(initial_data, spatial_discretization, parallelism)
 
     if PDEType == SecondOrder && strategy isa ReferenceOperator
         @warn "Reference-operator approach not implemented for second-order equations. Using physical-operator formulation."
@@ -95,7 +118,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{1},
     V_ar = Vector{LinearMap}(undef,N_e)
     R_ar = Vector{LinearMap}(undef,N_e)
 
-    Threads.@threads for k in 1:N_e
+    @inbounds Threads.@threads for k in 1:N_e
         M⁻¹ = mass_matrix_inverse(mass_solver, k)
         VOL[k] = (make_operator(M⁻¹ * Matrix(V' * D[1]' * W), alg),)
         FAC[k] = make_operator(-M⁻¹ * Matrix(V' * R' * B), alg)
@@ -122,7 +145,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     R_ar = Vector{LinearMap}(undef,N_e)
     n_f = Array{Float64,3}(undef, d, N_f, N_e)
 
-    Threads.@threads for k in 1:N_e 
+    @inbounds Threads.@threads for k in 1:N_e 
         M⁻¹ = mass_matrix_inverse(mass_solver, k)
         VOL[k] = Tuple(make_operator(M⁻¹ * Matrix(V' * 
             sum(D[m]' * Diagonal(W * Λ_q[:,m,n,k]) for m in 1:d)), alg) 
@@ -155,7 +178,7 @@ function make_operators(spatial_discretization::SpatialDiscretization{d},
     R_ar = Vector{LinearMap}(undef,N_e)
     n_f = Array{Float64,3}(undef, d, N_f, N_e)
 
-    Threads.@threads for k in 1:N_e
+    @inbounds Threads.@threads for k in 1:N_e
         M⁻¹ = mass_matrix_inverse(mass_solver, k)
         VOL[k] = Tuple(make_operator(M⁻¹ * Matrix(V' * 
             (sum(D[m]' * Diagonal(0.5 * W * Λ_q[:,m,n,k]) -

@@ -42,9 +42,8 @@ function euler_vortex_2d_modal()
 
     dt = T/1000
     sol = solve(ode, CarpenterKennedy2N54(williamson_condition=false),
-                dt=dt, adaptive=false, save_everystep=false,
-                callback=save_callback(results_path, (0.0,T),  
-            floor(Int, T/(dt*50))))
+        dt=dt, adaptive=false, save_everystep=false, 
+        callback=save_callback(results_path, (0.0,T), floor(Int, T/(dt*50))))
 
     error_analysis = ErrorAnalysis(results_path, conservation_law, 
         spatial_discretization)

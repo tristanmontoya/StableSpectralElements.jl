@@ -45,7 +45,7 @@ LinearAdvectionDiffusionEquation(a::Float64, b::Float64) = LinearAdvectionDiffus
 
 
 """
-Evaluate the flux for the linear advection equation 1D linear advection equation
+Evaluate the flux for the linear advection equation
 
 `F(u) = au`
 """
@@ -160,7 +160,7 @@ function evaluate(
 
     r² = sum((z[m] - x₀[m]).^2 for m in 1:d)
     t₀ = σ^2/(2.0*b)
-    return [A*(t₀/(t+t₀))^(0.5*d)*exp.(-r²/(4.0*b*(t₀ + t)))]
+    return SVector{1}(A*(t₀/(t+t₀))^(0.5*d)*exp.(-r²/(4.0*b*(t₀ + t))))
 end
 
 function evaluate(

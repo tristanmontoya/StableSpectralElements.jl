@@ -15,7 +15,7 @@ module Solvers
     using ..SpatialDiscretizations: AbstractApproximationType, ReferenceApproximation, SpatialDiscretization, apply_reference_mapping, reference_derivative_operators, check_facet_nodes, check_normals, NodalTensor, ModalTensor
     using ..GridFunctions: AbstractGridFunction, AbstractGridFunction, NoSourceTerm, evaluate
     
-    export AbstractResidualForm, StandardForm, FluxDifferencingForm, AbstractMappingForm, AbstractStrategy, AbstractDiscretizationOperators, AbstractMassMatrixSolver, AbstractParallelism, ReferenceOperators, PhysicalOperators, FluxDifferencingOperators, PreAllocatedArrays, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, Serial, Threaded, get_dof, semi_discrete_residual!, auxiliary_variable!, make_operators, entropy_projection!, facet_correction!, nodal_values!, time_derivative!, flux_differencing_operators
+    export AbstractResidualForm, StandardForm, FluxDifferencingForm, AbstractMappingForm, AbstractStrategy, AbstractDiscretizationOperators,  AbstractMassMatrixSolver, AbstractParallelism, ReferenceOperators, PhysicalOperators, FluxDifferencingOperators, PreAllocatedArrays, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, Serial, Threaded, get_dof, semi_discrete_residual!, auxiliary_variable!, make_operators, entropy_projection!, facet_correction!, nodal_values!, time_derivative!, project_function!,flux_differencing_operators
 
     abstract type AbstractResidualForm{MappingForm, TwoPointFlux} end
     abstract type AbstractMappingForm end

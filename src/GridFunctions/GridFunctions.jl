@@ -1,19 +1,10 @@
 module GridFunctions
+
+    using StaticArrays
     
-    export AbstractGridFunction, SumOfFunctions, ConstantFunction, InitialDataSine, InitialDataCosine, InitialDataGaussian, InitialDataSinCos, DerivativeSinCos, InitialDataGassner, BurgersSolution, SourceTermGassner, GaussianNoise, NoSourceTerm, evaluate
+    export AbstractGridFunction, ConstantFunction, InitialDataSine, InitialDataCosine, InitialDataGaussian, InitialDataSinCos, DerivativeSinCos, InitialDataGassner, BurgersSolution, SourceTermGassner, GaussianNoise, NoSourceTerm, evaluate
     
     abstract type AbstractGridFunction{d} end
-
-    struct SumOfFunctions{d} <: AbstractGridFunction{d}
-        f::AbstractGridFunction{d}
-        g::AbstractGridFunction{d}
-        N_c::Int
-
-        function SumOfFunctions(f::AbstractGridFunction{d},
-            g::AbstractGridFunction{d}) where {d}
-            return new{d}(f,g,f.N_c)
-        end
-    end
 
     struct ConstantFunction{d} <: AbstractGridFunction{d}
         c::Float64
@@ -106,11 +97,6 @@ end
     
     struct NoSourceTerm{d} <: AbstractGridFunction{d} end
 
-    function Base.:+(f::AbstractGridFunction{d},
-        g::AbstractGridFunction{d}) where {d}
-        return SumOfFunctions(f,g)
-    end
-
     @inline function InitialDataSine(A::Float64, k::Float64)
         return InitialDataSine(A,(k,))
     end
@@ -157,7 +143,8 @@ end
 
     @inline function evaluate(f::SourceTermGassner, 
         x::NTuple{1,Float64},t::Float64=0.0)
-        return [f.k .* cos(f.k*(x[1]-t))*(-1.0 + f.ϵ + sin(f.k*(x[1]-t)))]
+        return SVector{1}(
+            f.k .* cos(f.k*(x[1]-t))*(-1.0 + f.ϵ + sin(f.k*(x[1]-t))))
     end
 
     @inline function evaluate(f::GaussianNoise{d},
@@ -180,7 +167,7 @@ end
         t::Float64=0.0) where {d}
         N, N_e = size(x[1])
         u0 = Array{Float64}(undef, N, f.N_c, N_e)
-        @inbounds Threads.@threads for k in 1:N_e
+        @inbounds for k in 1:N_e
             u0[:,:,k] .= evaluate(f, Tuple(x[m][:,k] for m in 1:d),t)
         end
         return u0

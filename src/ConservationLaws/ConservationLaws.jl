@@ -36,7 +36,7 @@ module ConservationLaws
     struct ConservativeFlux <: AbstractTwoPointFlux end
     struct EntropyConservativeFlux <: AbstractTwoPointFlux end
     struct NoTwoPointFlux <: AbstractTwoPointFlux end
-
+    
     @inline @views function numerical_flux!(
         f_star::AbstractMatrix{Float64},
         conservation_law::AbstractConservationLaw{d,PDEType,N_c}, 
@@ -63,10 +63,10 @@ module ConservationLaws
     @inline @views function numerical_flux!(
         f_star::AbstractMatrix{Float64},
         conservation_law::AbstractConservationLaw{d,PDEType,N_c}, 
-        ::EntropyConservativeNumericalFlux,
+        ::Union{CentralNumericalFlux,EntropyConservativeNumericalFlux},
         u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
         n_f::AbstractMatrix{Float64},
-        two_point_flux=EntropyConservativeFlux()) where {d,PDEType,N_c}
+        two_point_flux=ConservativeFlux()) where {d,PDEType,N_c}
          
         @inbounds for i in axes(u_in, 1)
             f_s = compute_two_point_flux(conservation_law, two_point_flux,
@@ -79,18 +79,6 @@ module ConservationLaws
                f_star[i,e] = temp
             end
         end
-    end
-
-    @inline function numerical_flux!(
-        f_star::AbstractMatrix{Float64},
-        conservation_law::AbstractConservationLaw{d}, 
-        ::CentralNumericalFlux,
-        u_in::AbstractMatrix{Float64}, u_out::AbstractMatrix{Float64}, 
-        n_f::NTuple{d, Vector{Float64}}) where {d}
-        
-        numerical_flux!(f_star,conservation_law, 
-            EntropyConservativeNumericalFlux(), 
-            u_in, u_out, n_f, ConservativeFlux())
     end
 
     """ 
