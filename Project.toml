@@ -4,7 +4,6 @@ authors = ["Tristan Montoya <montoya.tristan@gmail.com>"]
 version = "0.2.2"
 
 [deps]
-AppleAccelerate = "13e28ba4-7ad8-5781-acae-3021b1ed3924"
 Arpack = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 DiffEqCallbacks = "459566f4-90b8-5000-8ac3-15dfb0a30def"

@@ -108,11 +108,6 @@ end
     @inline function InitialDataGaussian(A::Float64, σ::Float64, x₀::Float64)
         return InitialDataGaussian(A,σ,(x₀,))
     end
-    
-    @inline function evaluate(func::SumOfFunctions{d}, 
-        x::NTuple{d,Float64},t::Float64=0.0) where {d}
-        return evaluate(func.f,x,t) .+ evaluate(func.g,x,t)
-    end
 
     @inline function evaluate(f::ConstantFunction{d},
         x::NTuple{d,Float64},t::Float64=0.0) where {d}
