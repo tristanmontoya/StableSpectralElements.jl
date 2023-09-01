@@ -296,11 +296,11 @@ module Solvers
         MassSolver,Serial,N_p,N_q,N_f,N_c,N_e}, t::Float64=0.0) where {d,ResidualForm,ConservationLaw,Operators,MassSolver,N_p,N_q,N_f,N_c,N_e}
 
         @inbounds for k in 1:N_e
-            nodal_values!(u, solver, k)
+            @timeit "nodal values" nodal_values!(u, solver, k)
         end
 
         @inbounds for k in 1:N_e
-            time_derivative!(dudt, solver, k)
+            @timeit "time deriv." time_derivative!(dudt, solver, k)
         end
 
         return dudt

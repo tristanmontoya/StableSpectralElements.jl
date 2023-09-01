@@ -8,18 +8,18 @@
 
     fill!(r_q, 0.0)
     @inbounds for i in axes(u_q,1)
-        @inbounds for j in (i+1):size(u_q,1)
+        for j in (i+1):size(u_q,1)
 
             # evaluate two-point flux (must be symmetric)
             F_ij = compute_two_point_flux(conservation_law,
                 two_point_flux, u_q[i,:], u_q[j,:])
 
             # apply flux-differencing operator to flux tensor
-            @inbounds for e in 1:N_c
+            for e in 1:N_c
                 diff_ij = 0.0
-                @inbounds for m in 1:d
+                for m in 1:d
                     Fm_ij = 0.0
-                    @inbounds for n in 1:d
+                    for n in 1:d
                         Λ_ij = Λ_q[i,m,n] + Λ_q[j,m,n]
                         @muladd Fm_ij = Fm_ij + Λ_ij * F_ij[e,n]
                     end
@@ -44,8 +44,8 @@ end
     @inbounds for m in 1:d
         Sm_nz = nonzeros(S[m])
         row_index = rowvals(S[m])
-        @inbounds for j in axes(u_q,1)
-            @inbounds for ii in nzrange(S[m],j)
+        for j in axes(u_q,1)
+            for ii in nzrange(S[m],j)
                 i = row_index[ii]
                 if i < j 
                     # evaluate two-point flux
@@ -54,9 +54,9 @@ end
                     Sm_ij = Sm_nz[ii]
                     
                     # apply flux-differencing operator to flux tensor
-                    @inbounds for e in 1:N_c
+                    for e in 1:N_c
                         Fm_ij = 0.0
-                        @inbounds for n in 1:d
+                        for n in 1:d
                             Λ_ij = Λ_q[i,m,n] + Λ_q[j,m,n]
                             @muladd Fm_ij = Fm_ij + Λ_ij * F_ij[e,n]
                         end
@@ -98,17 +98,17 @@ end
     ::Val{true}) where {d, N_c}
 
     @inbounds for i in axes(u_q,1)
-        @inbounds for j in axes(u_f,1)
+        for j in axes(u_f,1)
             F_ij = compute_two_point_flux(conservation_law, 
                 two_point_flux, u_q[i,:], u_f[j,:])
         
             f = (j-1)÷nodes_per_face + 1
 
-            @inbounds for e in 1:N_c
+            for e in 1:N_c
                 F_dot_n_ij = 0.0
-                @inbounds for n in 1:d
-                    nJ_ij = halfnJf[n,j] + halfnJq[n,f,i]
-                    @muladd F_dot_n_ij = F_dot_n_ij + nJ_ij * F_ij[e,n]
+                for m in 1:d
+                    nJ_ij = halfnJf[m,j] + halfnJq[m,f,i]
+                    @muladd F_dot_n_ij = F_dot_n_ij + nJ_ij * F_ij[e,m]
                 end
                 diff_ij = C[i,j] * F_dot_n_ij
                 r_q[i,e] -= diff_ij
@@ -133,9 +133,9 @@ end
 
     C_nz = nonzeros(C)
     row_index = rowvals(C)
-
+    
     @inbounds for j in axes(u_f,1)
-        @inbounds for ii in nzrange(C,j)
+        for ii in nzrange(C,j)
             i = row_index[ii]
 
             # evaluate two-point flux
@@ -147,11 +147,11 @@ end
             # (note this won't work if different number of nodes per facet)
             f = (j-1)÷nodes_per_face + 1
 
-            @inbounds for e in 1:N_c
+            for e in 1:N_c
                 F_dot_n_ij = 0.0
-                @inbounds for n in 1:d
-                    nJ_ij = halfnJf[n,j] + halfnJq[n,f,i]
-                    @muladd F_dot_n_ij = F_dot_n_ij + nJ_ij * F_ij[e,n]
+                for m in 1:d
+                    nJ_ij = halfnJf[m,j] + halfnJq[m,f,i]
+                    @muladd F_dot_n_ij = F_dot_n_ij + nJ_ij * F_ij[e,m]
                 end
                 diff_ij = C_ij * F_dot_n_ij
                 r_q[i,e] -= diff_ij
@@ -283,7 +283,7 @@ end
     # volume flux differencing term
     flux_difference!(r_q[:,:,k], S, conservation_law, 
         two_point_flux, Λ_q[:,:,:,k], u_q[:,:,k])
-
+    
     # apply facet correction term (for operators w/o boundary nodes)
     facet_correction!(r_q[:,:,k], f_f[:,:,k], C, conservation_law,
         two_point_flux, halfnJf[:,:,k], halfnJq[:,:,:,k], 

@@ -96,7 +96,7 @@ Evaluate the matrix-vector product
     Z = MArray{Tuple{size(σᵢ,1), size(σᵢ,2), size(σₒ,3)},Float64}(undef)
     W = MArray{Tuple{size(σᵢ,1), size(σₒ,2), size(σₒ,3)},Float64}(undef)
     
-    for β1 in axes(σᵢ,1), α2 in axes(σₒ,2), α3 in axes(σₒ,3)
+    @inbounds for β1 in axes(σᵢ,1), α2 in axes(σₒ,2), α3 in axes(σₒ,3)
         temp = 0.0
         @simd for α1 in axes(σₒ,1)
             @muladd temp = temp + A[α1,β1] * x[σₒ[α1,α2,α3]]
@@ -104,7 +104,7 @@ Evaluate the matrix-vector product
         W[β1,α2,α3] = temp
     end
 
-    for β1 in axes(σᵢ,1)
+    @inbounds for β1 in axes(σᵢ,1)
         for β2 in 1:N2[β1], α3 in axes(σₒ,3)
             temp = 0.0
             @simd for α2 in axes(σₒ,2)
@@ -114,7 +114,7 @@ Evaluate the matrix-vector product
         end
     end
 
-    for β1 in axes(σᵢ,1)
+    @inbounds for β1 in axes(σᵢ,1)
         for β2 in 1:N2[β1]
             for β3 in 1:N3[β1,β2]
                 temp = 0.0

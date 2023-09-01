@@ -1,6 +1,6 @@
-@inline @views function nodal_values!(u::AbstractArray{Float64,3},
-    solver::Solver{d,ResidualForm,PDEType,ConservationLaw,
-    Operators,MassSolver,Parallelism,N_p,N_q,N_f,N_c,N_e}, 
+@inline @views function nodal_values!(
+    u::AbstractArray{Float64,3},solver::Solver{d,ResidualForm,PDEType,
+    ConservationLaw,Operators,MassSolver,Parallelism,N_p,N_q,N_f,N_c,N_e}, 
     k::Int) where {d, ResidualForm<:StandardForm,PDEType,ConservationLaw,
     Operators<:ReferenceOperators,MassSolver,
     Parallelism,N_p,N_q,N_f,N_c,N_e}
@@ -12,11 +12,12 @@
     mul!(u_f[:,k,:], R, u_q[:,:,k])
 end
 
-@inline @views function nodal_values!(u::AbstractArray{Float64,3},
-    solver::Solver{d,ResidualForm,PDEType,ConservationLaw,
-    Operators,MassSolver,Parallelism,N_p,N_q,N_f,N_c,N_e}, 
-    k::Int) where {d,ResidualForm<:StandardForm,PDEType,ConservationLaw,
-    Operators<:PhysicalOperators,MassSolver,Parallelism,N_p,N_q,N_f,N_c,N_e}
+@inline @views function nodal_values!(
+    u::AbstractArray{Float64,3},solver::Solver{d,ResidualForm,PDEType,
+    ConservationLaw,Operators,MassSolver,Parallelism,N_p,N_q,N_f,N_c,N_e}, 
+    k::Int) where {d, ResidualForm<:StandardForm,PDEType,ConservationLaw,
+    Operators<:PhysicalOperators,MassSolver,
+    Parallelism,N_p,N_q,N_f,N_c,N_e}
 
     (; u_q, u_f) = solver.preallocated_arrays
     (; V, R) = solver.operators
@@ -25,9 +26,9 @@ end
     mul!(u_f[:,k,:], R[k], u_q[:,:,k])
 end
 
-@inline @views function time_derivative!(dudt::AbstractArray{Float64,3},
-    solver::Solver{d,ResidualForm,FirstOrder,ConservationLaw,
-    Operators,MassSolver,Parallelism,N_p,N_q,N_f,N_c,N_e}, 
+@inline @views function time_derivative!(
+    dudt::AbstractArray{Float64,3}, solver::Solver{d,ResidualForm,FirstOrder,
+    ConservationLaw,Operators,MassSolver,Parallelism,N_p,N_q,N_f,N_c,N_e}, 
     k::Int) where {d,ResidualForm<:StandardForm,ConservationLaw,
     Operators<:ReferenceOperators,MassSolver,Parallelism,N_p,N_q,N_f,N_c,N_e}
 
@@ -69,11 +70,12 @@ end
     mass_matrix_solve!(solver.mass_solver, k, dudt[:,:,k], u_q[:,:,k])
 end
 
-@inline @views function time_derivative!(dudt::AbstractArray{Float64,3},
-    solver::Solver{d,ResidualForm,FirstOrder,ConservationLaw,
-    Operators,MassSolver,Parallelism,N_p,N_q,N_f,N_c,N_e}, 
-    k::Int) where {d, ResidualForm<:StandardForm, ConservationLaw,
-    Operators<:PhysicalOperators,MassSolver,Parallelism,N_p,N_q,N_f,N_c,N_e}
+@inline @views function time_derivative!(
+    dudt::AbstractArray{Float64,3}, 
+    solver::Solver{d,ResidualForm,FirstOrder,ConservationLaw,Operators,
+    MassSolver,Parallelism,N_p,N_q,N_f,N_c,N_e}, k::Int) where {d, 
+    ResidualForm<:StandardForm, ConservationLaw, Operators<:PhysicalOperators,
+    MassSolver,Parallelism,N_p,N_q,N_f,N_c,N_e}
 
     (; conservation_law, operators, connectivity, form) = solver
     (; VOL, FAC, n_f) = operators
