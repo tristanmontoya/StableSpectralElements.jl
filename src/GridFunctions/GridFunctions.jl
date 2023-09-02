@@ -183,4 +183,3 @@ end
         return f.A*f.k[1]*cos(f.k[1]*x[1])*cos(f.k[2]*x[2])
     end
 end
-

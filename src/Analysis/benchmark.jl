@@ -1,3 +1,4 @@
+
 """This removes the threading and considers just one element. Note that this probably will not work with the Euler equations as the facet states at adjacent elements are left undefined and thus may lead to non-physical states when used to compute the fluxes"""
 @views @timeit "semi-disc. residual" function rhs_benchmark!(
     dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
@@ -98,4 +99,63 @@ end
     dudt[:,:,k] .+= temp[:,:,k]
 
     return dudt
+end
+
+function scaling_test_euler_2d(p::Int, M::Int, path="./", 
+    parallelism=Threaded())
+    path = new_path(path,true,true)
+
+    mach_number = 0.4
+    angle = 0.0
+    L = 1.0
+    γ=1.4
+    T = L/mach_number # end time
+    strength = sqrt(2/(γ-1)*(1-0.75^(γ-1)))
+
+    conservation_law = EulerEquations{2}(γ)
+    exact_solution = IsentropicVortex(conservation_law, θ=angle,
+        Ma=mach_number, β=strength, R=1.0/10.0, x_0=(L/2,L/2));
+
+    form = FluxDifferencingForm(
+        inviscid_numerical_flux=LaxFriedrichsNumericalFlux(), 
+        entropy_projection=true, facet_correction=true)
+
+    println("building reference approximation...")
+    reference_approximation = ReferenceApproximation(ModalTensor(p), 
+        Tri(), mapping_degree=p, N_plot=25)
+
+    println("generating mesh...")
+    uniform_mesh = uniform_periodic_mesh(
+        reference_approximation, ((0.0,L),(0.0,L)), (M,M))
+
+    println("warping mesh...")
+    mesh = warp_mesh(uniform_mesh, reference_approximation, 
+        ChanWarping(1/16, (L,L)))
+
+    println("building global discretization...")
+    spatial_discretization = SpatialDiscretization(mesh, reference_approximation, project_jacobian=true)
+
+    println("preprocessing...")
+    ode = semidiscretize(conservation_law, spatial_discretization, 
+        exact_solution, form, (0.0, T), ReferenceOperator(), GenericTensorProductAlgorithm(), parallelism=parallelism)
+
+    dudt = similar(ode.u0)
+    println("solving...")
+    b = @benchmark semi_discrete_residual!($dudt,$ode.u0,$ode.p,0.0)
+    min_time = minimum(b.times)
+    med_time = median(b.times)
+    println("min = ", min_time, " med = ", med_time)
+
+    if !isfile(string(path, "minimum.jld2"))
+        save_object(string(path, "minimum.jld2"), [min_time])
+        save_object(string(path, "median.jld2"), [med_time])
+    else
+        minima = load_object(string(path, "minimum.jld2"))
+        push!(minima, min_time)
+        save_object(string(path, "minimum.jld2"),min_time)
+
+        medians = load_object(string(path, "median.jld2"))
+        push!(medians, med)
+        save_object(string(path, "median.jld2"),med_time)
+    end
 end

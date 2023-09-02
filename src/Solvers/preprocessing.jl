@@ -91,8 +91,8 @@ function semidiscretize(
             u0, tspan)
     else
         return semidiscretize(Solver(conservation_law,spatial_discretization,
-        form,strategy,operator_algorithm,mass_matrix_solver,parallelism), 
-        u0, tspan)
+            form,strategy,operator_algorithm,mass_matrix_solver,parallelism), 
+            u0, tspan)
     end
 end
 

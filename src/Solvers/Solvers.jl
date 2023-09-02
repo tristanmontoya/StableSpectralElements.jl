@@ -5,6 +5,7 @@ module Solvers
     using StaticArrays
     using MuladdMacro
     using SparseArrays
+    using Polyester
     using LinearAlgebra: Diagonal, eigvals, inv, mul!, lmul!, diag, diagm, factorize, cholesky, ldiv!, Factorization, Cholesky, Symmetric, I, UniformScaling
     using TimerOutputs
     using LinearMaps: LinearMap, UniformScalingMap, TransposeMap
@@ -15,7 +16,7 @@ module Solvers
     using ..SpatialDiscretizations: AbstractApproximationType, ReferenceApproximation, SpatialDiscretization, apply_reference_mapping, reference_derivative_operators, check_facet_nodes, check_normals, NodalTensor, ModalTensor
     using ..GridFunctions: AbstractGridFunction, AbstractGridFunction, NoSourceTerm, evaluate
     
-    export AbstractResidualForm, StandardForm, FluxDifferencingForm, AbstractMappingForm, AbstractStrategy, AbstractDiscretizationOperators,  AbstractMassMatrixSolver, AbstractParallelism, ReferenceOperators, PhysicalOperators, FluxDifferencingOperators, PreAllocatedArrays, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, Serial, Threaded, get_dof, semi_discrete_residual!, auxiliary_variable!, make_operators, entropy_projection!, facet_correction!, nodal_values!, time_derivative!, project_function!,flux_differencing_operators
+    export AbstractResidualForm, StandardForm, FluxDifferencingForm, AbstractMappingForm, AbstractStrategy, AbstractDiscretizationOperators,  AbstractMassMatrixSolver, AbstractParallelism, ReferenceOperators, PhysicalOperators, FluxDifferencingOperators, PreAllocatedArrays, PhysicalOperator, ReferenceOperator, Solver, StandardMapping, SkewSymmetricMapping, Serial, Threaded, get_dof, semi_discrete_residual!, auxiliary_variable!, make_operators, entropy_projection!, facet_correction!, nodal_values!, time_derivative!, project_function!,flux_differencing_operators, scaling_test_euler_2d
 
     abstract type AbstractResidualForm{MappingForm, TwoPointFlux} end
     abstract type AbstractMappingForm end
@@ -310,12 +311,12 @@ module Solvers
         dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3},
         solver::Solver{d,ResidualForm,FirstOrder,ConservationLaw,Operators,
         MassSolver,Threaded,N_p,N_q,N_f,N_c,N_e}, t::Float64=0.0) where {d,ResidualForm,ConservationLaw,Operators,MassSolver,N_p,N_q,N_f,N_c,N_e}
-        
-        @inbounds Threads.@threads for k in 1:N_e
+        #println("threading")
+        Threads.@threads for k in 1:N_e
             nodal_values!(u, solver, k)
         end
 
-        @inbounds Threads.@threads for k in 1:N_e
+        Threads.@threads for k in 1:N_e
             time_derivative!(dudt, solver, k)
         end
 
@@ -380,7 +381,4 @@ module Solvers
 
     export LinearResidual
     include("linear.jl")
-
-    export rhs_benchmark!, rhs_volume!, rhs_facet!, rhs_benchmark_notime!
-    include("benchmark.jl")
 end

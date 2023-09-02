@@ -4,21 +4,23 @@ module Analysis
     using LinearAlgebra: Diagonal, mul!, lmul!, dot, norm, eigen, inv, svd, qr, pinv, eigsortby, I, rank, cond
     using JLD2: save, load, save_object, load_object
     using Plots: plot, savefig, plot!, scatter, text, annotate!, vline!, grid, theme_palette, twinx, @layout
-    using RecipesBase
     using LaTeXStrings: LaTeXString, latexstring
-    using StartUpDG: MeshData, vandermonde
     using SparseArrays: sparse, blockdiag, kron
     using Arpack: eigs
     using OrdinaryDiffEq: OrdinaryDiffEqAlgorithm, ODESolution, ODEIntegrator, solve, RK4, step!, reinit!
-    using PrettyTables
+    using StartUpDG: MeshData, vandermonde
+    using RecipesBase
     using Printf
+    using PrettyTables
     using Markdown
     using TimerOutputs
+    using BenchmarkTools
 
-    using ..ConservationLaws: AbstractConservationLaw, entropy, conservative_to_entropy
-    using ..SpatialDiscretizations: SpatialDiscretization, ReferenceApproximation, uniform_periodic_mesh, quadrature
+    using ..ConservationLaws
+    using ..SpatialDiscretizations
     using ..GridFunctions: AbstractGridFunction, evaluate
-    using ..Solvers: AbstractResidualForm, AbstractStrategy, Solver, AbstractMassMatrixSolver, WeightAdjustedSolver, mass_matrix,  mass_matrix_inverse, mass_matrix_solve!, semidiscretize, LinearResidual, get_dof, semi_discrete_residual!
+    using ..Solvers
+    using ..MatrixFreeOperators
     using ..File: new_path, load_project, load_solution, load_time_steps, load_snapshots, load_snapshots_with_derivatives, load_solver, save_callback, save_solution, save_project
     using ..Visualize: Plotter
 
@@ -45,4 +47,7 @@ module Analysis
 
     export RefinementAnalysis, RefinementErrorAnalysis, RefinementAnalysisResults, RefinementErrorAnalysisResults, run_refinement, get_tickslogscale
     include("refinement.jl")
+
+    export scaling_test_euler_2d
+    include("benchmark.jl")
 end

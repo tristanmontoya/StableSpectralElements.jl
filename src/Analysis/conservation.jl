@@ -58,8 +58,8 @@ function PrimaryConservationAnalysis(results_path::String,
     
     WJ = [Diagonal(W .* geometric_factors.J_q[:,k]) for k in 1:N_e]
 
-    return PrimaryConservationAnalysis(
-        WJ, N_c, N_e, V, results_path, "conservation.jld2")
+    return PrimaryConservationAnalysis(WJ, N_c, N_e, V, results_path,
+        "conservation.jld2")
 end
 
 function EnergyConservationAnalysis(results_path::String,
