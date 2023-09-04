@@ -5,11 +5,10 @@ module SpatialDiscretizations
     using Random: rand, shuffle
     using LinearMaps: LinearMap, ⊗
     using StartUpDG: MeshData, basis, vandermonde, grad_vandermonde, diagE_sbp_nodes, quad_nodes, NodesAndModes.quad_nodes_tri, NodesAndModes.quad_nodes_tet, face_vertices, nodes, num_faces, find_face_nodes, init_face_data, equi_nodes, face_type, Polynomial, jacobiP, match_coordinate_vectors,uniform_mesh, make_periodic, jaskowiec_sukumar_quad_nodes, Hicken, geometric_factors
-    
     using Jacobi: zgrjm, wgrjm, zgj, wgj, zglj, wglj
 
-    using ..MatrixFreeOperators: TensorProductMap2D, TensorProductMap3D, WarpedTensorProductMap2D, WarpedTensorProductMap3D, SelectionMap
-
+    using ..MatrixFreeOperators
+    
     using Reexport
     @reexport using StartUpDG: RefElemData, AbstractElemShape, Line, Quad, Tri, Tet, Hex, SBP
 
@@ -60,8 +59,8 @@ module SpatialDiscretizations
     struct ChanWilcoxMetrics <: AbstractMetrics end
 
     """Operators for local approximation on reference element"""
-    struct ReferenceApproximation{d, ElemShape, 
-        ApproxType, D_type, V_type, Vf_type, R_type, V_plot_type, ReferenceMappingType}
+    struct ReferenceApproximation{d, ElemShape, ApproxType, D_type, V_type,
+        Vf_type, R_type, V_plot_type, ReferenceMappingType}
         approx_type::ApproxType
         N_p::Int
         N_q::Int
@@ -77,12 +76,11 @@ module SpatialDiscretizations
         reference_mapping::ReferenceMappingType
 
         function ReferenceApproximation(approx_type::ApproxType,
-            reference_element::RefElemData{d,ElemShape},  
-            D::D_type, V::V_type, Vf::Vf_type, 
-            R::R_type, V_plot::V_plot_type, 
+            reference_element::RefElemData{d,ElemShape}, D::D_type, V::V_type,
+            Vf::Vf_type, R::R_type, V_plot::V_plot_type, 
             reference_mapping::ReferenceMappingType = NoMapping()
-            ) where {d, ElemShape, 
-            ApproxType, D_type, V_type, Vf_type, R_type, V_plot_type, ReferenceMappingType}
+            ) where {d, ElemShape, ApproxType, D_type, V_type, Vf_type, R_type,
+            V_plot_type, ReferenceMappingType}
 
             return new{d, ElemShape, 
             ApproxType, D_type, V_type, Vf_type, R_type, V_plot_type, ReferenceMappingType}(approx_type, size(V,2), 
@@ -117,7 +115,7 @@ module SpatialDiscretizations
         N_e::Int
         reference_approximation::ReferenceApproximation{d}
         geometric_factors::GeometricFactors
-        M::Vector{AbstractMatrix}
+        M::Vector{Matrix{Float64}}
         x_plot::NTuple{d, Matrix{Float64}}
     end
 
@@ -157,6 +155,7 @@ module SpatialDiscretizations
     """Express all metric terms in terms of collapsed coordinates"""
     function apply_reference_mapping(geometric_factors::GeometricFactors,
         reference_mapping::ReferenceMapping)
+
         (; J_q, Λ_q, J_f, nJf, nJq) = geometric_factors
         (; J_ref, Λ_ref) = reference_mapping
         (N_q, N_e) = size(J_q)
@@ -164,7 +163,7 @@ module SpatialDiscretizations
         Λ_η = similar(Λ_q)
 
         @inbounds for k in 1:N_e, i in 1:N_q, m in 1:d, n in 1:d
-            Λ_η[i,m,n,k] = sum(Λ_ref[i,m,l] * Λ_q[i,l,n,k] ./ J_ref[i] 
+            Λ_η[i,m,n,k] = sum(Λ_ref[i,m,l] * Λ_q[i,l,n,k] / J_ref[i] 
                 for l in 1:d)
         end
         
@@ -191,8 +190,8 @@ module SpatialDiscretizations
         spatial_discretization::SpatialDiscretization{d}) where {d}
         (; geometric_factors, mesh, N_e) = spatial_discretization
         return Tuple([maximum(abs.(geometric_factors.nJf[m,:,k] + 
-                geometric_factors.nJf[m,:,:][mesh.mapP[:,k]])) for k in 1:N_e]
-                for m in 1:d)
+            geometric_factors.nJf[m,:,:][mesh.mapP[:,k]])) for k in 1:N_e]
+            for m in 1:d)
     end
 
     """
@@ -229,13 +228,13 @@ module SpatialDiscretizations
         (; W, D, R, B) = spatial_discretization.reference_approximation
         (; Λ_q, nJf) = spatial_discretization.geometric_factors
 
-        S = Tuple((sum( 0.5 * D[m]' * W * Diagonal(Λ_q[:,m,n,k]) -
-                        0.5 * Diagonal(Λ_q[:,m,n,k]) * W * D[m] for m in 1:d) + 
+        Q = Tuple((sum( 0.5 * D[m]' * W * Diagonal(Λ_q[:,m,n,k]) -
+                0.5 * Diagonal(Λ_q[:,m,n,k]) * W * D[m] for m in 1:d) + 
                 0.5 * R' * B * Diagonal(nJf[n,:,k]) * R) for n in 1:d)
 
         E = Tuple(R' * B * Diagonal(nJf[n,:,k]) * R for n in 1:d)
 
-        return Tuple(maximum(abs.(convert(Matrix, S[n] + S[n]' - E[n]))) 
+        return Tuple(maximum(abs.(convert(Matrix, Q[n] + Q[n]' - E[n]))) 
             for n in 1:d)
     end
 

@@ -195,12 +195,12 @@ end
     u::AbstractMatrix, ::Int,
     ::Val{true})
 
-    @timeit "get cons vars at volume nodes" mul!(u_q, V, u)
-    @inbounds @timeit "conservative to entropy" for i in axes(u, 1)
+    mul!(u_q, V, u)
+    @inbounds for i in axes(u, 1)
         w_q[i,:] .= conservative_to_entropy(conservation_law,u_q[i,:])
     end
-    @timeit "extrap entropy variables" mul!(w_f, R, w_q)
-    @inbounds @timeit "entropy to conservative" for i in axes(u_f, 1)
+    mul!(w_f, R, w_q)
+    @inbounds for i in axes(u_f, 1)
         u_f[i,:] .= entropy_to_conservative(conservation_law,w_f[i,:])
     end
 end

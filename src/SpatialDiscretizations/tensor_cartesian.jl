@@ -4,8 +4,7 @@ function ReferenceApproximation(
     volume_quadrature_rule=LGLQuadrature(approx_type.p))
 
     reference_element = RefElemData(Line(), mapping_degree,
-        quad_rule_vol=quadrature(Line(), 
-        volume_quadrature_rule), Nplot=N_plot)
+        quad_rule_vol=quadrature(Line(), volume_quadrature_rule), Nplot=N_plot)
 
     (; rp, rq, rstq, rf, rstf) = reference_element
     q = length(rq)-1
@@ -14,13 +13,15 @@ function ReferenceApproximation(
     if volume_quadrature_rule isa GaussLobattoQuadrature
         R = SelectionMap(match_coordinate_vectors(rstf, rstq), q+1)
     else 
-        R = LinearMap(vandermonde(element_type, q, rf) / VDM) 
+        R = OctavianMap(SMatrix{2,q+1}(vandermonde(element_type, q, rf) / VDM))
     end
 
-    V_plot = LinearMap(vandermonde(element_type, q, rp) / VDM)
+    V_plot = OctavianMap(SMatrix{N_plot+1,q+1}(
+        vandermonde(element_type, q, rp) / VDM))
 
     return ReferenceApproximation(approx_type, reference_element,
-        (LinearMap(∇VDM / VDM),), LinearMap(I, q+1), R, R, V_plot)
+        (OctavianMap(SMatrix{q+1,q+1}(∇VDM / VDM)),), 
+        LinearMap(I, q+1), R, R, V_plot)
 end
 
 function ReferenceApproximation(approx_type::NodalTensor, 
@@ -32,10 +33,12 @@ function ReferenceApproximation(approx_type::NodalTensor,
     nodes_1D = quadrature(Line(),volume_quadrature_rule)[1]
     q = length(nodes_1D)-1
     VDM_1D, ∇VDM_1D = basis(Line(), q, nodes_1D)
-    D_1D = ∇VDM_1D / VDM_1D
+    D_1D = OctavianMap(SMatrix{q+1,q+1}(∇VDM_1D / VDM_1D))
     I_1D = LinearMap(I, q+1)
-    R_L = vandermonde(Line(), q, [-1.0]) / VDM_1D
-    R_R = vandermonde(Line(), q, [1.0]) / VDM_1D
+    R_L = OctavianMap(SMatrix{1,q+1}(
+        vandermonde(Line(), q, [-1.0]) / VDM_1D))
+    R_R = OctavianMap(SMatrix{1,q+1}(
+        vandermonde(Line(), q, [1.0]) / VDM_1D))
 
     # reference element data
     reference_element = RefElemData(element_type, mapping_degree,
@@ -52,11 +55,11 @@ function ReferenceApproximation(approx_type::NodalTensor,
             R = [R_L ⊗ I_1D; R_R ⊗ I_1D; I_1D ⊗ R_L; I_1D ⊗ R_R]
         end
     else
-        R = LinearMap(vandermonde(element_type,q,rstf...) / 
+        R = OctavianMap(vandermonde(element_type,q,rstf...) / 
             vandermonde(element_type,q,rstq...))
     end
     
-    V_plot = LinearMap(vandermonde(element_type, q, rstp...) / 
+    V_plot = OctavianMap(vandermonde(element_type, q, rstp...) / 
         vandermonde(element_type, q, rstq...))
 
     return ReferenceApproximation(approx_type, reference_element,
@@ -71,7 +74,7 @@ function ReferenceApproximation(approx_type::NodalTensor, ::Hex;
     nodes_1D = quadrature(Line(),volume_quadrature_rule)[1]
     q = length(nodes_1D)-1
     VDM_1D, ∇VDM_1D = basis(Line(), q, nodes_1D)
-    D_1D = ∇VDM_1D / VDM_1D
+    D_1D = OctavianMap(SMatrix{q+1,q+1}(∇VDM_1D / VDM_1D))
     I_1D = LinearMap(I, q+1)
 
     # reference element data
@@ -87,11 +90,11 @@ function ReferenceApproximation(approx_type::NodalTensor, ::Hex;
         (volume_quadrature_rule isa GaussLobattoQuadrature)
         R = SelectionMap(match_coordinate_vectors(rstf,rstq),(q+1)^3)
     else 
-        R = LinearMap(vandermonde(Hex(),q,rstf...) / 
+        R = OctavianMap(vandermonde(Hex(),q,rstf...) / 
             vandermonde(Hex(),q,rstq...))
     end
     
-    V_plot = LinearMap(vandermonde(Hex(), q, rstp...) / 
+    V_plot = OctavianMap(vandermonde(Hex(), q, rstp...) / 
         vandermonde(Hex(), q, rstq...))
 
     return ReferenceApproximation(approx_type, reference_element,

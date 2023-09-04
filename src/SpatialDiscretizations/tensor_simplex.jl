@@ -159,21 +159,23 @@ end
 function operators_1d( 
     quadrature_rule::NTuple{d,AbstractQuadratureRule}) where {d}
 
-    η_1D, w_1D, q, V_1D, D_1D, I_1D, R_L, R_R = fill((),8)
+    η_1D, q, V_1D, D_1D, I_1D, R_L, R_R = fill((),7)
 
     for m in 1:d
-        η, w = quadrature(Line(),quadrature_rule[m])
+        η, _ = quadrature(Line(),quadrature_rule[m])
         η_1D = (η_1D..., η)
-        w_1D = (w_1D..., w)
         q = (q..., length(η_1D[m]) - 1)
-        V_1D = (V_1D..., vandermonde(Line(),q[m],η_1D[m] ))
-        D_1D = (D_1D..., grad_vandermonde(Line(),q[m], η_1D[m]) / V_1D[m])
+        V_1D = (V_1D..., vandermonde(Line(),q[m],η_1D[m]))
+        D_1D = (D_1D..., OctavianMap(SMatrix{q[m]+1,q[m]+1}(
+            grad_vandermonde(Line(),q[m], η_1D[m]) / V_1D[m])))
         I_1D = (I_1D..., LinearMap(I,q[m]+1))
-        R_L = (R_L..., vandermonde(Line(),q[m],[-1.0]) / V_1D[m])
-        R_R = (R_R..., vandermonde(Line(),q[m],[1.0]) / V_1D[m])
+        R_L = (R_L...,  OctavianMap(SMatrix{1,q[m]+1}(
+            vandermonde(Line(),q[m],[-1.0]) / V_1D[m])))
+        R_R = (R_R...,OctavianMap(SMatrix{1,q[m]+1}(
+            vandermonde(Line(),q[m],[1.0]) / V_1D[m])))
     end
     
-    return η_1D, w_1D, q, V_1D, D_1D, I_1D, R_L, R_R
+    return η_1D, q, V_1D, D_1D, I_1D, R_L, R_R
 end
 
 function ReferenceApproximation(
@@ -184,7 +186,7 @@ function ReferenceApproximation(
     facet_quadrature_rule=LGQuadrature(approx_type.p))
 
     # one-dimensional operators
-    η_1D, w_1D, q, V_1D, D_1D, I_1D, R_L, R_R = operators_1d(
+    η_1D, q, V_1D, D_1D, I_1D, R_L, R_R = operators_1d(
         volume_quadrature_rule)
 
     # geometric factors for collapsed coordinate transformation
@@ -192,17 +194,20 @@ function ReferenceApproximation(
 
     # one-dimensional facet quadrature rule
     η_f, _ = quadrature(Line(), facet_quadrature_rule)
+    q_f = length(η_f) - 1
 
     # interpolation/extrapolation operators
     if volume_quadrature_rule[1] == facet_quadrature_rule
         η1_to_ηf = LinearMap(I, q[1]+1)
     else
-        η1_to_ηf = vandermonde(Line(),q[1],η_f) / V_1D[1]
+        η1_to_ηf = OctavianMap(SMatrix{q_f+1,q[1]+1}(
+            vandermonde(Line(),q[1],η_f) / V_1D[1]))
     end
     if volume_quadrature_rule[2] == facet_quadrature_rule
         η2_to_ηf = LinearMap(I, q[2]+1)
     else
-        η2_to_ηf = vandermonde(Line(),q[2],η_f) / V_1D[2]
+        η2_to_ηf = OctavianMap(SMatrix{q_f+1,q[2]+1}(
+            vandermonde(Line(),q[2],η_f) / V_1D[2]))
     end
     R = [η1_to_ηf ⊗ R_L[2]; R_R[1] ⊗ η2_to_ηf; R_L[1] ⊗ η2_to_ηf]
         
@@ -237,7 +242,7 @@ function ReferenceApproximation(
         GaussQuadrature(approx_type.p,1,0)))
 
     # one-dimensional operators
-    η_1D, w_1D, q, V_1D, D_1D, I_1D, R_L, R_R = operators_1d(
+    η_1D, q, V_1D, D_1D, I_1D, R_L, R_R = operators_1d(
         volume_quadrature_rule)
 
     # reference geometric factors for cube-to-tetrahedron mapping
@@ -246,27 +251,32 @@ function ReferenceApproximation(
     # two-dimensional facet quadrature nodes and weights
     η_f1, _ = quadrature(Line(), facet_quadrature_rule[1])
     η_f2, _ = quadrature(Line(), facet_quadrature_rule[2])
-
+    q_f = (length(η_f1) - 1, length(η_f1) - 1)
+    
     # interpolation/extrapolation operators
     if volume_quadrature_rule[1] == facet_quadrature_rule[1]
         η1_to_ηf1 = LinearMap(I,q[1]+1)
     else
-        η1_to_ηf1 = LinearMap(vandermonde(Line(),q[1],η_f1) / V_1D[1])
+        η1_to_ηf1 = OctavianMap(SMatrix{q_f[1]+1,q[1]+1}(
+            vandermonde(Line(),q[1],η_f1) / V_1D[1]))
     end
     if volume_quadrature_rule[2] == facet_quadrature_rule[1]
         η2_to_ηf1 = LinearMap(I,q[2]+1)
     else
-        η2_to_ηf1 = LinearMap(vandermonde(Line(),q[2],η_f1) / V_1D[2])
+        η2_to_ηf1 =  OctavianMap(SMatrix{q_f[1]+1,q[2]+1}(
+            vandermonde(Line(),q[2],η_f1) / V_1D[2]))
     end
     if volume_quadrature_rule[2] == facet_quadrature_rule[2]
         η2_to_ηf2 = LinearMap(I,q[2]+1)
     else
-        η2_to_ηf2 = LinearMap(vandermonde(Line(),q[2],η_f2) / V_1D[2])
+        η2_to_ηf2 = OctavianMap(SMatrix{q_f[2]+1,q[2]+1}(
+            vandermonde(Line(),q[2],η_f2) / V_1D[2]))
     end
     if volume_quadrature_rule[3] == facet_quadrature_rule[2]
         η3_to_ηf2 = LinearMap(I,q[3]+1)
     else
-        η3_to_ηf2 = LinearMap(vandermonde(Line(),q[3],η_f2) / V_1D[3])
+        η3_to_ηf2 = OctavianMap(SMatrix{q_f[2]+1,q[3]+1}(
+            vandermonde(Line(),q[3],η_f2) / V_1D[3]))
     end
     R = [η1_to_ηf1 ⊗ R_L[2] ⊗ η3_to_ηf2; R_R[1] ⊗ η2_to_ηf1 ⊗ η3_to_ηf2;
         R_L[1] ⊗ η2_to_ηf1 ⊗ η3_to_ηf2;  η1_to_ηf1 ⊗ η2_to_ηf2 ⊗ R_L[3]]

@@ -16,12 +16,12 @@ function TensorProductMap2D(A, B)
 
     if A isa LinearMaps.UniformScalingMap{Bool} 
         A = I 
-    elseif A isa LinearMaps.WrappedMap
+    elseif A isa Union{LinearMaps.WrappedMap,OctavianMap}
         A = SMatrix{M1,N1,Float64}(A.lmap)
     end
     if B isa LinearMaps.UniformScalingMap{Bool} 
         B = I 
-    elseif B isa LinearMaps.WrappedMap
+    elseif B isa Union{LinearMaps.WrappedMap,OctavianMap}
         B = SMatrix{M2,N2,Float64}(B.lmap)
     end
     return TensorProductMap2D(A,B, σᵢ, σₒ)

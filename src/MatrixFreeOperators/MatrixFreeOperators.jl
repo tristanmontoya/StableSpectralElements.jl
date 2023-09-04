@@ -1,6 +1,6 @@
 module MatrixFreeOperators
 
-    using LinearAlgebra, LinearMaps, MuladdMacro, GFlops, StaticArrays
+    using LinearAlgebra, LinearMaps, MuladdMacro, GFlops, StaticArrays, Octavian
     export AbstractOperatorAlgorithm, BLASAlgorithm, GenericMatrixAlgorithm, GenericTensorProductAlgorithm, DefaultOperatorAlgorithm, make_operator, count_ops
     
     abstract type AbstractOperatorAlgorithm end
@@ -9,47 +9,33 @@ module MatrixFreeOperators
     struct GenericMatrixAlgorithm <: AbstractOperatorAlgorithm end
     struct GenericTensorProductAlgorithm <: AbstractOperatorAlgorithm end
 
-    function make_operator(map::LinearMap, ::AbstractOperatorAlgorithm)
-        return map
-    end
-    
-    function make_operator(matrix::Matrix, ::AbstractOperatorAlgorithm)
-        return LinearMaps.WrappedMap(matrix)
-    end
+    # default fallbacks
+    make_operator(map::LinearMap, 
+        ::AbstractOperatorAlgorithm) = map
+    make_operator(matrix::Matrix, 
+        ::AbstractOperatorAlgorithm) = OctavianMap(matrix)
 
-    function make_operator(matrix::Matrix, ::BLASAlgorithm)
-        return LinearMaps.WrappedMap(matrix)
-    end
+    # BLAS algorithm
+    make_operator(matrix::Matrix, 
+        ::BLASAlgorithm) = LinearMaps.WrappedMap(matrix)
+    make_operator(map::LinearMaps.UniformScalingMap,
+        ::BLASAlgorithm) = map
+    make_operator(map::UniformScaling, 
+        ::BLASAlgorithm) = LinearMap(map,size(map,1))
+    make_operator(map::LinearMap, 
+        ::BLASAlgorithm) = LinearMaps.WrappedMap(Matrix(map))
 
-    function make_operator(map::LinearMaps.UniformScalingMap, ::BLASAlgorithm)
-        return map
-    end
+    # Hand-coded matrix algorithm
+    make_operator(matrix::Matrix, 
+        ::GenericMatrixAlgorithm) = GenericMatrixMap(matrix)
+    make_operator(map::LinearMaps.UniformScalingMap,
+        ::GenericMatrixAlgorithm) = map
+    make_operator(map::UniformScaling, 
+        ::GenericMatrixAlgorithm) = LinearMap(map,size(map,1))
+    make_operator(map::LinearMap, 
+        ::GenericMatrixAlgorithm) = GenericMatrixMap(map)
 
-    function make_operator(map::UniformScaling, ::BLASAlgorithm)
-        return LinearMap(map,size(map,1))
-    end
-
-    function make_operator(map::LinearMap, ::BLASAlgorithm)
-        return LinearMaps.WrappedMap(Matrix(map))
-    end
-
-    function make_operator(matrix::Matrix, ::GenericMatrixAlgorithm)
-        return GenericMatrixMap(matrix)
-    end
-
-    function make_operator(map::LinearMaps.UniformScalingMap,
-        ::GenericMatrixAlgorithm)
-        return map
-    end
-
-    function make_operator(map::UniformScaling, ::GenericMatrixAlgorithm)
-        return LinearMap(map,size(map,1))
-    end
-
-    function make_operator(map::LinearMap, ::GenericMatrixAlgorithm)
-        return GenericMatrixMap(map)
-    end
-
+    # Hand-coded Kronecker products
     function make_operator(
         map::LinearMaps.BlockMap, alg::GenericTensorProductAlgorithm)
         return vcat([make_operator(block, alg) for block in map.maps]...)
@@ -65,6 +51,7 @@ module MatrixFreeOperators
         return TensorProductMap3D(map.maps[1],map.maps[2],map.maps[3])
     end
     
+    # count adds, muls, and muladds
     function count_ops(map::LinearMap)
         x = rand(size(map,2))
         y = rand(size(map,1))
@@ -85,6 +72,9 @@ module MatrixFreeOperators
 
     export GenericMatrixMap
     include("generic.jl")
+
+    export OctavianMap
+    include("octavian.jl")
 
     export ZeroMap
     include("zero.jl")

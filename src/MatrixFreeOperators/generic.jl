@@ -1,5 +1,5 @@
 struct GenericMatrixMap <: LinearMaps.LinearMap{Float64}
-    lmap::AbstractMatrix
+    lmap::Matrix{Float64}
 end
 
 function GenericMatrixMap(L::LinearMap)

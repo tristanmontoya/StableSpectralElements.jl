@@ -18,11 +18,11 @@ module Analysis
 
     using ..ConservationLaws
     using ..SpatialDiscretizations
-    using ..GridFunctions: AbstractGridFunction, evaluate
+    using ..GridFunctions
     using ..Solvers
     using ..MatrixFreeOperators
-    using ..File: new_path, load_project, load_solution, load_time_steps, load_snapshots, load_snapshots_with_derivatives, load_solver, save_callback, save_solution, save_project
-    using ..Visualize: Plotter
+    using ..File
+    using ..Visualize
 
     export AbstractAnalysis, AbstractAnalysisResults, analyze, save_analysis, plot_analysis, plot_spectrum, plot_modes, tabulate_analysis, tabulate_analysis_for_paper
 

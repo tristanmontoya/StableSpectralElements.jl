@@ -102,7 +102,7 @@ end
         StandardForm(
             mapping_form=SkewSymmetricMapping(),
             inviscid_numerical_flux=LaxFriedrichsNumericalFlux(0.0)),
-        DefaultOperatorAlgorithm(),
+        BLASAlgorithm(),
         ReferenceOperator(), 1.0, 2, 1.0, 1.0/50.0, 0.1,
         "test_advection_3d_collapsed_econ")
     

@@ -16,7 +16,7 @@ module Visualize
     using ..GridFunctions: AbstractGridFunction, evaluate
     using ..File: new_path
 
-    export visualize, plotter
+    export visualize, Plotter
     include("plot_1d.jl")
 
     export low_order_subdivision, postprocess_vtk, outline_element, plot_ref_elem

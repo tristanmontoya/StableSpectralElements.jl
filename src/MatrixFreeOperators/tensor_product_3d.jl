@@ -21,17 +21,17 @@ function TensorProductMap3D(A, B, C)
 
     if A isa LinearMaps.UniformScalingMap{Bool} 
         A = I 
-    elseif A isa LinearMaps.WrappedMap
+    elseif A isa Union{LinearMaps.WrappedMap,OctavianMap}
         A = SMatrix{M1,N1,Float64}(A.lmap)
     end
     if B isa LinearMaps.UniformScalingMap{Bool} 
         B = I 
-    elseif B isa LinearMaps.WrappedMap
+    elseif B isa Union{LinearMaps.WrappedMap,OctavianMap}
         B = SMatrix{M2,N2,Float64}(B.lmap)
     end
     if C isa LinearMaps.UniformScalingMap{Bool} 
         C = I 
-    elseif C isa LinearMaps.WrappedMap
+    elseif C isa Union{LinearMaps.WrappedMap,OctavianMap}
         C = SMatrix{M3,N3,Float64}(C.lmap)
     end
     return TensorProductMap3D(A,B,C, σᵢ, σₒ)
@@ -89,7 +89,7 @@ end
 
     LinearMaps.check_dim_mul(y, L, x)
     (; A, B, C, σᵢ, σₒ) = L
-
+    
     @inbounds for α1 in axes(σₒ,1), α2 in axes(σₒ,2), α3 in axes(σₒ,3)
         temp = 0.0
         @simd for β1 in axes(σᵢ,1)
