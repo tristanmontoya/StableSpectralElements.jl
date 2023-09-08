@@ -1,25 +1,36 @@
+function test_discretization(L::Float64,M::Int,
+    reference_approximation::ReferenceApproximation{<:RefElemData{1}},
+    ::Float64)
+    
+    return SpatialDiscretization(uniform_periodic_mesh(reference_approximation, 
+        (0.0,L),M), reference_approximation)
+end
+
+function test_discretization(L::Float64,M::Int,
+    reference_approximation::ReferenceApproximation{<:RefElemData{d}}, 
+    mesh_perturb::Float64) where {d}
+
+    return SpatialDiscretization(warp_mesh(uniform_periodic_mesh(
+        reference_approximation, Tuple((0.0,L) for m in 1:d),
+        Tuple(M for m in 1:d)), reference_approximation, mesh_perturb), reference_approximation, project_jacobian=true)
+end
+
 function test_driver(
     reference_approximation::ReferenceApproximation,
     conservation_law::AbstractConservationLaw,
-    initial_data::AbstractGridFunction{d},
+    initial_data::AbstractGridFunction,
     form::AbstractResidualForm,
-    operator_algorithm::AbstractOperatorAlgorithm,
     strategy::AbstractStrategy,
+    alg::AbstractOperatorAlgorithm,
     L::Float64,
     M::Int,
     T::Float64,
     dt::Float64,
     mesh_perturb::Float64,
-    test_name::String) where {d}
+    test_name::String)
 
-    if d == 1 spatial_discretization = SpatialDiscretization(           
-        uniform_periodic_mesh(reference_approximation, 
-            (0.0,L),M), reference_approximation)
-    else spatial_discretization = SpatialDiscretization(
-        warp_mesh(uniform_periodic_mesh(reference_approximation,
-            Tuple((0.0,L) for m in 1:d), Tuple(M for m in 1:d)),
-            reference_approximation, mesh_perturb), reference_approximation)
-    end
+    spatial_discretization = test_discretization(L,M,
+        reference_approximation,mesh_perturb)
 
     exact_solution = ExactSolution(conservation_law,initial_data)
 
@@ -27,19 +38,11 @@ function test_driver(
         spatial_discretization, initial_data, form, (0.0, T),
         string("results/", test_name,"/"), overwrite=true, clear=true)
 
-    mass_solver = CholeskySolver(spatial_discretization)
-
     ode_problem = semidiscretize(conservation_law,
-        spatial_discretization,
-        initial_data, 
-        form,
-        (0.0, T),
-        strategy,
-        operator_algorithm,
-        mass_matrix_solver=mass_solver)
+        spatial_discretization, initial_data, form, (0.0, T), strategy, alg)
 
-    sol = solve(ode_problem, CarpenterKennedy2N54(),
-        adaptive=false, dt=dt, callback=save_callback(results_path, (0.0,T),  floor(Int, 1.0/(dt*50))))
+    sol = solve(ode_problem, CarpenterKennedy2N54(), adaptive=false, dt=dt,
+        callback=save_callback(results_path, (0.0,T),  floor(Int, 1.0/(dt*50))))
 
     error = analyze(ErrorAnalysis(results_path, conservation_law, 
         spatial_discretization), last(sol.u), exact_solution, 1.0)
@@ -47,7 +50,7 @@ function test_driver(
         conservation_law, spatial_discretization), 
         load_time_steps(results_path))
     energy = analyze(EnergyConservationAnalysis(results_path,
-        conservation_law, spatial_discretization, mass_solver),
+        conservation_law, spatial_discretization, ode_problem.p.mass_solver),
         load_time_steps(results_path))
 
     return (error..., maximum(abs.(conservation.dEdt[:,1])), 

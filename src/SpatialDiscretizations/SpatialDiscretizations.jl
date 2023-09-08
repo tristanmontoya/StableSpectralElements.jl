@@ -12,37 +12,40 @@ module SpatialDiscretizations
     using Reexport
     @reexport using StartUpDG: RefElemData, AbstractElemShape, Line, Quad, Tri, Tet, Hex, SBP
 
-    export AbstractApproximationType, NodalTensor, ModalTensor, ModalMulti, NodalMulti, ModalMultiDiagE, NodalMultiDiagE, AbstractReferenceMapping, AbstractMetrics, ExactMetrics, ChanWilcoxMetrics, NoMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, apply_reference_mapping, reference_derivative_operators, check_normals, check_facet_nodes, check_sbp_property, centroids, trace_constant, dim, χ, warped_product
+    export AbstractApproximationType, AbstractTensorProduct, AbstractMultidimensional,
+    NodalTensor, ModalTensor, ModalMulti, NodalMulti, ModalMultiDiagE, NodalMultiDiagE, AbstractReferenceMapping, AbstractMetrics, ExactMetrics, ChanWilcoxMetrics, NoMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, apply_reference_mapping, reference_derivative_operators, check_normals, check_facet_nodes, check_sbp_property, centroids, trace_constant, dim, χ, warped_product
     
     abstract type AbstractApproximationType end
+    abstract type AbstractTensorProduct <: AbstractApproximationType end
+    abstract type AbstractMultidimensional <: AbstractApproximationType end
 
     """Nodal approximation using tensor-product operators"""
-    struct NodalTensor <: AbstractApproximationType 
+    struct NodalTensor <: AbstractTensorProduct 
         p::Int
     end
 
     """Modal approximation using tensor-product operators"""
-    struct ModalTensor <: AbstractApproximationType
+    struct ModalTensor <: AbstractTensorProduct
         p::Int
     end
 
     """Modal approximation using multidimensional operators"""
-    struct ModalMulti <: AbstractApproximationType
+    struct ModalMulti <: AbstractMultidimensional
         p::Int
     end
 
     """Nodal approximation using multidimensional operators"""
-    struct NodalMulti <: AbstractApproximationType
+    struct NodalMulti <: AbstractMultidimensional
         p::Int
     end
 
     """Modal approximation using diagonal-E SBP operators"""
-    struct ModalMultiDiagE <: AbstractApproximationType
+    struct ModalMultiDiagE <: AbstractMultidimensional
         p::Int
     end
 
     """Nodal approximation using diagonal-E SBP operators"""
-    struct NodalMultiDiagE <: AbstractApproximationType
+    struct NodalMultiDiagE <: AbstractMultidimensional
         p::Int
     end
 
@@ -59,13 +62,13 @@ module SpatialDiscretizations
     struct ChanWilcoxMetrics <: AbstractMetrics end
 
     """Operators for local approximation on reference element"""
-    struct ReferenceApproximation{d, ElemShape, ApproxType, D_type, V_type,
+    struct ReferenceApproximation{RefElemType, ApproxType, D_type, V_type,
         Vf_type, R_type, V_plot_type, ReferenceMappingType}
         approx_type::ApproxType
         N_p::Int
         N_q::Int
         N_f::Int
-        reference_element::RefElemData{d, ElemShape}
+        reference_element::RefElemType
         D::D_type
         V::V_type
         Vf::Vf_type
@@ -76,15 +79,15 @@ module SpatialDiscretizations
         reference_mapping::ReferenceMappingType
 
         function ReferenceApproximation(approx_type::ApproxType,
-            reference_element::RefElemData{d,ElemShape}, D::D_type, V::V_type,
+            reference_element::RefElemType, D::D_type, V::V_type,
             Vf::Vf_type, R::R_type, V_plot::V_plot_type, 
             reference_mapping::ReferenceMappingType = NoMapping()
-            ) where {d, ElemShape, ApproxType, D_type, V_type, Vf_type, R_type,
+            ) where {RefElemType, ApproxType, D_type, V_type, Vf_type, R_type,
             V_plot_type, ReferenceMappingType}
 
-            return new{d, ElemShape, 
-            ApproxType, D_type, V_type, Vf_type, R_type, V_plot_type, ReferenceMappingType}(approx_type, size(V,2), 
-                size(V,1), size(R,1), reference_element, D, V, Vf, R, 
+            return new{RefElemType, ApproxType, D_type, V_type,
+            Vf_type, R_type, V_plot_type, ReferenceMappingType}(
+                approx_type, size(V,2), size(V,1), size(R,1), reference_element, D, V, Vf, R, 
                 Diagonal(reference_element.wq), Diagonal(reference_element.wf),
                 V_plot, reference_mapping)
         end
@@ -110,42 +113,72 @@ module SpatialDiscretizations
     end
     
     """Data for constructing the global spatial discretization"""
-    struct SpatialDiscretization{d}
-        mesh::MeshData{d}
+    struct SpatialDiscretization{d,MeshType,ReferenceApproximationType}
+        mesh::MeshType
         N_e::Int
-        reference_approximation::ReferenceApproximation{d}
+        reference_approximation::ReferenceApproximationType
         geometric_factors::GeometricFactors
         M::Vector{Matrix{Float64}}
         x_plot::NTuple{d, Matrix{Float64}}
     end
 
-    function SpatialDiscretization(mesh::MeshData{d},
-        reference_approximation::ReferenceApproximation{d},
-        metric_type::AbstractMetrics=ExactMetrics();
-        project_jacobian::Bool=false) where {d}
+    function project_jacobian!(J_q::Matrix{Float64}, V::LinearMap,
+        W::Diagonal, ::Val{true})
+        VDM = Matrix(V)
+        proj = VDM * inv(VDM'*W*VDM) * VDM' * W
+        @inbounds for k in axes(J_q,2)
+            J_qk = copy(J_q[:,k])
+            mul!(view(J_q,:,k),proj,J_qk)
+        end
+    end
+
+    function project_jacobian!(J_q::Matrix{Float64}, V::LinearMap,
+        W::Diagonal, ::Val{false})
+    end
+
+    function physical_mass_matrix(J_q::Matrix{Float64}, 
+        V::LinearMap, W::Diagonal)
+        N_e = size(J_q,2)
+        VDM = Matrix(V)
+        M = Vector{Matrix{Float64}}(undef, N_e)
+        @inbounds for k in 1:N_e
+            M[k] = VDM' * W * Diagonal(J_q[:,k]) * VDM
+        end
+        return M
+    end
+
+    function SpatialDiscretization(mesh::MeshType,
+        reference_approximation::ReferenceApproximationType,
+        metric_type::ExactMetrics=ExactMetrics(); 
+        project_jacobian::Bool=true) where {d,MeshType<:MeshData{d},ReferenceApproximationType<:ReferenceApproximation{<:RefElemData{d}}}
 
         (; reference_element, W, V) = reference_approximation
 
-        N_e = size(mesh.xyz[1])[2]
+        geometric_factors = GeometricFactors(mesh,
+             reference_element, metric_type)
+        (; J_q, Λ_q, J_f, nJf, nJq) = geometric_factors
+
+        project_jacobian!(J_q, V, W, Val(project_jacobian))
+
+        return SpatialDiscretization{d,MeshType,ReferenceApproximationType}(
+            mesh, size(J_q,2), reference_approximation,
+            GeometricFactors(J_q, Λ_q, J_f, nJf, nJq), 
+            physical_mass_matrix(J_q, V, W), 
+            Tuple(reference_element.Vp * mesh.xyz[m] for m in 1:d))
+    end
+
+    function SpatialDiscretization(mesh::MeshType,
+        reference_approximation::ReferenceApproximationType,
+        metric_type::ChanWilcoxMetrics) where {d,MeshType<:MeshData{d},ReferenceApproximationType<:ReferenceApproximation{<:RefElemData{d}}}
+
+        (; reference_element, W, V) = reference_approximation
         (; J_q, Λ_q, J_f, nJf, nJq) = GeometricFactors(mesh,
         reference_element, metric_type)
 
-        # this is used in the SISC paper
-        # Chan and Wilcox metrics interpolate on mapping nodes so 
-        # this isn't needed in that case.
-        if project_jacobian
-            J_proj = similar(J_q)
-            Minv = inv(Matrix(V'*W*V))
-            for k in 1:N_e 
-                J_proj[:,k] = V * Minv * V' * W * J_q[:,k]
-            end
-        else 
-            J_proj = J_q
-        end
-
-        return SpatialDiscretization{d}(mesh, N_e, reference_approximation, 
-            GeometricFactors(J_proj, Λ_q, J_f, nJf, nJq),
-            [Matrix(V' * Diagonal(W * J_proj[:,k]) * V) for k in 1:N_e],
+        return SpatialDiscretization{d,MeshType,ReferenceApproximationType}(
+            mesh, size(J_q,2), reference_approximation, 
+            GeometricFactors(J_q, Λ_q, J_f, nJf, nJq),
+            physical_mass_matrix(J_q, V, W),
             Tuple(reference_element.Vp * mesh.xyz[m] for m in 1:d))
     end
 
@@ -170,7 +203,9 @@ module SpatialDiscretizations
         return GeometricFactors(J_q, Λ_η, J_f, nJf, nJq)
     end
 
-    # get derivative operators in reference coordinates from collapsed
+    """
+    Get derivative operators in reference coordinates from collapsed coordinates
+    """
     function reference_derivative_operators(D_η::NTuple{d, LinearMap},
         reference_mapping::ReferenceMapping) where {d}
         (; Λ_ref, J_ref) = reference_mapping
@@ -208,7 +243,7 @@ module SpatialDiscretizations
     Check if the SBP property is satisfied on the reference element
     """
     function check_sbp_property(
-        reference_approximation::ReferenceApproximation{d}) where {d}       
+        reference_approximation::ReferenceApproximation{<:RefElemData{d}}) where {d}       
         (; W, D, R, B) = reference_approximation
         (; reference_mapping) = reference_approximation
         (; nrstJ) = reference_approximation.reference_element

@@ -1,24 +1,24 @@
 """
 Warped tensor-product operator (e.g. for Dubiner-type bases)
 """    
-struct WarpedTensorProductMap2D{A_type,B_type,σᵢ_type,σₒ_type,N2_type} <: LinearMaps.LinearMap{Float64}
+struct WarpedTensorProductMap2D{A_type,B_type,σᵢ_type,σₒ_type} <: LinearMaps.LinearMap{Float64}
     A::A_type
     B::B_type
     σᵢ::σᵢ_type 
     σₒ::σₒ_type
-    N2::N2_type
+    N2::Vector{Int}
+    size::NTuple{2,Int}
 
     function WarpedTensorProductMap2D(
         A::A_type,B::B_type, σᵢ::σᵢ_type,
         σₒ::σₒ_type) where {A_type,B_type,σᵢ_type,σₒ_type}
-        N1 = size(A,2)
-        return new{A_type,B_type,σᵢ_type,σₒ_type,SVector{N1,Int}}(A,B,σᵢ,σₒ,
-            SVector{N1,Int}([count(a -> a>0, σᵢ[β1,:]) for β1 in axes(σᵢ,1)]))
+        N2 = [count(a -> a>0, σᵢ[β1,:]) for β1 in axes(σᵢ,1)]
+        return new{A_type,B_type,σᵢ_type,σₒ_type}(A,B,σᵢ,σₒ,
+            N2, (size(A,1)*size(B,1), sum(N2)))
     end
 end
 
-@inline Base.size(L::WarpedTensorProductMap2D) = (count(a->a>0,L.σₒ), 
-    count(a->a>0,L.σᵢ))
+@inline Base.size(L::WarpedTensorProductMap2D) = L.size
 
 """
 Evaluate the matrix-vector product
@@ -29,10 +29,11 @@ Evaluate the matrix-vector product
 """
 @inline function LinearAlgebra.mul!(y::AbstractVector, 
     L::WarpedTensorProductMap2D, x::AbstractVector)
+
     LinearMaps.check_dim_mul(y, L, x)
     (; A, B, σᵢ, σₒ, N2) = L
     
-    Z = MMatrix{size(σᵢ,1), size(σₒ,2),Float64}(undef)
+    Z = MMatrix{size(σᵢ,1), size(σₒ,2),Float64}(undef) # stack allocate
 
     @inbounds for α2 in axes(σₒ,2), β1 in axes(σᵢ,1)
         temp = 0.0
@@ -59,14 +60,16 @@ Evaluate the matrix-vector product
                 = ∑_{α2} B[α2,β1,β2] (∑_{α1} A[α1,β1] x[σₒ[α1,α2]] )
                 = ∑_{α2} B[α2,β1,β2] Z[β1,α2])
 """
-@inline function LinearMaps._unsafe_mul!(y::AbstractVector, 
+@inline function LinearMaps._unsafe_mul!(
+    y::AbstractVector, 
     L::LinearMaps.TransposeMap{Float64, <:WarpedTensorProductMap2D},
     x::AbstractVector)
 
     LinearMaps.check_dim_mul(y, L, x)
     (; A, B, σᵢ, σₒ, N2) = L.lmap
 
-    Z = MMatrix{size(σᵢ,1), size(σₒ,2),Float64}(undef)
+    Z = MMatrix{size(σᵢ,1), size(σₒ,2),Float64}(undef) # stack allocate
+    
     @inbounds for β1 in axes(σᵢ,1), α2 in axes(σₒ,2)
         temp = 0.0
         @simd for α1 in axes(σₒ,1)

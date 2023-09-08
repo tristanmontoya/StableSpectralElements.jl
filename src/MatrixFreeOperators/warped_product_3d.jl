@@ -1,29 +1,53 @@
 """
 Warped tensor-product operator (e.g. for Dubiner-type bases)
 """    
-struct WarpedTensorProductMap3D{A_type,B_type,C_type,σᵢ_type,σₒ_type,N2_type,N3_type} <: LinearMaps.LinearMap{Float64}
+
+struct WarpedTensorProductMap3D{A_type,B_type,C_type,σᵢ_type,σₒ_type} <: LinearMaps.LinearMap{Float64}
     A::A_type
     B::B_type
     C::C_type
     σᵢ::σᵢ_type
     σₒ::σₒ_type
-    N2::N2_type
-    N3::N3_type
+    N2::Vector{Int}
+    N3::Matrix{Int}
+    size::NTuple{2,Int}
 
     function WarpedTensorProductMap3D(
         A::A_type,B::B_type,C::C_type,σᵢ::σᵢ_type,
         σₒ::σₒ_type) where {A_type,B_type,C_type,σᵢ_type,σₒ_type}
-        N1 = size(σᵢ,1)
-        N2max = size(σᵢ,2)
-        return new{A_type,B_type,C_type,σᵢ_type,σₒ_type,SVector{N1,Int},SMatrix{N1,N2max,Int}}(A, B, C, σᵢ, σₒ,
-            SVector{N1,Int}([count(a -> a>0, σᵢ[β1,1,:]) for β1 in axes(σᵢ,1)]),
-            SMatrix{N1,N2max,Int}([count(a -> a>0, σᵢ[β1,β2,:]) 
-                for β1 in axes(σᵢ,1),  β2 in axes(σᵢ,2)]))
+        return new{A_type,B_type,C_type,σᵢ_type,σₒ_type}(A, B, C, σᵢ, σₒ,
+            [count(a -> a>0, σᵢ[β1,1,:]) for β1 in axes(σᵢ,1)],
+            [count(a -> a>0, σᵢ[β1,β2,:]) for β1 in axes(σᵢ,1),
+             β2 in axes(σᵢ,2)], (size(A,1)*size(B,1)*size(C,1), 
+             count(a->a>0,σᵢ)))
     end
 end
 
-@inline Base.size(L::WarpedTensorProductMap3D) = (count(a->a>0,L.σₒ), 
-    count(a->a>0,L.σᵢ))
+#=
+struct WarpedTensorProductMap3D{N,M1,M2,M3} <: LinearMaps.LinearMap{Float64}
+    A::SArray{Tuple{M1,N},Float64}
+    B::SArray{Tuple{M1,N,N},Float64}
+    C::SArray{Tuple{M1,N,N,N},Float64}
+    σᵢ::SArray{Tuple{N,N,N},Int}
+    σₒ::SArray{Tuple{M1,M2,M3},Int}
+    N2::SVector{N,Int}
+    N3::SMatrix{N,N,Int}
+
+    function WarpedTensorProductMap3D(
+        A::SArray{Tuple{M1,N}},
+        B::SArray{Tuple{M1,N,N}},
+        C::SArray{Tuple{M1,N,N,N}},
+        σᵢ::SArray{Tuple{N,N,N}},
+        σₒ::SArray{Tuple{M1,M2,M3}}) where {N,M1,M2,M3}
+        return new{N,M1,M2,M3}(A, B, C, σᵢ, σₒ,
+        SVector{M1}(count(a -> a>0, σᵢ[β1,1,:]) for β1 in 1:N),
+        SMatrix{M1,M2}(count(a -> a>0, σᵢ[β1,β2,:]) 
+            for β1 in 1:N, β2 in 1:N))
+    end
+end
+=#
+
+@inline Base.size(L::WarpedTensorProductMap3D) = L.size
 
 """
 Evaluate the matrix-vector product
@@ -42,9 +66,10 @@ Evaluate the matrix-vector product
     LinearMaps.check_dim_mul(y, L, x)
     (; A, B, C, σᵢ, σₒ, N2, N3) = L
 
+    # these will be stack allocated
     Z = MArray{Tuple{size(σᵢ,1), size(σᵢ,2), size(σₒ,3)},Float64}(undef)
     W = MArray{Tuple{size(σᵢ,1), size(σₒ,2), size(σₒ,3)},Float64}(undef)
-    
+
     @inbounds for β1 in axes(σᵢ,1)
         for β2 in 1:N2[β1], α3 in axes(σₒ,3)
             temp = 0.0
@@ -93,6 +118,7 @@ Evaluate the matrix-vector product
     LinearMaps.check_dim_mul(y, L, x)
     (; A, B, C, σᵢ, σₒ, N2, N3) = L.lmap
 
+    # these will be stack allocated
     Z = MArray{Tuple{size(σᵢ,1), size(σᵢ,2), size(σₒ,3)},Float64}(undef)
     W = MArray{Tuple{size(σᵢ,1), size(σₒ,2), size(σₒ,3)},Float64}(undef)
     

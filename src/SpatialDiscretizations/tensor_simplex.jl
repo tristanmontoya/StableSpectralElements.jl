@@ -1,12 +1,10 @@
 """Duffy transform from the square to triangle"""
-@inline function χ(::Tri, 
-     η::Union{NTuple{2,Float64},NTuple{2,Vector{Float64}}})
+@inline function χ(::Tri, η::Union{NTuple{2,Float64},NTuple{2,Vector{Float64}}})
     return (0.5.*(1.0 .+ η[1]).*(1.0 .- η[2]) .- 1.0, η[2])
 end
 
 """Duffy transform from the cube to tetrahedron"""
-@inline function χ(::Tet, 
-    η::Union{NTuple{3,Float64},NTuple{3,Vector{Float64}}})
+@inline function χ(::Tet, η::Union{NTuple{3,Float64},NTuple{3,Vector{Float64}}})
     ξ_pri = (0.5.*(1.0 .+ η[1]).*(1.0 .- η[3]) .- 1.0, η[2], η[3])
     ξ_pyr = (ξ_pri[1], 0.5.*(1.0 .+ η[2]).*(1.0 .- η[3]) .- 1.0, ξ_pri[3])
     return (0.5.*(1.0 .+ ξ_pri[1]).*(1.0 .- η[2]) .- 1.0, ξ_pyr[2] , ξ_pyr[3])
@@ -45,7 +43,7 @@ function reference_geometric_factors(::Tri,
     return J_ref, Λ_ref
 end
 
-function reference_geometric_factors(::Tet, 
+function reference_geometric_factors(::Tet,
     quadrature_rule::NTuple{3,AbstractQuadratureRule})
 
     η = quadrature(Hex(),quadrature_rule)
@@ -97,7 +95,7 @@ function reference_geometric_factors(::Tet,
     return J_ref, Λ_ref
 end
 
-function warped_product(::Tri, p, η1D::NTuple{2,Vector{Float64}})
+function warped_product(::Tri, p::Int, η1D::NTuple{2,Vector{Float64}})
 
     (M1, M2) = (length(η1D[1]), length(η1D[2]))
     σₒ = [M2*(i-1) + j for i in 1:M1, j in 1:M2]
@@ -106,7 +104,7 @@ function warped_product(::Tri, p, η1D::NTuple{2,Vector{Float64}})
     B = zeros(M2, p+1, p+1)
 
     k = 1
-    for i = 0:p
+    @inbounds for i = 0:p
         for j = 0:p-i
             σᵢ[i+1,j+1] = k
             k = k + 1
@@ -117,13 +115,14 @@ function warped_product(::Tri, p, η1D::NTuple{2,Vector{Float64}})
         end
     end
 
-    return WarpedTensorProductMap2D(SArray{Tuple{M1,p+1}}(A),
+    return WarpedTensorProductMap2D(
+        SArray{Tuple{M1,p+1}}(A),
         SArray{Tuple{M1,p+1,p+1}}(B),
         SArray{Tuple{M1,M2}}(σᵢ),
         SArray{Tuple{p+1,p+1}}(σₒ))
 end
 
-function warped_product(::Tet, p, η1D::NTuple{3,Vector{Float64}})
+function warped_product(::Tet, p::Int, η1D::NTuple{3,Vector{Float64}})
 
     (M1, M2, M3) = (length(η1D[1]), length(η1D[2]), length(η1D[3]))
     σₒ = [M2*M3*(i-1) + M3*(j-1) + k for i in 1:M1, j in 1:M2, k in 1:M3]
@@ -133,7 +132,7 @@ function warped_product(::Tet, p, η1D::NTuple{3,Vector{Float64}})
     C = zeros(M3, p+1, p+1, p+1)
 
     l = 1
-    for i = 0:p
+    @inbounds for i = 0:p
         for j = 0:p-i
             for k = 0:p-i-j
                 σᵢ[i+1,j+1,k+1] = l
@@ -149,7 +148,8 @@ function warped_product(::Tet, p, η1D::NTuple{3,Vector{Float64}})
         end
     end
 
-    return WarpedTensorProductMap3D(SArray{Tuple{M1,p+1}}(A),
+    return WarpedTensorProductMap3D(
+        SArray{Tuple{M1,p+1}}(A),
         SArray{Tuple{M1,p+1,p+1}}(B),
         SArray{Tuple{M1,p+1,p+1,p+1}}(C),
         SArray{Tuple{M1,M2,M3}}(σᵢ),
@@ -158,21 +158,17 @@ end
 
 function operators_1d( 
     quadrature_rule::NTuple{d,AbstractQuadratureRule}) where {d}
-
     η_1D, q, V_1D, D_1D, I_1D, R_L, R_R = fill((),7)
-
     for m in 1:d
         η, _ = quadrature(Line(),quadrature_rule[m])
         η_1D = (η_1D..., η)
         q = (q..., length(η_1D[m]) - 1)
         V_1D = (V_1D..., vandermonde(Line(),q[m],η_1D[m]))
-        D_1D = (D_1D..., OctavianMap(SMatrix{q[m]+1,q[m]+1}(
-            grad_vandermonde(Line(),q[m], η_1D[m]) / V_1D[m])))
+        D_1D = (D_1D..., OctavianMap(
+            grad_vandermonde(Line(),q[m], η_1D[m]) / V_1D[m]))
         I_1D = (I_1D..., LinearMap(I,q[m]+1))
-        R_L = (R_L...,  OctavianMap(SMatrix{1,q[m]+1}(
-            vandermonde(Line(),q[m],[-1.0]) / V_1D[m])))
-        R_R = (R_R...,OctavianMap(SMatrix{1,q[m]+1}(
-            vandermonde(Line(),q[m],[1.0]) / V_1D[m])))
+        R_L = (R_L...,  OctavianMap(vandermonde(Line(),q[m],[-1.0]) / V_1D[m]))
+        R_R = (R_R...,OctavianMap(vandermonde(Line(),q[m],[1.0]) / V_1D[m]))
     end
     
     return η_1D, q, V_1D, D_1D, I_1D, R_L, R_R
@@ -194,23 +190,20 @@ function ReferenceApproximation(
 
     # one-dimensional facet quadrature rule
     η_f, _ = quadrature(Line(), facet_quadrature_rule)
-    q_f = length(η_f) - 1
 
     # interpolation/extrapolation operators
     if volume_quadrature_rule[1] == facet_quadrature_rule
         η1_to_ηf = LinearMap(I, q[1]+1)
     else
-        η1_to_ηf = OctavianMap(SMatrix{q_f+1,q[1]+1}(
-            vandermonde(Line(),q[1],η_f) / V_1D[1]))
+        η1_to_ηf = OctavianMap(vandermonde(Line(),q[1],η_f) / V_1D[1])
     end
     if volume_quadrature_rule[2] == facet_quadrature_rule
         η2_to_ηf = LinearMap(I, q[2]+1)
     else
-        η2_to_ηf = OctavianMap(SMatrix{q_f+1,q[2]+1}(
-            vandermonde(Line(),q[2],η_f) / V_1D[2]))
+        η2_to_ηf = OctavianMap(vandermonde(Line(),q[2],η_f) / V_1D[2])
     end
     R = [η1_to_ηf ⊗ R_L[2]; R_R[1] ⊗ η2_to_ηf; R_L[1] ⊗ η2_to_ηf]
-        
+    
     # reference element data (mainly used for mapping, normals, etc.)
     reference_element = RefElemData(Tri(), approx_type, mapping_degree,
         volume_quadrature_rule=volume_quadrature_rule,
@@ -225,7 +218,6 @@ function ReferenceApproximation(
         V = LinearMap(I, (q[1]+1)*(q[2]+1))
         V_plot = (vandermonde(Line(),q[1],equi_nodes(Line(),N_plot))/V_1D[1]) ⊗
             (vandermonde(Line(),q[2],equi_nodes(Line(),N_plot))/V_1D[2])
-        approx_type = NodalTensor(min(q[1],q[2]))
     end
     
     return ReferenceApproximation(approx_type, reference_element, 
@@ -251,32 +243,27 @@ function ReferenceApproximation(
     # two-dimensional facet quadrature nodes and weights
     η_f1, _ = quadrature(Line(), facet_quadrature_rule[1])
     η_f2, _ = quadrature(Line(), facet_quadrature_rule[2])
-    q_f = (length(η_f1) - 1, length(η_f1) - 1)
-    
+
     # interpolation/extrapolation operators
     if volume_quadrature_rule[1] == facet_quadrature_rule[1]
         η1_to_ηf1 = LinearMap(I,q[1]+1)
     else
-        η1_to_ηf1 = OctavianMap(SMatrix{q_f[1]+1,q[1]+1}(
-            vandermonde(Line(),q[1],η_f1) / V_1D[1]))
+        η1_to_ηf1 = OctavianMap(vandermonde(Line(),q[1],η_f1) / V_1D[1])
     end
     if volume_quadrature_rule[2] == facet_quadrature_rule[1]
         η2_to_ηf1 = LinearMap(I,q[2]+1)
     else
-        η2_to_ηf1 =  OctavianMap(SMatrix{q_f[1]+1,q[2]+1}(
-            vandermonde(Line(),q[2],η_f1) / V_1D[2]))
+        η2_to_ηf1 = OctavianMap(vandermonde(Line(),q[2],η_f1) / V_1D[2])
     end
     if volume_quadrature_rule[2] == facet_quadrature_rule[2]
         η2_to_ηf2 = LinearMap(I,q[2]+1)
     else
-        η2_to_ηf2 = OctavianMap(SMatrix{q_f[2]+1,q[2]+1}(
-            vandermonde(Line(),q[2],η_f2) / V_1D[2]))
+        η2_to_ηf2 = OctavianMap(vandermonde(Line(),q[2],η_f2) / V_1D[2])
     end
     if volume_quadrature_rule[3] == facet_quadrature_rule[2]
         η3_to_ηf2 = LinearMap(I,q[3]+1)
     else
-        η3_to_ηf2 = OctavianMap(SMatrix{q_f[2]+1,q[3]+1}(
-            vandermonde(Line(),q[3],η_f2) / V_1D[3]))
+        η3_to_ηf2 = OctavianMap(vandermonde(Line(),q[3],η_f2) / V_1D[3])
     end
     R = [η1_to_ηf1 ⊗ R_L[2] ⊗ η3_to_ηf2; R_R[1] ⊗ η2_to_ηf1 ⊗ η3_to_ηf2;
         R_L[1] ⊗ η2_to_ηf1 ⊗ η3_to_ηf2;  η1_to_ηf1 ⊗ η2_to_ηf2 ⊗ R_L[3]]
@@ -289,14 +276,16 @@ function ReferenceApproximation(
     # construct nodal or modal scheme
     if approx_type isa ModalTensor
         V = warped_product(Tet(),approx_type.p, η_1D)
-        V_plot = LinearMap(vandermonde(Tet(), approx_type.p, 
+        V_plot = OctavianMap(vandermonde(Tet(), approx_type.p, 
             reference_element.rstp...))
     else
         V = LinearMap(I, (q[1]+1)*(q[2]+1)*(q[3]+1))
-        V_plot = (vandermonde(Line(),q[1],equi_nodes(Line(),N_plot))/V_1D[1]) ⊗
-            (vandermonde(Line(),q[2],equi_nodes(Line(),N_plot))/V_1D[2]) ⊗
-            (vandermonde(Line(),q[3],equi_nodes(Line(),N_plot))/V_1D[3])
-        approx_type = NodalTensor(min(q[1],q[2],q[3]))
+        V_plot = OctavianMap(
+                vandermonde(Line(),q[1],equi_nodes(Line(),N_plot))/V_1D[1]) ⊗
+            OctavianMap(
+                vandermonde(Line(),q[2],equi_nodes(Line(),N_plot))/V_1D[2]) ⊗
+            OctavianMap(
+                vandermonde(Line(),q[3],equi_nodes(Line(),N_plot))/V_1D[3])
     end
     
     return ReferenceApproximation(approx_type,

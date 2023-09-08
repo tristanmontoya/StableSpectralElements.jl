@@ -72,13 +72,13 @@ function ReferenceApproximation(
 
     (; rstq, rstp) = reference_element
 
-    V = LinearMap(vandermonde(element_type, approx_type.p, rstq...))
-    V_plot = LinearMap(vandermonde(element_type, approx_type.p, rstp...)) 
-    R = LinearMap(sbp_element.Vf)
+    V = OctavianMap(vandermonde(element_type, approx_type.p, rstq...))
+    V_plot = OctavianMap(vandermonde(element_type, approx_type.p, rstp...)) 
+    R = LinearMap(sbp_element.Vf) # SparseMatrixCSC
 
-    return ReferenceApproximation(approx_type, 
-        reference_element, Tuple(LinearMap(sbp_element.Drst[m]) for m in 1:d), 
-        V, R*V, R, V_plot)
+    return ReferenceApproximation(approx_type, reference_element, 
+        Tuple(OctavianMap(sbp_element.Drst[m]) for m in 1:d), V, 
+        OctavianMap(Matrix(R*V)), R, V_plot)
 end
 
 function ReferenceApproximation(
@@ -102,11 +102,10 @@ function ReferenceApproximation(
 
     VDM = vandermonde(element_type, approx_type.p, rstq...) 
     V = LinearMap(I, length(wq))
-    V_plot = LinearMap(vandermonde(element_type, approx_type.p, rstp...)) 
-    P = inv(VDM' * Diagonal(wq) * VDM) * VDM' * Diagonal(wq)
-    R = LinearMap(sbp_element.Vf)
+    V_plot = OctavianMap(vandermonde(element_type, approx_type.p, rstp...) *
+        inv(VDM' * Diagonal(wq) * VDM) * VDM' * Diagonal(wq))
+    R = LinearMap(sbp_element.Vf) # SparseMatrixCSC
 
-    return ReferenceApproximation(approx_type, 
-        reference_element, Tuple(LinearMap(sbp_element.Drst[m]) for m in 1:d), 
-        V, R, R, V_plot * P)
+    return ReferenceApproximation(approx_type, reference_element,
+        Tuple(OctavianMap(sbp_element.Drst[m]) for m in 1:d), V, R, R, V_plot)
 end

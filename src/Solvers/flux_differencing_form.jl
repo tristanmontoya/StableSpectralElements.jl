@@ -82,6 +82,7 @@ end
     u_f::AbstractMatrix{Float64},
     nodes_per_face::Int,
     ::Val{false}) where {d}
+    return
 end
 
 @inline @views function facet_correction!(
@@ -177,6 +178,7 @@ end
     ::Val{false})
     mul!(u_q, V, u)
     mul!(u_f, R, u_q)
+    return
 end
 
 # specialized for nodal schemes (not necessarily diagonal-E)
@@ -246,10 +248,8 @@ end
 end
 
 @inline @views function nodal_values!(u::AbstractArray{Float64,3},
-    solver::Solver{d,ResidualForm,FirstOrder,ConservationLawType,OperatorType,
-    MassSolverType,Parallelism,N_p,N_q,N_f,N_c,N_e}, k::Int) where {d,
-    ResidualForm<:FluxDifferencingForm, ConservationLawType,
-    OperatorType,MassSolverType,Parallelism,N_p,N_q,N_f,N_c,N_e}
+    solver::Solver{<:AbstractConservationLaw,<:FluxDifferencingOperators,
+    <:AbstractMassMatrixSolver,<:FluxDifferencingForm}, k::Int)
 
     (; conservation_law, form, preallocated_arrays, mass_solver) = solver
     (; f_f, u_q, r_q, u_f, temp) = preallocated_arrays
@@ -262,10 +262,8 @@ end
 end
 
 @inline @views function time_derivative!(dudt::AbstractArray{Float64,3},
-    solver::Solver{d,ResidualForm,FirstOrder,ConservationLawType,OperatorType,
-    MassSolverType,Parallelism,N_p,N_q,N_f,N_c,N_e}, k::Int) where {d, 
-    ResidualForm<:FluxDifferencingForm, ConservationLawType,
-    OperatorType, MassSolverType,Parallelism,N_p,N_q,N_f,N_c,N_e}
+    solver::Solver{<:AbstractConservationLaw,<:FluxDifferencingOperators,
+    <:AbstractMassMatrixSolver,<:FluxDifferencingForm}, k::Int)
 
      (; conservation_law, connectivity, form, mass_solver) = solver
      (; inviscid_numerical_flux, two_point_flux, facet_correction) = form

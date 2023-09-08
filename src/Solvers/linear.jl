@@ -1,15 +1,18 @@
 """ Semi-discrete residual operator as a LinearMap"""
-struct LinearResidual <: LinearMap{Float64}
-    solver::Solver
+struct LinearResidual{SolverType} <: LinearMap{Float64}
+    solver::SolverType
 end
 
-Base.size(L::LinearResidual) = (L.solver.N_p*L.solver.N_c*L.solver.N_e, 
-    L.solver.N_p*L.solver.N_c*L.solver.N_e)
+function Base.size(L::LinearResidual) 
+    (N_p, N_c, N_e) = size(L.solver)
+    return (N_p*N_c*N_e, N_p*N_c*N_e)
+end
 
 function LinearAlgebra.mul!(y::AbstractVector, L::LinearResidual,
     x::AbstractVector)
-    u = reshape(x,(L.solver.N_p,L.solver.N_c,L.solver.N_e))
-    dudt = Array{Float64}(undef,L.solver.N_p,L.solver.N_c,L.solver.N_e)
+    (N_p, N_c, N_e) = size(L.solver)
+    u = reshape(x,(N_p,N_c,N_e))
+    dudt = similar(u)
     semi_discrete_residual!(dudt,u,L.solver,0.0)
     y[:] = vec(dudt)
     return y

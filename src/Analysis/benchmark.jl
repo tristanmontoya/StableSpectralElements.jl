@@ -2,10 +2,8 @@
 """This removes the threading and considers just one element. Note that this probably will not work with the Euler equations as the facet states at adjacent elements are left undefined and thus may lead to non-physical states when used to compute the fluxes"""
 @views @timeit "semi-disc. residual" function rhs_benchmark!(
     dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
-    solver::Solver{d,ResidualForm,FirstOrder, ConservationLaw,Operators,
-    MassSolver,Parallelism,N_p,N_q,N_f,N_c,N_e}, t::Float64=0.0) where {d,
-    ResidualForm<:StandardForm,ConservationLaw, Operators<:ReferenceOperators,
-    MassSolver,Parallelism,N_p,N_q,N_f,N_c,N_e}
+    solver::Solver{<:AbstractConservationLaw{d,FirstOrder},<:ReferenceOperators,
+    <:AbstractMassMatrixSolver,<:StandardForm}, t::Float64=0.0) where {d}
 
     @timeit "unpack" begin
         (; conservation_law, connectivity, form) = solver
@@ -63,10 +61,8 @@ end
 
 @views @timeit "semi-disc. residual" function rhs_benchmark!(
     dudt::AbstractArray{Float64,3}, u::AbstractArray{Float64,3}, 
-    solver::Solver{d,ResidualForm,FirstOrder, ConservationLaw,Operators,
-    MassSolver,Parallelism,N_p,N_q,N_f,N_c,N_e}, t::Float64=0.0) where {d,
-    ResidualForm<:StandardForm,ConservationLaw, Operators<:PhysicalOperators,
-    MassSolver,Parallelism,N_p,N_q,N_f,N_c,N_e}
+    solver::Solver{<:AbstractConservationLaw{d,FirstOrder},<:PhysicalOperators,
+    <:AbstractMassMatrixSolver,<:StandardForm}, t::Float64=0.0) where {d}
 
     @timeit "unpack" begin
         (; conservation_law, operators, connectivity, form) = solver

@@ -60,7 +60,8 @@ function postprocess_vtk_high_order(
 end
 
 @recipe function plot(
-    obj::Union{SpatialDiscretization{2},ReferenceApproximation{2,<:AbstractElemShape,<:AbstractApproximationType}};
+    obj::Union{SpatialDiscretization{2},
+    ReferenceApproximation{<:RefElemData{2}}};
     volume_quadrature=true,
     facet_quadrature=true,
     mapping_nodes=false,

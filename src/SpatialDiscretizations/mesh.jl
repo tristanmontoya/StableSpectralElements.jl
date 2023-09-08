@@ -348,7 +348,8 @@ function GeometricFactors(mesh::MeshData{2},
 end
 
 function uniform_periodic_mesh(
-    reference_approximation::ReferenceApproximation{3, Tet, <:Union{NodalTensor,ModalTensor}},
+    reference_approximation::ReferenceApproximation{<:RefElemData{3, Tet},
+    <:Union{NodalTensor,ModalTensor}},
     limits::NTuple{3,NTuple{2,Float64}}, 
     M::NTuple{3,Int};
     random_rotate::Bool=false, 
@@ -362,7 +363,7 @@ function uniform_periodic_mesh(
 end
 
 function uniform_periodic_mesh(
-    reference_approximation::ReferenceApproximation{d, <:AbstractElemShape, <:AbstractApproximationType}, 
+    reference_approximation::ReferenceApproximation{<:RefElemData{d}}, 
     limits::NTuple{d,NTuple{2,Float64}}, 
     M::NTuple{d,Int};
     random_rotate::Bool=false, 
@@ -375,17 +376,17 @@ function uniform_periodic_mesh(
 end
 
 @inline uniform_periodic_mesh(
-    reference_approximation::ReferenceApproximation{1, <:AbstractElemShape, <:AbstractApproximationType}, 
-    limits::NTuple{2,Float64}, 
-    M::Int) = uniform_periodic_mesh(reference_approximation.reference_element,
-        limits, M)
+    reference_approximation::ReferenceApproximation{<:RefElemData{1}}, 
+    limits::NTuple{2,Float64}, M::Int) = uniform_periodic_mesh(
+        reference_approximation.reference_element, limits, M)
 
-function warp_mesh(mesh::MeshData{d}, reference_approximation::ReferenceApproximation{d,<:AbstractElemShape, <:AbstractApproximationType},
+function warp_mesh(mesh::MeshData{d},
+    reference_approximation::ReferenceApproximation{<:RefElemData{d}},
     factor::Float64=0.2, L::Float64=1.0) where {d}
     return warp_mesh(mesh,reference_approximation.reference_element,
         DelReyWarping(factor, Tuple(L for m in 1:d)))
 end
 
-function warp_mesh(mesh::MeshData{d}, reference_approximation::ReferenceApproximation{d,<:AbstractElemShape, <:AbstractApproximationType}, mesh_warping::AbstractMeshWarping{d}) where {d}
+function warp_mesh(mesh::MeshData{d}, reference_approximation::ReferenceApproximation{<:RefElemData{d}}, mesh_warping::AbstractMeshWarping{d}) where {d}
     return warp_mesh(mesh, reference_approximation.reference_element, mesh_warping)
 end

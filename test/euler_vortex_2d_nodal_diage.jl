@@ -1,4 +1,4 @@
-function euler_vortex_2d_diage()
+function euler_vortex_2d_diage(M::Int=4)
 
     mach_number = 0.4
     angle = 0.0
@@ -12,7 +12,6 @@ function euler_vortex_2d_diage()
         Ma=mach_number, β=strength, R=1.0/10.0, x_0=(L/2,L/2))
     
     p = 3
-    M = 4
 
     form = FluxDifferencingForm(
         inviscid_numerical_flux=EntropyConservativeNumericalFlux())
@@ -31,7 +30,7 @@ function euler_vortex_2d_diage()
 
     results_path = save_project(conservation_law,
         spatial_discretization, exact_solution, form, (0.0, T),
-        "results/euler_vortex_2d/", overwrite=true, clear=true);
+        "results/euler_vortex_2d/", overwrite=true, clear=true)
 
     mass_solver = DiagonalSolver(spatial_discretization)
 
@@ -41,8 +40,8 @@ function euler_vortex_2d_diage()
 
     dt = T/1000
     sol = solve(ode, CarpenterKennedy2N54(williamson_condition=false),
-                dt=dt, adaptive=false, save_everystep=false,
-                callback=save_callback(results_path, (0.0,T),  
+            dt=dt, adaptive=false, save_everystep=false,
+            callback=save_callback(results_path, (0.0,T), 
             floor(Int, T/(dt*50))))
 
     error_analysis = ErrorAnalysis(results_path, conservation_law, 

@@ -1,4 +1,4 @@
-function euler_vortex_2d_modal()
+function euler_vortex_2d_modal(M::Int=4)
 
     mach_number = 0.4
     angle = 0.0
@@ -12,7 +12,6 @@ function euler_vortex_2d_modal()
         Ma=mach_number, β=strength, R=1.0/10.0, x_0=(L/2,L/2))
     
     p = 3
-    M = 4
 
     form = FluxDifferencingForm(
         inviscid_numerical_flux=EntropyConservativeNumericalFlux(),
@@ -34,17 +33,15 @@ function euler_vortex_2d_modal()
         spatial_discretization, exact_solution, form, (0.0, T),
         "results/euler_vortex_2d_modal/", overwrite=true, clear=true);
 
-    mass_solver = WeightAdjustedSolver(spatial_discretization)
-
-    ode = semidiscretize(conservation_law, spatial_discretization, 
-        exact_solution, form, (0.0, T), ReferenceOperator(),
-        mass_matrix_solver=mass_solver);
-
     dt = T/1000
+
+    ode = semidiscretize(conservation_law,
+        spatial_discretization, exact_solution, form, (0.0, T), ReferenceOperator(), BLASAlgorithm())
+
     sol = solve(ode, CarpenterKennedy2N54(williamson_condition=false),
         dt=dt, adaptive=false, save_everystep=false, 
         callback=save_callback(results_path, (0.0,T), floor(Int, T/(dt*50))))
-
+    
     error_analysis = ErrorAnalysis(results_path, conservation_law, 
         spatial_discretization)
     error_results = analyze(error_analysis, last(sol.u), exact_solution, T)
@@ -54,7 +51,7 @@ function euler_vortex_2d_modal()
     conservation_results = analyze(conservation_analysis, 
         load_time_steps(results_path))
     entropy_analysis = EntropyConservationAnalysis(results_path, 
-        conservation_law, spatial_discretization, mass_solver)
+        conservation_law, spatial_discretization, ode.p.mass_solver)
     entropy_results = analyze(entropy_analysis, load_time_steps(results_path))
 
     return error_results, conservation_results.E[end,:] - conservation_results.E[1,:], maximum(abs.(entropy_results.dEdt[:,1]))

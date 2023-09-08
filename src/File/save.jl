@@ -22,13 +22,14 @@ function new_path(results_path::String,
 end
 
 function save_project(
-    conservation_law::AbstractConservationLaw,spatial_discretization::SpatialDiscretization,
-    initial_data::AbstractGridFunction, 
-    form::AbstractResidualForm,
+    @nospecialize(conservation_law::AbstractConservationLaw),
+    @nospecialize(spatial_discretization::SpatialDiscretization),
+    @nospecialize(initial_data::AbstractGridFunction), 
+    @nospecialize(form::AbstractResidualForm),
     tspan::NTuple{2,Float64}, 
     results_path::String; 
-    overwrite::Bool=false,
-    clear::Bool=false)
+    overwrite=false,
+    clear=false)
 
     results_path = new_path(results_path, overwrite, clear)
 
@@ -49,8 +50,8 @@ function save_solution(integrator::ODEIntegrator,
 
     time_step = integrator.iter + restart_step
     file_name = string(results_path, "sol_", time_step, ".jld2")
-    if !isfile(file_name)
 
+    if !isfile(file_name)
         open(string(results_path,"screen.txt"), "a") do io
             println(io, "writing time step ", time_step, "  t = ", integrator.t)
         end
@@ -61,7 +62,7 @@ function save_solution(integrator::ODEIntegrator,
                 "du" => semi_discrete_residual!(similar(integrator.u), 
                     integrator.u, integrator.p, integrator.t)))
 
-        time_steps=load_object(string(results_path, "time_steps.jld2"))
+        time_steps = load_object(string(results_path, "time_steps.jld2"))
         save_object(string(results_path, "time_steps.jld2"),
             push!(time_steps, time_step))
     end

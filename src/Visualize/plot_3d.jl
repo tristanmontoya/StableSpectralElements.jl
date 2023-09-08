@@ -83,7 +83,8 @@ function postprocess_vtk(
 end
 
 @recipe function plot(
-    obj::Union{SpatialDiscretization{3},ReferenceApproximation{3,<:AbstractElemShape,<:AbstractApproximationType}};
+    obj::Union{SpatialDiscretization{3},
+    ReferenceApproximation{<:RefElemData{3}}};
     volume_quadrature=true,
     facet_quadrature=true,
     mapping_nodes=false,
@@ -389,7 +390,9 @@ end
 
 end
 
-function plot_ref_elem(reference_approximation::ReferenceApproximation{3, Tet, <:Union{NodalTensor,ModalTensor}}, title::String)
+function plot_ref_elem(
+    reference_approximation::ReferenceApproximation{<:RefElemData{3,Tet},
+    <:Union{NodalTensor,ModalTensor}}, title::String)
     (; p) = reference_approximation.approx_type
     vol_nodes = plot(reference_approximation, volume_connect=true,
         facet_connect=true, facet_quadrature=false,

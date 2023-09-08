@@ -1,72 +1,75 @@
-struct CholeskySolver <: AbstractMassMatrixSolver 
-    M::Vector{Cholesky}
-    WJ::Vector{Diagonal}
-    V::LinearMap
+struct CholeskySolver{V_type<:LinearMap} <: AbstractMassMatrixSolver 
+    M::Vector{Cholesky{Float64, Matrix{Float64}}}
+    WJ::Vector{Diagonal{Float64, Vector{Float64}}}
+    V::V_type
 end
 
 struct DiagonalSolver <: AbstractMassMatrixSolver 
-    WJ⁻¹::Vector{Diagonal}
+    WJ⁻¹::Vector{Diagonal{Float64, Vector{Float64}}}
 end
 
-struct WeightAdjustedSolver <: AbstractMassMatrixSolver
-    M⁻¹::Union{UniformScaling,AbstractMatrix}
-    J⁻¹W::Vector{Diagonal}
-    V::LinearMap
-    Vᵀ::LinearMap
+struct WeightAdjustedSolver{Minv_type, V_type<:LinearMap, 
+    Vt_type<:LinearMap} <: AbstractMassMatrixSolver
+    M⁻¹::Minv_type
+    J⁻¹W::Vector{Diagonal{Float64, Vector{Float64}}}
+    V::V_type
+    Vᵀ::Vt_type
 end
 
-function CholeskySolver(spatial_discretization::SpatialDiscretization)
+function default_mass_matrix_solver(
+    spatial_discretization::SpatialDiscretization, alg::AbstractOperatorAlgorithm=DefaultOperatorAlgorithm())
     (; V, W) = spatial_discretization.reference_approximation
     (; J_q) = spatial_discretization.geometric_factors
-    (; N_e) = spatial_discretization
+    return WeightAdjustedSolver(J_q, V, W, alg,
+        Val(true), Float64(0.0))
+end
 
-    if V isa UniformScalingMap
-        return DiagonalSolver(spatial_discretization)
-    end
+function CholeskySolver(J_q::Matrix{Float64}, V::UniformScalingMap,
+    W::Diagonal) 
+    return DiagonalSolver(J_q, V, W)
+end
 
-    WJ = Vector{Diagonal}(undef, N_e)
-    M = Vector{Cholesky}(undef, N_e)
-    Threads.@threads for k in 1:N_e
+function CholeskySolver(J_q::Matrix{Float64}, V::LinearMap, W::Diagonal)
+    N_e = size(J_q, 2)
+    WJ = Vector{Diagonal{Float64, Vector{Float64}}}(undef, N_e)
+    M = Vector{Cholesky{Float64, Matrix{Float64}}}(undef, N_e)
+    @inbounds for k in 1:N_e
         WJ[k] = Diagonal(W .* J_q[:,k])
         M[k] = cholesky(Symmetric(Matrix(V' * WJ[k] * V)))
     end
     return CholeskySolver(M, WJ, V)
 end
 
-function DiagonalSolver(spatial_discretization::SpatialDiscretization)
-    (; V, W) = spatial_discretization.reference_approximation
-    (; J_q) = spatial_discretization.geometric_factors
-    (; N_e) = spatial_discretization
-
-    if !(V isa UniformScalingMap)
-        return CholeskySolver(spatial_discretization)
-    end
-
-    WJ⁻¹ = Vector{Diagonal}(undef, N_e)
-    Threads.@threads for k in 1:N_e
-        WJ⁻¹[k] = inv(Diagonal(W .* J_q[:,k]))
-    end
-    return DiagonalSolver(WJ⁻¹)
+function WeightAdjustedSolver(J_q::Matrix{Float64}, V::UniformScalingMap, 
+    W::Diagonal, ::AbstractOperatorAlgorithm, ::Val{true}, ::Float64)
+    return DiagonalSolver(J_q, V, W)
 end
 
-function WeightAdjustedSolver(spatial_discretization::SpatialDiscretization, 
-    operator_algorithm=DefaultOperatorAlgorithm(); assume_orthonormal=false,
-    tol=1.0e-13)
-    
-    (; V, W) = spatial_discretization.reference_approximation
-    (; J_q) = spatial_discretization.geometric_factors
-    (; N_e) = spatial_discretization
+function WeightAdjustedSolver(J_q::Matrix{Float64}, V::UniformScalingMap, 
+    W::Diagonal, ::AbstractOperatorAlgorithm, ::Val{false}, ::Float64)
+    return DiagonalSolver(J_q, V, W)
+end
 
-    if V isa UniformScalingMap
-        return DiagonalSolver(spatial_discretization)
+function WeightAdjustedSolver(J_q::Matrix{Float64}, V::LinearMap, W::Diagonal,
+    operator_algorithm::AbstractOperatorAlgorithm, ::Val{true}, ::Float64)
+    N_e = size(J_q, 2)
+    J⁻¹W = Vector{Diagonal{Float64, Vector{Float64}}}(undef, N_e)
+    @inbounds for k in 1:N_e
+        J⁻¹W[k] = Diagonal(W ./ J_q[:,k])
     end
 
-    M = Matrix(V'*W*V)
-    M_diag = diag(M)
+    return WeightAdjustedSolver(I, J⁻¹W, make_operator(V, operator_algorithm),
+        make_operator(V', operator_algorithm))
+end
 
-    if assume_orthonormal 
-        M⁻¹ = I
-    elseif maximum(abs.(M - diagm(M_diag))) < tol
+function WeightAdjustedSolver(J_q::Matrix{Float64}, V::LinearMap, W::Diagonal,
+    operator_algorithm::AbstractOperatorAlgorithm, ::Val{false}, tol::Float64)
+
+    N_e = size(J_q, 2)
+    VDM = Matrix(V)
+    M = VDM' * W * VDM
+    M_diag = diag(M)
+    if maximum(abs.(M - diagm(M_diag))) < tol
         if maximum(abs.(M_diag .- 1.0)) < tol
             M⁻¹ = I
         else
@@ -76,13 +79,48 @@ function WeightAdjustedSolver(spatial_discretization::SpatialDiscretization,
         M⁻¹ = inv(M)
     end
 
-    J⁻¹W = Vector{Diagonal}(undef, N_e)
-    Threads.@threads for k in 1:N_e
+    J⁻¹W = Vector{Diagonal{Float64, Vector{Float64}}}(undef, N_e)
+    for k in 1:N_e
         J⁻¹W[k] = Diagonal(W ./ J_q[:,k])
     end
 
-    return WeightAdjustedSolver(M⁻¹,J⁻¹W, make_operator(V, operator_algorithm),
+    return WeightAdjustedSolver(M⁻¹, J⁻¹W, make_operator(V, operator_algorithm),
         make_operator(V', operator_algorithm))
+end
+
+function DiagonalSolver(J_q::Matrix{Float64}, 
+    ::UniformScalingMap, W::Diagonal)
+    N_e = size(J_q, 2)
+    WJ⁻¹ = Vector{Diagonal{Float64, Vector{Float64}}}(undef, N_e)
+    @inbounds for k in 1:N_e
+        WJ⁻¹[k] = inv(Diagonal(W .* J_q[:,k]))
+    end
+    return DiagonalSolver(WJ⁻¹)
+end
+
+function CholeskySolver(spatial_discretization::SpatialDiscretization)
+    (; V, W) = spatial_discretization.reference_approximation
+    (; J_q) = spatial_discretization.geometric_factors
+    
+    return CholeskySolver(J_q, V, W)
+end
+
+function DiagonalSolver(spatial_discretization::SpatialDiscretization)
+    (; V, W) = spatial_discretization.reference_approximation
+    (; J_q) = spatial_discretization.geometric_factors
+    return DiagonalSolver(J_q, V, W)
+end
+
+function WeightAdjustedSolver(spatial_discretization::SpatialDiscretization, 
+    operator_algorithm=DefaultOperatorAlgorithm(); 
+    assume_orthonormal::Bool=true,
+    tol=1.0e-13)
+    
+    (; V, W) = spatial_discretization.reference_approximation
+    (; J_q) = spatial_discretization.geometric_factors
+
+    return WeightAdjustedSolver(J_q,V,W,operator_algorithm,
+        Val(assume_orthonormal), tol)
 end
 
 @inline function mass_matrix(mass_solver::CholeskySolver, k::Int)
