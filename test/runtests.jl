@@ -89,7 +89,8 @@ end
 
 @testset "Advection 3D Energy-Conservative ModalTensor Tet" begin
     (l2, conservation, energy) = test_driver(
-        ReferenceApproximation(ModalTensor(p), Tet(), mapping_degree=3),
+        ReferenceApproximation(ModalTensor(p), Tet(), 
+            mapping_degree=3, sum_factorize_vandermonde=false),
         LinearAdvectionEquation((1.0,1.0,1.0)),
         InitialDataSine(1.0,(2*π, 2*π, 2*π)),
         StandardForm(mapping_form=SkewSymmetricMapping(),

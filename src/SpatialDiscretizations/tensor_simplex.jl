@@ -179,7 +179,8 @@ function ReferenceApproximation(
     ::Tri; mapping_degree::Int=1, N_plot::Int=10, 
     volume_quadrature_rule=(LGQuadrature(approx_type.p),
         LGQuadrature(approx_type.p)),
-    facet_quadrature_rule=LGQuadrature(approx_type.p))
+    facet_quadrature_rule=LGQuadrature(approx_type.p),
+    sum_factorize_vandermonde=true)
 
     # one-dimensional operators
     η_1D, q, V_1D, D_1D, I_1D, R_L, R_R = operators_1d(
@@ -211,8 +212,13 @@ function ReferenceApproximation(
 
     # construct nodal or modal scheme (different Vandermonde matrix)
     if approx_type isa ModalTensor
-        V = warped_product(Tri(),approx_type.p, η_1D)
-        V_plot = LinearMap(vandermonde(Tri(), 
+        if sum_factorize_vandermonde
+            V = warped_product(Tri(),approx_type.p, η_1D)
+        else
+            V = OctavianMap(vandermonde(Tri(), 
+                approx_type.p, reference_element.rstq...))
+        end
+        V_plot = OctavianMap(vandermonde(Tri(), 
             approx_type.p, reference_element.rstp...))
     else
         V = LinearMap(I, (q[1]+1)*(q[2]+1))
@@ -275,7 +281,12 @@ function ReferenceApproximation(
 
     # construct nodal or modal scheme
     if approx_type isa ModalTensor
-        V = warped_product(Tet(),approx_type.p, η_1D)
+        if sum_factorize_vandermonde
+            V = warped_product(Tet(),approx_type.p, η_1D)
+        else
+            V = OctavianMap(vandermonde(Tet(), 
+                approx_type.p, reference_element.rstq...))
+        end
         V_plot = OctavianMap(vandermonde(Tet(), approx_type.p, 
             reference_element.rstp...))
     else
