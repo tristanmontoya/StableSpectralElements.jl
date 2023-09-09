@@ -175,7 +175,7 @@ function operators_1d(
 end
 
 function ReferenceApproximation(
-    approx_type::Union{NodalTensor,ModalTensor}, 
+    approx_type::AbstractTensorProduct, 
     ::Tri; mapping_degree::Int=1, N_plot::Int=10, 
     volume_quadrature_rule=(LGQuadrature(approx_type.p),
         LGQuadrature(approx_type.p)),
@@ -232,12 +232,13 @@ function ReferenceApproximation(
 end
 
 function ReferenceApproximation(
-    approx_type::Union{NodalTensor,ModalTensor}, 
+    approx_type::AbstractTensorProduct, 
     ::Tet; mapping_degree::Int=1, N_plot::Int=10,
     volume_quadrature_rule=(LGQuadrature(approx_type.p),
         LGQuadrature(approx_type.p), GaussQuadrature(approx_type.p,1,0)), 
     facet_quadrature_rule=(LGQuadrature(approx_type.p), 
-        GaussQuadrature(approx_type.p,1,0)))
+        GaussQuadrature(approx_type.p,1,0)),
+        sum_factorize_vandermonde=true)
 
     # one-dimensional operators
     η_1D, q, V_1D, D_1D, I_1D, R_L, R_R = operators_1d(
