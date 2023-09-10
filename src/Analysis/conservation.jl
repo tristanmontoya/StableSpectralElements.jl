@@ -172,7 +172,7 @@ function evaluate_conservation_residual(
     return dEdt
 end
 
-function evaluate_conservation_residual(
+@inline @views function evaluate_conservation_residual(
     analysis::EntropyConservationAnalysis, 
     u::Array{Float64,3},
     dudt::Array{Float64,3})
@@ -185,7 +185,7 @@ function evaluate_conservation_residual(
         M = mass_matrix(mass_solver, k)
         mul!(u_q,V,u[:,:,k])
         for i in axes(u_q,1)
-            w_q[i,:] = conservative_to_entropy(conservation_law, u_q[i,:])
+            conservative_to_entropy!(w_q[i,:], conservation_law, u_q[i,:])
         end
         P = mass_matrix_inverse(mass_solver, k) * V' * WJ[k]
         for e in 1:N_c

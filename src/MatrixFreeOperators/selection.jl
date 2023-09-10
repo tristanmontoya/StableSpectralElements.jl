@@ -13,14 +13,14 @@ end
 
 Base.size(R::SelectionMap) = (length(R.facet_ids),length(R.volume_ids))
 
-function LinearAlgebra.mul!(y::AbstractVector, 
+@inline function LinearAlgebra.mul!(y::AbstractVector, 
     R::SelectionMap, x::AbstractVector)
     LinearMaps.check_dim_mul(y, R, x)
     y[:] = x[R.facet_ids]
     return y
 end
 
-function LinearMaps._unsafe_mul!(y::AbstractVector, 
+@inline function LinearMaps._unsafe_mul!(y::AbstractVector, 
     transR::LinearMaps.TransposeMap{Float64, <:SelectionMap},
     x::AbstractVector)
     

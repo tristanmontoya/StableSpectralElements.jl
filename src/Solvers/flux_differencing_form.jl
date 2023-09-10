@@ -199,11 +199,11 @@ end
 
     mul!(u_q, V, u)
     @inbounds for i in axes(u, 1)
-        w_q[i,:] .= conservative_to_entropy(conservation_law,u_q[i,:])
+        conservative_to_entropy!(w_q[i,:], conservation_law,u_q[i,:])
     end
     mul!(w_f, R, w_q)
     @inbounds for i in axes(u_f, 1)
-        u_f[i,:] .= entropy_to_conservative(conservation_law,w_f[i,:])
+        entropy_to_conservative!(u_f[i,:], conservation_law,w_f[i,:])
     end
 end
 
@@ -226,7 +226,7 @@ end
     # evaluate entropy variables in terms of nodal conservative variables
     mul!(u_q, V, u)
     @inbounds for i in axes(u_q, 1)
-        w_q[i,:] .= conservative_to_entropy(conservation_law, u_q[i,:])
+        conservative_to_entropy!(w_q[i,:], conservation_law, u_q[i,:])
     end
 
     # project entropy variables and store modal coeffs in w
@@ -240,10 +240,10 @@ end
 
     # convert back to conservative variables
     @inbounds for i in axes(u_q, 1)
-        u_q[i,:] .= entropy_to_conservative(conservation_law, w_q[i,:])
+        entropy_to_conservative!(u_q[i,:], conservation_law, w_q[i,:])
     end
     @inbounds for i in axes(u_f, 1)
-        u_f[i,:] .= entropy_to_conservative(conservation_law, w_f[i,:])
+        entropy_to_conservative!(u_f[i,:], conservation_law, w_f[i,:])
     end
 end
 

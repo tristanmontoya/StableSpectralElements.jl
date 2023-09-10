@@ -102,10 +102,7 @@ F*(u⁻, u⁺, q⁻, q⁺, n) = ½(F²(u⁻,q⁻) + F²(u⁺, q⁺))⋅n
         for m in 1:d)
 end
 
-@inline conservative_to_primitive(::BurgersType, u) = u
 @inline entropy(::BurgersType, u) = 0.5*u[1]^2
-@inline entropy_to_conservative(::BurgersType, u) = u
-@inline conservative_to_entropy(::BurgersType, u) = u
 
 @inline function wave_speed(conservation_law::BurgersType{d},
     u_in::AbstractVector{Float64}, u_out::AbstractVector{Float64},

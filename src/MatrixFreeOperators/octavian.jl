@@ -1,5 +1,5 @@
-struct OctavianMap{M_type} <: LinearMaps.LinearMap{Float64}
-    lmap::M_type
+struct OctavianMap <: LinearMaps.LinearMap{Float64}
+    lmap::Matrix{Float64}
 end
 
 @inline function OctavianMap(L::LinearMap)
@@ -7,6 +7,7 @@ end
 end
 
 @inline Base.size(L::OctavianMap) = size(L.lmap)
+
 function LinearAlgebra.transpose(L::OctavianMap)
     return OctavianMap(transpose(L.lmap))
 end

@@ -8,7 +8,7 @@ module ConservationLaws
 
     import ..GridFunctions: evaluate
 
-    export physical_flux, physical_flux!, numerical_flux!, entropy, conservative_to_primitive, conservative_to_entropy, entropy_to_conservative, compute_two_point_flux, wave_speed, logmean, inv_logmean, AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, NoInviscidFlux, NoViscousFlux, LaxFriedrichsNumericalFlux, CentralNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, ConservativeFlux, EntropyConservativeFlux, NoTwoPointFlux, ExactSolution
+    export physical_flux, physical_flux!, numerical_flux!, entropy, conservative_to_entropy!, entropy_to_conservative!, compute_two_point_flux, wave_speed, logmean, inv_logmean, AbstractConservationLaw, AbstractPDEType, FirstOrder, SecondOrder, AbstractInviscidNumericalFlux, AbstractViscousNumericalFlux, NoInviscidFlux, NoViscousFlux, LaxFriedrichsNumericalFlux, CentralNumericalFlux, BR1, EntropyConservativeNumericalFlux, AbstractTwoPointFlux, ConservativeFlux, EntropyConservativeFlux, NoTwoPointFlux, ExactSolution
 
     abstract type AbstractConservationLaw{d, PDEType, N_c} end
     abstract type AbstractPDEType end
@@ -126,6 +126,18 @@ module ConservationLaws
             return new{d,typeof(conservation_law),typeof(initial_data),typeof(conservation_law.source_term)}(
                 conservation_law, initial_data, periodic, N_c)
         end
+    end
+
+    @inbounds function entropy_to_conservative!(u::AbstractVector{Float64},
+        ::AbstractConservationLaw, w::AbstractVector{Float64})
+        copyto!(u,w)
+        return
+    end
+
+    @inbounds function conservative_to_entropy(w::AbstractVector{Float64},
+        ::AbstractConservationLaw, u::AbstractVector{Float64})
+        copyto!(w,u)
+        return
     end
 
     export LinearAdvectionEquation, LinearAdvectionDiffusionEquation

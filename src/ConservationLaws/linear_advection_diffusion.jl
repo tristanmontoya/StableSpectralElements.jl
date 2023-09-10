@@ -108,9 +108,6 @@ function numerical_flux!(f_star::AbstractMatrix{Float64},
         for m in 1:d)
 end
 
-@inline conservative_to_primitive(::AdvectionType, u) = u
-@inline conservative_to_entropy(::AdvectionType, u) = u
-@inline entropy_to_conservative(::AdvectionType, u) = u
 @inline entropy(::AdvectionType, u) = 0.5*u[1]^2
 
 @inline function wave_speed(conservation_law::AdvectionType{d},

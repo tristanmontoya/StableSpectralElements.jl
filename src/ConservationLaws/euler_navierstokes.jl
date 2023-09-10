@@ -100,18 +100,31 @@ end
     u::AbstractVector{Float64}) where {d}
     (; γ_minus_1) = conservation_law
     return vcat(u[1], SVector{d}(u[m+1] / u[1] for m in 1:d),
-        γ_minus_1 * (u[end] - (0.5/u[1]) * (sum(u[m+1]^2 for m in 1:d))))
+        γ_minus_1 * (u[d+2] - (0.5/u[1]) * (sum(u[m+1]^2 for m in 1:d))))
 end
 
 @inline function conservative_to_entropy(conservation_law::EulerType{d}, 
     u::AbstractVector{Float64}) where {d}
     (; γ, γ_minus_1, inv_γ_minus_1) = conservation_law
     k = (0.5/u[1]) * (sum(u[m+1]^2 for m in 1:d))
-    p = γ_minus_1 * (u[end] - k)
+    p = γ_minus_1 * (u[d+2] - k)
     inv_p = 1.0/p
     return SVector{d+2}(inv_γ_minus_1*(γ-log(p/(u[1]^γ))) - k*inv_p,
                         (u[m+1]*inv_p for m in 1:d)..., 
                         -u[1]*inv_p)
+end
+
+@inline function conservative_to_entropy!(
+    w::AbstractVector{Float64}, conservation_law::EulerType{d}, 
+    u::AbstractVector{Float64}) where {d}
+    (; γ, γ_minus_1, inv_γ_minus_1) = conservation_law
+    k = (0.5/u[1]) * (sum(u[m+1]^2 for m in 1:d))
+    p = γ_minus_1 * (u[end] - k)
+    inv_p = 1.0/p
+    w[1] = inv_γ_minus_1*(γ-log(p/(u[1]^γ))) - k*inv_p
+    @inbounds for m in 1:d w[m+1] = u[m+1]*inv_p end
+    w[d+2] = -u[1]*inv_p
+    return
 end
 
 @inline function entropy_to_conservative(conservation_law::EulerType{d}, 
@@ -121,10 +134,25 @@ end
     k = sum(w[m+1]^2 for m in 1:d)/(2*w[end])
     s = γ - w[1] + k
     ρe = (γ_minus_1/((-w[end])^γ))^inv_γ_minus_1*exp(-s*inv_γ_minus_1)
-    return SVector{d+2}(-w[end]*ρe, 
-                        (w[m+1] * ρe for m in 1:d)..., 
-                        ρe*(1-k))
+    return SVector{d+2}(-w[end]*ρe, (w[m+1] * ρe for m in 1:d)..., ρe*(1-k))
 end
+
+@inline function entropy_to_conservative!(
+    u::AbstractVector{Float64},
+    conservation_law::EulerType{d}, 
+    w::AbstractVector{Float64}) where {d}
+    (; γ, γ_minus_1, inv_γ_minus_1) = conservation_law
+    w = w * γ_minus_1
+    k = sum(w[m+1]^2 for m in 1:d)/(2*w[d+2])
+    s = γ - w[1] + k
+    ρe = (γ_minus_1/((-w[d+2])^γ))^inv_γ_minus_1*exp(-s*inv_γ_minus_1)
+    
+    u[1] = -w[d+2]*ρe
+    @inbounds for m in 1:d u[m+1] = w[m+1] * ρe end
+    u[d+2] = ρe*(1-k)
+    return
+end
+
 
 @inline function wave_speed(conservation_law::EulerType{d},
     u_in::AbstractVector{Float64}, u_out::AbstractVector{Float64}, 
