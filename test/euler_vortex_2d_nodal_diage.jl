@@ -39,8 +39,8 @@ function euler_vortex_2d_diage(M::Int=4)
         mass_matrix_solver=mass_solver);
 
     dt = T/1000
-    sol = solve(ode, CarpenterKennedy2N54(williamson_condition=false),
-            dt=dt, adaptive=false, save_everystep=false,
+    sol = solve(ode, CarpenterKennedy2N54(),
+        dt=dt, adaptive=false, save_everystep=false,
             callback=save_callback(results_path, (0.0,T), 
             floor(Int, T/(dt*50))))
 

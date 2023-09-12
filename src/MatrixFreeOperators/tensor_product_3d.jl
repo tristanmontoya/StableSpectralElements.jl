@@ -1,9 +1,10 @@
-struct TensorProductMap3D{A_type,B_type,C_type} <: LinearMaps.LinearMap{Float64}
+struct TensorProductMap3D{A_type,B_type,C_type,σᵢ_type, 
+    σₒ_type} <: LinearMaps.LinearMap{Float64}
     A::A_type
     B::B_type
     C::C_type
-    σᵢ::AbstractArray{Int,3}
-    σₒ::AbstractArray{Int,3}
+    σᵢ::σᵢ_type
+    σₒ::σₒ_type
 end
 
 @inline Base.size(L::TensorProductMap3D) = (
@@ -34,7 +35,7 @@ function TensorProductMap3D(A, B, C)
     elseif C isa Union{LinearMaps.WrappedMap,OctavianMap}
         C = SMatrix{M3,N3,Float64}(C.lmap)
     end
-    return TensorProductMap3D(A,B,C, σᵢ, σₒ)
+    return TensorProductMap3D(A, B, C, σᵢ, σₒ)
 end
 
 """

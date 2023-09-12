@@ -1,7 +1,8 @@
 """
 Warped tensor-product operator (e.g. for Dubiner-type bases)
 """    
-struct WarpedTensorProductMap2D{A_type,B_type,σᵢ_type,σₒ_type} <: LinearMaps.LinearMap{Float64}
+struct WarpedTensorProductMap2D{A_type,B_type,
+    σᵢ_type,σₒ_type} <: LinearMaps.LinearMap{Float64}
     A::A_type
     B::B_type
     σᵢ::σᵢ_type 
@@ -9,8 +10,7 @@ struct WarpedTensorProductMap2D{A_type,B_type,σᵢ_type,σₒ_type} <: LinearMa
     N2::Vector{Int}
     size::NTuple{2,Int}
 
-    function WarpedTensorProductMap2D(
-        A::A_type,B::B_type, σᵢ::σᵢ_type,
+    function WarpedTensorProductMap2D(A::A_type,B::B_type, σᵢ::σᵢ_type,
         σₒ::σₒ_type) where {A_type,B_type,σᵢ_type,σₒ_type}
         N2 = [count(a -> a>0, σᵢ[β1,:]) for β1 in axes(σᵢ,1)]
         return new{A_type,B_type,σᵢ_type,σₒ_type}(A,B,σᵢ,σₒ,
@@ -69,7 +69,7 @@ Evaluate the matrix-vector product
     (; A, B, σᵢ, σₒ, N2) = L.lmap
 
     Z = MMatrix{size(σᵢ,1), size(σₒ,2),Float64}(undef) # stack allocate
-    
+
     @inbounds for β1 in axes(σᵢ,1), α2 in axes(σₒ,2)
         temp = 0.0
         @simd for α1 in axes(σₒ,1)

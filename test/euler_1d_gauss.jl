@@ -16,9 +16,8 @@ function euler_1d_gauss()
     spatial_discretization = SpatialDiscretization(mesh,
         reference_approximation)
 
-    form = FluxDifferencingForm(two_point_flux=EntropyConservativeFlux(),
-            inviscid_numerical_flux=EntropyConservativeNumericalFlux(),
-            entropy_projection=true, facet_correction=true)
+    form = FluxDifferencingForm(
+        inviscid_numerical_flux=EntropyConservativeNumericalFlux())
 
     ode = semidiscretize(conservation_law, spatial_discretization, exact_sol, 
         form, (0.0, T), ReferenceOperator())

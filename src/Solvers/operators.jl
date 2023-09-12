@@ -33,7 +33,8 @@ function FluxDifferencingOperators(
     Λ_q::Array{Float64,4}, nJq::Array{Float64,4}, nJf::Array{Float64,3}, 
     J_f::Matrix{Float64}) where {d}
 
-    (; W, V, R, B, reference_element) = reference_approximation
+    (; D, W, V, R, B, approx_type, reference_element, 
+        reference_mapping) = reference_approximation
     (N_f, N_e) = size(J_f)
 
     WJ = Vector{Diagonal{Float64, Vector{Float64}}}(undef, N_e)
@@ -48,7 +49,8 @@ function FluxDifferencingOperators(
         end
     end
     
-    S, C = flux_differencing_operators(reference_approximation)
+    D_ξ = reference_derivative_operators(D, reference_mapping)
+    S, C = flux_differencing_operators(approx_type, D_ξ, W, R, B)
 
     return FluxDifferencingOperators(S, C, make_operator(V, alg),
         transpose(make_operator(V, alg)), make_operator(R, alg), 
@@ -137,42 +139,58 @@ function PhysicalOperators(spatial_discretization::SpatialDiscretization{d},
         VOL, FAC, make_operator(V, alg), make_operator(R, alg), n_f)
 end
 
-
+# ensure one-dimensional schemes don't use sparse operators unnecessarily
 function flux_differencing_operators(
-    reference_approximation::ReferenceApproximation{<:RefElemData{1}, 
-    <:AbstractTensorProduct})
+    ::AbstractTensorProduct, D_ξ::NTuple{1,LinearMap},
+    W::Diagonal, ::SelectionMap, ::Diagonal)
 
-    (; D, W, R, B) = reference_approximation
-
-    S = (0.5*Matrix(W*D[1] - D[1]'*W),)
-    C = Matrix(R')*Matrix(B)
-
-    return S, C
+    S = (0.5*Matrix(W*D_ξ[1] - D_ξ[1]'*W),)
+    return S, nothing
 end
 
 function flux_differencing_operators(
-    reference_approximation::ReferenceApproximation{<:RefElemData{d}, 
-    <:AbstractTensorProduct}) where {d}
+    ::AbstractTensorProduct, D_ξ::NTuple{1,LinearMap},
+    W::Diagonal, R::LinearMap, B::Diagonal)
 
-    (; D, W, R, B, reference_mapping) = reference_approximation
+    S = (0.5*Matrix(W*D_ξ[1] - D_ξ[1]'*W),)
+    return S, Matrix(R')*Matrix(B)
+end
 
-    D_ξ = reference_derivative_operators(D, reference_mapping)
+
+# sparse version for tensor-product operators
+function flux_differencing_operators(
+    ::AbstractTensorProduct, D_ξ::NTuple{d,LinearMap},
+    W::Diagonal, ::SelectionMap, ::Diagonal) where {d}
 
     S = Tuple(0.5*Matrix(W*D_ξ[m] - D_ξ[m]'*W) for m in 1:d)
-    C = Matrix(R')*Matrix(B)
     
-    return Tuple(sparse(S[m]) for m in 1:d), sparse(C)
+    return Tuple(sparse(S[m]) for m in 1:d), nothing
 end
 
 function flux_differencing_operators(
-    reference_approximation::ReferenceApproximation{<:RefElemData{d}, 
-    <:AbstractMultidimensional}) where {d}
+    ::AbstractTensorProduct, D_ξ::NTuple{d,LinearMap},
+    W::Diagonal, R::LinearMap, B::Diagonal) where {d}
 
-    (; D, W, R, B, reference_mapping) = reference_approximation
-
-    D_ξ = reference_derivative_operators(D, reference_mapping)
     S = Tuple(0.5*Matrix(W*D_ξ[m] - D_ξ[m]'*W) for m in 1:d)
-    C = Matrix(R')*Matrix(B)
     
-    return S, C
+    return Tuple(sparse(S[m]) for m in 1:d), sparse(Matrix(R')*Matrix(B))
+end
+
+# dense version
+function flux_differencing_operators(
+    ::AbstractMultidimensional, D_ξ::NTuple{d,LinearMap},
+    W::Diagonal, ::SelectionMap, ::Diagonal) where {d}
+
+    S = Tuple(0.5*Matrix(W*D_ξ[m] - D_ξ[m]'*W) for m in 1:d)
+    
+    return S, nothing
+end
+
+function flux_differencing_operators(
+    ::AbstractMultidimensional, D_ξ::NTuple{d,LinearMap},
+    W::Diagonal, R::LinearMap, B::Diagonal) where {d}
+
+    S = Tuple(0.5*Matrix(W*D_ξ[m] - D_ξ[m]'*W) for m in 1:d)
+    
+    return S, Matrix(R')*Matrix(B)
 end

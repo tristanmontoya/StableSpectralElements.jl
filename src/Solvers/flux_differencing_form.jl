@@ -70,18 +70,19 @@ end
     end
 end
 
+# no-op for LGL/diagonal-E operators
 @inline function facet_correction!(
-    r_q::AbstractMatrix{Float64}, # N_q x N_c 
-    f_f::AbstractMatrix{Float64}, # N_f x N_c
-    CORR::AbstractMatrix{Float64}, # N_f x N_q
-    conservation_law::AbstractConservationLaw{d},
-    two_point_flux::AbstractTwoPointFlux,
-    halfnJf::AbstractMatrix{Float64},
-    halfnJq::AbstractArray{Float64,3},
-    u_q::AbstractMatrix{Float64},
-    u_f::AbstractMatrix{Float64},
-    nodes_per_face::Int,
-    ::Val{false}) where {d}
+    ::AbstractMatrix{Float64}, 
+    ::AbstractMatrix{Float64}, 
+    ::Nothing, # no facet correction operator
+    ::AbstractConservationLaw{d},
+    ::AbstractTwoPointFlux,
+    ::AbstractMatrix{Float64},
+    ::AbstractArray{Float64,3},
+    ::AbstractMatrix{Float64},
+    ::AbstractMatrix{Float64},
+    ::Int) where {d}
+
     return
 end
 
@@ -95,8 +96,7 @@ end
     halfnJq::AbstractArray{Float64,3},
     u_q::AbstractMatrix{Float64},
     u_f::AbstractMatrix{Float64},
-    nodes_per_face::Int,
-    ::Val{true}) where {d, N_c}
+    nodes_per_face::Int) where {d, N_c}
 
     @inbounds for i in axes(u_q,1)
         for j in axes(u_f,1)
@@ -129,8 +129,7 @@ end
     halfnJq::AbstractArray{Float64,3},
     u_q::AbstractMatrix{Float64},
     u_f::AbstractMatrix{Float64},
-    nodes_per_face::Int,
-    ::Val{true}) where {d, N_c}
+    nodes_per_face::Int) where {d, N_c}
 
     C_nz = nonzeros(C)
     row_index = rowvals(C)
@@ -162,27 +161,27 @@ end
     end
 end
 
-# specialized for no entropy projection 
-@inline @views function entropy_projection!(
+# specialize for LGL/Diag-E nodal operators (no entropy projection)
+@inline function entropy_projection!(
     ::AbstractMassMatrixSolver,
-    ::AbstractConservationLaw,
+    conservation_law::AbstractConservationLaw,
     u_q::AbstractMatrix, 
     u_f::AbstractMatrix, 
     ::AbstractMatrix,
     ::AbstractMatrix,
     ::AbstractMatrix,
-    V::LinearMap,
+    V::UniformScalingMap, # nodal
     ::LinearMap,
-    R::LinearMap, ::Diagonal,
-    u::AbstractMatrix, ::Int,
-    ::Val{false})
+    R::SelectionMap, # diag-E
+    ::Diagonal,
+    u::AbstractMatrix, ::Int)
+
     mul!(u_q, V, u)
     mul!(u_f, R, u_q)
     return
 end
 
 # specialized for nodal schemes (not necessarily diagonal-E)
-# this is really an "entropy extrapolation" and not "projection"
 @inline @views function entropy_projection!(
     ::AbstractMassMatrixSolver,
     conservation_law::AbstractConservationLaw,
@@ -191,24 +190,24 @@ end
     w_q::AbstractMatrix,
     w_f::AbstractMatrix,
     w::AbstractMatrix,
-    V::UniformScalingMap, 
+    V::UniformScalingMap, # nodal
     ::LinearMap,
-    R::LinearMap, ::Diagonal,
-    u::AbstractMatrix, ::Int,
-    ::Val{true})
+    R::LinearMap, # not just SelectionMap
+    ::Diagonal,
+    u::AbstractMatrix,
+    ::Int)
 
     mul!(u_q, V, u)
     @inbounds for i in axes(u, 1)
-        conservative_to_entropy!(w_q[i,:], conservation_law,u_q[i,:])
+        conservative_to_entropy!(w_q[i,:], conservation_law, u_q[i,:])
     end
     mul!(w_f, R, w_q)
     @inbounds for i in axes(u_f, 1)
-        entropy_to_conservative!(u_f[i,:], conservation_law,w_f[i,:])
+        entropy_to_conservative!(u_f[i,:], conservation_law, w_f[i,:])
     end
 end
 
-# general (i.e. suitable for modal) approach
-# uses a full entropy projection
+# most general (i.e. suitable for modal) approach
 @inline @views function entropy_projection!(
     mass_solver::AbstractMassMatrixSolver,
     conservation_law::AbstractConservationLaw,
@@ -217,11 +216,12 @@ end
     w_q::AbstractMatrix,
     w_f::AbstractMatrix,
     w::AbstractMatrix,
-    V::LinearMap,
+    V::LinearMap, # not just UniformScalingMap
     Vᵀ::LinearMap,
-    R::LinearMap, WJ::Diagonal,
-    u::AbstractMatrix, k::Int,
-    ::Val{true})
+    R::LinearMap, # not just SelectionMap
+    WJ::Diagonal,
+    u::AbstractMatrix,
+    k::Int)
     
     # evaluate entropy variables in terms of nodal conservative variables
     mul!(u_q, V, u)
@@ -247,18 +247,32 @@ end
     end
 end
 
+# for scalar equations, no entropy projection
+@inline @views function nodal_values!(u::AbstractArray{Float64,3},
+    solver::Solver{<:AbstractConservationLaw{<:Any,1},
+    <:FluxDifferencingOperators, <:AbstractMassMatrixSolver,<:FluxDifferencingForm}, k::Int)
+
+    (; u_q, u_f) = solver.preallocated_arrays
+    (; V, R) = solver.operators
+
+    mul!(u_q[:,:,k], V, u[:,:,k])
+    mul!(u_f[:,k,:], R, u_q[:,:,k])
+    
+    return
+end
+
+# for systems, dispatch entropy projection on V and R
 @inline @views function nodal_values!(u::AbstractArray{Float64,3},
     solver::Solver{<:AbstractConservationLaw,<:FluxDifferencingOperators,
     <:AbstractMassMatrixSolver,<:FluxDifferencingForm}, k::Int)
 
-    (; conservation_law, form, preallocated_arrays, mass_solver) = solver
+    (; conservation_law, preallocated_arrays, mass_solver) = solver
     (; f_f, u_q, r_q, u_f, temp) = preallocated_arrays
-    (; entropy_projection) = form
     (; V, Vᵀ, R, WJ) = solver.operators
 
     entropy_projection!(mass_solver, conservation_law, u_q[:,:,k], 
         u_f[:,k,:], r_q[:,:,k], f_f[:,:,k], temp[:,:,k], 
-        V, Vᵀ, R, WJ[k], u[:,:,k], k, Val(entropy_projection))
+        V, Vᵀ, R, WJ[k], u[:,:,k], k)
 end
 
 @inline @views function time_derivative!(dudt::AbstractArray{Float64,3},
@@ -266,7 +280,7 @@ end
     <:AbstractMassMatrixSolver,<:FluxDifferencingForm}, k::Int)
 
      (; conservation_law, connectivity, form, mass_solver) = solver
-     (; inviscid_numerical_flux, two_point_flux, facet_correction) = form
+     (; inviscid_numerical_flux, two_point_flux) = form
      (; f_f, u_q, r_q, u_f, CI) = solver.preallocated_arrays
      (; S, C, Vᵀ, Rᵀ, Λ_q, BJf, halfnJq, halfnJf, n_f, 
         nodes_per_face) = solver.operators
@@ -282,10 +296,10 @@ end
     flux_difference!(r_q[:,:,k], S, conservation_law, 
         two_point_flux, Λ_q[:,:,:,k], u_q[:,:,k])
     
-    # apply facet correction term (for operators w/o boundary nodes)
+    # apply facet correction term (if C is not nothing)
     facet_correction!(r_q[:,:,k], f_f[:,:,k], C, conservation_law,
         two_point_flux, halfnJf[:,:,k], halfnJq[:,:,:,k], 
-        u_q[:,:,k], u_f[:,k,:], nodes_per_face, Val(facet_correction))
+        u_q[:,:,k], u_f[:,k,:], nodes_per_face)
 
     # apply facet operators
     mul!(u_q[:,:,k], Rᵀ, f_f[:,:,k])

@@ -94,22 +94,11 @@ module SpatialDiscretizations
     end
 
     struct GeometricFactors
-        # first dimension is node index, second is element
-        J_q::Matrix{Float64}
-    
-        # first dimension is node index, second and third are matrix indices mn,
-        # fourth is element
-        Λ_q::Array{Float64,4}
-    
-        # first dimension is node index, second is element
-        J_f::Matrix{Float64}
-    
-        # first dimension is node, second is cartesian component, third is element
-        nJf::Array{Float64,3}
-
-        # first dimension is is node, second is vector index n
-        # fourth is element
-        nJq::Array{Float64,4}
+        J_q::Matrix{Float64} # N_q x N_e
+        Λ_q::Array{Float64,4} # N_q x d x d x N_e
+        J_f::Matrix{Float64} # N_f x N_e
+        nJf::Array{Float64,3} # d x N_f x N_e
+        nJq::Array{Float64,4} # d x num_faces x N_q x N_e
     end
     
     """Data for constructing the global spatial discretization"""
@@ -132,8 +121,8 @@ module SpatialDiscretizations
         end
     end
 
-    function project_jacobian!(J_q::Matrix{Float64}, V::LinearMap,
-        W::Diagonal, ::Val{false})
+    function project_jacobian!(::Matrix{Float64}, ::LinearMap,
+        ::Diagonal, ::Val{false})
     end
 
     function physical_mass_matrix(J_q::Matrix{Float64}, 

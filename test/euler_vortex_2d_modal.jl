@@ -14,8 +14,7 @@ function euler_vortex_2d_modal(M::Int=4)
     p = 3
 
     form = FluxDifferencingForm(
-        inviscid_numerical_flux=EntropyConservativeNumericalFlux(),
-        entropy_projection=true, facet_correction=true)
+         inviscid_numerical_flux=EntropyConservativeNumericalFlux())
 
     reference_approximation = ReferenceApproximation(ModalTensor(p), 
         Tri(), mapping_degree=p)
@@ -38,7 +37,7 @@ function euler_vortex_2d_modal(M::Int=4)
     ode = semidiscretize(conservation_law,
         spatial_discretization, exact_solution, form, (0.0, T), ReferenceOperator(), BLASAlgorithm())
 
-    sol = solve(ode, CarpenterKennedy2N54(williamson_condition=false),
+    sol = solve(ode, CarpenterKennedy2N54(), 
         dt=dt, adaptive=false, save_everystep=false, 
         callback=save_callback(results_path, (0.0,T), floor(Int, T/(dt*50))))
     

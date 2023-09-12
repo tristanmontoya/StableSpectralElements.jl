@@ -1,4 +1,5 @@
-struct TensorProductMap2D{A_type,B_type,σᵢ_type,σₒ_type} <: LinearMaps.LinearMap{Float64}
+struct TensorProductMap2D{A_type,B_type,σᵢ_type,
+    σₒ_type} <: LinearMaps.LinearMap{Float64}
     A::A_type
     B::B_type
     σᵢ::σᵢ_type

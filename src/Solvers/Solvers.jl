@@ -49,8 +49,6 @@ module Solvers
             LaxFriedrichsNumericalFlux()
         viscous_numerical_flux::ViscousNumericalFlux = BR1()
         two_point_flux::TwoPointFlux = EntropyConservativeFlux()
-        facet_correction::Bool = false
-        entropy_projection::Bool = false
     end
 
     struct ReferenceOperators{D_type, Dt_type, V_type, Vt_type,
@@ -64,9 +62,9 @@ module Solvers
         W::Diagonal{Float64, Vector{Float64}}
         B::Diagonal{Float64, Vector{Float64}}
         halfWΛ::Array{Diagonal{Float64, Vector{Float64}},3} # d x d x N_e
-        halfN::Matrix{Diagonal{Float64, Vector{Float64}}}
-        BJf::Vector{Diagonal{Float64, Vector{Float64}}}
-        n_f::Array{Float64,3}
+        halfN::Matrix{Diagonal{Float64, Vector{Float64}}} # d x N_e
+        BJf::Vector{Diagonal{Float64, Vector{Float64}}} # N_e
+        n_f::Array{Float64,3} # d x N_f x N_e
     end
 
     struct PhysicalOperators{d, VOL_type, FAC_type, V_type, 
@@ -75,7 +73,7 @@ module Solvers
         FAC::Vector{FAC_type}
         V::V_type
         R::R_type
-        n_f::Array{Float64,3}
+        n_f::Array{Float64,3} # d x N_f x N_e
     end
 
     struct FluxDifferencingOperators{S_type,
@@ -90,11 +88,11 @@ module Solvers
         W::Diagonal{Float64, Vector{Float64}}
         B::Diagonal{Float64, Vector{Float64}}
         WJ::Vector{Diagonal{Float64, Vector{Float64}}}
-        Λ_q::Array{Float64,4}
-        BJf::Vector{Diagonal{Float64, Vector{Float64}}}
-        n_f::Array{Float64,3}
-        halfnJf::Array{Float64,3}
-        halfnJq::Array{Float64,4}
+        Λ_q::Array{Float64,4} # N_q x d x d x N_e
+        BJf::Vector{Diagonal{Float64, Vector{Float64}}} # N_e
+        n_f::Array{Float64,3} # d x N_f x N_e
+        halfnJf::Array{Float64,3} # d x N_f x N_e
+        halfnJq::Array{Float64,4} # d x N_q x num_faces x N_e
         nodes_per_face::Int64
     end
 
@@ -230,7 +228,7 @@ module Solvers
     function Solver(
         conservation_law::AbstractConservationLaw{d,SecondOrder,N_c},     
         spatial_discretization::SpatialDiscretization{d},
-        form::StandardForm, ::PhysicalOperator, alg::AbstractOperatorAlgorithm,
+        form::StandardForm, ::AbstractStrategy, alg::AbstractOperatorAlgorithm,
         mass_solver::AbstractMassMatrixSolver, 
         parallelism::AbstractParallelism) where {d, N_c}
 
@@ -271,6 +269,7 @@ module Solvers
     
         @inbounds @views for k in 1:N_e
             WJ = Diagonal(W .* J_q[:,k])
+            # this will throw if M is not SPD
             M = cholesky(Symmetric(VDM' * WJ * VDM))
             lmul!(WJ, u_q[:,:,k])
             mul!(u0[:,:,k], VDM', u_q[:,:,k])
