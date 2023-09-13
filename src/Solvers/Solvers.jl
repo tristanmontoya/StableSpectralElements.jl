@@ -303,7 +303,7 @@ module Solvers
         u0 = initialize(initial_data, spatial_discretization)
     
         solver = Solver(conservation_law,spatial_discretization, form,
-            strategy, alg,mass_matrix_solver,parallelism)
+            strategy, alg, mass_matrix_solver, parallelism)
     
         return ODEProblem(semi_discrete_residual!, u0, tspan, solver)
     end
@@ -332,11 +332,11 @@ module Solvers
         <:AbstractResidualForm,Threaded}, t::Float64=0.0)
     
         Threads.@threads for k in axes(u,3)
-            @timeit "nodal values threaded" nodal_values!(u, solver, k)
+            nodal_values!(u, solver, k)
         end
 
         Threads.@threads for k in axes(u,3)
-            @timeit "time deriv. threaded" time_derivative!(dudt, solver, k)
+            time_derivative!(dudt, solver, k)
         end
 
         return dudt

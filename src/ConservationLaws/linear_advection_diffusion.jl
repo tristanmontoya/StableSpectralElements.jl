@@ -43,7 +43,6 @@ LinearAdvectionEquation(a::Float64) = LinearAdvectionEquation((a,))
 
 LinearAdvectionDiffusionEquation(a::Float64, b::Float64) = LinearAdvectionDiffusionEquation((a,),b)
 
-
 """
 Evaluate the flux for the linear advection equation
 

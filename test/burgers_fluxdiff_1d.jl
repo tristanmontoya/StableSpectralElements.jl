@@ -14,7 +14,8 @@ function burgers_fluxdiff_1d()
 
     mesh = uniform_periodic_mesh(reference_approximation, (0.0,L), M)
 
-    spatial_discretization = SpatialDiscretization(mesh, reference_approximation);
+    spatial_discretization = SpatialDiscretization(mesh,
+        reference_approximation);
 
     results_path = save_project(conservation_law,
         spatial_discretization, initial_data, form, (0.0, T),

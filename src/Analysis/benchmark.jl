@@ -97,7 +97,8 @@ end
     return dudt
 end
 
-function scaling_test_euler_2d(p::Int, M::Int, path="./", 
+function scaling_test_euler_2d(p::Int, M::Int, 
+    path="./results/euler_benchmark/", 
     parallelism=Threaded())
     path = new_path(path,true,true)
 
@@ -113,8 +114,7 @@ function scaling_test_euler_2d(p::Int, M::Int, path="./",
         Ma=mach_number, β=strength, R=1.0/10.0, x_0=(L/2,L/2));
 
     form = FluxDifferencingForm(
-        inviscid_numerical_flux=LaxFriedrichsNumericalFlux(), 
-        entropy_projection=true, facet_correction=true)
+        inviscid_numerical_flux=LaxFriedrichsNumericalFlux())
 
     println("building reference approximation...")
     reference_approximation = ReferenceApproximation(ModalTensor(p), 
