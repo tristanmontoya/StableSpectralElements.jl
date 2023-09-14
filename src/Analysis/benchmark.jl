@@ -23,7 +23,7 @@
 
     @timeit "num flux" numerical_flux!(f_f[:,:,k],
         conservation_law, inviscid_numerical_flux, u_f[:,k,:], 
-        u_f[CI[connectivity[:,k]],:], n_f[k])
+        u_f[CI[connectivity[:,k]],:], n_f[:,:,k])
 
     @timeit "fill w zeros" fill!(r_q[:,:,k],0.0)
 
