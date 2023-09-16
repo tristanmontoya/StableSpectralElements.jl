@@ -1,8 +1,7 @@
-function RefElemData(elem::Tri,  
-    approx_type::Union{ModalTensor,NodalTensor}, N; volume_quadrature_rule=(
-        LGQuadrature(approx_type.p),LGRQuadrature(approx_type.p)),
-        facet_quadrature_rule=LGQuadrature(approx_type.p),
-        Nplot=10)
+function RefElemData(elem::Tri, approx_type::Union{ModalTensor,NodalTensor}, N; 
+    volume_quadrature_rule=(LGQuadrature(approx_type.p),
+        LGQuadrature(approx_type.p)),
+    facet_quadrature_rule=LGQuadrature(approx_type.p), Nplot=10)
 
     fv = face_vertices(elem) # set faces for triangle
 
@@ -47,8 +46,7 @@ function RefElemData(elem::Tri,
                     M, Pq, (Dr, Ds), LIFT)
 end
 
-function RefElemData(elem::Tet,  
-    approx_type::Union{ModalTensor,NodalTensor}, N;
+function RefElemData(elem::Tet, approx_type::Union{ModalTensor,NodalTensor}, N;
     volume_quadrature_rule=(LGQuadrature(approx_type.p), 
         LGQuadrature(approx_type.p), LGQuadrature(approx_type.p)),    
     facet_quadrature_rule=(LGQuadrature(approx_type.p), 

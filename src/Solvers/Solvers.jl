@@ -106,14 +106,15 @@ module Solvers
         temp::Array{Float64,3}
         CI::CartesianIndices{2, Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}}
 
-        function PreAllocatedArraysFirstOrder(d,N_q,N_f,N_c,N_e,temp_size=N_q)
-            return new(Array{Float64}(undef,N_q, N_c, d, N_e),
-                Array{Float64}(undef,N_f, N_c, N_e),
-                Array{Float64}(undef,N_f, N_c, N_e),
-                Array{Float64}(undef,N_q, N_c, N_e),
-                Array{Float64}(undef,N_q, N_c, N_e),
-                Array{Float64}(undef,N_f, N_e, N_c), #note switched order
-                Array{Float64}(undef,temp_size, N_c, N_e),
+        function PreAllocatedArraysFirstOrder(d,N_q,N_f,N_c,N_e,
+            temp_size=N_q, N_r=Threads.nthreads())
+            return new(Array{Float64}(undef,N_q, N_c, d, N_r),
+                Array{Float64}(undef, N_f, N_c, N_r),
+                Array{Float64}(undef, N_f, N_c, N_r),
+                Array{Float64}(undef, N_q, N_c, N_e),
+                Array{Float64}(undef, N_q, N_c, N_r),
+                Array{Float64}(undef, N_f, N_e, N_c), #note switched order
+                Array{Float64}(undef, temp_size, N_c, N_r),
                 CartesianIndices((N_f,N_e)))
         end
     end
@@ -131,15 +132,16 @@ module Solvers
         q_f::Array{Float64,4}
         CI::CartesianIndices{2, Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}}
 
-        function PreAllocatedArraysSecondOrder(d,N_q,N_f,N_c,N_e,temp_size=N_q)
-            return new(Array{Float64}(undef,N_q, N_c, d, N_e),
-                Array{Float64}(undef,N_f, N_c, N_e),
-                Array{Float64}(undef,N_f, N_c, N_e),
+        function PreAllocatedArraysSecondOrder(d,N_q,N_f,N_c,N_e,
+            temp_size=N_q, N_r=Threads.nthreads())
+            return new(Array{Float64}(undef,N_q, N_c, d, N_r),
+                Array{Float64}(undef,N_f, N_c, N_r),
+                Array{Float64}(undef,N_f, N_c, N_r),
                 Array{Float64}(undef,N_q, N_c, N_e),
-                Array{Float64}(undef,N_q, N_c, N_e),
+                Array{Float64}(undef,N_q, N_c, N_r),
                 Array{Float64}(undef,N_f, N_e, N_c), #note switched order
-                Array{Float64}(undef,temp_size, N_c, N_e),
-                Array{Float64}(undef,N_f, N_c, d, N_e),
+                Array{Float64}(undef,temp_size, N_c, N_r),
+                Array{Float64}(undef,N_f, N_c, d, N_r),
                 Array{Float64}(undef,N_q, N_c, d, N_e),
                 Array{Float64}(undef,N_f, N_e, N_c, d), #note switched order
                 CartesianIndices((N_f,N_e)))
@@ -160,10 +162,10 @@ module Solvers
     function Base.size(solver::Solver{<:AbstractConservationLaw{d,
         <:AbstractPDEType,N_c}}) where {d, N_c}
         N_p = size(solver.operators.V,2)
-        N_e = size(solver.preallocated_arrays.u_q,3)
+        N_e = size(solver.preallocated_arrays.CI,2)
         return (N_p, N_c, N_e)
     end
-    
+
     function Solver(
         conservation_law::AbstractConservationLaw{d,FirstOrder,N_c},     
         spatial_discretization::SpatialDiscretization{d},
@@ -184,7 +186,7 @@ module Solvers
             reference_approximation, alg, Λ_q, nJf, J_f)
     
         return Solver(conservation_law, operators, mass_solver, mesh.mapP, form,
-            parallelism, PreAllocatedArraysFirstOrder(d,N_q,N_f,N_c,N_e))
+            parallelism, PreAllocatedArraysFirstOrder(d,N_q,N_f,N_c,N_e,N_q))
     end
 
     function Solver(
@@ -222,7 +224,8 @@ module Solvers
             
         return Solver(conservation_law, operators, mass_solver, 
             spatial_discretization.mesh.mapP, form, parallelism,
-            PreAllocatedArraysFirstOrder(d,N_q,N_f,N_c,N_e,N_p))
+            PreAllocatedArraysFirstOrder(d,N_q,N_f,N_c,N_e,N_p,
+            Threads.nthreads()))
     end
 
     function Solver(

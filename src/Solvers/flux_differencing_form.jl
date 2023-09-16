@@ -250,14 +250,14 @@ end
 # for scalar equations, no entropy projection
 @inline @views function nodal_values!(u::AbstractArray{Float64,3},
     solver::Solver{<:AbstractConservationLaw{<:Any,1},
-    <:FluxDifferencingOperators, <:AbstractMassMatrixSolver,<:FluxDifferencingForm}, k::Int)
+    <:FluxDifferencingOperators, <:AbstractMassMatrixSolver,
+    <:FluxDifferencingForm}, k::Int)
 
     (; u_q, u_f) = solver.preallocated_arrays
     (; V, R) = solver.operators
 
     mul!(u_q[:,:,k], V, u[:,:,k])
     mul!(u_f[:,k,:], R, u_q[:,:,k])
-    
     return
 end
 
@@ -270,8 +270,9 @@ end
     (; f_f, u_q, r_q, u_f, temp) = preallocated_arrays
     (; V, Vᵀ, R, WJ) = solver.operators
 
+    id = Threads.threadid()
     entropy_projection!(mass_solver, conservation_law, u_q[:,:,k], 
-        u_f[:,k,:], r_q[:,:,k], f_f[:,:,k], temp[:,:,k], 
+        u_f[:,k,:], r_q[:,:,id], f_f[:,:,id], temp[:,:,id], 
         V, Vᵀ, R, WJ[k], u[:,:,k], k)
 end
 
@@ -285,27 +286,30 @@ end
      (; S, C, Vᵀ, Rᵀ, Λ_q, BJf, halfnJq, halfnJf, n_f, 
         nodes_per_face) = solver.operators
 
+    # get thread id for temporary register
+    id = Threads.threadid()
+
     # evaluate interface numerical flux
-    numerical_flux!(f_f[:,:,k], conservation_law, inviscid_numerical_flux, 
+    numerical_flux!(f_f[:,:,id], conservation_law, inviscid_numerical_flux, 
         u_f[:,k,:], u_f[CI[connectivity[:,k]],:], n_f[:,:,k], two_point_flux)
  
     # scale numerical flux by quadrature weights
-    lmul!(BJf[k], f_f[:,:,k])
+    lmul!(BJf[k], f_f[:,:,id])
 
     # volume flux differencing term
-    flux_difference!(r_q[:,:,k], S, conservation_law, 
+    flux_difference!(r_q[:,:,id], S, conservation_law, 
         two_point_flux, Λ_q[:,:,:,k], u_q[:,:,k])
     
     # apply facet correction term (if C is not nothing)
-    facet_correction!(r_q[:,:,k], f_f[:,:,k], C, conservation_law,
+    facet_correction!(r_q[:,:,id], f_f[:,:,id], C, conservation_law,
         two_point_flux, halfnJf[:,:,k], halfnJq[:,:,:,k], 
         u_q[:,:,k], u_f[:,k,:], nodes_per_face)
 
     # apply facet operators
-    mul!(u_q[:,:,k], Rᵀ, f_f[:,:,k])
-    r_q[:,:,k] .-= u_q[:,:,k]
+    mul!(u_q[:,:,k], Rᵀ, f_f[:,:,id])
+    r_q[:,:,id] .-= u_q[:,:,k]
 
     # solve for time derivative
-    mul!(dudt[:,:,k], Vᵀ, r_q[:,:,k])
+    mul!(dudt[:,:,k], Vᵀ, r_q[:,:,id])
     mass_matrix_solve!(mass_solver, k, dudt[:,:,k], u_q[:,:,k])
 end

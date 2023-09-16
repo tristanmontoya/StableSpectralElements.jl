@@ -123,9 +123,10 @@ module SpatialDiscretizations
 
     function project_jacobian!(::Matrix{Float64}, ::LinearMap,
         ::Diagonal, ::Val{false})
+        return
     end
 
-    function physical_mass_matrix(J_q::Matrix{Float64}, 
+    function physical_mass_matrix(J_q::Matrix{Float64},
         V::LinearMap, W::Diagonal)
         N_e = size(J_q,2)
         VDM = Matrix(V)
