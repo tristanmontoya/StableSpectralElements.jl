@@ -47,7 +47,7 @@ end
         LinearAdvectionEquation((1.0,1.0)),
         InitialDataSine(1.0,(2*π, 2*π)),
         FluxDifferencingForm(),
-        ReferenceOperator(), DefaultOperatorAlgorithm(),
+        ReferenceOperator(), GenericTensorProductAlgorithm(),
         1.0, 2, 1.0, 1.0/100.0, 0.1,
         "test_advection_2d_dgsem_fluxdiff")
     

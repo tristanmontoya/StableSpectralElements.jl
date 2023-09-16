@@ -9,10 +9,6 @@ module MatrixFreeOperators
     struct GenericMatrixAlgorithm <: AbstractOperatorAlgorithm end
     struct GenericTensorProductAlgorithm <: AbstractOperatorAlgorithm end
 
-    export TensorProductMap2D, TensorProductMap3D
-    include("tensor_product_2d.jl")
-    include("tensor_product_3d.jl")
-
     export WarpedTensorProductMap2D, WarpedTensorProductMap3D
     include("warped_product_2d.jl")
     include("warped_product_3d.jl")
@@ -64,9 +60,14 @@ module MatrixFreeOperators
         alg::GenericTensorProductAlgorithm) = vcat(
         [make_operator(block, alg) for block in map.maps]...)
     make_operator(map::LinearMaps.KroneckerMap{Float64, <:NTuple{2,LinearMap}}, 
-        ::GenericTensorProductAlgorithm) = TensorProductMap2D(map.maps...)
+        ::GenericTensorProductAlgorithm) = 
+        make_operator(map.maps[1], GenericMatrixAlgorithm()) ⊗ 
+        make_operator(map.maps[2], GenericMatrixAlgorithm())
     make_operator(map::LinearMaps.KroneckerMap{Float64, <:NTuple{3,LinearMap}},
-        ::GenericTensorProductAlgorithm) = TensorProductMap3D(map.maps...)
+        ::GenericTensorProductAlgorithm) = 
+        make_operator(map.maps[1], GenericMatrixAlgorithm()) ⊗ 
+        make_operator(map.maps[2], GenericMatrixAlgorithm()) ⊗
+        make_operator(map.maps[3], GenericMatrixAlgorithm())
 
     # count adds, muls, and muladds
     function count_ops(map::LinearMap)
