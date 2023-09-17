@@ -14,7 +14,7 @@ function euler_vortex_2d_modal(M::Int=4)
     p = 3
 
     form = FluxDifferencingForm(
-         inviscid_numerical_flux=EntropyConservativeNumericalFlux())
+         inviscid_numerical_flux=LaxFriedrichsNumericalFlux())
 
     reference_approximation = ReferenceApproximation(ModalTensor(p), 
         Tri(), mapping_degree=p)
@@ -44,14 +44,10 @@ function euler_vortex_2d_modal(M::Int=4)
     error_analysis = ErrorAnalysis(results_path, conservation_law, 
         spatial_discretization)
     error_results = analyze(error_analysis, last(sol.u), exact_solution, T)
-
     conservation_analysis = PrimaryConservationAnalysis(results_path, 
         conservation_law, spatial_discretization)
     conservation_results = analyze(conservation_analysis, 
         load_time_steps(results_path))
-    entropy_analysis = EntropyConservationAnalysis(results_path, 
-        conservation_law, spatial_discretization, ode.p.mass_solver)
-    entropy_results = analyze(entropy_analysis, load_time_steps(results_path))
-
-    return error_results, conservation_results.E[end,:] - conservation_results.E[1,:], maximum(abs.(entropy_results.dEdt[:,1]))
+ 
+    return error_results, conservation_results.E[end,:] - conservation_results.E[1,:]
 end

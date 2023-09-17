@@ -237,19 +237,14 @@ function GeometricFactors(mesh::MeshData{d},
 
     J_q = Matrix{Float64}(undef, N_q, N_e)
     J_f = Matrix{Float64}(undef, N_f, N_e)
-
     nJf = Array{Float64, 3}(undef, d, N_f, N_e)
     nJq = Array{Float64, 4}(undef, d, N_fac, N_q, N_e)
-
-    # first dimension is node index, 
-    # second and third are matrix indices mn,
-    # fourth is element index.
     dxdr_q = Array{Float64, 4}(undef, N_q, d, d, N_e)
     Λ_q = Array{Float64, 4}(undef, N_q, d, d, N_e)
     dxdr_f = Array{Float64, 4}(undef, N_f, d, d, N_e)   
 
-    for k in 1:N_e
-        @inbounds for m in 1:d, n in 1:d
+    @inbounds for k in 1:N_e
+        for m in 1:d, n in 1:d
             # evaluate metric at mapping nodes
             dxdr = reference_element.Drst[n]*mesh.xyz[m][:,k]
 
@@ -259,7 +254,7 @@ function GeometricFactors(mesh::MeshData{d},
         end
 
         # loops over slower indices
-        @inbounds for i in 1:N_q
+        for i in 1:N_q
             J_q[i,k], Λ_q[i,:,:,k] = metrics(SMatrix{d,d}(dxdr_q[i,:,:,k]))
             for f in 1:N_fac
                 n_ref = Tuple(nrstJ[m][nodes_per_face*(f-1)+1] for m in 1:d)
@@ -289,7 +284,6 @@ function GeometricFactors(mesh::MeshData{2},
     (; x, y) = mesh
     (; nrstJ, Dr, Ds, Vq, Vf) = reference_element
 
-
     # note, here we assume that mesh is same N_q, N_f every element
     N_q = size(mesh.xyzq[1],1)
     N_f = size(mesh.xyzf[1],1)
@@ -301,13 +295,8 @@ function GeometricFactors(mesh::MeshData{2},
 
     J_q = Matrix{Float64}(undef, N_q, N_e)
     J_f = Matrix{Float64}(undef, N_f, N_e)
-
     nJf = Array{Float64, 3}(undef, 2, N_f, N_e)
     nJq = Array{Float64, 4}(undef, 2, N_fac, N_q, N_e)
-
-    # first dimension is node index, 
-    # second and third are matrix indices mn,
-    # fourth is element index.
     Λ_q = Array{Float64, 4}(undef, N_q, 2, 2, N_e)
 
     @inbounds @views for k in 1:N_e
@@ -342,6 +331,76 @@ function GeometricFactors(mesh::MeshData{2},
                 nJf[m,i,k] = sum(Λ_f[i,n,m]*nrstJ[n][i] for n in 1:2)
             end
             J_f[i,k] = sqrt(sum(nJf[m,i,k]^2 for m in 1:2))
+        end
+    end
+    return GeometricFactors(J_q, Λ_q, J_f, nJf, nJq)
+end
+
+function GeometricFactors(mesh::MeshData{3}, 
+    reference_element::RefElemData{3}, 
+    ::ChanWilcoxMetrics)
+
+    (; x, y, z) = mesh
+    (; nrstJ, Dr, Ds, Dt, Vq, Vf) = reference_element
+
+    # note, here we assume that mesh is same N_q, N_f every element
+    N_q = size(mesh.xyzq[1],1)
+    N_f = size(mesh.xyzf[1],1)
+    N_e = size(mesh.xyzq[1],2)
+
+    # here we assume same number of nodes per face
+    N_fac = num_faces(reference_element.element_type)
+    nodes_per_face = N_f ÷ N_fac
+
+    J_q = Matrix{Float64}(undef, N_q, N_e)
+    J_f = Matrix{Float64}(undef, N_f, N_e)
+    nJf = Array{Float64, 3}(undef, 3, N_f, N_e)
+    nJq = Array{Float64, 4}(undef, 3, N_fac, N_q, N_e)
+    Λ_q = Array{Float64, 4}(undef, N_q, 3, 3, N_e)
+
+    @inbounds @views for k in 1:N_e
+
+        rxJ, sxJ, txJ, ryJ, syJ, tyJ, rzJ, szJ, tzJ, J = geometric_factors(
+            x[:,k], y[:,k], z[:,k], Dr, Ds, Dt)
+
+        mul!(Λ_q[:,1,1,k], Vq, rxJ)
+        mul!(Λ_q[:,2,1,k], Vq, sxJ)
+        mul!(Λ_q[:,3,1,k], Vq, txJ)
+        mul!(Λ_q[:,1,2,k], Vq, ryJ)
+        mul!(Λ_q[:,2,2,k], Vq, syJ)
+        mul!(Λ_q[:,3,2,k], Vq, tyJ)
+        mul!(Λ_q[:,1,3,k], Vq, rzJ)
+        mul!(Λ_q[:,2,3,k], Vq, szJ)
+        mul!(Λ_q[:,3,3,k], Vq, tzJ)
+        mul!(J_q[:,k], Vq, J)
+        
+        Λ_f = Array{Float64, 3}(undef, N_f, 3, 3)
+        mul!(Λ_f[:,1,1], Vf, rxJ)
+        mul!(Λ_f[:,2,1], Vf, sxJ)
+        mul!(Λ_f[:,3,1], Vf, txJ)
+        mul!(Λ_f[:,1,2], Vf, ryJ)
+        mul!(Λ_f[:,2,2], Vf, syJ)
+        mul!(Λ_f[:,3,2], Vf, tyJ)
+        mul!(Λ_f[:,1,3], Vf, rzJ)
+        mul!(Λ_f[:,2,3], Vf, szJ)
+        mul!(Λ_f[:,3,3], Vf, tzJ)
+
+        # loops over slower indices
+        @inbounds for i in 1:N_q
+            for f in 1:N_fac
+                n_ref = Tuple(nrstJ[m][nodes_per_face*(f-1)+1] for m in 1:3)
+                for n in 1:3
+                    nJq[n,f,i,k] = sum(Λ_q[i,m,n,k]*n_ref[m] for m in 1:3)
+                end
+            end
+        end
+
+        # get scaled normal vectors - this includes scaling for ref. quadrature weights on long side of right-angled triangle.
+        @inbounds for i in 1:N_f
+            for m in 1:3
+                nJf[m,i,k] = sum(Λ_f[i,n,m]*nrstJ[n][i] for n in 1:3)
+            end
+            J_f[i,k] = sqrt(sum(nJf[m,i,k]^2 for m in 1:3))
         end
     end
     return GeometricFactors(J_q, Λ_q, J_f, nJf, nJq)

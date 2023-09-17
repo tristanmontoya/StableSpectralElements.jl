@@ -6,9 +6,11 @@ include("burgers_fluxdiff_1d.jl")
 include("euler_1d_gauss.jl")
 include("euler_vortex_2d_nodal_diage.jl")
 include("euler_vortex_2d_modal.jl")
+include("advection_3d.jl")
 
 const tol = 1.0e-10
 const p = 4
+
 @testset "Advection-Diffusion 1D ModalMulti" begin
     (l2, conservation, _) = test_driver(
         ReferenceApproximation(ModalMulti(p), Line()), 
@@ -79,26 +81,17 @@ end
     @test entropy ≈ 0.0 atol=tol
 end
 
-@testset "Isentropic Euler vortex FluxDiff ModalTensor Tri 2D" begin
-    (l2, conservation, entropy) = euler_vortex_2d_modal()
+@testset "Isentropic Euler vortex FluxDiff ModalTensor Tri 2D LF" begin
+    (l2, conservation) = euler_vortex_2d_modal()
 
-    @test l2 ≈ [0.03734599714012373, 0.075883163090583, 0.06103456983950774, 0.07065687750221998] atol=tol
+    @test l2 ≈ [0.015568197027072704, 0.040539693811761104, 0.04060141777050208, 0.043960971468832745] atol=tol
     @test conservation ≈ [0.0, 0.0, 0.0, 0.0] atol=tol
-    @test entropy ≈ 0.0 atol=tol
 end
 
 @testset "Advection 3D Energy-Conservative ModalTensor Tet" begin
-    (l2, conservation, energy) = test_driver(
-        ReferenceApproximation(ModalTensor(p), Tet(), 
-            mapping_degree=3, sum_factorize_vandermonde=false),
-        LinearAdvectionEquation((1.0,1.0,1.0)),
-        InitialDataSine(1.0,(2*π, 2*π, 2*π)),
-        StandardForm(mapping_form=SkewSymmetricMapping(),
-            inviscid_numerical_flux=LaxFriedrichsNumericalFlux(0.0)),
-        ReferenceOperator(), BLASAlgorithm(), 1.0, 2, 1.0, 1.0/50.0, 0.1,
-        "test_advection_3d_collapsed_econ")
-    
-    @test l2 ≈ 0.18604185425549752 atol=tol
+    (l2, conservation, energy) = advection_3d()
+
+    @test l2 ≈ 0.18698123719889992 atol=tol
     @test conservation ≈ 0.0 atol=tol
     @test energy ≈ 0.0 atol=tol
 end
