@@ -27,6 +27,7 @@ We recommend that users refer to the following Jupyter notebooks (included in th
 * [Linear advection equation in 2D](https://github.com/tristanmontoya/StableSpectralElements.jl/tree/main/examples/advection_2d.ipynb)
 * [Isentropic Euler vortex in 2D with entropy-stable modal scheme on triangles](https://github.com/tristanmontoya/StableSpectralElements.jl/tree/main/examples/euler_vortex_2d.ipynb)
 * [Linear advection equation in 3D](https://github.com/tristanmontoya/StableSpectralElements.jl/tree/main/examples/advection_3d.ipynb)
+* [3D Euler equations with entropy-stable modal scheme on tetrahedra](https://github.com/tristanmontoya/StableSpectralElements.jl/tree/main/examples/euler_3d.ipynb)
 
 ## License
 This software is released under the [GPLv3 license](https://www.gnu.org/licenses/gpl-3.0.en.html).
