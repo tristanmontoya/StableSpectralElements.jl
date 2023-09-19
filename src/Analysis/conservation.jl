@@ -214,8 +214,8 @@ function analyze(analysis::EntropyConservationAnalysis,
         
     for i in 1:N_t
         u, dudt, t[i] = load_solution(results_path, time_steps[i], load_du=true)
-        E[i,:] = evaluate_conservation(analysis, u) ./ factor
-        dEdt[i,:] = evaluate_conservation_residual(analysis, u, dudt) ./ factor
+        E[i,:] .= evaluate_conservation(analysis, u) ./ factor
+        dEdt[i,:] .= evaluate_conservation_residual(analysis, u, dudt) ./ factor
     end
 
     results = ConservationAnalysisResults(t,E)
@@ -275,55 +275,6 @@ function analyze(analysis::ConservationAnalysis,
     return ConservationAnalysisResultsWithDerivative(t,E, dEdt)
 end
 
-function analyze(analysis::ConservationAnalysis,    
-    model::DynamicalAnalysisResults,
-    time_steps::Vector{Int}, Δt::Float64, start::Int=1,
-    resolution=100;  n=1, window_size=nothing, new_projection=false)
-
-    (; results_path, N_c, dict_name) = analysis
-    N_t = length(time_steps)
-    t = Vector{Float64}(undef,N_t)
-    E = Matrix{Float64}(undef,N_t, N_c)
-    
-    t_modeled = Vector{Float64}(undef,resolution+1)
-    E_modeled = Matrix{Float64}(undef,resolution+1, N_c)
-
-    u0, t0 = load_solution(results_path, time_steps[start])
-    for i in 1:N_t
-        u, t[i] = load_solution(results_path, time_steps[i])
-        E[i,:] = evaluate_conservation(analysis, u)
-    end
-
-    (N_p,N_c,N_e) = size(u0)
-    N = N_p*N_c*N_e
-
-    dt = Δt/resolution
-    if new_projection
-        c = pinv(model.Z[1:N,:]) * vec(u0)
-    elseif !isnothing(window_size)
-        c = model.c[:,1]
-        t0 = t[max(start-window_size+1,1)]
-    else
-        c = model.c[:, (start-1)*n+1]
-    end
-
-    for i in 0:resolution
-        u = reshape(real.(forecast(model, dt*i, c)[1:N]),(N_p,N_c,N_e))
-        t_modeled[i+1] = t0+dt*i
-        E_modeled[i+1,:] = evaluate_conservation(analysis, u)
-    end
-
-    results = ConservationAnalysisResults(t,E)
-    modeled_results = ConservationAnalysisResults(t_modeled, E_modeled)
-
-    save(string(results_path, dict_name), 
-    Dict("conservation_analysis" => analysis,
-        "conservation_results" => results,
-        "modeled_conservation_results" => modeled_results))  
-
-    return results, modeled_results
-end
-
 @recipe function plot(results::ConservationAnalysisResults, e::Int=1)
 
     xlabel --> latexstring("t")
@@ -333,7 +284,8 @@ end
     results.t, results.E[:,e]
 end
 
-@recipe function plot(results::ConservationAnalysisResultsWithDerivative, e::Int=1)
+@recipe function plot(results::ConservationAnalysisResultsWithDerivative,
+    e::Int=1)
 
     xlabel --> latexstring("t")
     labels = [LaTeXString("Net change"), LaTeXString("Time derivative")]
@@ -349,25 +301,4 @@ end
         label --> labels[2]
         results.t, results.dEdt[:,e]
     end
-end
-
-function plot_evolution(analysis::ConservationAnalysis, 
-    results::Vector{<:AbstractConservationAnalysisResults}, title::String; 
-    labels::Vector{String}=["Actual", "Predicted"],
-    ylabel::String="Energy", e::Int=1, t=nothing, xlims=nothing, ylims=nothing)
-
-    p = plot(results[1].t, results[1].E[:,e], xlabel="\$t\$",
-        ylabel=ylabel, labels=labels[1], xlims=xlims, ylims=ylims, 
-        linewidth=2.0)
-    N = length(results)
-    
-    for i in 2:N
-        plot!(p, results[i].t, results[i].E[:,e], labels=labels[i], linestyle=:dash, linewidth=3.0, legend=:topright)
-    end
-    if !isnothing(t)
-       vline!(p,[t], labels=nothing)
-    end
-
-    savefig(p, string(analysis.results_path, title))
-    return p
 end

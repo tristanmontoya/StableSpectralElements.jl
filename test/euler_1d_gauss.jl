@@ -3,7 +3,14 @@ function euler_1d_gauss()
     L = 2.0
     
     conservation_law = EulerEquations{1}(1.4)
-    exact_sol = EulerPeriodicTest(conservation_law);
+
+    function exact_sol(x,t)
+        γ = 1.4
+        ρ = 1.0 + 0.2sin(π*x)
+        v = 1.0
+        E = 1.0/(γ-1) + 0.5*ρ
+        return SVector{3}(ρ, ρ*v, E)
+    end
 
     p = 5
     M = 4

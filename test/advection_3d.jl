@@ -10,9 +10,8 @@ function advection_3d()
     M = 2
     p = 4
     
-    reference_approximation = ReferenceApproximation(
-        ModalTensor(p), Tet(), mapping_degree=4,
-        sum_factorize_vandermonde=false)
+    reference_approximation = ReferenceApproximation(ModalTensor(p), Tet(),
+        mapping_degree=4, sum_factorize_vandermonde=false)
     
     form = StandardForm(mapping_form=SkewSymmetricMapping(), 
         inviscid_numerical_flux=CentralNumericalFlux())

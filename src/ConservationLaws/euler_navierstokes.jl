@@ -305,18 +305,19 @@ Domain should be [0,2]ᵈ.
 struct EulerPeriodicTest{d} <: AbstractGridFunction{d} 
     γ::Float64
     strength::Float64
+    L::Float64
     N_c::Int
 
     function EulerPeriodicTest(conservation_law::EulerEquations{d}, 
-        strength::Float64=0.2) where {d}
-        return new{d}(conservation_law.γ,strength,d+2)
+        strength::Float64=0.2, L::Float64=2.0) where {d}
+        return new{d}(conservation_law.γ,strength,L,d+2)
     end
 end
 
 function evaluate(f::EulerPeriodicTest{d}, 
     x::NTuple{d,Float64},t::Float64=0.0) where {d}
 
-    ρ = 1.0 + f.strength*sin(π*sum(x[m] for m in 1:d))
+    ρ = 1.0 + f.strength*sin(2π*sum(x[m] for m in 1:d)/f.L)
     return [ρ, fill(ρ,d)..., 1.0/(f.γ-1.0) + 0.5*ρ*d]
 end
 

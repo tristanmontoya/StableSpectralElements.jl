@@ -52,9 +52,9 @@ module ConservationLaws
                 u_in[i,:], u_out[i,:])
             a = numerical_flux.halfλ*wave_speed(conservation_law, 
                 u_in[i,:], u_out[i,:], n_f[:,i])
-            @inbounds for e in 1:N_c
+            for e in 1:N_c
                 f_n_avg = 0.0
-                @inbounds for m in 1:d
+                for m in 1:d
                     @muladd f_n_avg = f_n_avg + f_s[e,m]*n_f[m,i]
                 end
                 @muladd f_star[i,e] = f_n_avg + a * (u_in[i,e] - u_out[i,e])
@@ -73,9 +73,9 @@ module ConservationLaws
         @inbounds for i in axes(u_in, 1)
             f_s = compute_two_point_flux(conservation_law, two_point_flux,
                 u_in[i,:], u_out[i,:])
-            @inbounds for e in 1:N_c
+            for e in 1:N_c
                 temp = 0.0
-                @inbounds for m in 1:d
+                for m in 1:d
                     @muladd temp = temp + f_s[e,m]*n_f[m,i]
                 end
                f_star[i,e] = temp

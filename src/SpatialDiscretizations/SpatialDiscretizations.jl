@@ -111,6 +111,8 @@ module SpatialDiscretizations
         x_plot::NTuple{d, Matrix{Float64}}
     end
 
+    dim(::SpatialDiscretization{d}) where {d} = d
+
     function project_jacobian!(J_q::Matrix{Float64}, V::LinearMap,
         W::Diagonal, ::Val{true})
         VDM = Matrix(V)

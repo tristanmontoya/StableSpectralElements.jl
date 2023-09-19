@@ -168,8 +168,19 @@ end
         return u0
     end
 
-    @inline function evaluate(::NoSourceTerm{d}, 
-        ::NTuple{d,Vector{Float64}}, ::Float64) where {d}
+    function evaluate(f::Function, 
+        x::NTuple{d,AbstractMatrix{Float64}},
+        t::Float64=0.0) where {d}
+        u0 = Array{Float64}(undef, size(x[1],1), 
+            length(f(Tuple(0.0 for m in 1:d)...,t)), size(x[1],2))
+        @inbounds for k in axes(x[1],2), i in axes(x[1],1)
+            u0[i,:,k] .= f(Tuple(x[m][i,k] for m in 1:d)...,t)
+        end 
+        return u0
+    end
+
+    @inline function evaluate(::NoSourceTerm{d}, ::NTuple{d,Vector{Float64}},
+        ::Float64) where {d}
         return nothing
     end
 

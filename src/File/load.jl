@@ -68,5 +68,5 @@ function load_snapshots_with_derivatives(results_path::String,
 
     t_s = (times[N_t] - times[1])/(N_t - 1.0)
     
-    return U,dU,t_s
+    return U, dU, t_s
 end

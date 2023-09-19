@@ -1,5 +1,5 @@
 push!(LOAD_PATH,"../")
-using Test, StableSpectralElements, OrdinaryDiffEq, TimerOutputs
+using Test, StableSpectralElements, OrdinaryDiffEq, TimerOutputs, StaticArrays
 
 include("test_driver.jl")
 include("burgers_fluxdiff_1d.jl")

@@ -1,19 +1,11 @@
-struct ErrorAnalysis{d} <: AbstractAnalysis
+struct ErrorAnalysis{d,V_err_type} <: AbstractAnalysis
     N_c::Int
     N_e::Int
-    WJ_err::Vector{<:AbstractMatrix{Float64}}
-    V_err::LinearMap
+    WJ_err::Vector{Diagonal{Float64, Vector{Float64}}}
+    V_err::V_err_type
     x_err::NTuple{d, Matrix{Float64}}
     total_volume::Float64
     results_path::String
-end
-
-function ErrorAnalysis(conservation_law::AbstractConservationLaw,
-    spatial_discretization::SpatialDiscretization,
-    error_quadrature_rule=nothing)
-    return ErrorAnalysis("./", conservation_law,
-        spatial_discretization,
-        error_quadrature_rule)
 end
 
 function ErrorAnalysis(results_path::String, 
@@ -21,9 +13,9 @@ function ErrorAnalysis(results_path::String,
     spatial_discretization::SpatialDiscretization{d},
     error_quadrature_rule=nothing) where {d}
 
-    (; N_e) = spatial_discretization
+    (; N_e, reference_approximation) = spatial_discretization
     (; xyzq) = spatial_discretization.mesh
-    (; V,reference_element,approx_type) = spatial_discretization.reference_approximation
+    (; V,reference_element,approx_type) = reference_approximation
     (; J_q) = spatial_discretization.geometric_factors
 
     if isnothing(error_quadrature_rule)
@@ -32,10 +24,8 @@ function ErrorAnalysis(results_path::String,
         x_err = xyzq
     else 
         # Note: this introduces an additional approximation if the mapping and # Jacobian determinant are over degree p.
-     
         # Otherwise we have to recompute the Jacobian rather than just
         # interpolate, which I haven't done here.
-
         (; wq, rstq, element_type) = reference_element
         error_quad = quadrature(element_type, error_quadrature_rule)
         r_err = error_quad[1:d]
@@ -56,10 +46,9 @@ function ErrorAnalysis(results_path::String,
         sum(sum.(WJ_err)), results_path)
 end
 
-function analyze(analysis::ErrorAnalysis{d}, 
-    sol::Array{Float64,3}, 
-    exact_solution::AbstractGridFunction{d},
-    t::Float64=0.0; normalize=false, write_to_file=true) where {d}
+function analyze(analysis::ErrorAnalysis{d}, sol::Array{Float64,3},
+    exact_solution, t::Float64=0.0; 
+    normalize=false, write_to_file=true) where {d}
 
     (; N_c, N_e, WJ_err, V_err, x_err, total_volume, results_path) = analysis 
 

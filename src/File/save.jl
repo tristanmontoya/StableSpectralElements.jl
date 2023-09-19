@@ -24,8 +24,7 @@ end
 function save_project(
     @nospecialize(conservation_law::AbstractConservationLaw),
     @nospecialize(spatial_discretization::SpatialDiscretization),
-    @nospecialize(initial_data::AbstractGridFunction), 
-    @nospecialize(form::AbstractResidualForm),
+    initial_data, @nospecialize(form::AbstractResidualForm),
     tspan::NTuple{2,Float64}, 
     results_path::String; 
     overwrite=false,

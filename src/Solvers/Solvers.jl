@@ -252,7 +252,6 @@ module Solvers
             spatial_discretization.N_e)
     end
 
-
     @inline function project_function(initial_data::AbstractGridFunction{d},
         ::UniformScalingMap, W::Diagonal, J_q::Matrix{Float64}, 
         x::NTuple{d,Matrix{Float64}}) where {d}
@@ -260,18 +259,18 @@ module Solvers
     end
     
     @inline function project_function(
-        initial_data::AbstractGridFunction{d}, V::LinearMap, W::Diagonal, J_q::Matrix{Float64}, x::NTuple{d,Matrix{Float64}}) where {d}
+        initial_data, V::LinearMap, W::Diagonal, J_q::Matrix{Float64}, x::NTuple{d,Matrix{Float64}}) where {d}
     
-        (; N_c) = initial_data
         N_p = size(V,2)
         N_e = size(J_q,2)
         
-        u0 = Array{Float64}(undef, N_p, N_c, N_e)
         u_q = evaluate(initial_data,x,0.0)
+        u0 = Array{Float64}(undef, N_p, size(u_q,2), N_e)
         VDM = Matrix(V)
     
         @inbounds @views for k in 1:N_e
             WJ = Diagonal(W .* J_q[:,k])
+
             # this will throw if M is not SPD
             M = cholesky(Symmetric(VDM' * WJ * VDM))
             lmul!(WJ, u_q[:,:,k])
@@ -282,8 +281,8 @@ module Solvers
     end
     
         """Returns an array of initial data as nodal or modal DOF"""
-    @inline function initialize(initial_data::AbstractGridFunction{d},
-        spatial_discretization::SpatialDiscretization{d}) where {d}
+    @inline function initialize(initial_data,
+        spatial_discretization::SpatialDiscretization)
     
         (; J_q) = spatial_discretization.geometric_factors
         (; V, W) = spatial_discretization.reference_approximation

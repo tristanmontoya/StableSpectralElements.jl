@@ -5,8 +5,7 @@ module Analysis
     using JLD2: save, load, save_object, load_object
     using Plots: plot, savefig, plot!, scatter, text, annotate!, vline!, grid, theme_palette, twinx, @layout
     using LaTeXStrings: LaTeXString, latexstring
-    using SparseArrays: sparse, blockdiag, kron
-    using Arpack: eigs
+    using SparseArrays: sparse, blockdiag, kron!
     using OrdinaryDiffEq: OrdinaryDiffEqAlgorithm, ODESolution, ODEIntegrator, solve, RK4, step!, reinit!
     using StartUpDG: MeshData, vandermonde
     using RecipesBase
@@ -24,7 +23,7 @@ module Analysis
     using ..File
     using ..Visualize
 
-    export AbstractAnalysis, AbstractAnalysisResults, analyze, save_analysis, plot_analysis, plot_spectrum, plot_modes, tabulate_analysis, tabulate_analysis_for_paper
+    export AbstractAnalysis, AbstractAnalysisResults, analyze, save_analysis, tabulate_analysis, tabulate_analysis_for_paper
 
     abstract type AbstractAnalysis end
     abstract type AbstractAnalysisResults end
@@ -39,10 +38,7 @@ module Analysis
     export ErrorAnalysis, AbstractNorm, QuadratureL2, QuadratureL2Normalized
     include("error.jl")
 
-    export LinearAnalysis, DynamicalAnalysisResults, KoopmanAnalysis, AbstractKoopmanAlgorithm, StandardDMD, ExtendedDMD, KernelDMD, KernelResDMD, ExtendedResDMD, GeneratorDMD, AbstractSamplingAlgorithmx, GaussianSampling, analyze_running, forecast, monomial_basis, monomial_derivatives, make_dmd_matrices, dmd, generate_samples
-    include("dynamics.jl")
-
-    export ConservationAnalysis, PrimaryConservationAnalysis, EnergyConservationAnalysis, EntropyConservationAnalysis, ConservationAnalysisResults, ConservationAnalysisResultsWithDerivative, plot_evolution, evaluate_conservation, evaluate_conservation_residual
+    export ConservationAnalysis, PrimaryConservationAnalysis, EnergyConservationAnalysis, EntropyConservationAnalysis, ConservationAnalysisResults, ConservationAnalysisResultsWithDerivative, evaluate_conservation, evaluate_conservation_residual
     include("conservation.jl")
 
     export RefinementAnalysis, RefinementErrorAnalysis, RefinementAnalysisResults, RefinementErrorAnalysisResults, run_refinement, get_tickslogscale
