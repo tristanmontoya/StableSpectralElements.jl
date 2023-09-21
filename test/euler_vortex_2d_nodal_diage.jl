@@ -56,5 +56,10 @@ function euler_vortex_2d_diage(M::Int=4)
         conservation_law, spatial_discretization, mass_solver)
     entropy_results = analyze(entropy_analysis, load_time_steps(results_path))
 
+    for i in eachindex(sol.u)
+        postprocess_vtk(spatial_discretization, string(results_path,
+            "solution_",i,".vtu"), sol.u[i], variable_name="Density")
+    end
+
     return error_results, conservation_results.E[end,:] - conservation_results.E[1,:], maximum(abs.(entropy_results.dEdt[:,1]))
 end

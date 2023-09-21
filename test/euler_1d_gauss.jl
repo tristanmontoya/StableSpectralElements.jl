@@ -27,7 +27,7 @@ function euler_1d_gauss()
         inviscid_numerical_flux=EntropyConservativeNumericalFlux())
 
     ode = semidiscretize(conservation_law, spatial_discretization, exact_sol, 
-        form, (0.0, T), ReferenceOperator())
+        form, (0.0, T), ReferenceOperator(), BLASAlgorithm())
 
     results_path = save_project(conservation_law,
         spatial_discretization, exact_sol, form, (0.0, T),

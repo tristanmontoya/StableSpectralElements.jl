@@ -13,7 +13,7 @@ module SpatialDiscretizations
     @reexport using StartUpDG: RefElemData, AbstractElemShape, Line, Quad, Tri, Tet, Hex, SBP
 
     export AbstractApproximationType, AbstractTensorProduct, AbstractMultidimensional,
-    NodalTensor, ModalTensor, ModalMulti, NodalMulti, ModalMultiDiagE, NodalMultiDiagE, AbstractReferenceMapping, AbstractMetrics, ExactMetrics, ChanWilcoxMetrics, NoMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, apply_reference_mapping, reference_derivative_operators, check_normals, check_facet_nodes, check_sbp_property, centroids, trace_constant, dim, χ, warped_product
+    NodalTensor, ModalTensor, ModalMulti, NodalMulti, ModalMultiDiagE, NodalMultiDiagE, AbstractReferenceMapping, AbstractMetrics, ExactMetrics, ConservativeCurlMetrics, ChanWilcoxMetrics, NoMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, apply_reference_mapping, reference_derivative_operators, check_normals, check_facet_nodes, check_sbp_property, centroids, trace_constant, dim, χ, warped_product
     
     abstract type AbstractApproximationType end
     abstract type AbstractTensorProduct <: AbstractApproximationType end
@@ -59,7 +59,8 @@ module SpatialDiscretizations
 
     abstract type AbstractMetrics end
     struct ExactMetrics <: AbstractMetrics end
-    struct ChanWilcoxMetrics <: AbstractMetrics end
+    struct ConservativeCurlMetrics <: AbstractMetrics end
+    const ChanWilcoxMetrics = ConservativeCurlMetrics
 
     """Operators for local approximation on reference element"""
     struct ReferenceApproximation{RefElemType, ApproxType, D_type, V_type,

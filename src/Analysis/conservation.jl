@@ -4,11 +4,11 @@ abstract type AbstractConservationAnalysisResults <: AbstractAnalysisResults end
 """
 Evaluate change in ∫udx  
 """
-struct PrimaryConservationAnalysis <: ConservationAnalysis
-    WJ::Vector{Diagonal}
+struct PrimaryConservationAnalysis{V_type} <: ConservationAnalysis
+    WJ::Vector{Diagonal{Float64, Vector{Float64}}}
     N_c::Int
     N_e::Int
-    V::LinearMap
+    V::V_type
     results_path::String
     dict_name::String
 end
@@ -16,22 +16,23 @@ end
 """
 Evaluate change in  ∫½u²dx  
 """
-struct EnergyConservationAnalysis <: ConservationAnalysis
-    mass_solver::AbstractMassMatrixSolver
+struct EnergyConservationAnalysis{V_type, MassSolver} <: ConservationAnalysis
+    mass_solver::MassSolver
     N_c::Int
     N_e::Int
-    V::LinearMap
+    V::V_type
     results_path::String
     dict_name::String
 end
 
-struct EntropyConservationAnalysis <: ConservationAnalysis
-    mass_solver::AbstractMassMatrixSolver
-    WJ::Vector{Diagonal}
-    conservation_law::AbstractConservationLaw
+struct EntropyConservationAnalysis{V_type, MassSolver, 
+    ConservationLaw} <: ConservationAnalysis
+    mass_solver::MassSolver
+    WJ::Vector{Diagonal{Float64, Vector{Float64}}}
+    conservation_law::ConservationLaw
     N_c::Int
     N_e::Int
-    V::LinearMap
+    V::V_type
     results_path::String
     dict_name::String
 end
@@ -285,20 +286,24 @@ end
 end
 
 @recipe function plot(results::ConservationAnalysisResultsWithDerivative,
-    e::Int=1)
+    e::Int=1; net_change=true, derivative=true)
 
     xlabel --> latexstring("t")
     labels = [LaTeXString("Net change"), LaTeXString("Time derivative")]
     fontfamily --> "Computer Modern"
 
-    @series begin
-        linestyle --> :solid
-        label --> labels[1]
-        results.t, results.E[:,e] .- first(results.E[:,e])
+    if net_change
+        @series begin
+            linestyle --> :solid
+            label --> labels[1]
+            results.t, results.E[:,e] .- first(results.E[:,e])
+        end
     end
-    @series begin
-        linestyle --> :dot
-        label --> labels[2]
-        results.t, results.dEdt[:,e]
+    if derivative
+        @series begin
+            linestyle --> :dot
+            label --> labels[2]
+            results.t, results.dEdt[:,e]
+        end
     end
 end

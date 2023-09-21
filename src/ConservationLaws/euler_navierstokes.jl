@@ -220,50 +220,6 @@ end
     return SVector{d+2}(f_ρ, (f_ρ*V_avg[m] + p_avg*n[m] for m in 1:d)...,
         f_ρ*C + 0.5*(p_L*Vn_R + p_R*Vn_L))
 end
-
-
-"""
-Isentropic vortex problem, taken verbatim from the Trixi.jl examples (https://github.com/trixi-framework/Trixi.jl/blob/main/examples/tree_2d_dgsem/elixir_euler_vortex.jl).
-
-Domain should be [-10,10] × [-10,10].
-"""
-struct TrixiIsentropicVortex <: AbstractGridFunction{2} 
-    γ::Float64
-    strength::Float64
-    N_c::Int
-    function TrixiIsentropicVortex(conservation_law::EulerEquations{2}, 
-        strength::Float64=5.0)
-        return new(conservation_law.γ,strength,4)
-    end
-end
-
-function evaluate(f::TrixiIsentropicVortex, x::NTuple{2,Float64},t::Float64=0.0)
-    inicenter = SVector(0.0, 0.0)
-    iniamplitude = f.strength
-
-    # base flow
-    gamma = f.γ
-    rho = 1.0
-    v1 = 1.0
-    v2 = 1.0
-    vel = SVector(v1, v2)
-    p = 25.0
-
-    rt = p / rho                  
-    t_loc = 0.0
-    cent = inicenter + vel*t_loc
-    cent = SVector(x) - cent 
-    cent = SVector(-cent[2], cent[1])
-    r2 = cent[1]^2 + cent[2]^2
-    du = iniamplitude / (2*π) * exp(0.5 * (1 - r2))
-    dtemp = -(gamma - 1) / (2 * gamma * rt) * du^2
-    rho = rho * (1 + dtemp)^(1 / (gamma - 1))
-    vel = vel + du * cent
-    v1, v2 = vel
-    p = p * (1 + dtemp)^(gamma / (gamma - 1))
-    return [rho, rho*v1, rho*v2, p/(gamma-1) + 0.5*rho*(v1^2 + v2^2)]
-end
-
 struct IsentropicVortex <: AbstractGridFunction{2} 
     γ::Float64
     Ma::Float64 
@@ -281,7 +237,8 @@ struct IsentropicVortex <: AbstractGridFunction{2}
     end
 end
 
-function evaluate(f::IsentropicVortex, x::NTuple{2,Float64},t::Float64=0.0)
+@inline function evaluate(f::IsentropicVortex, x::NTuple{2,Float64},
+    t::Float64=0.0)
     (; γ, Ma, θ, R, β, σ², x_0) = f
     x_rel = ((x[1] - x_0[1])/R, (x[2] - x_0[2])/R)
     Ω = β*exp(-0.5/σ² * (x_rel[1]^2 + x_rel[2]^2))
@@ -291,7 +248,7 @@ function evaluate(f::IsentropicVortex, x::NTuple{2,Float64},t::Float64=0.0)
     v = (Ma*cos(θ) + dv[1], Ma*sin(θ) + dv[2])
     p = (ρ^γ)/γ
     E = p/(γ-1) + 0.5*ρ*(v[1]^2 + v[2]^2)
-    return [ρ, ρ*v[1], ρ*v[2], E]
+    return SVector{4}(ρ, ρ*v[1], ρ*v[2], E)
 end
 
 """
@@ -314,11 +271,11 @@ struct EulerPeriodicTest{d} <: AbstractGridFunction{d}
     end
 end
 
-function evaluate(f::EulerPeriodicTest{d}, 
+@inline function evaluate(f::EulerPeriodicTest{d}, 
     x::NTuple{d,Float64},t::Float64=0.0) where {d}
 
     ρ = 1.0 + f.strength*sin(2π*sum(x[m] for m in 1:d)/f.L)
-    return [ρ, fill(ρ,d)..., 1.0/(f.γ-1.0) + 0.5*ρ*d]
+    return SVector{d+2}(ρ, fill(ρ,d)..., 1.0/(f.γ-1.0) + 0.5*ρ*d)
 end
 
 """Inviscid 3D Taylor-Green vortex, I think I got this version of it from Shadpey and Zingg, "Entropy-Stable Multidimensional Summation-by-Parts Discretizations on hp-Adaptive Curvilinear Grids for Hyperbolic Conservation Laws," JSC 2020.
@@ -335,7 +292,8 @@ struct TaylorGreenVortex <: AbstractGridFunction{3}
     end
 end
 
-function evaluate(f::TaylorGreenVortex,  x::NTuple{3,Float64}, t::Float64=0.0)
+@inline function evaluate(f::TaylorGreenVortex, 
+    x::NTuple{3,Float64}, t::Float64=0.0)
 
     p = 1.0/(f.γ * f.Ma^2) + 
         1.0/16 * (2*cos(2*x[1]) + 2*cos(2*x[2]) +
@@ -343,5 +301,5 @@ function evaluate(f::TaylorGreenVortex,  x::NTuple{3,Float64}, t::Float64=0.0)
     u = sin(x[1])*cos(x[2])*cos(x[3])
     v = -cos(x[1])*sin(x[2])*cos(x[3])
 
-    return [1.0, u, v, 0.0,  p/(f.γ-1.0) + 0.5*ρ*(u^2 + v^2)]
+    return SVector{5}(1.0, u, v, 0.0,  p/(f.γ-1.0) + 0.5*ρ*(u^2 + v^2))
 end

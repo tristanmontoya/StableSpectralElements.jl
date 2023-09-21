@@ -1,5 +1,5 @@
 push!(LOAD_PATH,"../")
-using Test, StableSpectralElements, OrdinaryDiffEq, TimerOutputs, StaticArrays
+using Test, StableSpectralElements, OrdinaryDiffEq, TimerOutputs, StaticArrays, Plots
 
 include("test_driver.jl")
 include("burgers_fluxdiff_1d.jl")
@@ -7,10 +7,10 @@ include("euler_1d_gauss.jl")
 include("euler_vortex_2d_nodal_diage.jl")
 include("euler_vortex_2d_modal.jl")
 include("advection_3d.jl")
+include("euler_3d.jl")
 
 const tol = 1.0e-10
 const p = 4
-
 @testset "Advection-Diffusion 1D ModalMulti" begin
     (l2, conservation, _) = test_driver(
         ReferenceApproximation(ModalMulti(p), Line()), 
@@ -91,7 +91,17 @@ end
 @testset "Advection 3D Energy-Conservative ModalTensor Tet" begin
     (l2, conservation, energy) = advection_3d()
 
-    @test l2 ≈ 0.18698123719889992 atol=tol
+    @test l2 ≈ 0.1876141674772107 atol=tol
     @test conservation ≈ 0.0 atol=tol
     @test energy ≈ 0.0 atol=tol
+end
+
+@testset "Euler 3D NodalTensor Hex" begin
+    (l2, conservation, entropy) = euler_3d()
+
+    @test l2 ≈ [0.18342164491797003, 0.1834216449179776, 
+        0.18342164491796725, 0.18342164491796784, 0.2751324673769553] atol=tol
+    @test conservation ≈ [0.0, 0.0, 0.0, 0.0, 0.0] atol=tol
+    @test entropy ≈ 0.0 atol=tol
+
 end

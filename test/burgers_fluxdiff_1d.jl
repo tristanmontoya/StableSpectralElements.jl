@@ -7,6 +7,7 @@ function burgers_fluxdiff_1d()
 
     M = 20
     p = 7
+    
     form = FluxDifferencingForm(
         inviscid_numerical_flux=EntropyConservativeNumericalFlux())
 
@@ -28,7 +29,7 @@ function burgers_fluxdiff_1d()
     h = L / (reference_approximation.N_p * spatial_discretization.N_e)
     dt = CFL * h / 1.0
 
-    sol = solve(ode_problem, CarpenterKennedy2N54(), adaptive=false, dt=dt,
+    solve(ode_problem, CarpenterKennedy2N54(), adaptive=false, dt=dt,
         save_everystep=false, callback=save_callback(results_path, (0.0,T),  
             floor(Int, T/(dt*50))))
 

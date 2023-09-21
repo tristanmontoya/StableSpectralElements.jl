@@ -123,7 +123,8 @@ module ConservationLaws
             initial_data::AbstractGridFunction{d};
             periodic::Bool=false) where {d, PDEType, N_c}
 
-            return new{d,typeof(conservation_law),typeof(initial_data),typeof(conservation_law.source_term)}(
+            return new{d,typeof(conservation_law),typeof(initial_data),
+                typeof(conservation_law.source_term)}(
                 conservation_law, initial_data, periodic, N_c)
         end
     end

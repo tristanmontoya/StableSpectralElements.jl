@@ -35,7 +35,7 @@ function euler_vortex_2d_modal(M::Int=4)
     dt = T/1000
 
     ode = semidiscretize(conservation_law,
-        spatial_discretization, exact_solution, form, (0.0, T), ReferenceOperator(), BLASAlgorithm())
+        spatial_discretization, exact_solution, form, (0.0, T), ReferenceOperator())
 
     sol = solve(ode, CarpenterKennedy2N54(), 
         dt=dt, adaptive=false, save_everystep=false, 
