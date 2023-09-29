@@ -1,6 +1,5 @@
 module SpatialDiscretizations
 
-    using StaticArrays: SArray, SMatrix, SVector
     using LinearAlgebra: I, inv, Diagonal, diagm, kron, transpose, det, eigvals, mul!
     using Random: rand, shuffle
     using LinearMaps: LinearMap, ⊗
@@ -11,6 +10,7 @@ module SpatialDiscretizations
     
     using Reexport
     @reexport using StartUpDG: RefElemData, AbstractElemShape, Line, Quad, Tri, Tet, Hex, SBP
+    @reexport using StaticArrays: SArray, SMatrix, SVector
 
     export AbstractApproximationType, AbstractTensorProduct, AbstractMultidimensional,
     NodalTensor, ModalTensor, ModalMulti, NodalMulti, ModalMultiDiagE, NodalMultiDiagE, AbstractReferenceMapping, AbstractMetrics, ExactMetrics, ConservativeCurlMetrics, ChanWilcoxMetrics, NoMapping, ReferenceApproximation, GeometricFactors, SpatialDiscretization, apply_reference_mapping, reference_derivative_operators, check_normals, check_facet_nodes, check_sbp_property, centroids, trace_constant, dim, χ, warped_product
