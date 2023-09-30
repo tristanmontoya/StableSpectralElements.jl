@@ -309,6 +309,7 @@ struct KelvinHelmholtzInstability <: AbstractGridFunction{2}
     N_c::Int
     function KelvinHelmholtzInstability(conservation_law::EulerEquations{2})
         return new(conservation_law.γ,4)
+    end
 end
 
 @inline function evaluate(f::KelvinHelmholtzInstability, 
