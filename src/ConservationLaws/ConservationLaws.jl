@@ -147,7 +147,7 @@ module ConservationLaws
     export InviscidBurgersEquation, ViscousBurgersEquation
     include("burgers.jl")
 
-    export EulerEquations, NavierStokesEquations, EulerPeriodicTest, TaylorGreenVortex, IsentropicVortex, TrixiIsentropicVortex
+    export EulerEquations, NavierStokesEquations, EulerPeriodicTest, TaylorGreenVortex, IsentropicVortex, KelvinHelmholtzInstability
     include("euler_navierstokes.jl")
 
 end

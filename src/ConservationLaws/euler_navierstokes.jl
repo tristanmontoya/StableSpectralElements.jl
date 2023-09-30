@@ -303,3 +303,21 @@ end
 
     return SVector{5}(1.0, u, v, 0.0,  p/(f.γ-1.0) + 0.5*ρ*(u^2 + v^2))
 end
+
+struct KelvinHelmholtzInstability <: AbstractGridFunction{2}
+    γ::Float64
+    N_c::Int
+    function KelvinHelmholtzInstability(conservation_law::EulerEquations{2})
+        return new(conservation_law.γ,4)
+end
+
+@inline function evaluate(f::KelvinHelmholtzInstability, 
+    x::NTuple{2,Float64}, t::Float64=0.0)
+    (x₁,x₂) = (x - 1, y - 1)
+    B = tanh(15*x₂ + 7.5) - tanh(15*x₂ - 7.5)
+    ρ = 0.5 + 0.75*B
+    p = 1.0
+    u = 0.5*(B-1) 
+    v = 0.1*sin(2π*x₁)
+    return SVector{4}(ρ,ρ*u,ρ*v,p/(f.γ-1) + 0.5*ρ*(u^2 + v^2))
+end
