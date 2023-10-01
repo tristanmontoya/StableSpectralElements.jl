@@ -56,17 +56,22 @@ end
 
 function quadrature(::Tet, quadrature_rule::XiaoGimbutasQuadrature)
     if quadrature_rule.degree > 15
-        @error "Xiao-Gimbutas quadrature rules not available for N > 20."
+        @error "Xiao-Gimbutas quadrature rules not available for N > 15."
     end
     return quad_nodes_tet(quadrature_rule.degree)
 end
 
 function quadrature(::Tet, quadrature_rule::JaskowiecSukumarQuadrature)
+    # will throw if degree > 20
     return jaskowiec_sukumar_quad_nodes(Tet(), quadrature_rule.degree)
 end
 
 function quadrature(::Tet, quadrature_rule::DefaultQuadrature)
-    return jaskowiec_sukumar_quad_nodes(Tet(), quadrature_rule.degree)
+    if quadrature_rule.degree < 21
+        return jaskowiec_sukumar_quad_nodes(Tet(), quadrature_rule.degree)
+    else
+        return quad_nodes_tet(quadrature_rule.degree)
+    end
 end
 
 function quadrature(::Line, quadrature_rule::GaussLobattoQuadrature)

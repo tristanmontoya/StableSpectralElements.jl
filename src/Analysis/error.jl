@@ -53,7 +53,7 @@ function analyze(analysis::ErrorAnalysis{d}, sol::Array{Float64,3},
     (; N_c, N_e, WJ_err, V_err, x_err, total_volume, results_path) = analysis 
 
     u_exact = evaluate(exact_solution, x_err, t)
-    nodal_error = Tuple(u_exact[:,e,:] - convert(Matrix, V_err * sol[:,e,:])
+    nodal_error = Tuple(u_exact[:,e,:] - Matrix(V_err * sol[:,e,:]) 
         for e in 1:N_c)
 
     squared_error = [sum(dot(nodal_error[e][:,k], WJ_err[k]*nodal_error[e][:,
