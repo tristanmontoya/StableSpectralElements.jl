@@ -280,7 +280,7 @@ end
 
 """Inviscid 3D Taylor-Green vortex, I think I got this version of it from Shadpey and Zingg, "Entropy-Stable Multidimensional Summation-by-Parts Discretizations on hp-Adaptive Curvilinear Grids for Hyperbolic Conservation Laws," JSC 2020.
 
-Domain should be [-π,π]³.
+Domain should be [0,2π]³.
 """
 struct TaylorGreenVortex <: AbstractGridFunction{3} 
     γ::Float64
@@ -293,17 +293,20 @@ struct TaylorGreenVortex <: AbstractGridFunction{3}
 end
 
 @inline function evaluate(f::TaylorGreenVortex, 
-    x::NTuple{3,Float64}, t::Float64=0.0)
-
-    p = 1.0/(f.γ * f.Ma^2) + 
-        1.0/16 * (2*cos(2*x[1]) + 2*cos(2*x[2]) +
-        cos(2*x[1])*cos(2*x[3]) + cos(2*x[2])*cos(2*x[3]))
-    u = sin(x[1])*cos(x[2])*cos(x[3])
-    v = -cos(x[1])*sin(x[2])*cos(x[3])
+    x::NTuple{3,Float64}, t::Float64=0.0) 
+    x_rel = (x[1]-π, x[2]-π, x[3]-π)
+    p = 1.0/(f.γ * f.Ma^2) + 1.0/16 * (2*cos(2*x_rel[1]) + 2*cos(2*x_rel[2]) +
+        cos(2*x_rel[1])*cos(2*x_rel[3]) + cos(2*x_rel[2])*cos(2*x_rel[3]))
+    u = sin(x_rel[1])*cos(x_rel[2])*cos(x_rel[3])
+    v = -cos(x_rel[1])*sin(x_rel[2])*cos(x_rel[3])
 
     return SVector{5}(1.0, u, v, 0.0,  p/(f.γ-1.0) + 0.5*ρ*(u^2 + v^2))
 end
 
+"""
+Kelvin-Helmholtz Instability from Ranocha et al.
+Domain should be [0,2]²
+"""
 struct KelvinHelmholtzInstability <: AbstractGridFunction{2}
     γ::Float64
     N_c::Int
@@ -314,11 +317,11 @@ end
 
 @inline function evaluate(f::KelvinHelmholtzInstability, 
     x::NTuple{2,Float64}, t::Float64=0.0)
-    (x₁,x₂) = (x - 1, y - 1)
-    B = tanh(15*x₂ + 7.5) - tanh(15*x₂ - 7.5)
+    x_rel = (x[1]-1, x[2]-1)
+    B = tanh(15*x_rel[2] + 7.5) - tanh(15*x_rel[2] - 7.5)
     ρ = 0.5 + 0.75*B
     p = 1.0
     u = 0.5*(B-1) 
-    v = 0.1*sin(2π*x₁)
+    v = 0.1*sin(2π*x_rel[1])
     return SVector{4}(ρ,ρ*u,ρ*v,p/(f.γ-1) + 0.5*ρ*(u^2 + v^2))
 end
