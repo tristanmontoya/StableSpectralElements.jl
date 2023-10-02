@@ -1,7 +1,7 @@
 name = "StableSpectralElements"
 uuid = "fb992021-99c7-4c2d-a14b-5e48ac4045b2"
 authors = ["Tristan Montoya <montoya.tristan@gmail.com>"]
-version = "0.2.7"
+version = "0.2.8"
 
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
