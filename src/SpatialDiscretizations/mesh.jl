@@ -167,7 +167,7 @@ function uniform_periodic_mesh(
 
     return make_periodic(MeshData([limits[m][1] .+ 
         0.5*(limits[m][2]-limits[m][1])*(VXY[m] .+ 1.0) for m in 1:d]...,
-        EtoV, reference_element))
+        EtoV, reference_element)) #tol=1000*eps())
 end
 
 function cartesian_mesh(element_type::AbstractElemShape, 

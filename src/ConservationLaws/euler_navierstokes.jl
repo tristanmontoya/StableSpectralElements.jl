@@ -284,23 +284,19 @@ Domain should be [0,2π]³.
 """
 struct TaylorGreenVortex <: AbstractGridFunction{3} 
     γ::Float64
-    Ma::Float64
     N_c::Int
-    function TaylorGreenVortex(conservation_law::EulerEquations{3},
-        Ma::Float64=0.1)
-        return new(conservation_law.γ,Ma,5)
+    function TaylorGreenVortex(conservation_law::EulerEquations{3})
+        return new(conservation_law.γ,5)
     end
 end
 
 @inline function evaluate(f::TaylorGreenVortex, 
     x::NTuple{3,Float64}, t::Float64=0.0) 
-    x_rel = (x[1]-π, x[2]-π, x[3]-π)
-    p = 1.0/(f.γ * f.Ma^2) + 1.0/16 * (2*cos(2*x_rel[1]) + 2*cos(2*x_rel[2]) +
-        cos(2*x_rel[1])*cos(2*x_rel[3]) + cos(2*x_rel[2])*cos(2*x_rel[3]))
-    u = sin(x_rel[1])*cos(x_rel[2])*cos(x_rel[3])
-    v = -cos(x_rel[1])*sin(x_rel[2])*cos(x_rel[3])
-
-    return SVector{5}(1.0, u, v, 0.0,  p/(f.γ-1.0) + 0.5*ρ*(u^2 + v^2))
+    p = (100/f.γ) + 0.0625*(2*cos(2*x[1]) + 2*cos(2*x[2]) +
+        cos(2*x[1])*cos(2*x[3]) + cos(2*x[2])*cos(2*x[3]))
+    u = sin(x[1])*cos(x[2])*cos(x[3])
+    v = -cos(x[1])*sin(x[2])*cos(x[3])
+    return SVector{5}(1.0, u, v, 0.0,  p/(f.γ-1) + 0.5*(u^2 + v^2))
 end
 
 """
