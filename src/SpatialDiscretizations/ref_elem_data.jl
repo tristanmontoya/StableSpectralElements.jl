@@ -56,7 +56,8 @@ function RefElemData(elem::Tet, approx_type::Union{ModalTensor,NodalTensor}, N;
 
     # Construct matrices on reference elements
     r, s, t = nodes(elem, N)
-    Fmask = hcat(find_face_nodes(elem, r, s, t)...)
+    face_nodes = find_face_nodes(elem, r, s, t, 100*eps())
+    Fmask = hcat(face_nodes...)
     VDM, Vr, Vs, Vt = basis(elem, N, r, s, t)
     Dr, Ds, Dt = (A -> A / VDM).((Vr, Vs, Vt))
 

@@ -167,7 +167,7 @@ function uniform_periodic_mesh(
 
     return make_periodic(MeshData([limits[m][1] .+ 
         0.5*(limits[m][2]-limits[m][1])*(VXY[m] .+ 1.0) for m in 1:d]...,
-        EtoV, reference_element)) #tol=1000*eps())
+        EtoV, reference_element),tol=1e-12)
 end
 
 function cartesian_mesh(element_type::AbstractElemShape, 
@@ -410,13 +410,14 @@ end
 
     # need a degree N+1 element on which to compute the argument of the curl
     # operator, which is approximated as a degree N+1 polynomial
-    reference_element_Nplus1 = RefElemData(Tet(),reference_element.N+1)
+    r_Nplus1, s_Nplus1, t_Nplus1 = nodes(Tet(), N+1)
+    V_Nplus1, Vr_Nplus1, Vs_Nplus1, Vt_Nplus1 = basis(Tet(), N+1, r_Nplus1,
+        s_Nplus1, t_Nplus1)
     N_to_Nplus1 = vandermonde(Tet(), N, 
-        reference_element_Nplus1.r, reference_element_Nplus1.s,
-        reference_element_Nplus1.t) / reference_element.VDM
+        r_Nplus1, s_Nplus1, t_Nplus1) / reference_element.VDM
     Nplus1_to_N = vandermonde(Tet(), N+1, 
         reference_element.r, reference_element.s,
-        reference_element.t) / reference_element_Nplus1.VDM
+        reference_element.t) / V_Nplus1
 
     # before evaluating metrics at quadrature nodes, they are brought 
     # back to degree N interpolation nodes -- this is exact since they
@@ -448,10 +449,8 @@ end
     # Metric terms as degree N polynomials represented in degree N+1 nodal basis
     rxJ, sxJ, txJ, ryJ, syJ, tyJ, rzJ, szJ, tzJ, _ = geometric_factors(
             N_to_Nplus1*x, N_to_Nplus1*y, N_to_Nplus1*z, 
-            reference_element_Nplus1.Dr, 
-            reference_element_Nplus1.Ds,
-            reference_element_Nplus1.Dt)
-            
+            Vr_Nplus1 / V_Nplus1, Vs_Nplus1 / V_Nplus1, Vt_Nplus1 / V_Nplus1)
+
     # Evaluate metric at volume quadrature nodes
     mul!(Λ_q[:,1,1,:], Vq, rxJ)
     mul!(Λ_q[:,2,1,:], Vq, sxJ)
