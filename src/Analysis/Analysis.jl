@@ -23,7 +23,7 @@ module Analysis
     using ..File
     using ..Visualize
 
-    export AbstractAnalysis, AbstractAnalysisResults, analyze, save_analysis, tabulate_analysis, tabulate_analysis_for_paper
+    export AbstractAnalysis, AbstractAnalysisResults, analyze, analyze_new, save_analysis, tabulate_analysis, tabulate_analysis_for_paper
 
     abstract type AbstractAnalysis end
     abstract type AbstractAnalysisResults end

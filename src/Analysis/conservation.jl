@@ -174,8 +174,7 @@ function evaluate_conservation_residual(
 end
 
 @inline @views function evaluate_conservation_residual(
-    analysis::EntropyConservationAnalysis, 
-    u::Array{Float64,3},
+    analysis::EntropyConservationAnalysis, u::Array{Float64,3},
     dudt::Array{Float64,3})
     (; mass_solver, conservation_law, N_c, N_e, V, WJ) = analysis
 

@@ -52,17 +52,22 @@ function analyze(analysis::ErrorAnalysis{d}, sol::Array{Float64,3},
 
     (; N_c, N_e, WJ_err, V_err, x_err, total_volume, results_path) = analysis 
 
-    u_exact = evaluate(exact_solution, x_err, t)
-    nodal_error = Tuple(u_exact[:,e,:] - Matrix(V_err * sol[:,e,:]) 
-        for e in 1:N_c)
-
-    squared_error = [sum(dot(nodal_error[e][:,k], WJ_err[k]*nodal_error[e][:,
-        k]) for k in 1:N_e) for e in 1:N_c]
+    u_approx = Matrix{Float64}(undef, size(V_err,1), N_c)
+    error = zeros(N_c)
+    @inbounds @views for k in 1:N_e
+        u_exact = evaluate(exact_solution, 
+            Tuple(x_err[m][:,k] for m in 1:d), t)
+        mul!(u_approx, V_err, sol[:,:,k])
+        for e in 1:N_c
+            error_nodal = u_exact[:,e,k] .- u_approx[:,e]
+            error[e] += dot(error_nodal, WJ_err[k]*error_nodal)
+        end
+    end
     
     if normalize
-        error = sqrt.(squared_error ./ total_volume)
+        error = sqrt.(error ./ total_volume)
     else
-        error = sqrt.(squared_error)
+        error = sqrt.(error)
     end
 
     if write_to_file

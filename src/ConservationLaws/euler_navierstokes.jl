@@ -93,7 +93,7 @@ end
     u::AbstractVector{Float64}) where {d}
     (; γ, γ_minus_1, inv_γ_minus_1) = conservation_law
     p = γ_minus_1 * (u[end] - (0.5/u[1]) * (sum(u[m+1]^2 for m in 1:d)))
-    return -u[1]*log(p/u[1]^γ)*inv_γ_minus_1
+    return -u[1]*log(p/(u[1]^γ))*inv_γ_minus_1
 end
 
 @inline function conservative_to_entropy!(
