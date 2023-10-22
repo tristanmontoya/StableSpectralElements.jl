@@ -179,6 +179,17 @@ end
         return u0
     end
 
+    function evaluate(f::Function, 
+        x::NTuple{d,AbstractVector{Float64}},
+        t::Float64=0.0) where {d}
+        u0 = Matrix{Float64}(undef, length(x[1]), 
+            length(f(Tuple(0.0 for m in 1:d)...,t)))
+        @inbounds for i in eachindex(x[1])
+            u0[i,:] .= f(Tuple(x[m][i] for m in 1:d)...,t)
+        end 
+        return u0
+    end
+
     @inline function evaluate(::NoSourceTerm{d}, ::NTuple{d,Vector{Float64}},
         ::Float64) where {d}
         return nothing

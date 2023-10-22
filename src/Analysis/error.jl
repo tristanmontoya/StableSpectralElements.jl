@@ -59,7 +59,7 @@ function analyze(analysis::ErrorAnalysis{d}, sol::Array{Float64,3},
             Tuple(x_err[m][:,k] for m in 1:d), t)
         mul!(u_approx, V_err, sol[:,:,k])
         for e in 1:N_c
-            error_nodal = u_exact[:,e,k] .- u_approx[:,e]
+            error_nodal = u_exact[:,e] .- u_approx[:,e]
             error[e] += dot(error_nodal, WJ_err[k]*error_nodal)
         end
     end
