@@ -39,9 +39,16 @@ function ErrorAnalysis(results_path::String,
         print("\nmaking WJ_err...")
         WJ_err = [Diagonal(w_err .* volq_to_err*J_q[:,k]) for k in 1:N_e]
         print(" ...done!\n")
-        print("\nmaking x_err...")
-        x_err = Tuple(volq_to_err * xyzq[m] for m in 1:d)
-        print("... done!")
+        print("\nallocating x_err...")
+        x_err = Tuple(Matrix{Float64}(undef, size(w_err,1), N_e) for m in 1:d)
+        print(" ...done!\n")
+        print("\nfilling x_err...")
+        for k in 1:N_e
+            for m in 1:d
+                x_err[m][:,k] .= volq_to_err * xyzq[m][:,k]
+            end
+        end
+        print(" ...done!\n")
     end
 
     _, N_c, N_e = get_dof(spatial_discretization, conservation_law)
