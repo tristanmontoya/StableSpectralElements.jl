@@ -36,8 +36,12 @@ function ErrorAnalysis(results_path::String,
         volq_to_err = V_modes_to_errq * P_volq_to_modes
         V_err = volq_to_err * V
 
+        print("\nmaking WJ_err...")
         WJ_err = [Diagonal(w_err .* volq_to_err*J_q[:,k]) for k in 1:N_e]
+        print(" ...done!\n")
+        print("\nmaking x_err...")
         x_err = Tuple(volq_to_err * xyzq[m] for m in 1:d)
+        print("... done!")
     end
 
     _, N_c, N_e = get_dof(spatial_discretization, conservation_law)
