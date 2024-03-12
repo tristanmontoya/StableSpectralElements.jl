@@ -132,7 +132,8 @@ function uniform_periodic_mesh(
     M::NTuple{d,Int};
     random_rotate::Bool=false, 
     collapsed_orientation::Bool=false,
-    strategy::AbstractMeshGenStrategy=Uniform()) where {d}
+    strategy::AbstractMeshGenStrategy=Uniform(),
+    tol::Float64=1.0e-12) where {d}
 
     VXY, EtoV = cartesian_mesh(reference_element.element_type, 
         M, strategy)
@@ -167,7 +168,7 @@ function uniform_periodic_mesh(
 
     return make_periodic(MeshData([limits[m][1] .+ 
         0.5*(limits[m][2]-limits[m][1])*(VXY[m] .+ 1.0) for m in 1:d]...,
-        EtoV, reference_element),tol=1e-12)
+        EtoV, reference_element),tol=tol)
 end
 
 function cartesian_mesh(element_type::AbstractElemShape, 

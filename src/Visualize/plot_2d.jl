@@ -70,6 +70,7 @@ end
     mapping_nodes_connect = nothing,
     sketch=false,
     stride = nothing,
+    elems = nothing,
     node_color = 1,
     facet_node_color=2,
     mapping_node_color=3,
@@ -105,7 +106,11 @@ end
         showaxis --> false
     end
 
-    for k in 1:N_e
+    if isnothing(elems)
+        elems = 1:N_e
+    end
+
+    for k in elems
         if obj isa SpatialDiscretization
             X = function(ξ1,ξ2)
                 V = vandermonde(reference_element.element_type,

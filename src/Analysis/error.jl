@@ -24,7 +24,8 @@ function ErrorAnalysis(results_path::String,
         (w_err, V_err) = (diag(reference_approximation.W), V)
         volq_to_err = diagm(ones(length(w_err)))
     else 
-        # Note: this introduces an additional approximation if the mapping and # Jacobian determinant are over degree p.
+        # Note: this introduces an additional approximation if the mapping and 
+        # Jacobian determinant are over degree p.
         # Otherwise we have to recompute the Jacobian rather than just
         # interpolate, which I haven't done here.
         (; wq, rstq, element_type) = reference_element
@@ -37,7 +38,6 @@ function ErrorAnalysis(results_path::String,
 
         volq_to_err = V_modes_to_errq * P_volq_to_modes
         V_err = volq_to_err * V
-
     end
     total_volume = 0.0
     for k in 1:N_e
@@ -59,7 +59,6 @@ function analyze(analysis::ErrorAnalysis{d}, sol::Array{Float64,3},
     u_approx = Matrix{Float64}(undef, size(V_err,1), N_c)
     error = zeros(N_c)
     @inbounds @views for k in 1:N_e
-
         u_exact = evaluate(exact_solution, 
             Tuple(volq_to_err * xyzq[m][:,k] for m in 1:d), t)
         u_approx = V_err * sol[:,:,k]
