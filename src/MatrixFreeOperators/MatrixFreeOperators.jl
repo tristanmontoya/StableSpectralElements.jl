@@ -1,7 +1,7 @@
 module MatrixFreeOperators
 
-    using LinearAlgebra, LinearMaps, MuladdMacro, GFlops, StaticArrays, Octavian, TimerOutputs
-    export AbstractOperatorAlgorithm, BLASAlgorithm, GenericMatrixAlgorithm, GenericTensorProductAlgorithm, DefaultOperatorAlgorithm, SelectionMap, make_operator, count_ops
+    using LinearAlgebra, LinearMaps, MuladdMacro, StaticArrays, Octavian, TimerOutputs
+    export AbstractOperatorAlgorithm, BLASAlgorithm, GenericMatrixAlgorithm, GenericTensorProductAlgorithm, DefaultOperatorAlgorithm, SelectionMap, make_operator
     
     abstract type AbstractOperatorAlgorithm end
     struct DefaultOperatorAlgorithm <: AbstractOperatorAlgorithm end
@@ -69,11 +69,4 @@ module MatrixFreeOperators
         make_operator(map.maps[2], GenericMatrixAlgorithm()) ⊗
         make_operator(map.maps[3], GenericMatrixAlgorithm())
 
-    # count adds, muls, and muladds
-    function count_ops(map::LinearMap)
-        x = rand(size(map,2))
-        y = rand(size(map,1))
-        cnt = @count_ops mul!(y,map,x)
-        return cnt.muladd64 + cnt.add64 + cnt.mul64
-    end
 end
