@@ -1,7 +1,6 @@
 module Solvers
     
     import LinearAlgebra
-    using GFlops
     using StaticArrays
     using MuladdMacro
     using SparseArrays
