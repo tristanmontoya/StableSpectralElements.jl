@@ -83,7 +83,7 @@ function PhysicalOperators(spatial_discretization::SpatialDiscretization{d},
     mass_solver::AbstractMassMatrixSolver) where {d}
 
     (; N_e, reference_approximation, geometric_factors) = spatial_discretization
-    (; V, R, W, B, D) = reference_approximation
+    (; V, R, W, B, D, N_f) = reference_approximation
 
     (; Λ_q, nJf, J_f) = apply_reference_mapping(geometric_factors,
         reference_approximation.reference_mapping)
