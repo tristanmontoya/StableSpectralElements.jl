@@ -501,15 +501,10 @@ function uniform_periodic_mesh(
     strategy::AbstractMeshGenStrategy=Uniform(),
     tol=1e-10)
 
-    collapsed_orientation = false
-    if reference_approximation.approx_type isa Union{ModalTensor,NodalTensor}
-        collapsed_orientation = true
-    else
-
     return uniform_periodic_mesh(
         reference_approximation.reference_element, limits, M,
         random_rotate=random_rotate,
-        collapsed_orientation=collapsed_orientation,
+        collapsed_orientation=true,
         strategy=strategy, tol=tol)
 end
 
@@ -518,12 +513,12 @@ function uniform_periodic_mesh(
     limits::NTuple{d,NTuple{2,Float64}}, 
     M::NTuple{d,Int};
     random_rotate::Bool=false, 
-    strategy::AbstractMeshGenStrategy=Uniform()) where {d}
+    strategy::AbstractMeshGenStrategy=Uniform(), tol=1.0e-10) where {d}
 
     return uniform_periodic_mesh(
         reference_approximation.reference_element, limits, M,
         random_rotate=random_rotate,
-        strategy=strategy)
+        strategy=strategy, tol=tol)
 end
 
 @inline uniform_periodic_mesh(
