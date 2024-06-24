@@ -3,7 +3,8 @@ function ReferenceApproximation(
     mapping_degree::Int=1, N_plot::Int=10,
     volume_quadrature_rule=LGLQuadrature(approx_type.p))
 
-    reference_element = RefElemData(Line(), mapping_degree,
+    reference_element = RefElemData(Line(), 
+        Polynomial{MultidimensionalQuadrature}(), mapping_degree,
         quad_rule_vol=quadrature(Line(), volume_quadrature_rule), Nplot=N_plot)
 
     (; rp, rq, rstq, rf, rstf) = reference_element
@@ -37,7 +38,8 @@ function ReferenceApproximation(approx_type::NodalTensor,
     R_R = OctavianMap(vandermonde(Line(), q, [1.0]) / VDM_1D)
 
     # reference element data
-    reference_element = RefElemData(element_type, mapping_degree,
+    reference_element = RefElemData(element_type,
+        Polynomial{MultidimensionalQuadrature}(), mapping_degree,
         quad_rule_vol=quadrature(Quad(), volume_quadrature_rule),
         quad_rule_face=quadrature(Line(), facet_quadrature_rule), Nplot=N_plot)
 
@@ -74,7 +76,8 @@ function ReferenceApproximation(approx_type::NodalTensor, ::Hex;
     I_1D = LinearMap(I, q+1)
 
     # reference element data
-    reference_element = RefElemData(Hex(), mapping_degree,
+    reference_element = RefElemData(Hex(), 
+        Polynomial{MultidimensionalQuadrature}(), mapping_degree,
         quad_rule_vol=quadrature(Hex(), volume_quadrature_rule),
         quad_rule_face=quadrature(Quad(), facet_quadrature_rule), Nplot=N_plot)
 
