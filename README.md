@@ -9,7 +9,7 @@
 
 ## Installation
 
-StableSpectralElements.jl is a registered Julia package (compatible with Julia versions 1.8 and above) and can be installed by entering the following commands within the REPL:
+StableSpectralElements.jl is a registered Julia package (compatible with Julia versions 1.10 and above) and can be installed by entering the following commands within the REPL:
 ```julia
 using Pkg; Pkg.add("StableSpectralElements")
 ```
