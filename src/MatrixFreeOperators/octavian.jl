@@ -13,8 +13,8 @@ function LinearAlgebra.transpose(L::OctavianMap)
 end
 
 @inline function LinearAlgebra.mul!(y::AbstractVector{Float64},
-                                    L::OctavianMap,
-                                    x::AbstractVector{Float64})
+        L::OctavianMap,
+        x::AbstractVector{Float64})
     LinearMaps.check_dim_mul(y, L, x)
     matmul_serial!(y, L.lmap, x)
     return y

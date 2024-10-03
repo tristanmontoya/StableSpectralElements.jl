@@ -11,16 +11,16 @@ struct WarpedTensorProductMap2D{A_type, B_type, σᵢ_type, σₒ_type} <:
     size::NTuple{2, Int}
 
     function WarpedTensorProductMap2D(A::A_type,
-                                      B::B_type,
-                                      σᵢ::σᵢ_type,
-                                      σₒ::σₒ_type) where {A_type, B_type, σᵢ_type, σₒ_type}
+            B::B_type,
+            σᵢ::σᵢ_type,
+            σₒ::σₒ_type) where {A_type, B_type, σᵢ_type, σₒ_type}
         N2 = [count(a -> a > 0, σᵢ[β1, :]) for β1 in axes(σᵢ, 1)]
         return new{A_type, B_type, σᵢ_type, σₒ_type}(A,
-                                                     B,
-                                                     σᵢ,
-                                                     σₒ,
-                                                     N2,
-                                                     (size(A, 1) * size(B, 1), sum(N2)))
+            B,
+            σᵢ,
+            σₒ,
+            N2,
+            (size(A, 1) * size(B, 1), sum(N2)))
     end
 end
 
@@ -34,8 +34,8 @@ Evaluate the matrix-vector product
                 = ∑_{β1} A[α1,β1] Z[β1,α2]
 """
 @inline function LinearAlgebra.mul!(y::AbstractVector,
-                                    L::WarpedTensorProductMap2D,
-                                    x::AbstractVector)
+        L::WarpedTensorProductMap2D,
+        x::AbstractVector)
     LinearMaps.check_dim_mul(y, L, x)
     (; A, B, σᵢ, σₒ, N2) = L
 
@@ -67,9 +67,9 @@ Evaluate the matrix-vector product
                 = ∑_{α2} B[α2,β1,β2] Z[β1,α2])
 """
 @inline function LinearMaps._unsafe_mul!(y::AbstractVector,
-                                         L::LinearMaps.TransposeMap{Float64,
-                                                                    <:WarpedTensorProductMap2D},
-                                         x::AbstractVector)
+        L::LinearMaps.TransposeMap{Float64,
+            <:WarpedTensorProductMap2D},
+        x::AbstractVector)
     LinearMaps.check_dim_mul(y, L, x)
     (; A, B, σᵢ, σₒ, N2) = L.lmap
 

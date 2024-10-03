@@ -21,15 +21,15 @@ struct UniformWarping{d} <: AbstractMeshWarping{d}
 end
 
 function warp_mesh(mesh::MeshData{d},
-                   reference_element::RefElemData{d},
-                   factor::Float64 = 0.2,
-                   L::Float64 = 1.0) where {d}
+        reference_element::RefElemData{d},
+        factor::Float64 = 0.2,
+        L::Float64 = 1.0) where {d}
     return warp_mesh(mesh, reference_element, DelReyWarping(factor, Tuple(L for m in 1:d)))
 end
 
 function warp_mesh(mesh::MeshData{2},
-                   reference_element::RefElemData{2},
-                   mesh_warping::DelReyWarping{2})
+        reference_element::RefElemData{2},
+        mesh_warping::DelReyWarping{2})
     (; x, y) = mesh
     (; factor, L) = mesh_warping
 
@@ -41,8 +41,8 @@ function warp_mesh(mesh::MeshData{2},
 end
 
 function warp_mesh(mesh::MeshData{2},
-                   reference_element::RefElemData{2},
-                   mesh_warping::ChanWarping{2})
+        reference_element::RefElemData{2},
+        mesh_warping::ChanWarping{2})
     (; x, y) = mesh
     (; factor, L) = mesh_warping
 
@@ -57,8 +57,8 @@ function warp_mesh(mesh::MeshData{2},
 end
 
 function warp_mesh(mesh::MeshData{3},
-                   reference_element::RefElemData{3},
-                   mesh_warping::ChanWarping{3})
+        reference_element::RefElemData{3},
+        mesh_warping::ChanWarping{3})
     (; x, y, z) = mesh
     (; factor, L) = mesh_warping
 
@@ -76,8 +76,8 @@ function warp_mesh(mesh::MeshData{3},
 end
 
 function warp_mesh(mesh::MeshData{2},
-                   reference_element::RefElemData{2},
-                   mesh_warping::UniformWarping{2})
+        reference_element::RefElemData{2},
+        mesh_warping::UniformWarping{2})
     (; x, y) = mesh
     (; factor, L) = mesh_warping
 
@@ -89,8 +89,8 @@ function warp_mesh(mesh::MeshData{2},
 end
 
 function warp_mesh(mesh::MeshData{3},
-                   reference_element::RefElemData{3},
-                   mesh_warping::UniformWarping{3})
+        reference_element::RefElemData{3},
+        mesh_warping::UniformWarping{3})
     (; x, y, z) = mesh
     (; factor, L) = mesh_warping
 
@@ -104,8 +104,8 @@ function warp_mesh(mesh::MeshData{3},
 end
 
 function warp_mesh(mesh::MeshData{3},
-                   reference_element::RefElemData{3},
-                   mesh_warping::DelReyWarping{3})
+        reference_element::RefElemData{3},
+        mesh_warping::DelReyWarping{3})
     (; x, y, z) = mesh
     (; factor, L) = mesh_warping
 
@@ -120,23 +120,23 @@ function warp_mesh(mesh::MeshData{3},
 end
 
 function uniform_periodic_mesh(reference_element::RefElemData{1},
-                               limits::NTuple{2, Float64},
-                               M::Int)
+        limits::NTuple{2, Float64},
+        M::Int)
     VX, EtoV = uniform_mesh(reference_element.element_type, M)
     mesh = MeshData(limits[1] .+ 0.5 * (limits[2] - limits[1]) * (VX[1] .+ 1.0),
-                    EtoV,
-                    reference_element)
+        EtoV,
+        reference_element)
 
     return make_periodic(mesh)
 end
 
 function uniform_periodic_mesh(reference_element::RefElemData{d},
-                               limits::NTuple{d, NTuple{2, Float64}},
-                               M::NTuple{d, Int};
-                               random_rotate::Bool = false,
-                               collapsed_orientation::Bool = false,
-                               strategy::AbstractMeshGenStrategy = Uniform(),
-                               tol::Float64 = 1.0e-12,) where {d}
+        limits::NTuple{d, NTuple{2, Float64}},
+        M::NTuple{d, Int};
+        random_rotate::Bool = false,
+        collapsed_orientation::Bool = false,
+        strategy::AbstractMeshGenStrategy = Uniform(),
+        tol::Float64 = 1.0e-12,) where {d}
     VXY, EtoV = cartesian_mesh(reference_element.element_type, M, strategy)
     N_e = size(EtoV, 1)
 
@@ -155,14 +155,14 @@ function uniform_periodic_mesh(reference_element::RefElemData{d},
         @inbounds for k in 1:N_e
             EtoV_new = sort(EtoV[k, :], rev = true)
             X = hcat([[VXY[1][EtoV_new[m]] - VXY[1][EtoV_new[1]]
-                       VXY[2][EtoV_new[m]] - VXY[2][EtoV_new[1]]
-                       VXY[3][EtoV_new[m]] - VXY[3][EtoV_new[1]]] for m in 2:4]...)
+                VXY[2][EtoV_new[m]] - VXY[2][EtoV_new[1]]
+                VXY[3][EtoV_new[m]] - VXY[3][EtoV_new[1]]] for m in 2:4]...)
 
             if det(X) < 0
                 EtoV[k, :] = [EtoV_new[2]
-                              EtoV_new[1]
-                              EtoV_new[3]
-                              EtoV_new[4]]
+                    EtoV_new[1]
+                    EtoV_new[3]
+                    EtoV_new[4]]
             else
                 EtoV[k, :] = EtoV_new
             end
@@ -173,14 +173,14 @@ function uniform_periodic_mesh(reference_element::RefElemData{d},
                                    0.5 * (limits[m][2] - limits[m][1]) * (VXY[m] .+ 1.0)
                                    for
                                    m in 1:d]...,
-                                  EtoV,
-                                  reference_element),
-                         tol = tol)
+            EtoV,
+            reference_element),
+        tol = tol)
 end
 
 function cartesian_mesh(element_type::AbstractElemShape,
-                        M::NTuple{d, Int},
-                        ::AbstractMeshGenStrategy) where {d}
+        M::NTuple{d, Int},
+        ::AbstractMeshGenStrategy) where {d}
     return uniform_mesh(element_type, [M[m] for m in 1:d]...)
 end
 
@@ -196,14 +196,14 @@ function cartesian_mesh(::Tri, M::NTuple{2, Int}, ::ZigZag)
         bot_mid = j * (M[2] + 1) + i
         bot_right = (j + 1) * (M[2] + 1) + i
         EtoV = vcat(EtoV,
-                    [bot_mid bot_left bot_left+1
-                     bot_left+1 bot_mid+1 bot_mid
-                     bot_right+1 bot_right bot_mid
-                     bot_mid bot_mid+1 bot_right+1
-                     bot_mid+2 bot_mid+1 bot_left+1
-                     bot_left+1 bot_left+2 bot_mid+2
-                     bot_right+1 bot_mid+1 bot_mid+2
-                     bot_mid+2 bot_right+2 bot_right+1])
+            [bot_mid bot_left bot_left+1
+                bot_left+1 bot_mid+1 bot_mid
+                bot_right+1 bot_right bot_mid
+                bot_mid bot_mid+1 bot_right+1
+                bot_mid+2 bot_mid+1 bot_left+1
+                bot_left+1 bot_left+2 bot_mid+2
+                bot_right+1 bot_mid+1 bot_mid+2
+                bot_mid+2 bot_right+2 bot_right+1])
     end
     return (VX, VY), EtoV
 end
@@ -227,8 +227,8 @@ function metrics(dxdr::SMatrix{3, 3})
 end
 
 function GeometricFactors(mesh::MeshData{d},
-                          reference_element::RefElemData{d},
-                          metric_type::ExactMetrics = ExactMetrics()) where {d}
+        reference_element::RefElemData{d},
+        metric_type::ExactMetrics = ExactMetrics()) where {d}
     (; nrstJ) = reference_element
 
     # note, here we assume that mesh is same N_q, N_f every element
@@ -282,8 +282,8 @@ function GeometricFactors(mesh::MeshData{d},
 end
 
 function GeometricFactors(mesh::MeshData{2},
-                          reference_element::RefElemData{2},
-                          ::ConservativeCurlMetrics)
+        reference_element::RefElemData{2},
+        ::ConservativeCurlMetrics)
     (; x, y) = mesh
     (; nrstJ, Dr, Ds, Vq, Vf) = reference_element
 
@@ -339,8 +339,8 @@ function GeometricFactors(mesh::MeshData{2},
 end
 
 function GeometricFactors(mesh::MeshData{3},
-                          reference_element::RefElemData{3, Hex},
-                          ::ConservativeCurlMetrics)
+        reference_element::RefElemData{3, Hex},
+        ::ConservativeCurlMetrics)
     (; x, y, z) = mesh
     (; nrstJ, Dr, Ds, Dt, Vq, Vf) = reference_element
 
@@ -361,8 +361,8 @@ function GeometricFactors(mesh::MeshData{3},
 
     @inbounds @views for k in 1:N_e
         rxJ, sxJ, txJ, ryJ, syJ, tyJ, rzJ, szJ, tzJ, J = geometric_factors(x[:, k], y[:, k],
-                                                                           z[:, k], Dr, Ds,
-                                                                           Dt)
+            z[:, k], Dr, Ds,
+            Dt)
 
         mul!(Λ_q[:, 1, 1, k], Vq, rxJ)
         mul!(Λ_q[:, 2, 1, k], Vq, sxJ)
@@ -408,8 +408,8 @@ function GeometricFactors(mesh::MeshData{3},
 end
 
 @views function GeometricFactors(mesh::MeshData{3},
-                                 reference_element::RefElemData{3, Tet},
-                                 ::ConservativeCurlMetrics)
+        reference_element::RefElemData{3, Tet},
+        ::ConservativeCurlMetrics)
     (; x, y, z) = mesh
     (; N, nrstJ) = reference_element
 
@@ -417,14 +417,14 @@ end
     # operator, which is approximated as a degree N+1 polynomial
     r_Nplus1, s_Nplus1, t_Nplus1 = nodes(Tet(), N + 1)
     V_Nplus1, Vr_Nplus1, Vs_Nplus1, Vt_Nplus1 = basis(Tet(), N + 1, r_Nplus1, s_Nplus1,
-                                                      t_Nplus1)
+        t_Nplus1)
     N_to_Nplus1 = vandermonde(Tet(), N, r_Nplus1, s_Nplus1, t_Nplus1) /
                   reference_element.VDM
     Nplus1_to_N = vandermonde(Tet(),
-                              N + 1,
-                              reference_element.r,
-                              reference_element.s,
-                              reference_element.t) / V_Nplus1
+        N + 1,
+        reference_element.r,
+        reference_element.s,
+        reference_element.t) / V_Nplus1
 
     # before evaluating metrics at quadrature nodes, they are brought 
     # back to degree N interpolation nodes -- this is exact since they
@@ -450,20 +450,20 @@ end
 
     # Jacobian as degree N polynomial represented in degree N nodal basis
     _, _, _, _, _, _, _, _, _, J = geometric_factors(x,
-                                                     y,
-                                                     z,
-                                                     reference_element.Dr,
-                                                     reference_element.Ds,
-                                                     reference_element.Dt)
+        y,
+        z,
+        reference_element.Dr,
+        reference_element.Ds,
+        reference_element.Dt)
     mul!(J_q, reference_element.Vq, J)
 
     # Metric terms as degree N polynomials represented in degree N+1 nodal basis
     rxJ, sxJ, txJ, ryJ, syJ, tyJ, rzJ, szJ, tzJ, _ = geometric_factors(N_to_Nplus1 * x,
-                                                                       N_to_Nplus1 * y,
-                                                                       N_to_Nplus1 * z,
-                                                                       Vr_Nplus1 / V_Nplus1,
-                                                                       Vs_Nplus1 / V_Nplus1,
-                                                                       Vt_Nplus1 / V_Nplus1)
+        N_to_Nplus1 * y,
+        N_to_Nplus1 * z,
+        Vr_Nplus1 / V_Nplus1,
+        Vs_Nplus1 / V_Nplus1,
+        Vt_Nplus1 / V_Nplus1)
 
     # Evaluate metric at volume quadrature nodes
     mul!(Λ_q[:, 1, 1, :], Vq, rxJ)
@@ -505,36 +505,39 @@ end
     return GeometricFactors(J_q, Λ_q, J_f, nJf, nJq)
 end
 
-function uniform_periodic_mesh(reference_approximation::ReferenceApproximation{<:RefElemData{3,
-                                                                                             Tet},
-                                                                               <:Union{NodalTensor,
-                                                                                       ModalTensor}},
-                               limits::NTuple{3, NTuple{2, Float64}},
-                               M::NTuple{3, Int};
-                               random_rotate::Bool = false,
-                               strategy::AbstractMeshGenStrategy = Uniform(),
-                               tol = 1e-10,)
+function uniform_periodic_mesh(reference_approximation::ReferenceApproximation{
+            <:RefElemData{3,
+                Tet},
+            <:Union{NodalTensor,
+                ModalTensor}},
+        limits::NTuple{3, NTuple{2, Float64}},
+        M::NTuple{3, Int};
+        random_rotate::Bool = false,
+        strategy::AbstractMeshGenStrategy = Uniform(),
+        tol = 1e-10,)
     return uniform_periodic_mesh(reference_approximation.reference_element,
-                                 limits,
-                                 M,
-                                 random_rotate = random_rotate,
-                                 collapsed_orientation = true,
-                                 strategy = strategy,
-                                 tol = tol)
+        limits,
+        M,
+        random_rotate = random_rotate,
+        collapsed_orientation = true,
+        strategy = strategy,
+        tol = tol)
 end
 
-function uniform_periodic_mesh(reference_approximation::ReferenceApproximation{<:RefElemData{d}},
-                               limits::NTuple{d, NTuple{2, Float64}},
-                               M::NTuple{d, Int};
-                               random_rotate::Bool = false,
-                               strategy::AbstractMeshGenStrategy = Uniform(),
-                               tol = 1.0e-10,) where {d}
+function uniform_periodic_mesh(reference_approximation::ReferenceApproximation{
+            <:RefElemData{d},
+        },
+        limits::NTuple{d, NTuple{2, Float64}},
+        M::NTuple{d, Int};
+        random_rotate::Bool = false,
+        strategy::AbstractMeshGenStrategy = Uniform(),
+        tol = 1.0e-10,) where {d}
     return uniform_periodic_mesh(reference_approximation.reference_element,
-                                 limits,
-                                 M,
-                                 random_rotate = random_rotate,
-                                 strategy = strategy,
-                                 tol = tol)
+        limits,
+        M,
+        random_rotate = random_rotate,
+        strategy = strategy,
+        tol = tol)
 end
 
 @inline uniform_periodic_mesh(reference_approximation::ReferenceApproximation{<:RefElemData{1}},
@@ -542,16 +545,16 @@ limits::NTuple{2, Float64},
 M::Int) = uniform_periodic_mesh(reference_approximation.reference_element, limits, M)
 
 function warp_mesh(mesh::MeshData{d},
-                   reference_approximation::ReferenceApproximation{<:RefElemData{d}},
-                   factor::Float64 = 0.2,
-                   L::Float64 = 1.0) where {d}
+        reference_approximation::ReferenceApproximation{<:RefElemData{d}},
+        factor::Float64 = 0.2,
+        L::Float64 = 1.0) where {d}
     return warp_mesh(mesh,
-                     reference_approximation.reference_element,
-                     DelReyWarping(factor, Tuple(L for m in 1:d)))
+        reference_approximation.reference_element,
+        DelReyWarping(factor, Tuple(L for m in 1:d)))
 end
 
 function warp_mesh(mesh::MeshData{d},
-                   reference_approximation::ReferenceApproximation{<:RefElemData{d}},
-                   mesh_warping::AbstractMeshWarping{d}) where {d}
+        reference_approximation::ReferenceApproximation{<:RefElemData{d}},
+        mesh_warping::AbstractMeshWarping{d}) where {d}
     return warp_mesh(mesh, reference_approximation.reference_element, mesh_warping)
 end

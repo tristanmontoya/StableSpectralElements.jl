@@ -17,7 +17,7 @@ struct WeightAdjustedSolver{Minv_type, V_type <: LinearMap, Vt_type <: LinearMap
 end
 
 function default_mass_matrix_solver(spatial_discretization::SpatialDiscretization,
-                                    alg::AbstractOperatorAlgorithm = DefaultOperatorAlgorithm())
+        alg::AbstractOperatorAlgorithm = DefaultOperatorAlgorithm())
     (; V, W) = spatial_discretization.reference_approximation
     (; J_q) = spatial_discretization.geometric_factors
     return WeightAdjustedSolver(J_q, V, W, alg, Val(true), Float64(0.0))
@@ -39,29 +39,29 @@ function CholeskySolver(J_q::Matrix{Float64}, V::LinearMap, W::Diagonal)
 end
 
 function WeightAdjustedSolver(J_q::Matrix{Float64},
-                              V::UniformScalingMap,
-                              W::Diagonal,
-                              ::AbstractOperatorAlgorithm,
-                              ::Val{true},
-                              ::Float64)
+        V::UniformScalingMap,
+        W::Diagonal,
+        ::AbstractOperatorAlgorithm,
+        ::Val{true},
+        ::Float64)
     return DiagonalSolver(J_q, V, W)
 end
 
 function WeightAdjustedSolver(J_q::Matrix{Float64},
-                              V::UniformScalingMap,
-                              W::Diagonal,
-                              ::AbstractOperatorAlgorithm,
-                              ::Val{false},
-                              ::Float64)
+        V::UniformScalingMap,
+        W::Diagonal,
+        ::AbstractOperatorAlgorithm,
+        ::Val{false},
+        ::Float64)
     return DiagonalSolver(J_q, V, W)
 end
 
 function WeightAdjustedSolver(J_q::Matrix{Float64},
-                              V::LinearMap,
-                              W::Diagonal,
-                              operator_algorithm::AbstractOperatorAlgorithm,
-                              ::Val{true},
-                              ::Float64)
+        V::LinearMap,
+        W::Diagonal,
+        operator_algorithm::AbstractOperatorAlgorithm,
+        ::Val{true},
+        ::Float64)
     N_e = size(J_q, 2)
     J⁻¹W = Vector{Diagonal{Float64, Vector{Float64}}}(undef, N_e)
     @inbounds for k in 1:N_e
@@ -69,17 +69,17 @@ function WeightAdjustedSolver(J_q::Matrix{Float64},
     end
 
     return WeightAdjustedSolver(I,
-                                J⁻¹W,
-                                make_operator(V, operator_algorithm),
-                                make_operator(V', operator_algorithm))
+        J⁻¹W,
+        make_operator(V, operator_algorithm),
+        make_operator(V', operator_algorithm))
 end
 
 function WeightAdjustedSolver(J_q::Matrix{Float64},
-                              V::LinearMap,
-                              W::Diagonal,
-                              operator_algorithm::AbstractOperatorAlgorithm,
-                              ::Val{false},
-                              tol::Float64)
+        V::LinearMap,
+        W::Diagonal,
+        operator_algorithm::AbstractOperatorAlgorithm,
+        ::Val{false},
+        tol::Float64)
     N_e = size(J_q, 2)
     VDM = Matrix(V)
     M = VDM' * W * VDM
@@ -100,9 +100,9 @@ function WeightAdjustedSolver(J_q::Matrix{Float64},
     end
 
     return WeightAdjustedSolver(M⁻¹,
-                                J⁻¹W,
-                                make_operator(V, operator_algorithm),
-                                make_operator(V', operator_algorithm))
+        J⁻¹W,
+        make_operator(V, operator_algorithm),
+        make_operator(V', operator_algorithm))
 end
 
 function DiagonalSolver(J_q::Matrix{Float64}, ::UniformScalingMap, W::Diagonal)
@@ -128,9 +128,9 @@ function DiagonalSolver(spatial_discretization::SpatialDiscretization)
 end
 
 function WeightAdjustedSolver(spatial_discretization::SpatialDiscretization,
-                              operator_algorithm = DefaultOperatorAlgorithm();
-                              assume_orthonormal::Bool = true,
-                              tol = 1.0e-13,)
+        operator_algorithm = DefaultOperatorAlgorithm();
+        assume_orthonormal::Bool = true,
+        tol = 1.0e-13,)
     (; V, W) = spatial_discretization.reference_approximation
     (; J_q) = spatial_discretization.geometric_factors
 
@@ -167,25 +167,25 @@ end
 end
 
 @inline function mass_matrix_solve!(mass_solver::CholeskySolver,
-                                    k::Int,
-                                    rhs::AbstractMatrix,
-                                    ::AbstractMatrix)
+        k::Int,
+        rhs::AbstractMatrix,
+        ::AbstractMatrix)
     ldiv!(mass_solver.M[k], rhs)
     return rhs
 end
 
 @inline function mass_matrix_solve!(mass_solver::DiagonalSolver,
-                                    k::Int,
-                                    rhs::AbstractMatrix,
-                                    ::AbstractMatrix)
+        k::Int,
+        rhs::AbstractMatrix,
+        ::AbstractMatrix)
     lmul!(mass_solver.WJ⁻¹[k], rhs)
     return rhs
 end
 
 @inline function mass_matrix_solve!(mass_solver::WeightAdjustedSolver,
-                                    k::Int,
-                                    rhs::AbstractMatrix,
-                                    temp::AbstractMatrix)
+        k::Int,
+        rhs::AbstractMatrix,
+        temp::AbstractMatrix)
     (; M⁻¹, Vᵀ, J⁻¹W, V) = mass_solver
     lmul!(M⁻¹, rhs)
     mul!(temp, V, rhs)

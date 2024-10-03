@@ -1,9 +1,9 @@
 @inline @views function nodal_values!(u::AbstractArray{Float64, 3},
-                                      solver::Solver{<:AbstractConservationLaw,
-                                                     <:AbstractDiscretizationOperators,
-                                                     <:AbstractMassMatrixSolver,
-                                                     <:StandardForm},
-                                      k::Int)
+        solver::Solver{<:AbstractConservationLaw,
+            <:AbstractDiscretizationOperators,
+            <:AbstractMassMatrixSolver,
+            <:StandardForm},
+        k::Int)
     (; u_q, u_f) = solver.preallocated_arrays
     (; V, R) = solver.operators
 
@@ -14,12 +14,12 @@
 end
 
 @inline @views function time_derivative!(dudt::AbstractArray{Float64, 3},
-                                         solver::Solver{<:AbstractConservationLaw{d,
-                                                                                  FirstOrder},
-                                                        <:ReferenceOperators,
-                                                        <:AbstractMassMatrixSolver,
-                                                        <:StandardForm},
-                                         k::Int) where {d}
+        solver::Solver{<:AbstractConservationLaw{d,
+                FirstOrder},
+            <:ReferenceOperators,
+            <:AbstractMassMatrixSolver,
+            <:StandardForm},
+        k::Int) where {d}
     (; conservation_law, connectivity, form) = solver
     (; inviscid_numerical_flux) = form
     (; f_q, f_f, f_n, u_q, r_q, u_f, temp, CI) = solver.preallocated_arrays
@@ -28,11 +28,11 @@ end
     id = Threads.threadid()
     physical_flux!(f_q[:, :, :, id], conservation_law, u_q[:, :, k])
     numerical_flux!(f_f[:, :, id],
-                    conservation_law,
-                    inviscid_numerical_flux,
-                    u_f[:, k, :],
-                    u_f[CI[connectivity[:, k]], :],
-                    n_f[:, :, k])
+        conservation_law,
+        inviscid_numerical_flux,
+        u_f[:, k, :],
+        u_f[CI[connectivity[:, k]], :],
+        n_f[:, :, k])
 
     fill!(r_q[:, :, id], 0.0)
     @inbounds for n in 1:d
@@ -63,12 +63,12 @@ end
 end
 
 @inline @views function time_derivative!(dudt::AbstractArray{Float64, 3},
-                                         solver::Solver{<:AbstractConservationLaw{d,
-                                                                                  FirstOrder},
-                                                        <:PhysicalOperators,
-                                                        <:AbstractMassMatrixSolver,
-                                                        <:StandardForm},
-                                         k::Int) where {d}
+        solver::Solver{<:AbstractConservationLaw{d,
+                FirstOrder},
+            <:PhysicalOperators,
+            <:AbstractMassMatrixSolver,
+            <:StandardForm},
+        k::Int) where {d}
     (; conservation_law, operators, connectivity, form) = solver
     (; VOL, FAC, n_f) = operators
     (; inviscid_numerical_flux) = form
@@ -77,11 +77,11 @@ end
     id = Threads.threadid()
     physical_flux!(f_q[:, :, :, id], conservation_law, u_q[:, :, k])
     numerical_flux!(f_f[:, :, id],
-                    conservation_law,
-                    inviscid_numerical_flux,
-                    u_f[:, k, :],
-                    u_f[CI[connectivity[:, k]], :],
-                    n_f[:, :, k])
+        conservation_law,
+        inviscid_numerical_flux,
+        u_f[:, k, :],
+        u_f[CI[connectivity[:, k]], :],
+        n_f[:, :, k])
 
     fill!(dudt[:, :, k], 0.0)
     @inbounds for m in 1:d

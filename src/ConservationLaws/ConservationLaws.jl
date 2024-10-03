@@ -9,32 +9,32 @@ using ..GridFunctions
 import ..GridFunctions: evaluate
 
 export physical_flux,
-       physical_flux!,
-       numerical_flux!,
-       entropy,
-       conservative_to_entropy!,
-       entropy_to_conservative!,
-       compute_two_point_flux,
-       wave_speed,
-       logmean,
-       inv_logmean,
-       AbstractConservationLaw,
-       AbstractPDEType,
-       FirstOrder,
-       SecondOrder,
-       AbstractInviscidNumericalFlux,
-       AbstractViscousNumericalFlux,
-       NoInviscidFlux,
-       NoViscousFlux,
-       LaxFriedrichsNumericalFlux,
-       CentralNumericalFlux,
-       BR1,
-       EntropyConservativeNumericalFlux,
-       AbstractTwoPointFlux,
-       ConservativeFlux,
-       EntropyConservativeFlux,
-       NoTwoPointFlux,
-       ExactSolution
+    physical_flux!,
+    numerical_flux!,
+    entropy,
+    conservative_to_entropy!,
+    entropy_to_conservative!,
+    compute_two_point_flux,
+    wave_speed,
+    logmean,
+    inv_logmean,
+    AbstractConservationLaw,
+    AbstractPDEType,
+    FirstOrder,
+    SecondOrder,
+    AbstractInviscidNumericalFlux,
+    AbstractViscousNumericalFlux,
+    NoInviscidFlux,
+    NoViscousFlux,
+    LaxFriedrichsNumericalFlux,
+    CentralNumericalFlux,
+    BR1,
+    EntropyConservativeNumericalFlux,
+    AbstractTwoPointFlux,
+    ConservativeFlux,
+    EntropyConservativeFlux,
+    NoTwoPointFlux,
+    ExactSolution
 
 abstract type AbstractConservationLaw{d, PDEType, N_c} end
 abstract type AbstractPDEType end
@@ -66,21 +66,21 @@ struct EntropyConservativeFlux <: AbstractTwoPointFlux end
 struct NoTwoPointFlux <: AbstractTwoPointFlux end
 
 @inline @views function numerical_flux!(f_star::AbstractMatrix{Float64},
-                                        conservation_law::AbstractConservationLaw{d,
-                                                                                  PDEType,
-                                                                                  N_c},
-                                        numerical_flux::LaxFriedrichsNumericalFlux,
-                                        u_in::AbstractMatrix{Float64},
-                                        u_out::AbstractMatrix{Float64},
-                                        n_f::AbstractMatrix{Float64},
-                                        two_point_flux = ConservativeFlux()) where {d,
-                                                                                    PDEType,
-                                                                                    N_c}
+        conservation_law::AbstractConservationLaw{d,
+            PDEType,
+            N_c},
+        numerical_flux::LaxFriedrichsNumericalFlux,
+        u_in::AbstractMatrix{Float64},
+        u_out::AbstractMatrix{Float64},
+        n_f::AbstractMatrix{Float64},
+        two_point_flux = ConservativeFlux()) where {d,
+        PDEType,
+        N_c}
     @inbounds for i in axes(u_in, 1)
         f_s = compute_two_point_flux(conservation_law,
-                                     two_point_flux,
-                                     u_in[i, :],
-                                     u_out[i, :])
+            two_point_flux,
+            u_in[i, :],
+            u_out[i, :])
         a = numerical_flux.halfλ *
             wave_speed(conservation_law, u_in[i, :], u_out[i, :], n_f[:, i])
         for e in 1:N_c
@@ -94,22 +94,22 @@ struct NoTwoPointFlux <: AbstractTwoPointFlux end
 end
 
 @inline @views function numerical_flux!(f_star::AbstractMatrix{Float64},
-                                        conservation_law::AbstractConservationLaw{d,
-                                                                                  PDEType,
-                                                                                  N_c},
-                                        ::Union{CentralNumericalFlux,
-                                                EntropyConservativeNumericalFlux},
-                                        u_in::AbstractMatrix{Float64},
-                                        u_out::AbstractMatrix{Float64},
-                                        n_f::AbstractMatrix{Float64},
-                                        two_point_flux = ConservativeFlux()) where {d,
-                                                                                    PDEType,
-                                                                                    N_c}
+        conservation_law::AbstractConservationLaw{d,
+            PDEType,
+            N_c},
+        ::Union{CentralNumericalFlux,
+            EntropyConservativeNumericalFlux},
+        u_in::AbstractMatrix{Float64},
+        u_out::AbstractMatrix{Float64},
+        n_f::AbstractMatrix{Float64},
+        two_point_flux = ConservativeFlux()) where {d,
+        PDEType,
+        N_c}
     @inbounds for i in axes(u_in, 1)
         f_s = compute_two_point_flux(conservation_law,
-                                     two_point_flux,
-                                     u_in[i, :],
-                                     u_out[i, :])
+            two_point_flux,
+            u_in[i, :],
+            u_out[i, :])
         for e in 1:N_c
             temp = 0.0
             for m in 1:d
@@ -156,28 +156,28 @@ struct ExactSolution{d, ConservationLaw, InitialData, SourceTerm} <: AbstractGri
     N_c::Int
 
     function ExactSolution(conservation_law::AbstractConservationLaw{d, PDEType, N_c},
-                           initial_data::AbstractGridFunction{d};
-                           periodic::Bool = false,) where {d, PDEType, N_c}
+            initial_data::AbstractGridFunction{d};
+            periodic::Bool = false,) where {d, PDEType, N_c}
         return new{d,
-                   typeof(conservation_law),
-                   typeof(initial_data),
-                   typeof(conservation_law.source_term)}(conservation_law,
-                                                         initial_data,
-                                                         periodic,
-                                                         N_c)
+            typeof(conservation_law),
+            typeof(initial_data),
+            typeof(conservation_law.source_term)}(conservation_law,
+            initial_data,
+            periodic,
+            N_c)
     end
 end
 
 @inbounds function entropy_to_conservative!(u::AbstractVector{Float64},
-                                            ::AbstractConservationLaw,
-                                            w::AbstractVector{Float64})
+        ::AbstractConservationLaw,
+        w::AbstractVector{Float64})
     copyto!(u, w)
     return
 end
 
 @inbounds function conservative_to_entropy(w::AbstractVector{Float64},
-                                           ::AbstractConservationLaw,
-                                           u::AbstractVector{Float64})
+        ::AbstractConservationLaw,
+        u::AbstractVector{Float64})
     copyto!(w, u)
     return
 end
@@ -189,11 +189,11 @@ export InviscidBurgersEquation, ViscousBurgersEquation
 include("burgers.jl")
 
 export EulerEquations,
-       NavierStokesEquations,
-       EulerPeriodicTest,
-       TaylorGreenVortex,
-       IsentropicVortex,
-       KelvinHelmholtzInstability
+    NavierStokesEquations,
+    EulerPeriodicTest,
+    TaylorGreenVortex,
+    IsentropicVortex,
+    KelvinHelmholtzInstability
 include("euler_navierstokes.jl")
 
 end

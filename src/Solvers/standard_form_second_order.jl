@@ -1,10 +1,10 @@
 @inline @views function auxiliary_variable!(dudt::AbstractArray{Float64, 3},
-                                            solver::Solver{<:AbstractConservationLaw{d,
-                                                                                     SecondOrder},
-                                                           <:PhysicalOperators,
-                                                           <:AbstractMassMatrixSolver,
-                                                           <:StandardForm},
-                                            k::Int) where {d}
+        solver::Solver{<:AbstractConservationLaw{d,
+                SecondOrder},
+            <:PhysicalOperators,
+            <:AbstractMassMatrixSolver,
+            <:StandardForm},
+        k::Int) where {d}
     (; conservation_law, operators, connectivity, form) = solver
     (; V, R, VOL, FAC, n_f) = operators
     (; viscous_numerical_flux) = form
@@ -12,11 +12,11 @@
 
     id = Threads.threadid()
     numerical_flux!(u_n[:, :, :, id],
-                    conservation_law,
-                    viscous_numerical_flux,
-                    u_f[:, k, :],
-                    u_f[CI[connectivity[:, k]], :],
-                    n_f[:, :, k])
+        conservation_law,
+        viscous_numerical_flux,
+        u_f[:, k, :],
+        u_f[CI[connectivity[:, k]], :],
+        n_f[:, :, k])
 
     @inbounds for m in 1:d
         fill!(dudt[:, :, k], 0.0)
@@ -32,12 +32,12 @@
 end
 
 @inline @views function time_derivative!(dudt::AbstractArray{Float64, 3},
-                                         solver::Solver{<:AbstractConservationLaw{d,
-                                                                                  SecondOrder},
-                                                        <:PhysicalOperators,
-                                                        <:AbstractMassMatrixSolver,
-                                                        <:StandardForm},
-                                         k::Int) where {d}
+        solver::Solver{<:AbstractConservationLaw{d,
+                SecondOrder},
+            <:PhysicalOperators,
+            <:AbstractMassMatrixSolver,
+            <:StandardForm},
+        k::Int) where {d}
     (; conservation_law, operators, connectivity, form) = solver
     (; VOL, FAC, n_f) = operators
     (; inviscid_numerical_flux, viscous_numerical_flux) = form
@@ -46,19 +46,19 @@ end
     id = Threads.threadid()
     physical_flux!(f_q[:, :, :, id], conservation_law, u_q[:, :, k], q_q[:, :, :, k])
     numerical_flux!(f_f[:, :, id],
-                    conservation_law,
-                    inviscid_numerical_flux,
-                    u_f[:, k, :],
-                    u_f[CI[connectivity[:, k]], :],
-                    n_f[:, :, k])
+        conservation_law,
+        inviscid_numerical_flux,
+        u_f[:, k, :],
+        u_f[CI[connectivity[:, k]], :],
+        n_f[:, :, k])
     numerical_flux!(f_f[:, :, id],
-                    conservation_law,
-                    viscous_numerical_flux,
-                    u_f[:, k, :],
-                    u_f[CI[connectivity[:, k]], :],
-                    q_f[:, k, :, :],
-                    q_f[CI[connectivity[:, k]], :, :],
-                    n_f[:, :, k])
+        conservation_law,
+        viscous_numerical_flux,
+        u_f[:, k, :],
+        u_f[CI[connectivity[:, k]], :],
+        q_f[:, k, :, :],
+        q_f[CI[connectivity[:, k]], :, :],
+        n_f[:, :, k])
 
     fill!(dudt[:, :, k], 0.0)
     @inbounds for m in 1:d

@@ -14,26 +14,26 @@ struct WarpedTensorProductMap3D{A_type, B_type, C_type, σᵢ_type, σₒ_type} 
     size::NTuple{2, Int}
 
     function WarpedTensorProductMap3D(A::A_type,
-                                      B::B_type,
-                                      C::C_type,
-                                      σᵢ::σᵢ_type,
-                                      σₒ::σₒ_type) where {A_type, B_type, C_type, σᵢ_type,
-                                                          σₒ_type}
+            B::B_type,
+            C::C_type,
+            σᵢ::σᵢ_type,
+            σₒ::σₒ_type) where {A_type, B_type, C_type, σᵢ_type,
+            σₒ_type}
         return new{A_type, B_type, C_type, σᵢ_type, σₒ_type}(A,
-                                                             B,
-                                                             C,
-                                                             σᵢ,
-                                                             σₒ,
-                                                             [count(a -> a > 0,
-                                                                    σᵢ[β1, 1, :])
-                                                              for β1 in axes(σᵢ, 1)],
-                                                             [count(a -> a > 0,
-                                                                    σᵢ[β1, β2, :])
-                                                              for β1 in axes(σᵢ, 1),
-                                                                  β2 in axes(σᵢ, 2)],
-                                                             (size(A, 1) * size(B, 1) *
-                                                              size(C, 1),
-                                                              count(a -> a > 0, σᵢ)))
+            B,
+            C,
+            σᵢ,
+            σₒ,
+            [count(a -> a > 0,
+                σᵢ[β1, 1, :])
+             for β1 in axes(σᵢ, 1)],
+            [count(a -> a > 0,
+                σᵢ[β1, β2, :])
+             for β1 in axes(σᵢ, 1),
+            β2 in axes(σᵢ, 2)],
+            (size(A, 1) * size(B, 1) *
+             size(C, 1),
+                count(a -> a > 0, σᵢ)))
     end
 end
 
@@ -75,8 +75,8 @@ Evaluate the matrix-vector product
                    = ∑_{β1} A[α1,β1] W[β1,α2,α3]
 """
 @inline function LinearAlgebra.mul!(y::AbstractVector,
-                                    L::WarpedTensorProductMap3D,
-                                    x::AbstractVector)
+        L::WarpedTensorProductMap3D,
+        x::AbstractVector)
     LinearMaps.check_dim_mul(y, L, x)
     (; A, B, C, σᵢ, σₒ, N2, N3) = L
 
@@ -125,9 +125,9 @@ Evaluate the matrix-vector product
                    = ∑_{α3} C[α3,β1,β2,β3] Z[β1,β2,α3]
 """
 @inline function LinearMaps._unsafe_mul!(y::AbstractVector,
-                                         L::LinearMaps.TransposeMap{Float64,
-                                                                    <:WarpedTensorProductMap3D},
-                                         x::AbstractVector)
+        L::LinearMaps.TransposeMap{Float64,
+            <:WarpedTensorProductMap3D},
+        x::AbstractVector)
     LinearMaps.check_dim_mul(y, L, x)
     (; A, B, C, σᵢ, σₒ, N2, N3) = L.lmap
 

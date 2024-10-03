@@ -49,8 +49,10 @@ struct ConservationAnalysisResultsWithDerivative <: AbstractConservationAnalysis
 end
 
 function PrimaryConservationAnalysis(results_path::String,
-                                     conservation_law::AbstractConservationLaw,
-                                     spatial_discretization::SpatialDiscretization{d}) where {d}
+        conservation_law::AbstractConservationLaw,
+        spatial_discretization::SpatialDiscretization{d}) where {
+        d,
+}
     _, N_c, N_e = get_dof(spatial_discretization, conservation_law)
 
     (; W, V) = spatial_discretization.reference_approximation
@@ -62,9 +64,11 @@ function PrimaryConservationAnalysis(results_path::String,
 end
 
 function EnergyConservationAnalysis(results_path::String,
-                                    conservation_law::AbstractConservationLaw,
-                                    spatial_discretization::SpatialDiscretization{d},
-                                    mass_solver = WeightAdjustedSolver(spatial_discretization)) where {d}
+        conservation_law::AbstractConservationLaw,
+        spatial_discretization::SpatialDiscretization{d},
+        mass_solver = WeightAdjustedSolver(spatial_discretization)) where {
+        d,
+}
     _, N_c, N_e = get_dof(spatial_discretization, conservation_law)
 
     (; V) = spatial_discretization.reference_approximation
@@ -74,23 +78,25 @@ function EnergyConservationAnalysis(results_path::String,
 end
 
 function PrimaryConservationAnalysis(conservation_law::AbstractConservationLaw,
-                                     spatial_discretization::SpatialDiscretization)
+        spatial_discretization::SpatialDiscretization)
     return PrimaryConservationAnalysis("./", conservation_law, spatial_discretization)
 end
 
 function EnergyConservationAnalysis(conservation_law::AbstractConservationLaw,
-                                    spatial_discretization::SpatialDiscretization,
-                                    mass_solver = WeightAdjustedSolver(spatial_discretization))
+        spatial_discretization::SpatialDiscretization,
+        mass_solver = WeightAdjustedSolver(spatial_discretization))
     return EnergyConservationAnalysis("./",
-                                      conservation_law,
-                                      spatial_discretization,
-                                      mass_solver)
+        conservation_law,
+        spatial_discretization,
+        mass_solver)
 end
 
 function EntropyConservationAnalysis(results_path::String,
-                                     conservation_law::AbstractConservationLaw,
-                                     spatial_discretization::SpatialDiscretization{d},
-                                     mass_solver = WeightAdjustedSolver(spatial_discretization)) where {d}
+        conservation_law::AbstractConservationLaw,
+        spatial_discretization::SpatialDiscretization{d},
+        mass_solver = WeightAdjustedSolver(spatial_discretization)) where {
+        d,
+}
     _, N_c, N_e = get_dof(spatial_discretization, conservation_law)
 
     (; W, V) = spatial_discretization.reference_approximation
@@ -99,13 +105,13 @@ function EntropyConservationAnalysis(results_path::String,
     WJ = [Diagonal(W .* geometric_factors.J_q[:, k]) for k in 1:N_e]
 
     return EntropyConservationAnalysis(mass_solver,
-                                       WJ,
-                                       conservation_law,
-                                       N_c,
-                                       N_e,
-                                       V,
-                                       results_path,
-                                       "entropy.jld2")
+        WJ,
+        conservation_law,
+        N_c,
+        N_e,
+        V,
+        results_path,
+        "entropy.jld2")
 end
 
 function evaluate_conservation(analysis::PrimaryConservationAnalysis, u::Array{Float64, 3})
@@ -141,8 +147,8 @@ function evaluate_conservation(analysis::EnergyConservationAnalysis, u::Array{Fl
 end
 
 function evaluate_conservation_residual(analysis::PrimaryConservationAnalysis,
-                                        ::Array{Float64, 3},
-                                        dudt::Array{Float64, 3})
+        ::Array{Float64, 3},
+        dudt::Array{Float64, 3})
     (; WJ, N_c, N_e, V) = analysis
 
     return [sum(ones(size(WJ[k], 1))' * WJ[k] * V * dudt[:, e, k] for k in 1:N_e)
@@ -150,8 +156,8 @@ function evaluate_conservation_residual(analysis::PrimaryConservationAnalysis,
 end
 
 function evaluate_conservation_residual(analysis::EnergyConservationAnalysis,
-                                        u::Array{Float64, 3},
-                                        dudt::Array{Float64, 3})
+        u::Array{Float64, 3},
+        dudt::Array{Float64, 3})
     (; mass_solver, N_c, N_e) = analysis
 
     dEdt = zeros(N_c)
@@ -165,8 +171,8 @@ function evaluate_conservation_residual(analysis::EnergyConservationAnalysis,
 end
 
 @inline @views function evaluate_conservation_residual(analysis::EntropyConservationAnalysis,
-                                                       u::Array{Float64, 3},
-                                                       dudt::Array{Float64, 3})
+        u::Array{Float64, 3},
+        dudt::Array{Float64, 3})
     (; mass_solver, conservation_law, N_c, N_e, V, WJ) = analysis
 
     u_q = Matrix{Float64}(undef, size(V, 1), N_c)
@@ -187,8 +193,8 @@ end
 end
 
 function analyze(analysis::EntropyConservationAnalysis,
-                 time_steps::Vector{Int};
-                 normalize = false,)
+        time_steps::Vector{Int};
+        normalize = false,)
     (; results_path, dict_name) = analysis
     N_t = length(time_steps)
     t = Vector{Float64}(undef, N_t)
@@ -211,14 +217,14 @@ function analyze(analysis::EntropyConservationAnalysis,
     results = ConservationAnalysisResults(t, E)
 
     save(string(results_path, dict_name),
-         Dict("conservation_analysis" => analysis, "conservation_results" => results))
+        Dict("conservation_analysis" => analysis, "conservation_results" => results))
 
     return ConservationAnalysisResultsWithDerivative(t, E, dEdt)
 end
 
 function analyze(analysis::ConservationAnalysis,
-                 initial_time_step::Union{Int, String} = 0,
-                 final_time_step::Union{Int, String} = "final")
+        initial_time_step::Union{Int, String} = 0,
+        final_time_step::Union{Int, String} = "final")
     (; results_path) = analysis
 
     u_0, _ = load_solution(results_path, initial_time_step)
@@ -254,7 +260,7 @@ function analyze(analysis::ConservationAnalysis, time_steps::Vector{Int}; normal
     results = ConservationAnalysisResults(t, E)
 
     save(string(results_path, dict_name),
-         Dict("conservation_analysis" => analysis, "conservation_results" => results))
+        Dict("conservation_analysis" => analysis, "conservation_results" => results))
 
     return ConservationAnalysisResultsWithDerivative(t, E, dEdt)
 end
@@ -268,9 +274,9 @@ end
 end
 
 @recipe function plot(results::ConservationAnalysisResultsWithDerivative,
-                      e::Int = 1;
-                      net_change = true,
-                      derivative = true,)
+        e::Int = 1;
+        net_change = true,
+        derivative = true,)
     xlabel --> latexstring("t")
     labels = [LaTeXString("Net change"), LaTeXString("Time derivative")]
     fontfamily --> "Computer Modern"

@@ -11,9 +11,9 @@ struct ErrorAnalysis{d, V_err_type, Volq_to_Err_type} <: AbstractAnalysis
 end
 
 function ErrorAnalysis(results_path::String,
-                       conservation_law::AbstractConservationLaw,
-                       spatial_discretization::SpatialDiscretization{d},
-                       error_quadrature_rule = nothing) where {d}
+        conservation_law::AbstractConservationLaw,
+        spatial_discretization::SpatialDiscretization{d},
+        error_quadrature_rule = nothing) where {d}
     (; N_e, reference_approximation) = spatial_discretization
     (; xyzq) = spatial_discretization.mesh
     (; V, reference_element, approx_type) = reference_approximation
@@ -45,29 +45,29 @@ function ErrorAnalysis(results_path::String,
     _, N_c, N_e = get_dof(spatial_discretization, conservation_law)
 
     return ErrorAnalysis(N_c,
-                         N_e,
-                         V_err,
-                         w_err,
-                         volq_to_err,
-                         xyzq,
-                         J_q,
-                         total_volume,
-                         results_path)
+        N_e,
+        V_err,
+        w_err,
+        volq_to_err,
+        xyzq,
+        J_q,
+        total_volume,
+        results_path)
 end
 
 function analyze(analysis::ErrorAnalysis{d},
-                 sol::Array{Float64, 3},
-                 exact_solution,
-                 t::Float64 = 0.0;
-                 normalize = false,
-                 write_to_file = true,) where {d}
+        sol::Array{Float64, 3},
+        exact_solution,
+        t::Float64 = 0.0;
+        normalize = false,
+        write_to_file = true,) where {d}
     (; N_c, N_e, J_q, w_err, V_err, volq_to_err, xyzq, total_volume, results_path) = analysis
 
     u_approx = Matrix{Float64}(undef, size(V_err, 1), N_c)
     error = zeros(N_c)
     @inbounds @views for k in 1:N_e
         u_exact = evaluate(exact_solution, Tuple(volq_to_err * xyzq[m][:, k] for m in 1:d),
-                           t)
+            t)
         u_approx = V_err * sol[:, :, k]
 
         for e in 1:N_c
@@ -84,7 +84,7 @@ function analyze(analysis::ErrorAnalysis{d},
 
     if write_to_file
         save(string(results_path, "error.jld2"),
-             Dict("error_analysis" => analysis, "error" => error))
+            Dict("error_analysis" => analysis, "error" => error))
     end
 
     return error

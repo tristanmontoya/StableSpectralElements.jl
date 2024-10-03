@@ -1,14 +1,14 @@
 function ReferenceApproximation(approx_type::NodalTensor,
-                                element_type::Line;
-                                mapping_degree::Int = 1,
-                                N_plot::Int = 10,
-                                volume_quadrature_rule = LGLQuadrature(approx_type.p),)
+        element_type::Line;
+        mapping_degree::Int = 1,
+        N_plot::Int = 10,
+        volume_quadrature_rule = LGLQuadrature(approx_type.p),)
     reference_element = RefElemData(Line(),
-                                    Polynomial{MultidimensionalQuadrature}(),
-                                    mapping_degree,
-                                    quad_rule_vol = quadrature(Line(),
-                                                               volume_quadrature_rule),
-                                    Nplot = N_plot)
+        Polynomial{MultidimensionalQuadrature}(),
+        mapping_degree,
+        quad_rule_vol = quadrature(Line(),
+            volume_quadrature_rule),
+        Nplot = N_plot)
 
     (; rp, rq, rstq, rf, rstf) = reference_element
     q = length(rq) - 1
@@ -23,20 +23,20 @@ function ReferenceApproximation(approx_type::NodalTensor,
     V_plot = OctavianMap(vandermonde(element_type, q, rp) / VDM)
 
     return ReferenceApproximation(NodalTensor(q),
-                                  reference_element,
-                                  (OctavianMap(∇VDM / VDM),),
-                                  LinearMap(I, q + 1),
-                                  R,
-                                  R,
-                                  V_plot)
+        reference_element,
+        (OctavianMap(∇VDM / VDM),),
+        LinearMap(I, q + 1),
+        R,
+        R,
+        V_plot)
 end
 
 function ReferenceApproximation(approx_type::NodalTensor,
-                                element_type::Quad;
-                                mapping_degree::Int = 1,
-                                N_plot::Int = 10,
-                                volume_quadrature_rule = LGLQuadrature(approx_type.p),
-                                facet_quadrature_rule = LGLQuadrature(approx_type.p),)
+        element_type::Quad;
+        mapping_degree::Int = 1,
+        N_plot::Int = 10,
+        volume_quadrature_rule = LGLQuadrature(approx_type.p),
+        facet_quadrature_rule = LGLQuadrature(approx_type.p),)
 
     # one-dimensional operators
     nodes_1D = quadrature(Line(), volume_quadrature_rule)[1]
@@ -49,13 +49,13 @@ function ReferenceApproximation(approx_type::NodalTensor,
 
     # reference element data
     reference_element = RefElemData(element_type,
-                                    Polynomial{MultidimensionalQuadrature}(),
-                                    mapping_degree,
-                                    quad_rule_vol = quadrature(Quad(),
-                                                               volume_quadrature_rule),
-                                    quad_rule_face = quadrature(Line(),
-                                                                facet_quadrature_rule),
-                                    Nplot = N_plot)
+        Polynomial{MultidimensionalQuadrature}(),
+        mapping_degree,
+        quad_rule_vol = quadrature(Quad(),
+            volume_quadrature_rule),
+        quad_rule_face = quadrature(Line(),
+            facet_quadrature_rule),
+        Nplot = N_plot)
 
     (; rstp, rstq, rstf) = reference_element
 
@@ -75,20 +75,20 @@ function ReferenceApproximation(approx_type::NodalTensor,
                          vandermonde(element_type, q, rstq...))
 
     return ReferenceApproximation(NodalTensor(q),
-                                  reference_element,
-                                  (D_1D ⊗ I_1D, I_1D ⊗ D_1D),
-                                  LinearMap(I, (q + 1)^2),
-                                  R,
-                                  R,
-                                  V_plot)
+        reference_element,
+        (D_1D ⊗ I_1D, I_1D ⊗ D_1D),
+        LinearMap(I, (q + 1)^2),
+        R,
+        R,
+        V_plot)
 end
 
 function ReferenceApproximation(approx_type::NodalTensor,
-                                ::Hex;
-                                mapping_degree::Int = 1,
-                                N_plot::Int = 10,
-                                volume_quadrature_rule = LGLQuadrature(approx_type.p),
-                                facet_quadrature_rule = LGLQuadrature(approx_type.p),)
+        ::Hex;
+        mapping_degree::Int = 1,
+        N_plot::Int = 10,
+        volume_quadrature_rule = LGLQuadrature(approx_type.p),
+        facet_quadrature_rule = LGLQuadrature(approx_type.p),)
 
     # one-dimensional operators
     nodes_1D = quadrature(Line(), volume_quadrature_rule)[1]
@@ -99,13 +99,13 @@ function ReferenceApproximation(approx_type::NodalTensor,
 
     # reference element data
     reference_element = RefElemData(Hex(),
-                                    Polynomial{MultidimensionalQuadrature}(),
-                                    mapping_degree,
-                                    quad_rule_vol = quadrature(Hex(),
-                                                               volume_quadrature_rule),
-                                    quad_rule_face = quadrature(Quad(),
-                                                                facet_quadrature_rule),
-                                    Nplot = N_plot)
+        Polynomial{MultidimensionalQuadrature}(),
+        mapping_degree,
+        quad_rule_vol = quadrature(Hex(),
+            volume_quadrature_rule),
+        quad_rule_face = quadrature(Quad(),
+            facet_quadrature_rule),
+        Nplot = N_plot)
 
     (; rstp, rstq, rstf) = reference_element
 
@@ -121,11 +121,11 @@ function ReferenceApproximation(approx_type::NodalTensor,
     V_plot = OctavianMap(vandermonde(Hex(), q, rstp...) / vandermonde(Hex(), q, rstq...))
 
     return ReferenceApproximation(NodalTensor(q),
-                                  reference_element,
-                                  (D_1D ⊗ I_1D ⊗ I_1D, I_1D ⊗ D_1D ⊗ I_1D,
-                                   I_1D ⊗ I_1D ⊗ D_1D),
-                                  LinearMap(I, (q + 1)^3),
-                                  R,
-                                  R,
-                                  V_plot)
+        reference_element,
+        (D_1D ⊗ I_1D ⊗ I_1D, I_1D ⊗ D_1D ⊗ I_1D,
+            I_1D ⊗ I_1D ⊗ D_1D),
+        LinearMap(I, (q + 1)^3),
+        R,
+        R,
+        V_plot)
 end

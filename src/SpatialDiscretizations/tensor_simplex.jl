@@ -11,7 +11,7 @@ end
 end
 
 function reference_geometric_factors(::Tri,
-                                     quadrature_rule::NTuple{2, AbstractQuadratureRule})
+        quadrature_rule::NTuple{2, AbstractQuadratureRule})
     η = quadrature(Quad(), quadrature_rule)
     N = size(η[1], 1)
     Λ_ref = Array{Float64, 3}(undef, N, 2, 2)
@@ -40,7 +40,7 @@ function reference_geometric_factors(::Tri,
 end
 
 function reference_geometric_factors(::Tet,
-                                     quadrature_rule::NTuple{3, AbstractQuadratureRule})
+        quadrature_rule::NTuple{3, AbstractQuadratureRule})
     η = quadrature(Hex(), quadrature_rule)
     N = size(η[1], 1)
     Λ_ref = Array{Float64, 3}(undef, N, 3, 3)
@@ -101,9 +101,9 @@ function warped_product(::Tri, p::Int, η1D::NTuple{2, Vector{Float64}})
     end
 
     return WarpedTensorProductMap2D(SArray{Tuple{M1, p + 1}}(A),
-                                    SArray{Tuple{M1, p + 1, p + 1}}(B),
-                                    SArray{Tuple{M1, M2}}(σᵢ),
-                                    SArray{Tuple{p + 1, p + 1}}(σₒ))
+        SArray{Tuple{M1, p + 1, p + 1}}(B),
+        SArray{Tuple{M1, M2}}(σᵢ),
+        SArray{Tuple{p + 1, p + 1}}(σₒ))
 end
 
 function warped_product(::Tet, p::Int, η1D::NTuple{3, Vector{Float64}})
@@ -133,10 +133,10 @@ function warped_product(::Tet, p::Int, η1D::NTuple{3, Vector{Float64}})
     end
 
     return WarpedTensorProductMap3D(SArray{Tuple{M1, p + 1}}(A),
-                                    SArray{Tuple{M1, p + 1, p + 1}}(B),
-                                    SArray{Tuple{M1, p + 1, p + 1, p + 1}}(C),
-                                    SArray{Tuple{M1, M2, M3}}(σᵢ),
-                                    SArray{Tuple{p + 1, p + 1, p + 1}}(σₒ))
+        SArray{Tuple{M1, p + 1, p + 1}}(B),
+        SArray{Tuple{M1, p + 1, p + 1, p + 1}}(C),
+        SArray{Tuple{M1, M2, M3}}(σᵢ),
+        SArray{Tuple{p + 1, p + 1, p + 1}}(σₒ))
 end
 
 function operators_1d(quadrature_rule::NTuple{d, AbstractQuadratureRule}) where {d}
@@ -156,13 +156,13 @@ function operators_1d(quadrature_rule::NTuple{d, AbstractQuadratureRule}) where 
 end
 
 function ReferenceApproximation(approx_type::AbstractTensorProduct,
-                                ::Tri;
-                                mapping_degree::Int = 1,
-                                N_plot::Int = 10,
-                                volume_quadrature_rule = (LGQuadrature(approx_type.p),
-                                                          LGQuadrature(approx_type.p)),
-                                facet_quadrature_rule = LGQuadrature(approx_type.p),
-                                sum_factorize_vandermonde = true,)
+        ::Tri;
+        mapping_degree::Int = 1,
+        N_plot::Int = 10,
+        volume_quadrature_rule = (LGQuadrature(approx_type.p),
+            LGQuadrature(approx_type.p)),
+        facet_quadrature_rule = LGQuadrature(approx_type.p),
+        sum_factorize_vandermonde = true,)
 
     # one-dimensional operators
     η_1D, q, V_1D, D_1D, I_1D, R_L, R_R = operators_1d(volume_quadrature_rule)
@@ -188,11 +188,11 @@ function ReferenceApproximation(approx_type::AbstractTensorProduct,
 
     # reference element data (mainly used for mapping, normals, etc.)
     reference_element = RefElemData(Tri(),
-                                    approx_type,
-                                    mapping_degree,
-                                    volume_quadrature_rule = volume_quadrature_rule,
-                                    facet_quadrature_rule = facet_quadrature_rule,
-                                    Nplot = N_plot)
+        approx_type,
+        mapping_degree,
+        volume_quadrature_rule = volume_quadrature_rule,
+        facet_quadrature_rule = facet_quadrature_rule,
+        Nplot = N_plot)
 
     # construct nodal or modal scheme (different Vandermonde matrix)
     if approx_type isa ModalTensor
@@ -209,27 +209,27 @@ function ReferenceApproximation(approx_type::AbstractTensorProduct,
     end
 
     return ReferenceApproximation(approx_type,
-                                  reference_element,
-                                  (D_1D[1] ⊗ I_1D[2], I_1D[1] ⊗ D_1D[2]),
-                                  V,
-                                  R * V,
-                                  R,
-                                  V_plot,
-                                  ReferenceMapping(J_ref, Λ_ref))
+        reference_element,
+        (D_1D[1] ⊗ I_1D[2], I_1D[1] ⊗ D_1D[2]),
+        V,
+        R * V,
+        R,
+        V_plot,
+        ReferenceMapping(J_ref, Λ_ref))
 end
 
 function ReferenceApproximation(approx_type::AbstractTensorProduct,
-                                ::Tet;
-                                mapping_degree::Int = 1,
-                                N_plot::Int = 10,
-                                volume_quadrature_rule = (LGQuadrature(approx_type.p),
-                                                          LGQuadrature(approx_type.p),
-                                                          GaussQuadrature(approx_type.p, 1,
-                                                                          0)),
-                                facet_quadrature_rule = (LGQuadrature(approx_type.p),
-                                                         GaussQuadrature(approx_type.p, 1,
-                                                                         0)),
-                                sum_factorize_vandermonde = true,)
+        ::Tet;
+        mapping_degree::Int = 1,
+        N_plot::Int = 10,
+        volume_quadrature_rule = (LGQuadrature(approx_type.p),
+            LGQuadrature(approx_type.p),
+            GaussQuadrature(approx_type.p, 1,
+                0)),
+        facet_quadrature_rule = (LGQuadrature(approx_type.p),
+            GaussQuadrature(approx_type.p, 1,
+                0)),
+        sum_factorize_vandermonde = true,)
 
     # one-dimensional operators
     η_1D, q, V_1D, D_1D, I_1D, R_L, R_R = operators_1d(volume_quadrature_rule)
@@ -263,17 +263,17 @@ function ReferenceApproximation(approx_type::AbstractTensorProduct,
         η3_to_ηf2 = OctavianMap(vandermonde(Line(), q[3], η_f2) / V_1D[3])
     end
     R = [η1_to_ηf1 ⊗ R_L[2] ⊗ η3_to_ηf2
-         R_R[1] ⊗ η2_to_ηf1 ⊗ η3_to_ηf2
-         R_L[1] ⊗ η2_to_ηf1 ⊗ η3_to_ηf2
-         η1_to_ηf1 ⊗ η2_to_ηf2 ⊗ R_L[3]]
+        R_R[1] ⊗ η2_to_ηf1 ⊗ η3_to_ηf2
+        R_L[1] ⊗ η2_to_ηf1 ⊗ η3_to_ηf2
+        η1_to_ηf1 ⊗ η2_to_ηf2 ⊗ R_L[3]]
 
     # reference element data (mainly used for mapping, normals, etc.)
     reference_element = RefElemData(Tet(),
-                                    approx_type,
-                                    mapping_degree,
-                                    volume_quadrature_rule = volume_quadrature_rule,
-                                    facet_quadrature_rule = facet_quadrature_rule,
-                                    Nplot = N_plot)
+        approx_type,
+        mapping_degree,
+        volume_quadrature_rule = volume_quadrature_rule,
+        facet_quadrature_rule = facet_quadrature_rule,
+        Nplot = N_plot)
 
     # construct nodal or modal scheme
     if approx_type isa ModalTensor
@@ -294,13 +294,13 @@ function ReferenceApproximation(approx_type::AbstractTensorProduct,
     end
 
     return ReferenceApproximation(approx_type,
-                                  reference_element,
-                                  (D_1D[1] ⊗ I_1D[2] ⊗ I_1D[3],
-                                   I_1D[1] ⊗ D_1D[2] ⊗ I_1D[3],
-                                   I_1D[1] ⊗ I_1D[2] ⊗ D_1D[3]),
-                                  V,
-                                  R * V,
-                                  R,
-                                  V_plot,
-                                  ReferenceMapping(J_ref, Λ_ref))
+        reference_element,
+        (D_1D[1] ⊗ I_1D[2] ⊗ I_1D[3],
+            I_1D[1] ⊗ D_1D[2] ⊗ I_1D[3],
+            I_1D[1] ⊗ I_1D[2] ⊗ D_1D[3]),
+        V,
+        R * V,
+        R,
+        V_plot,
+        ReferenceMapping(J_ref, Λ_ref))
 end

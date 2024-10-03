@@ -30,7 +30,9 @@ struct EulerEquations{d, N_c} <: AbstractConservationLaw{d, FirstOrder, N_c}
     source_term::AbstractGridFunction{d}
 
     function EulerEquations{d}(γ::Float64 = 1.4,
-                               source_term::AbstractGridFunction{d} = NoSourceTerm{d}()) where {d}
+            source_term::AbstractGridFunction{d} = NoSourceTerm{d}()) where {
+            d,
+    }
         return new{d, d + 2}(γ, γ - 1, 1 / (γ - 1), source_term)
     end
 end
@@ -42,7 +44,9 @@ struct NavierStokesEquations{d, N_c} <: AbstractConservationLaw{d, SecondOrder, 
     source_term::AbstractGridFunction{d}
 
     function NavierStokesEquations{d}(γ::Float64 = 1.4,
-                                      source_term::AbstractGridFunction{d} = NoSourceTerm{d}()) where {d}
+            source_term::AbstractGridFunction{d} = NoSourceTerm{d}()) where {
+            d,
+    }
         @error "Navier-Stokes not implemented."
         return new{d, N_c}(γ, γ - 1, 1 / (γ - 1), source_term)
     end
@@ -54,20 +58,20 @@ const EulerType{d} = Union{EulerEquations{d}, NavierStokesEquations{d}}
 Evaluate the flux for the Euler equations
 """
 @inline function physical_flux(conservation_law::EulerType{d},
-                               u::AbstractVector{Float64}) where {d}
+        u::AbstractVector{Float64}) where {d}
     (; γ_minus_1) = conservation_law
 
     V = SVector{d}(u[m + 1] / u[1] for m in 1:d)
     p = γ_minus_1 * (u[end] - 0.5 * (sum(u[m + 1] * V[m] for m in 1:d)))
     h_t = u[end] + p
     return vcat(SMatrix{1, d}(u[n + 1] for n in 1:d),
-                SMatrix{d, d}(u[m + 1] * V[n] + I[m, n] * p for m in 1:d, n in 1:d),
-                SMatrix{1, d}(h_t * V[n] for n in 1:d))
+        SMatrix{d, d}(u[m + 1] * V[n] + I[m, n] * p for m in 1:d, n in 1:d),
+        SMatrix{1, d}(h_t * V[n] for n in 1:d))
 end
 
 @inline function physical_flux(conservation_law::EulerType{d},
-                               u::AbstractVector{Float64},
-                               n_f::AbstractVector{Float64}) where {d}
+        u::AbstractVector{Float64},
+        n_f::AbstractVector{Float64}) where {d}
     (; γ_minus_1) = conservation_law
 
     V = SVector{d}(u[m + 1] / u[1] for m in 1:d)
@@ -76,28 +80,28 @@ end
     p = γ_minus_1 * (u[end] - 0.5 * (sum(u[m + 1] * V[m] for m in 1:d)))
 
     return SVector{d + 2}(u[1] * Vₙ,
-                          (u[m + 1] * Vₙ + p * n_f[m] for m in 1:d)...,
-                          (u[end] + p) * Vₙ)
+        (u[m + 1] * Vₙ + p * n_f[m] for m in 1:d)...,
+        (u[end] + p) * Vₙ)
 end
 
 @inline @views function physical_flux!(f::AbstractArray{Float64, 3},
-                                       conservation_law::EulerType{d},
-                                       u::AbstractMatrix{Float64}) where {d}
+        conservation_law::EulerType{d},
+        u::AbstractMatrix{Float64}) where {d}
     @inbounds for i in axes(u, 1)
         f[i, :, :] .= physical_flux(conservation_law, u[i, :])
     end
 end
 
 @inline function entropy(conservation_law::EulerType{d},
-                         u::AbstractVector{Float64}) where {d}
+        u::AbstractVector{Float64}) where {d}
     (; γ, γ_minus_1, inv_γ_minus_1) = conservation_law
     p = γ_minus_1 * (u[end] - (0.5 / u[1]) * (sum(u[m + 1]^2 for m in 1:d)))
     return -u[1] * log(p / (u[1]^γ)) * inv_γ_minus_1
 end
 
 @inline function conservative_to_entropy!(w::AbstractVector{Float64},
-                                          conservation_law::EulerType{d},
-                                          u::AbstractVector{Float64}) where {d}
+        conservation_law::EulerType{d},
+        u::AbstractVector{Float64}) where {d}
     (; γ, γ_minus_1, inv_γ_minus_1) = conservation_law
     k = (0.5 / u[1]) * (sum(u[m + 1]^2 for m in 1:d))
     p = γ_minus_1 * (u[end] - k)
@@ -111,8 +115,8 @@ end
 end
 
 @inline function entropy_to_conservative!(u::AbstractVector{Float64},
-                                          conservation_law::EulerType{d},
-                                          w::AbstractVector{Float64}) where {d}
+        conservation_law::EulerType{d},
+        w::AbstractVector{Float64}) where {d}
     (; γ, γ_minus_1, inv_γ_minus_1) = conservation_law
 
     w = w * γ_minus_1
@@ -129,9 +133,9 @@ end
 end
 
 @inline function wave_speed(conservation_law::EulerType{d},
-                            u_in::AbstractVector{Float64},
-                            u_out::AbstractVector{Float64},
-                            n_f) where {d}
+        u_in::AbstractVector{Float64},
+        u_out::AbstractVector{Float64},
+        n_f) where {d}
     (; γ, γ_minus_1) = conservation_law
 
     V_in = SVector{d}(u_in[m + 1] / u_in[1] for m in 1:d)
@@ -148,18 +152,18 @@ end
 end
 
 @inline function compute_two_point_flux(conservation_law::EulerType{d},
-                                        ::ConservativeFlux,
-                                        u_L::AbstractVector{Float64},
-                                        u_R::AbstractVector{Float64}) where {d}
+        ::ConservativeFlux,
+        u_L::AbstractVector{Float64},
+        u_R::AbstractVector{Float64}) where {d}
     return 0.5 *
            (physical_flux(conservation_law, u_L) .+ physical_flux(conservation_law, u_R))
 end
 
 @inline function compute_two_point_flux(conservation_law::EulerType{d},
-                                        ::ConservativeFlux,
-                                        u_L::AbstractVector{Float64},
-                                        u_R::AbstractVector{Float64},
-                                        n_f::AbstractVector{Float64}) where {d}
+        ::ConservativeFlux,
+        u_L::AbstractVector{Float64},
+        u_R::AbstractVector{Float64},
+        n_f::AbstractVector{Float64}) where {d}
     return 0.5 * (physical_flux(conservation_law, u_L, n_f) .+
             physical_flux(conservation_law, u_R, n_f))
 end
@@ -168,9 +172,9 @@ end
 Entropy-conservative, kinetic-energy-preserving, and pressure-equilibrium-preserving numerical flux from Ranocha (see his 2018 PhD thesis)
 """
 @inline function compute_two_point_flux(conservation_law::EulerType{d},
-                                        ::EntropyConservativeFlux,
-                                        u_L::AbstractVector{Float64},
-                                        u_R::AbstractVector{Float64}) where {d}
+        ::EntropyConservativeFlux,
+        u_L::AbstractVector{Float64},
+        u_R::AbstractVector{Float64}) where {d}
     (; γ_minus_1, inv_γ_minus_1) = conservation_law
 
     # velocities and pressures
@@ -194,10 +198,10 @@ Entropy-conservative, kinetic-energy-preserving, and pressure-equilibrium-preser
 end
 
 @inline function compute_two_point_flux(conservation_law::EulerType{d},
-                                        ::EntropyConservativeFlux,
-                                        u_L::AbstractVector{Float64},
-                                        u_R::AbstractVector{Float64},
-                                        n::AbstractVector{Float64}) where {d}
+        ::EntropyConservativeFlux,
+        u_L::AbstractVector{Float64},
+        u_R::AbstractVector{Float64},
+        n::AbstractVector{Float64}) where {d}
     (; γ_minus_1, inv_γ_minus_1) = conservation_law
 
     # velocities and pressures
@@ -219,8 +223,8 @@ end
     # flux vector
     f_ρ = ρ_avg * Vn_avg
     return SVector{d + 2}(f_ρ,
-                          (f_ρ * V_avg[m] + p_avg * n[m] for m in 1:d)...,
-                          f_ρ * C + 0.5 * (p_L * Vn_R + p_R * Vn_L))
+        (f_ρ * V_avg[m] + p_avg * n[m] for m in 1:d)...,
+        f_ρ * C + 0.5 * (p_L * Vn_R + p_R * Vn_L))
 end
 struct IsentropicVortex <: AbstractGridFunction{2}
     γ::Float64
@@ -233,12 +237,12 @@ struct IsentropicVortex <: AbstractGridFunction{2}
     N_c::Int
 
     function IsentropicVortex(conservation_law::EulerEquations{2};
-                              Ma::Float64 = 0.4,
-                              θ::Float64 = π / 4,
-                              R::Float64 = 1.0,
-                              β::Float64 = 1.0,
-                              σ::Float64 = 1.0,
-                              x_0::NTuple{2, Float64} = (0.0, 0.0),)
+            Ma::Float64 = 0.4,
+            θ::Float64 = π / 4,
+            R::Float64 = 1.0,
+            β::Float64 = 1.0,
+            σ::Float64 = 1.0,
+            x_0::NTuple{2, Float64} = (0.0, 0.0),)
         return new(conservation_law.γ, Ma, θ, R, β, σ^2, x_0, 4)
     end
 end
@@ -271,15 +275,15 @@ struct EulerPeriodicTest{d} <: AbstractGridFunction{d}
     N_c::Int
 
     function EulerPeriodicTest(conservation_law::EulerEquations{d},
-                               strength::Float64 = 0.2,
-                               L::Float64 = 2.0) where {d}
+            strength::Float64 = 0.2,
+            L::Float64 = 2.0) where {d}
         return new{d}(conservation_law.γ, strength, L, d + 2)
     end
 end
 
 @inline function evaluate(f::EulerPeriodicTest{d},
-                          x::NTuple{d, Float64},
-                          t::Float64 = 0.0) where {d}
+        x::NTuple{d, Float64},
+        t::Float64 = 0.0) where {d}
     ρ = 1.0 + f.strength * sin(2π * sum(x[m] for m in 1:d) / f.L)
     return SVector{d + 2}(ρ, fill(ρ, d)..., 1.0 / (f.γ - 1.0) + 0.5 * ρ * d)
 end
@@ -317,14 +321,14 @@ struct KelvinHelmholtzInstability <: AbstractGridFunction{2}
     ρ_0::Float64
     N_c::Int
     function KelvinHelmholtzInstability(conservation_law::EulerEquations{2},
-                                        ρ_0::Float64 = 0.5)
+            ρ_0::Float64 = 0.5)
         return new(conservation_law.γ, ρ_0, 4)
     end
 end
 
 @inline function evaluate(f::KelvinHelmholtzInstability,
-                          x::NTuple{2, Float64},
-                          t::Float64 = 0.0)
+        x::NTuple{2, Float64},
+        t::Float64 = 0.0)
     x_rel = (x[1] - 1, x[2] - 1)
     B = tanh(15 * x_rel[2] + 7.5) - tanh(15 * x_rel[2] - 7.5)
     ρ = f.ρ_0 + 0.75 * B

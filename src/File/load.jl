@@ -1,6 +1,6 @@
 function load_solution(results_path::String,
-                       time_step::Union{Int, String} = 0;
-                       load_du = false,)
+        time_step::Union{Int, String} = 0;
+        load_du = false,)
     dict = load(string(results_path, "sol_", time_step, ".jld2"))
     if load_du
         return dict["u"], dict["du"], dict["t"]
@@ -12,18 +12,18 @@ end
 function load_project(results_path::String)
     dict = load(string(results_path, "project.jld2"))
     return (dict["conservation_law"],
-            dict["spatial_discretization"],
-            dict["initial_data"],
-            dict["form"],
-            dict["tspan"])
+        dict["spatial_discretization"],
+        dict["initial_data"],
+        dict["form"],
+        dict["tspan"])
 end
 
 function load_solver(results_path::String)
     dict = load(string(results_path, "project.jld2"))
     return Solver(dict["conservation_law"],
-                  dict["spatial_discretization"],
-                  dict["form"],
-                  dict["strategy"])
+        dict["spatial_discretization"],
+        dict["form"],
+        dict["strategy"])
 end
 
 function load_time_steps(results_path::String)

@@ -5,21 +5,21 @@ using StaticArrays
 using MuladdMacro
 using SparseArrays
 using LinearAlgebra:
-                     Diagonal,
-                     eigvals,
-                     inv,
-                     mul!,
-                     lmul!,
-                     diag,
-                     diagm,
-                     factorize,
-                     cholesky,
-                     ldiv!,
-                     Factorization,
-                     Cholesky,
-                     Symmetric,
-                     I,
-                     UniformScaling
+    Diagonal,
+    eigvals,
+    inv,
+    mul!,
+    lmul!,
+    diag,
+    diagm,
+    factorize,
+    cholesky,
+    ldiv!,
+    Factorization,
+    Cholesky,
+    Symmetric,
+    I,
+    UniformScaling
 using TimerOutputs
 using LinearMaps: LinearMap, UniformScalingMap, TransposeMap
 using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
@@ -31,38 +31,38 @@ using ..SpatialDiscretizations
 using ..GridFunctions
 
 export AbstractResidualForm,
-       StandardForm,
-       FluxDifferencingForm,
-       AbstractMappingForm,
-       AbstractStrategy,
-       AbstractDiscretizationOperators,
-       AbstractMassMatrixSolver,
-       AbstractParallelism,
-       ReferenceOperators,
-       PhysicalOperators,
-       FluxDifferencingOperators,
-       AbstractPreAllocatedArrays,
-       PreAllocatedArraysFirstOrder,
-       PreAllocatedArraysSecondOrder,
-       PhysicalOperator,
-       ReferenceOperator,
-       Solver,
-       StandardMapping,
-       SkewSymmetricMapping,
-       Serial,
-       Threaded,
-       get_dof,
-       semi_discrete_residual!,
-       auxiliary_variable!,
-       make_operators,
-       entropy_projection!,
-       facet_correction!,
-       nodal_values!,
-       time_derivative!,
-       project_function!,
-       flux_differencing_operators,
-       initialize,
-       semidiscretize
+    StandardForm,
+    FluxDifferencingForm,
+    AbstractMappingForm,
+    AbstractStrategy,
+    AbstractDiscretizationOperators,
+    AbstractMassMatrixSolver,
+    AbstractParallelism,
+    ReferenceOperators,
+    PhysicalOperators,
+    FluxDifferencingOperators,
+    AbstractPreAllocatedArrays,
+    PreAllocatedArraysFirstOrder,
+    PreAllocatedArraysSecondOrder,
+    PhysicalOperator,
+    ReferenceOperator,
+    Solver,
+    StandardMapping,
+    SkewSymmetricMapping,
+    Serial,
+    Threaded,
+    get_dof,
+    semi_discrete_residual!,
+    auxiliary_variable!,
+    make_operators,
+    entropy_projection!,
+    facet_correction!,
+    nodal_values!,
+    time_derivative!,
+    project_function!,
+    flux_differencing_operators,
+    initialize,
+    semidiscretize
 
 abstract type AbstractResidualForm end
 abstract type AbstractMappingForm end
@@ -87,9 +87,9 @@ Base.@kwdef struct StandardForm{MappingForm, InviscidNumericalFlux, ViscousNumer
 end
 
 Base.@kwdef struct FluxDifferencingForm{MappingForm,
-                                        InviscidNumericalFlux,
-                                        ViscousNumericalFlux,
-                                        TwoPointFlux} <: AbstractResidualForm
+    InviscidNumericalFlux,
+    ViscousNumericalFlux,
+    TwoPointFlux} <: AbstractResidualForm
     mapping_form::MappingForm = SkewSymmetricMapping()
     inviscid_numerical_flux::InviscidNumericalFlux = LaxFriedrichsNumericalFlux()
     viscous_numerical_flux::ViscousNumericalFlux = BR1()
@@ -151,20 +151,20 @@ struct PreAllocatedArraysFirstOrder <: AbstractPreAllocatedArrays
     CI::CartesianIndices{2, Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}}
 
     function PreAllocatedArraysFirstOrder(d,
-                                          N_q,
-                                          N_f,
-                                          N_c,
-                                          N_e,
-                                          temp_size = N_q,
-                                          N_r = Threads.nthreads())
+            N_q,
+            N_f,
+            N_c,
+            N_e,
+            temp_size = N_q,
+            N_r = Threads.nthreads())
         return new(Array{Float64}(undef, N_q, N_c, d, N_r),
-                   Array{Float64}(undef, N_f, N_c, N_r),
-                   Array{Float64}(undef, N_f, N_c, N_r),
-                   Array{Float64}(undef, N_q, N_c, N_e),
-                   Array{Float64}(undef, N_q, N_c, N_r),
-                   Array{Float64}(undef, N_f, N_e, N_c), #note switched order
-                   Array{Float64}(undef, temp_size, N_c, N_r),
-                   CartesianIndices((N_f, N_e)))
+            Array{Float64}(undef, N_f, N_c, N_r),
+            Array{Float64}(undef, N_f, N_c, N_r),
+            Array{Float64}(undef, N_q, N_c, N_e),
+            Array{Float64}(undef, N_q, N_c, N_r),
+            Array{Float64}(undef, N_f, N_e, N_c), #note switched order
+            Array{Float64}(undef, temp_size, N_c, N_r),
+            CartesianIndices((N_f, N_e)))
     end
 end
 
@@ -182,32 +182,32 @@ struct PreAllocatedArraysSecondOrder <: AbstractPreAllocatedArrays
     CI::CartesianIndices{2, Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}}
 
     function PreAllocatedArraysSecondOrder(d,
-                                           N_q,
-                                           N_f,
-                                           N_c,
-                                           N_e,
-                                           temp_size = N_q,
-                                           N_r = Threads.nthreads())
+            N_q,
+            N_f,
+            N_c,
+            N_e,
+            temp_size = N_q,
+            N_r = Threads.nthreads())
         return new(Array{Float64}(undef, N_q, N_c, d, N_r),
-                   Array{Float64}(undef, N_f, N_c, N_r),
-                   Array{Float64}(undef, N_f, N_c, N_r),
-                   Array{Float64}(undef, N_q, N_c, N_e),
-                   Array{Float64}(undef, N_q, N_c, N_r),
-                   Array{Float64}(undef, N_f, N_e, N_c), #note switched order
-                   Array{Float64}(undef, temp_size, N_c, N_r),
-                   Array{Float64}(undef, N_f, N_c, d, N_r),
-                   Array{Float64}(undef, N_q, N_c, d, N_e),
-                   Array{Float64}(undef, N_f, N_e, N_c, d), #note switched order
-                   CartesianIndices((N_f, N_e)))
+            Array{Float64}(undef, N_f, N_c, N_r),
+            Array{Float64}(undef, N_f, N_c, N_r),
+            Array{Float64}(undef, N_q, N_c, N_e),
+            Array{Float64}(undef, N_q, N_c, N_r),
+            Array{Float64}(undef, N_f, N_e, N_c), #note switched order
+            Array{Float64}(undef, temp_size, N_c, N_r),
+            Array{Float64}(undef, N_f, N_c, d, N_r),
+            Array{Float64}(undef, N_q, N_c, d, N_e),
+            Array{Float64}(undef, N_f, N_e, N_c, d), #note switched order
+            CartesianIndices((N_f, N_e)))
     end
 end
 
 struct Solver{ConservationLaw,
-              Operators,
-              MassSolver,
-              ResidualForm,
-              Parallelism,
-              PreAllocatedArrays}
+    Operators,
+    MassSolver,
+    ResidualForm,
+    Parallelism,
+    PreAllocatedArrays}
     conservation_law::ConservationLaw
     operators::Operators
     mass_solver::MassSolver
@@ -217,22 +217,24 @@ struct Solver{ConservationLaw,
     preallocated_arrays::PreAllocatedArrays
 end
 
-function Base.size(solver::Solver{<:AbstractConservationLaw{d, <:AbstractPDEType, N_c}}) where {
-                                                                                                d,
-                                                                                                N_c
-                                                                                                }
+function Base.size(solver::Solver{
+        <:AbstractConservationLaw{d, <:AbstractPDEType, N_c},
+}) where {
+        d,
+        N_c,
+}
     N_p = size(solver.operators.V, 2)
     N_e = size(solver.preallocated_arrays.CI, 2)
     return (N_p, N_c, N_e)
 end
 
 function Solver(conservation_law::AbstractConservationLaw{d, FirstOrder, N_c},
-                spatial_discretization::SpatialDiscretization{d},
-                form::StandardForm,
-                ::ReferenceOperator,
-                alg::AbstractOperatorAlgorithm,
-                mass_solver::AbstractMassMatrixSolver,
-                parallelism::AbstractParallelism) where {d, N_c}
+        spatial_discretization::SpatialDiscretization{d},
+        form::StandardForm,
+        ::ReferenceOperator,
+        alg::AbstractOperatorAlgorithm,
+        mass_solver::AbstractMassMatrixSolver,
+        parallelism::AbstractParallelism) where {d, N_c}
     (; reference_approximation, geometric_factors, N_e, mesh) = spatial_discretization
     (; N_q, N_f, reference_mapping) = reference_approximation
 
@@ -242,101 +244,101 @@ function Solver(conservation_law::AbstractConservationLaw{d, FirstOrder, N_c},
     operators = ReferenceOperators(reference_approximation, alg, Λ_q, nJf, J_f)
 
     return Solver(conservation_law,
-                  operators,
-                  mass_solver,
-                  mesh.mapP,
-                  form,
-                  parallelism,
-                  PreAllocatedArraysFirstOrder(d, N_q, N_f, N_c, N_e, N_q))
+        operators,
+        mass_solver,
+        mesh.mapP,
+        form,
+        parallelism,
+        PreAllocatedArraysFirstOrder(d, N_q, N_f, N_c, N_e, N_q))
 end
 
 function Solver(conservation_law::AbstractConservationLaw{d, FirstOrder, N_c},
-                spatial_discretization::SpatialDiscretization{d},
-                form::FluxDifferencingForm,
-                ::ReferenceOperator,
-                alg::AbstractOperatorAlgorithm,
-                mass_solver::AbstractMassMatrixSolver,
-                parallelism::AbstractParallelism) where {d, N_c}
+        spatial_discretization::SpatialDiscretization{d},
+        form::FluxDifferencingForm,
+        ::ReferenceOperator,
+        alg::AbstractOperatorAlgorithm,
+        mass_solver::AbstractMassMatrixSolver,
+        parallelism::AbstractParallelism) where {d, N_c}
     (; reference_approximation, N_e, mesh) = spatial_discretization
     (; N_p, N_q, N_f) = reference_approximation
     (; J_q, Λ_q, nJf, nJq, J_f) = spatial_discretization.geometric_factors
     (; reference_approximation, N_e, mesh) = spatial_discretization
 
     operators = FluxDifferencingOperators(reference_approximation, alg, J_q, Λ_q, nJq, nJf,
-                                          J_f)
+        J_f)
 
     return Solver(conservation_law,
-                  operators,
-                  mass_solver,
-                  mesh.mapP,
-                  form,
-                  parallelism,
-                  PreAllocatedArraysFirstOrder(d, N_q, N_f, N_c, N_e, N_p))
+        operators,
+        mass_solver,
+        mesh.mapP,
+        form,
+        parallelism,
+        PreAllocatedArraysFirstOrder(d, N_q, N_f, N_c, N_e, N_p))
 end
 
 function Solver(conservation_law::AbstractConservationLaw{d, FirstOrder, N_c},
-                spatial_discretization::SpatialDiscretization{d},
-                form::StandardForm,
-                ::PhysicalOperator,
-                alg::AbstractOperatorAlgorithm,
-                mass_solver::AbstractMassMatrixSolver,
-                parallelism::AbstractParallelism) where {d, N_c}
+        spatial_discretization::SpatialDiscretization{d},
+        form::StandardForm,
+        ::PhysicalOperator,
+        alg::AbstractOperatorAlgorithm,
+        mass_solver::AbstractMassMatrixSolver,
+        parallelism::AbstractParallelism) where {d, N_c}
     (; N_e) = spatial_discretization
     (; N_p, N_q, N_f) = spatial_discretization.reference_approximation
 
     operators = PhysicalOperators(spatial_discretization, form, alg, mass_solver)
 
     return Solver(conservation_law,
-                  operators,
-                  mass_solver,
-                  spatial_discretization.mesh.mapP,
-                  form,
-                  parallelism,
-                  PreAllocatedArraysFirstOrder(d, N_q, N_f, N_c, N_e, N_p,
-                                               Threads.nthreads()))
+        operators,
+        mass_solver,
+        spatial_discretization.mesh.mapP,
+        form,
+        parallelism,
+        PreAllocatedArraysFirstOrder(d, N_q, N_f, N_c, N_e, N_p,
+            Threads.nthreads()))
 end
 
 function Solver(conservation_law::AbstractConservationLaw{d, SecondOrder, N_c},
-                spatial_discretization::SpatialDiscretization{d},
-                form::StandardForm,
-                ::AbstractStrategy,
-                alg::AbstractOperatorAlgorithm,
-                mass_solver::AbstractMassMatrixSolver,
-                parallelism::AbstractParallelism) where {d, N_c}
+        spatial_discretization::SpatialDiscretization{d},
+        form::StandardForm,
+        ::AbstractStrategy,
+        alg::AbstractOperatorAlgorithm,
+        mass_solver::AbstractMassMatrixSolver,
+        parallelism::AbstractParallelism) where {d, N_c}
     (; N_e) = spatial_discretization
     (; N_p, N_q, N_f) = spatial_discretization.reference_approximation
 
     operators = PhysicalOperators(spatial_discretization, form, alg, mass_solver)
 
     return Solver(conservation_law,
-                  operators,
-                  mass_solver,
-                  spatial_discretization.mesh.mapP,
-                  form,
-                  parallelism,
-                  PreAllocatedArraysSecondOrder(d, N_q, N_f, N_c, N_e, N_p))
+        operators,
+        mass_solver,
+        spatial_discretization.mesh.mapP,
+        form,
+        parallelism,
+        PreAllocatedArraysSecondOrder(d, N_q, N_f, N_c, N_e, N_p))
 end
 
 @inline function get_dof(spatial_discretization::SpatialDiscretization{d},
-                         ::AbstractConservationLaw{d, PDEType, N_c}) where {d, PDEType, N_c}
+        ::AbstractConservationLaw{d, PDEType, N_c}) where {d, PDEType, N_c}
     return (spatial_discretization.reference_approximation.N_p,
-            N_c,
-            spatial_discretization.N_e)
+        N_c,
+        spatial_discretization.N_e)
 end
 
 @inline function project_function(initial_data::AbstractGridFunction{d},
-                                  ::UniformScalingMap,
-                                  W::Diagonal,
-                                  J_q::Matrix{Float64},
-                                  x::NTuple{d, Matrix{Float64}}) where {d}
+        ::UniformScalingMap,
+        W::Diagonal,
+        J_q::Matrix{Float64},
+        x::NTuple{d, Matrix{Float64}}) where {d}
     return evaluate(initial_data, x, 0.0)
 end
 
 @inline function project_function(initial_data,
-                                  V::LinearMap,
-                                  W::Diagonal,
-                                  J_q::Matrix{Float64},
-                                  x::NTuple{d, Matrix{Float64}}) where {d}
+        V::LinearMap,
+        W::Diagonal,
+        J_q::Matrix{Float64},
+        x::NTuple{d, Matrix{Float64}}) where {d}
     N_p = size(V, 2)
     N_e = size(J_q, 2)
 
@@ -366,40 +368,40 @@ end
 end
 
 @inline function semidiscretize(conservation_law::AbstractConservationLaw{d, PDEType},
-                                spatial_discretization::SpatialDiscretization{d},
-                                initial_data,
-                                form::AbstractResidualForm,
-                                tspan::NTuple{2, Float64},
-                                strategy::AbstractStrategy = ReferenceOperator(),
-                                alg::AbstractOperatorAlgorithm = DefaultOperatorAlgorithm();
-                                mass_matrix_solver::AbstractMassMatrixSolver = default_mass_matrix_solver(spatial_discretization,
-                                                                                                          alg),
-                                parallelism::AbstractParallelism = Threaded(),) where {d,
-                                                                                       PDEType
-                                                                                       }
+        spatial_discretization::SpatialDiscretization{d},
+        initial_data,
+        form::AbstractResidualForm,
+        tspan::NTuple{2, Float64},
+        strategy::AbstractStrategy = ReferenceOperator(),
+        alg::AbstractOperatorAlgorithm = DefaultOperatorAlgorithm();
+        mass_matrix_solver::AbstractMassMatrixSolver = default_mass_matrix_solver(spatial_discretization,
+            alg),
+        parallelism::AbstractParallelism = Threaded(),) where {d,
+        PDEType,
+}
     u0 = initialize(initial_data, spatial_discretization)
 
     solver = Solver(conservation_law,
-                    spatial_discretization,
-                    form,
-                    strategy,
-                    alg,
-                    mass_matrix_solver,
-                    parallelism)
+        spatial_discretization,
+        form,
+        strategy,
+        alg,
+        mass_matrix_solver,
+        parallelism)
 
     return ODEProblem(semi_discrete_residual!, u0, tspan, solver)
 end
 
 @timeit "semi-disc. residual" function semi_discrete_residual!(dudt::AbstractArray{Float64,
-                                                                                   3},
-                                                               u::AbstractArray{Float64, 3},
-                                                               solver::Solver{<:AbstractConservationLaw{<:Any,
-                                                                                                        FirstOrder},
-                                                                              <:AbstractDiscretizationOperators,
-                                                                              <:AbstractMassMatrixSolver,
-                                                                              <:AbstractResidualForm,
-                                                                              Serial},
-                                                               t::Float64 = 0.0)
+            3},
+        u::AbstractArray{Float64, 3},
+        solver::Solver{<:AbstractConservationLaw{<:Any,
+                FirstOrder},
+            <:AbstractDiscretizationOperators,
+            <:AbstractMassMatrixSolver,
+            <:AbstractResidualForm,
+            Serial},
+        t::Float64 = 0.0)
     @inbounds for k in axes(u, 3)
         @timeit "nodal values" nodal_values!(u, solver, k)
     end
@@ -412,15 +414,15 @@ end
 end
 
 @timeit "semi-disc. residual" function semi_discrete_residual!(dudt::AbstractArray{Float64,
-                                                                                   3},
-                                                               u::AbstractArray{Float64, 3},
-                                                               solver::Solver{<:AbstractConservationLaw{<:Any,
-                                                                                                        FirstOrder},
-                                                                              <:AbstractDiscretizationOperators,
-                                                                              <:AbstractMassMatrixSolver,
-                                                                              <:AbstractResidualForm,
-                                                                              Threaded},
-                                                               t::Float64 = 0.0)
+            3},
+        u::AbstractArray{Float64, 3},
+        solver::Solver{<:AbstractConservationLaw{<:Any,
+                FirstOrder},
+            <:AbstractDiscretizationOperators,
+            <:AbstractMassMatrixSolver,
+            <:AbstractResidualForm,
+            Threaded},
+        t::Float64 = 0.0)
     Threads.@threads for k in axes(u, 3)
         nodal_values!(u, solver, k)
     end
@@ -433,15 +435,15 @@ end
 end
 
 @timeit "semi-disc. residual" function semi_discrete_residual!(dudt::AbstractArray{Float64,
-                                                                                   3},
-                                                               u::AbstractArray{Float64, 3},
-                                                               solver::Solver{<:AbstractConservationLaw{<:Any,
-                                                                                                        SecondOrder},
-                                                                              <:AbstractDiscretizationOperators,
-                                                                              <:AbstractMassMatrixSolver,
-                                                                              <:AbstractResidualForm,
-                                                                              Serial},
-                                                               t::Float64 = 0.0)
+            3},
+        u::AbstractArray{Float64, 3},
+        solver::Solver{<:AbstractConservationLaw{<:Any,
+                SecondOrder},
+            <:AbstractDiscretizationOperators,
+            <:AbstractMassMatrixSolver,
+            <:AbstractResidualForm,
+            Serial},
+        t::Float64 = 0.0)
     @inbounds for k in axes(u, 3)
         nodal_values!(u, solver, k)
     end
@@ -458,15 +460,15 @@ end
 end
 
 @timeit "semi-disc. residual" function semi_discrete_residual!(dudt::AbstractArray{Float64,
-                                                                                   3},
-                                                               u::AbstractArray{Float64, 3},
-                                                               solver::Solver{<:AbstractConservationLaw{<:Any,
-                                                                                                        SecondOrder},
-                                                                              <:AbstractDiscretizationOperators,
-                                                                              <:AbstractMassMatrixSolver,
-                                                                              <:AbstractResidualForm,
-                                                                              Threaded},
-                                                               t::Float64 = 0.0)
+            3},
+        u::AbstractArray{Float64, 3},
+        solver::Solver{<:AbstractConservationLaw{<:Any,
+                SecondOrder},
+            <:AbstractDiscretizationOperators,
+            <:AbstractMassMatrixSolver,
+            <:AbstractResidualForm,
+            Threaded},
+        t::Float64 = 0.0)
     @inbounds Threads.@threads for k in axes(u, 3)
         nodal_values!(u, solver, k)
     end
@@ -483,12 +485,12 @@ end
 end
 
 export CholeskySolver,
-       WeightAdjustedSolver,
-       DiagonalSolver,
-       mass_matrix,
-       mass_matrix_inverse,
-       mass_matrix_solve!,
-       default_mass_matrix_solver
+    WeightAdjustedSolver,
+    DiagonalSolver,
+    mass_matrix,
+    mass_matrix_inverse,
+    mass_matrix_solve!,
+    default_mass_matrix_solver
 include("mass_matrix.jl")
 
 include("operators.jl")

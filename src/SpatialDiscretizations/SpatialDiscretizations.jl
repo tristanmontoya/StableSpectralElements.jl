@@ -4,30 +4,30 @@ using LinearAlgebra: I, inv, Diagonal, diagm, kron, transpose, det, eigvals, mul
 using Random: rand, shuffle
 using LinearMaps: LinearMap, ⊗
 using StartUpDG:
-                 MeshData,
-                 basis,
-                 vandermonde,
-                 grad_vandermonde,
-                 diagE_sbp_nodes,
-                 quad_nodes,
-                 NodesAndModes.quad_nodes_tri,
-                 NodesAndModes.quad_nodes_tet,
-                 face_vertices,
-                 nodes,
-                 num_faces,
-                 find_face_nodes,
-                 init_face_data,
-                 equi_nodes,
-                 face_type,
-                 Polynomial,
-                 jacobiP,
-                 match_coordinate_vectors,
-                 uniform_mesh,
-                 make_periodic,
-                 jaskowiec_sukumar_quad_nodes,
-                 Hicken,
-                 geometric_factors,
-                 MultidimensionalQuadrature
+    MeshData,
+    basis,
+    vandermonde,
+    grad_vandermonde,
+    diagE_sbp_nodes,
+    quad_nodes,
+    NodesAndModes.quad_nodes_tri,
+    NodesAndModes.quad_nodes_tet,
+    face_vertices,
+    nodes,
+    num_faces,
+    find_face_nodes,
+    init_face_data,
+    equi_nodes,
+    face_type,
+    Polynomial,
+    jacobiP,
+    match_coordinate_vectors,
+    uniform_mesh,
+    make_periodic,
+    jaskowiec_sukumar_quad_nodes,
+    Hicken,
+    geometric_factors,
+    MultidimensionalQuadrature
 using Jacobi: zgrjm, wgrjm, zgj, wgj, zglj, wglj
 
 using ..MatrixFreeOperators
@@ -37,33 +37,33 @@ using Reexport
 @reexport using StaticArrays: SArray, SMatrix, SVector
 
 export AbstractApproximationType,
-       AbstractTensorProduct,
-       AbstractMultidimensional,
-       NodalTensor,
-       ModalTensor,
-       ModalMulti,
-       NodalMulti,
-       ModalMultiDiagE,
-       NodalMultiDiagE,
-       AbstractReferenceMapping,
-       AbstractMetrics,
-       ExactMetrics,
-       ConservativeCurlMetrics,
-       ChanWilcoxMetrics,
-       NoMapping,
-       ReferenceApproximation,
-       GeometricFactors,
-       SpatialDiscretization,
-       apply_reference_mapping,
-       reference_derivative_operators,
-       check_normals,
-       check_facet_nodes,
-       check_sbp_property,
-       centroids,
-       trace_constant,
-       dim,
-       χ,
-       warped_product
+    AbstractTensorProduct,
+    AbstractMultidimensional,
+    NodalTensor,
+    ModalTensor,
+    ModalMulti,
+    NodalMulti,
+    ModalMultiDiagE,
+    NodalMultiDiagE,
+    AbstractReferenceMapping,
+    AbstractMetrics,
+    ExactMetrics,
+    ConservativeCurlMetrics,
+    ChanWilcoxMetrics,
+    NoMapping,
+    ReferenceApproximation,
+    GeometricFactors,
+    SpatialDiscretization,
+    apply_reference_mapping,
+    reference_derivative_operators,
+    check_normals,
+    check_facet_nodes,
+    check_sbp_property,
+    centroids,
+    trace_constant,
+    dim,
+    χ,
+    warped_product
 
 abstract type AbstractApproximationType end
 abstract type AbstractTensorProduct <: AbstractApproximationType end
@@ -114,13 +114,13 @@ const ChanWilcoxMetrics = ConservativeCurlMetrics
 
 """Operators for local approximation on reference element"""
 struct ReferenceApproximation{RefElemType,
-                              ApproxType,
-                              D_type,
-                              V_type,
-                              Vf_type,
-                              R_type,
-                              V_plot_type,
-                              ReferenceMappingType}
+    ApproxType,
+    D_type,
+    V_type,
+    Vf_type,
+    R_type,
+    V_plot_type,
+    ReferenceMappingType}
     approx_type::ApproxType
     N_p::Int
     N_q::Int
@@ -136,42 +136,42 @@ struct ReferenceApproximation{RefElemType,
     reference_mapping::ReferenceMappingType
 
     function ReferenceApproximation(approx_type::ApproxType,
-                                    reference_element::RefElemType,
-                                    D::D_type,
-                                    V::V_type,
-                                    Vf::Vf_type,
-                                    R::R_type,
-                                    V_plot::V_plot_type,
-                                    reference_mapping::ReferenceMappingType = NoMapping()) where {
-                                                                                                  RefElemType,
-                                                                                                  ApproxType,
-                                                                                                  D_type,
-                                                                                                  V_type,
-                                                                                                  Vf_type,
-                                                                                                  R_type,
-                                                                                                  V_plot_type,
-                                                                                                  ReferenceMappingType
-                                                                                                  }
+            reference_element::RefElemType,
+            D::D_type,
+            V::V_type,
+            Vf::Vf_type,
+            R::R_type,
+            V_plot::V_plot_type,
+            reference_mapping::ReferenceMappingType = NoMapping()) where {
+            RefElemType,
+            ApproxType,
+            D_type,
+            V_type,
+            Vf_type,
+            R_type,
+            V_plot_type,
+            ReferenceMappingType,
+    }
         return new{RefElemType,
-                   ApproxType,
-                   D_type,
-                   V_type,
-                   Vf_type,
-                   R_type,
-                   V_plot_type,
-                   ReferenceMappingType}(approx_type,
-                                         size(V, 2),
-                                         size(V, 1),
-                                         size(R, 1),
-                                         reference_element,
-                                         D,
-                                         V,
-                                         Vf,
-                                         R,
-                                         Diagonal(reference_element.wq),
-                                         Diagonal(reference_element.wf),
-                                         V_plot,
-                                         reference_mapping)
+            ApproxType,
+            D_type,
+            V_type,
+            Vf_type,
+            R_type,
+            V_plot_type,
+            ReferenceMappingType}(approx_type,
+            size(V, 2),
+            size(V, 1),
+            size(R, 1),
+            reference_element,
+            D,
+            V,
+            Vf,
+            R,
+            Diagonal(reference_element.wq),
+            Diagonal(reference_element.wf),
+            V_plot,
+            reference_mapping)
     end
 end
 
@@ -219,15 +219,15 @@ function physical_mass_matrix(J_q::Matrix{Float64}, V::LinearMap, W::Diagonal)
 end
 
 function SpatialDiscretization(mesh::MeshType,
-                               reference_approximation::ReferenceApproximationType,
-                               metric_type::ExactMetrics = ExactMetrics();
-                               project_jacobian::Bool = true,) where {
-                                                                      d,
-                                                                      MeshType <:
-                                                                      MeshData{d},
-                                                                      ReferenceApproximationType <:
-                                                                      ReferenceApproximation{<:RefElemData{d}}
-                                                                      }
+        reference_approximation::ReferenceApproximationType,
+        metric_type::ExactMetrics = ExactMetrics();
+        project_jacobian::Bool = true,) where {
+        d,
+        MeshType <:
+        MeshData{d},
+        ReferenceApproximationType <:
+        ReferenceApproximation{<:RefElemData{d}},
+}
     (; reference_element, W, V) = reference_approximation
 
     geometric_factors = GeometricFactors(mesh, reference_element, metric_type)
@@ -236,47 +236,47 @@ function SpatialDiscretization(mesh::MeshType,
     project_jacobian!(J_q, V, W, Val(project_jacobian))
 
     return SpatialDiscretization{d, MeshType, ReferenceApproximationType}(mesh,
-                                                                          size(J_q, 2),
-                                                                          reference_approximation,
-                                                                          GeometricFactors(J_q,
-                                                                                           Λ_q,
-                                                                                           J_f,
-                                                                                           nJf,
-                                                                                           nJq),
-                                                                          physical_mass_matrix(J_q,
-                                                                                               V,
-                                                                                               W),
-                                                                          Tuple(reference_element.Vp *
-                                                                                mesh.xyz[m]
-                                                                                for m in 1:d))
+        size(J_q, 2),
+        reference_approximation,
+        GeometricFactors(J_q,
+            Λ_q,
+            J_f,
+            nJf,
+            nJq),
+        physical_mass_matrix(J_q,
+            V,
+            W),
+        Tuple(reference_element.Vp *
+              mesh.xyz[m]
+              for m in 1:d))
 end
 
 function SpatialDiscretization(mesh::MeshType,
-                               reference_approximation::ReferenceApproximationType,
-                               metric_type::ChanWilcoxMetrics) where {
-                                                                      d,
-                                                                      MeshType <:
-                                                                      MeshData{d},
-                                                                      ReferenceApproximationType <:
-                                                                      ReferenceApproximation{<:RefElemData{d}}
-                                                                      }
+        reference_approximation::ReferenceApproximationType,
+        metric_type::ChanWilcoxMetrics) where {
+        d,
+        MeshType <:
+        MeshData{d},
+        ReferenceApproximationType <:
+        ReferenceApproximation{<:RefElemData{d}},
+}
     (; reference_element, W, V) = reference_approximation
     (; J_q, Λ_q, J_f, nJf, nJq) = GeometricFactors(mesh, reference_element, metric_type)
 
     return SpatialDiscretization{d, MeshType, ReferenceApproximationType}(mesh,
-                                                                          size(J_q, 2),
-                                                                          reference_approximation,
-                                                                          GeometricFactors(J_q,
-                                                                                           Λ_q,
-                                                                                           J_f,
-                                                                                           nJf,
-                                                                                           nJq),
-                                                                          physical_mass_matrix(J_q,
-                                                                                               V,
-                                                                                               W),
-                                                                          Tuple(reference_element.Vp *
-                                                                                mesh.xyz[m]
-                                                                                for m in 1:d))
+        size(J_q, 2),
+        reference_approximation,
+        GeometricFactors(J_q,
+            Λ_q,
+            J_f,
+            nJf,
+            nJq),
+        physical_mass_matrix(J_q,
+            V,
+            W),
+        Tuple(reference_element.Vp *
+              mesh.xyz[m]
+              for m in 1:d))
 end
 
 """Use this when there are no collapsed coordinates"""
@@ -284,7 +284,7 @@ end
 
 """Express all metric terms in terms of collapsed coordinates"""
 function apply_reference_mapping(geometric_factors::GeometricFactors,
-                                 reference_mapping::ReferenceMapping)
+        reference_mapping::ReferenceMapping)
     (; J_q, Λ_q, J_f, nJf, nJq) = geometric_factors
     (; J_ref, Λ_ref) = reference_mapping
     (N_q, N_e) = size(J_q)
@@ -302,7 +302,7 @@ end
 Get derivative operators in reference coordinates from collapsed coordinates
 """
 function reference_derivative_operators(D_η::NTuple{d, LinearMap},
-                                        reference_mapping::ReferenceMapping) where {d}
+        reference_mapping::ReferenceMapping) where {d}
     (; Λ_ref, J_ref) = reference_mapping
     return Tuple(sum(Diagonal(Λ_ref[:, l, m] ./ J_ref) * D_η[l] for l in 1:d) for m in 1:d)
 end
@@ -334,7 +334,11 @@ end
 """
 Check if the SBP property is satisfied on the reference element
 """
-function check_sbp_property(reference_approximation::ReferenceApproximation{<:RefElemData{d}}) where {d}
+function check_sbp_property(reference_approximation::ReferenceApproximation{
+        <:RefElemData{d},
+}) where {
+        d,
+}
     (; W, D, R, B) = reference_approximation
     (; reference_mapping) = reference_approximation
     (; nrstJ) = reference_approximation.reference_element
@@ -350,7 +354,7 @@ end
 Check if the SBP property is satisfied on the physical element
 """
 function check_sbp_property(spatial_discretization::SpatialDiscretization{d},
-                            k::Int = 1) where {d}
+        k::Int = 1) where {d}
     (; W, D, R, B) = spatial_discretization.reference_approximation
     (; Λ_q, nJf) = spatial_discretization.geometric_factors
 
@@ -387,16 +391,16 @@ end
 @inline dim(::Union{Tet, Hex}) = 3
 
 export AbstractQuadratureRule,
-       DefaultQuadrature,
-       LGLQuadrature,
-       LGQuadrature,
-       LGRQuadrature,
-       GaussLobattoQuadrature,
-       GaussRadauQuadrature,
-       GaussQuadrature,
-       XiaoGimbutasQuadrature,
-       JaskowiecSukumarQuadrature,
-       quadrature
+    DefaultQuadrature,
+    LGLQuadrature,
+    LGQuadrature,
+    LGRQuadrature,
+    GaussLobattoQuadrature,
+    GaussRadauQuadrature,
+    GaussQuadrature,
+    XiaoGimbutasQuadrature,
+    JaskowiecSukumarQuadrature,
+    quadrature
 include("quadrature_rules.jl")
 
 # new constructors for RefElemData from StartUpDG
@@ -409,14 +413,14 @@ export reference_geometric_factors, operators_1d
 include("tensor_simplex.jl")
 
 export GeometricFactors,
-       metrics,
-       uniform_periodic_mesh,
-       warp_mesh,
-       cartesian_mesh,
-       Uniform,
-       ZigZag,
-       DelReyWarping,
-       ChanWarping
+    metrics,
+    uniform_periodic_mesh,
+    warp_mesh,
+    cartesian_mesh,
+    Uniform,
+    ZigZag,
+    DelReyWarping,
+    ChanWarping
 include("mesh.jl")
 
 end

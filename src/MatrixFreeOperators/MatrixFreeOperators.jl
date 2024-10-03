@@ -2,12 +2,12 @@ module MatrixFreeOperators
 
 using LinearAlgebra, LinearMaps, MuladdMacro, StaticArrays, Octavian, TimerOutputs
 export AbstractOperatorAlgorithm,
-       BLASAlgorithm,
-       GenericMatrixAlgorithm,
-       GenericTensorProductAlgorithm,
-       DefaultOperatorAlgorithm,
-       SelectionMap,
-       make_operator
+    BLASAlgorithm,
+    GenericMatrixAlgorithm,
+    GenericTensorProductAlgorithm,
+    DefaultOperatorAlgorithm,
+    SelectionMap,
+    make_operator
 
 abstract type AbstractOperatorAlgorithm end
 struct DefaultOperatorAlgorithm <: AbstractOperatorAlgorithm end
@@ -33,19 +33,19 @@ include("zero.jl")
 
 # union of all types that don't actually do any floating-point operations
 const NoOp = Union{SelectionMap,
-                   ZeroMap,
-                   LinearMaps.UniformScalingMap,
-                   LinearMaps.TransposeMap{Float64, <:SelectionMap}}
+    ZeroMap,
+    LinearMaps.UniformScalingMap,
+    LinearMaps.TransposeMap{Float64, <:SelectionMap}}
 
 # default fallbacks
 make_operator(matrix::Diagonal, # specialize diagonal matrices
 ::DefaultOperatorAlgorithm) = LinearMap(matrix)
 function make_operator(matrix::AbstractMatrix, # gemm/gemv using Octavian.jl
-                       ::AbstractOperatorAlgorithm)
+        ::AbstractOperatorAlgorithm)
     OctavianMap(Matrix(matrix))
 end
 function make_operator(map::UniformScaling, # specialize scalar/identity matrices
-                       ::AbstractOperatorAlgorithm)
+        ::AbstractOperatorAlgorithm)
     LinearMap(map, size(map, 1))
 end
 make_operator(map::LinearMap, # keep predefined maps as is
@@ -69,12 +69,12 @@ function make_operator(map::LinearMaps.BlockMap, alg::GenericTensorProductAlgori
     vcat([make_operator(block, alg) for block in map.maps]...)
 end
 function make_operator(map::LinearMaps.KroneckerMap{Float64, <:NTuple{2, LinearMap}},
-                       ::GenericTensorProductAlgorithm)
+        ::GenericTensorProductAlgorithm)
     make_operator(map.maps[1], GenericMatrixAlgorithm()) ⊗
     make_operator(map.maps[2], GenericMatrixAlgorithm())
 end
 function make_operator(map::LinearMaps.KroneckerMap{Float64, <:NTuple{3, LinearMap}},
-                       ::GenericTensorProductAlgorithm)
+        ::GenericTensorProductAlgorithm)
     make_operator(map.maps[1], GenericMatrixAlgorithm()) ⊗
     make_operator(map.maps[2], GenericMatrixAlgorithm()) ⊗
     make_operator(map.maps[3], GenericMatrixAlgorithm())

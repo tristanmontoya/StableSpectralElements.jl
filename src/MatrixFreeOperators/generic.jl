@@ -12,8 +12,8 @@ function LinearAlgebra.transpose(L::GenericMatrixMap)
 end
 
 @inline function LinearAlgebra.mul!(y::AbstractVector{Float64},
-                                    L::GenericMatrixMap,
-                                    x::AbstractVector{Float64})
+        L::GenericMatrixMap,
+        x::AbstractVector{Float64})
     LinearMaps.check_dim_mul(y, L, x)
     @inbounds for i in eachindex(y)
         temp = 0.0

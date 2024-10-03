@@ -19,9 +19,9 @@ Base.size(R::SelectionMap) = (length(R.facet_ids), length(R.volume_ids))
 end
 
 @inline function LinearMaps._unsafe_mul!(y::AbstractVector,
-                                         transR::LinearMaps.TransposeMap{Float64,
-                                                                         <:SelectionMap},
-                                         x::AbstractVector)
+        transR::LinearMaps.TransposeMap{Float64,
+            <:SelectionMap},
+        x::AbstractVector)
     LinearMaps.check_dim_mul(y, transR, x)
     (; volume_ids) = transR.lmap
     for i in eachindex(volume_ids)

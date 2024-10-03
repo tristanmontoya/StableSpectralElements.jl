@@ -3,18 +3,18 @@ module GridFunctions
 using StaticArrays
 
 export AbstractGridFunction,
-       ConstantFunction,
-       InitialDataSine,
-       InitialDataCosine,
-       InitialDataGaussian,
-       InitialDataSinCos,
-       DerivativeSinCos,
-       InitialDataGassner,
-       BurgersSolution,
-       SourceTermGassner,
-       GaussianNoise,
-       NoSourceTerm,
-       evaluate
+    ConstantFunction,
+    InitialDataSine,
+    InitialDataCosine,
+    InitialDataGaussian,
+    InitialDataSinCos,
+    DerivativeSinCos,
+    InitialDataGassner,
+    BurgersSolution,
+    SourceTermGassner,
+    GaussianNoise,
+    NoSourceTerm,
+    evaluate
 
 abstract type AbstractGridFunction{d} end
 
@@ -116,26 +116,26 @@ end
 end
 
 @inline function evaluate(f::ConstantFunction{d},
-                          x::NTuple{d, Float64},
-                          t::Float64 = 0.0) where {d}
+        x::NTuple{d, Float64},
+        t::Float64 = 0.0) where {d}
     return fill(f.c, f.N_c)
 end
 
 @inline function evaluate(f::InitialDataSine{d},
-                          x::NTuple{d, Float64},
-                          t::Float64 = 0.0) where {d}
+        x::NTuple{d, Float64},
+        t::Float64 = 0.0) where {d}
     return fill(f.A * prod(Tuple(sin(f.k[m] * x[m]) for m in 1:d)), f.N_c)
 end
 
 @inline function evaluate(f::InitialDataCosine{d},
-                          x::NTuple{d, Float64},
-                          t::Float64 = 0.0) where {d}
+        x::NTuple{d, Float64},
+        t::Float64 = 0.0) where {d}
     return fill(f.A * prod(Tuple(cos(f.k[m] * x[m]) for m in 1:d)), f.N_c)
 end
 
 @inline function evaluate(f::InitialDataGaussian{d},
-                          x::NTuple{d, Float64},
-                          t::Float64 = 0.0) where {d}
+        x::NTuple{d, Float64},
+        t::Float64 = 0.0) where {d}
     (; A, σ, x₀, N_c) = f
     r² = sum((x[m] - x₀[m]) .^ 2 for m in 1:d)
     return fill(A * exp.(-r² / (2.0 * σ^2)), N_c)
@@ -150,14 +150,14 @@ end
 end
 
 @inline function evaluate(f::GaussianNoise{d},
-                          x::NTuple{d, Float64},
-                          t::Float64 = 0.0) where {d}
+        x::NTuple{d, Float64},
+        t::Float64 = 0.0) where {d}
     return [f.σ * randn() for e in 1:(f.N_c)]
 end
 
 @inline function evaluate(f::AbstractGridFunction{d},
-                          x::NTuple{d, AbstractVector{Float64}},
-                          t::Float64 = 0.0) where {d}
+        x::NTuple{d, AbstractVector{Float64}},
+        t::Float64 = 0.0) where {d}
     N = length(x[1])
     u0 = Matrix{Float64}(undef, N, f.N_c)
     @inbounds for i in 1:N
@@ -167,8 +167,8 @@ end
 end
 
 function evaluate(f::AbstractGridFunction{d},
-                  x::NTuple{d, AbstractMatrix{Float64}},
-                  t::Float64 = 0.0) where {d}
+        x::NTuple{d, AbstractMatrix{Float64}},
+        t::Float64 = 0.0) where {d}
     N, N_e = size(x[1])
     u0 = Array{Float64}(undef, N, f.N_c, N_e)
     @inbounds for k in 1:N_e
@@ -178,12 +178,12 @@ function evaluate(f::AbstractGridFunction{d},
 end
 
 function evaluate(f::Function,
-                  x::NTuple{d, AbstractMatrix{Float64}},
-                  t::Float64 = 0.0) where {d}
+        x::NTuple{d, AbstractMatrix{Float64}},
+        t::Float64 = 0.0) where {d}
     u0 = Array{Float64}(undef,
-                        size(x[1], 1),
-                        length(f(Tuple(0.0 for m in 1:d)..., t)),
-                        size(x[1], 2))
+        size(x[1], 1),
+        length(f(Tuple(0.0 for m in 1:d)..., t)),
+        size(x[1], 2))
     @inbounds for k in axes(x[1], 2), i in axes(x[1], 1)
         u0[i, :, k] .= f(Tuple(x[m][i, k] for m in 1:d)..., t)
     end
@@ -191,8 +191,8 @@ function evaluate(f::Function,
 end
 
 function evaluate(f::Function,
-                  x::NTuple{d, AbstractVector{Float64}},
-                  t::Float64 = 0.0) where {d}
+        x::NTuple{d, AbstractVector{Float64}},
+        t::Float64 = 0.0) where {d}
     u0 = Matrix{Float64}(undef, length(x[1]), length(f(Tuple(0.0 for m in 1:d)..., t)))
     @inbounds for i in eachindex(x[1])
         u0[i, :] .= f(Tuple(x[m][i] for m in 1:d)..., t)
@@ -201,8 +201,8 @@ function evaluate(f::Function,
 end
 
 @inline function evaluate(::NoSourceTerm{d},
-                          ::NTuple{d, Vector{Float64}},
-                          ::Float64) where {d}
+        ::NTuple{d, Vector{Float64}},
+        ::Float64) where {d}
     return nothing
 end
 

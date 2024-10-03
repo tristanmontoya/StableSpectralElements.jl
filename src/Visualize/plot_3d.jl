@@ -1,27 +1,27 @@
 function low_order_subdivision(reference_nodes::NTuple{3, Vector{Float64}},
-                               physical_nodes::NTuple{3, Matrix{Float64}})
+        physical_nodes::NTuple{3, Matrix{Float64}})
     tet_in = TetGen.RawTetGenIO{Cdouble}(pointlist = permutedims(hcat(reference_nodes[1],
-                                                                      reference_nodes[2],
-                                                                      reference_nodes[3])))
+        reference_nodes[2],
+        reference_nodes[3])))
     tet_out = tetrahedralize(tet_in, "Q")
     connectivity = permutedims(tet_out.tetrahedronlist)
     points = permutedims(hcat(vec(physical_nodes[1]), vec(physical_nodes[2]),
-                              vec(physical_nodes[3])))
+        vec(physical_nodes[3])))
     N_sub = size(connectivity, 1)
     (N_p, N_e) = size(physical_nodes[1])
 
     cells = [MeshCell(VTKCellTypes.VTK_TETRA,
-                      connectivity[mod1(i, N_sub), :] .+ N_p * div(i - 1, N_sub))
+        connectivity[mod1(i, N_sub), :] .+ N_p * div(i - 1, N_sub))
              for i in 1:(N_sub * N_e)]
 
     return points, cells
 end
 
 function low_order_subdivision(p_vis::Int,
-                               p_map::Int,
-                               reference_element::RefElemData{3},
-                               mesh::MeshData{3},
-                               res = 0.01)
+        p_map::Int,
+        reference_element::RefElemData{3},
+        mesh::MeshData{3},
+        res = 0.01)
     (; rq, sq, tq, wq, VDM, element_type) = reference_element
     (; x, y, z) = mesh
 
@@ -49,19 +49,19 @@ function low_order_subdivision(p_vis::Int,
     (N_p, N_e) = size(xp)
 
     cells = [MeshCell(VTKCellTypes.VTK_TETRA,
-                      connectivity[mod1(i, N_sub), :] .+ N_p * div(i - 1, N_sub))
+        connectivity[mod1(i, N_sub), :] .+ N_p * div(i - 1, N_sub))
              for i in 1:(N_sub * N_e)]
 
     return points, cells, V_quad_to_plot
 end
 
 function postprocess_vtk(spatial_discretization::SpatialDiscretization{3},
-                         filename::String,
-                         u::Array{Float64, 3};
-                         e = 1,
-                         p_vis = nothing,
-                         p_map = nothing,
-                         variable_name = "u",)
+        filename::String,
+        u::Array{Float64, 3};
+        e = 1,
+        p_vis = nothing,
+        p_map = nothing,
+        variable_name = "u",)
     (; reference_element, V, V_plot) = spatial_discretization.reference_approximation
     (; mesh, x_plot) = spatial_discretization
     (; rstp) = reference_element
@@ -71,7 +71,7 @@ function postprocess_vtk(spatial_discretization::SpatialDiscretization{3},
         u_nodal = vec(Matrix(V_plot * u[:, e, :]))
     else
         points, cells, V_quad_to_plot = low_order_subdivision(p_vis, p_map,
-                                                              reference_element, mesh)
+            reference_element, mesh)
         u_nodal = vec(Matrix(V_quad_to_plot * V * u[:, e, :]))
     end
 
@@ -81,27 +81,27 @@ function postprocess_vtk(spatial_discretization::SpatialDiscretization{3},
 end
 
 @recipe function plot(obj::Union{SpatialDiscretization{3},
-                                 ReferenceApproximation{<:RefElemData{3}}};
-                      volume_quadrature = true,
-                      facet_quadrature = true,
-                      mapping_nodes = false,
-                      edges = true,
-                      redraw_edge = true,
-                      sketch = false,
-                      volume_connect = false,
-                      facet_connect = false,
-                      node_color = 1,
-                      facet_node_color = 2,
-                      mapping_node_color = 3,
-                      edge_line_width = 3.0,
-                      grid_line_width = 2.0,
-                      qf = nothing,
-                      q = nothing,
-                      facet_color_inds = nothing,
-                      facet_inds = nothing,
-                      element_inds = nothing,
-                      mark_vertices = false,
-                      outline_facets = false,)
+            ReferenceApproximation{<:RefElemData{3}}};
+        volume_quadrature = true,
+        facet_quadrature = true,
+        mapping_nodes = false,
+        edges = true,
+        redraw_edge = true,
+        sketch = false,
+        volume_connect = false,
+        facet_connect = false,
+        node_color = 1,
+        facet_node_color = 2,
+        mapping_node_color = 3,
+        edge_line_width = 3.0,
+        grid_line_width = 2.0,
+        qf = nothing,
+        q = nothing,
+        facet_color_inds = nothing,
+        facet_inds = nothing,
+        element_inds = nothing,
+        mark_vertices = false,
+        outline_facets = false,)
     aspect_ratio --> :equal
     legend --> false
     grid --> false
@@ -148,13 +148,13 @@ end
         if obj isa SpatialDiscretization
             X = function (ξ1, ξ2, ξ3)
                 V = vandermonde(reference_element.element_type,
-                                reference_element.N,
-                                ξ1,
-                                ξ2,
-                                ξ3) / reference_element.VDM
+                    reference_element.N,
+                    ξ1,
+                    ξ2,
+                    ξ3) / reference_element.VDM
                 return (sum(mesh.x[j, k] * V[:, j] for j in axes(mesh.x, 1)),
-                        sum(mesh.y[j, k] * V[:, j] for j in axes(mesh.y, 1)),
-                        sum(mesh.z[j, k] * V[:, j] for j in axes(mesh.z, 1)))
+                    sum(mesh.y[j, k] * V[:, j] for j in axes(mesh.y, 1)),
+                    sum(mesh.z[j, k] * V[:, j] for j in axes(mesh.z, 1)))
             end
         else
             X = (x, y, z) -> (x, y, z)
@@ -278,7 +278,7 @@ end
 
                 if isnothing(qf)
                     (N1, N2) = (round(Int, sqrt(nodes_per_facet)),
-                                round(Int, sqrt(nodes_per_facet)))
+                        round(Int, sqrt(nodes_per_facet)))
                 else
                     (N1, N2) = qf
                 end
@@ -293,8 +293,8 @@ end
                             linewidth --> grid_line_width
                             start = i + nodes_per_facet * (facet_inds[z] - 1)
                             X(rf[start:N2:(N2 * (N1 - 1) + start)],
-                              sf[start:N2:(N2 * (N1 - 1) + start)],
-                              tf[start:N2:(N2 * (N1 - 1) + start)])
+                                sf[start:N2:(N2 * (N1 - 1) + start)],
+                                tf[start:N2:(N2 * (N1 - 1) + start)])
                         end
                     end
 
@@ -303,8 +303,8 @@ end
                             color --> facet_color_inds[z]
                             linewidth --> grid_line_width
                             X(rf[((i - 1) * N1 + 1 + nodes_per_facet * (facet_inds[z] - 1)):(i * N1 + nodes_per_facet * (facet_inds[z] - 1))],
-                              sf[((i - 1) * N1 + 1 + nodes_per_facet * (facet_inds[z] - 1)):(i * N1 + nodes_per_facet * (facet_inds[z] - 1))],
-                              tf[((i - 1) * N1 + 1 + nodes_per_facet * (facet_inds[z] - 1)):(i * N1 + nodes_per_facet * (facet_inds[z] - 1))])
+                                sf[((i - 1) * N1 + 1 + nodes_per_facet * (facet_inds[z] - 1)):(i * N1 + nodes_per_facet * (facet_inds[z] - 1))],
+                                tf[((i - 1) * N1 + 1 + nodes_per_facet * (facet_inds[z] - 1)):(i * N1 + nodes_per_facet * (facet_inds[z] - 1))])
                         end
                     end
                 end
@@ -324,8 +324,8 @@ end
             if volume_connect
                 if isnothing(q)
                     q = (round(Int, reference_approximation.N_q^(1 / 3)),
-                         round(Int, reference_approximation.N_q^(1 / 3)),
-                         round(Int, reference_approximation.N_q^(1 / 3)))
+                        round(Int, reference_approximation.N_q^(1 / 3)),
+                        round(Int, reference_approximation.N_q^(1 / 3)))
                 end
                 (N1, N2, N3) = q
 
@@ -387,37 +387,38 @@ end
     end
 end
 
-function plot_ref_elem(reference_approximation::ReferenceApproximation{<:RefElemData{3,
-                                                                                     Tet},
-                                                                       <:Union{NodalTensor,
-                                                                               ModalTensor}},
-                       title::String)
+function plot_ref_elem(reference_approximation::ReferenceApproximation{
+            <:RefElemData{3,
+                Tet},
+            <:Union{NodalTensor,
+                ModalTensor}},
+        title::String)
     (; p) = reference_approximation.approx_type
     vol_nodes = plot(reference_approximation,
-                     volume_connect = true,
-                     facet_connect = true,
-                     facet_quadrature = false,
-                     volume_quadrature = true,
-                     mapping_nodes = false,
-                     markersize = 4,
-                     camera = (115, 30),
-                     sketch = true,
-                     facet_inds = [1, 3, 4, 2],
-                     q = (p + 1, p + 1, p + 1),
-                     linewidth = 3,
-                     mapping_node_color = :red)
+        volume_connect = true,
+        facet_connect = true,
+        facet_quadrature = false,
+        volume_quadrature = true,
+        mapping_nodes = false,
+        markersize = 4,
+        camera = (115, 30),
+        sketch = true,
+        facet_inds = [1, 3, 4, 2],
+        q = (p + 1, p + 1, p + 1),
+        linewidth = 3,
+        mapping_node_color = :red)
     fac_nodes = plot(reference_approximation,
-                     volume_connect = true,
-                     facet_connect = true,
-                     facet_quadrature = true,
-                     volume_quadrature = false,
-                     mapping_nodes = false,
-                     markersize = 4,
-                     camera = (115, 30),
-                     sketch = true,
-                     facet_inds = [1, 3, 4, 2],
-                     q = (p + 1, p + 1, p + 1),
-                     linewidth = 3)
+        volume_connect = true,
+        facet_connect = true,
+        facet_quadrature = true,
+        volume_quadrature = false,
+        mapping_nodes = false,
+        markersize = 4,
+        camera = (115, 30),
+        sketch = true,
+        facet_inds = [1, 3, 4, 2],
+        q = (p + 1, p + 1, p + 1),
+        linewidth = 3)
     plt = plot(vol_nodes, fac_nodes, size = (600, 300))
     savefig(plt, title)
     run(`pdfcrop $title $title`)
