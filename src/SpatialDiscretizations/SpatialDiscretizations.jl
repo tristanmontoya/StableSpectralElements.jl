@@ -128,7 +128,6 @@ struct ModalMultiDiagE <: AbstractMultidimensional
     p::Int
 end
 
-
 """Collapsed coordinate mapping χ: [-1,1]ᵈ → Ωᵣ"""
 abstract type AbstractReferenceMapping end
 struct NoMapping <: AbstractReferenceMapping end
