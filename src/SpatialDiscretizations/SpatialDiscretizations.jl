@@ -106,9 +106,9 @@ end
 @doc raw"""
     ModalMulti(p::Int)
 
-Approximation type for a modal formulation based on a multidimensional volume and facet 
-quadrature rules (generalized Vandermonde, derivative and interpolation/extrapolation
-operators are all dense).
+Approximation type for a modal formulation of polynomial degree $p$ based on 
+multidimensional volume and facet quadrature rules (generalized Vandermonde, derivative and
+interpolation/extrapolation operators are all dense).
 """
 struct ModalMulti <: AbstractMultidimensional
     p::Int
@@ -117,10 +117,8 @@ end
 @doc raw"""
     NodalMultiDiagE(p::Int)
 
-Approximation type for a nodal formulation based on a multidimensional volume quadrature
-rule including nodes collocated with those used for facet integration (generalized
-Vandermonde matrix is identity, derivative operator is dense, interpolation/extrapolation
-operator picks out values at facet quadrature nodes).
+Approximation type for a nodal formulation of polynomial degree $p$ based on a multidimensional volume quadrature rule including nodes collocated with those used for
+facet integration (generalized Vandermonde matrix is identity, derivative operator is dense, interpolation/extrapolation operator picks out values at facet quadrature nodes).
 """
 struct NodalMultiDiagE <: AbstractMultidimensional
     p::Int
@@ -130,9 +128,8 @@ end
     ModalMultiDiagE(p::Int)
 
 Approximation type for a modal formulation based on a multidimensional volume quadrature
-rule including nodes collocated with those used for facet integration (generalized
-Vandermonde and derivative operators are dense, interpolation/extrapolation operator picks
-out values at facet quadrature nodes).
+rule of polynomial degree $p$ including nodes collocated with those used for facet
+integration (generalized Vandermonde and derivative operators are dense, interpolation/extrapolation operator picks out values at facet quadrature nodes).
 """
 struct ModalMultiDiagE <: AbstractMultidimensional
     p::Int
