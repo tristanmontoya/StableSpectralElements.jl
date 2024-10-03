@@ -18,3 +18,30 @@ In order to define the different geometric reference elements, existing subtypes
 These element types are used in the constructor for StableSpectralElements.jl's `ReferenceApproximation` type, along with a subtype of `AbstractApproximationType` specifying the nature of the local approximation (and, optionally, the associated volume and facet quadrature rules).
 
 All the information used to define the spatial discretization on the physical domain $\Omega$ is contained within a `SpatialDiscretization` structure, which is constructed using a `ReferenceApproximation` and a `MeshData` from StartUpDG.jl, which are stored as the fields `reference_approximation` and `mesh`. When the constructor for a `SpatialDiscretization` is called, the grid metrics are computed and stored in a `GeometricFactors` structure, with the corresponding field being `geometric_factors`. 
+
+## Approximation types 
+Listed below are approximation types supported by StableSpectralElements.jl.
+
+### Tensor-product operators 
+The following subtypes of `AbstractTensorProduct <: AbstractApproximationType` employ tensor-product operators.
+
+```@meta
+CurrentModule = SpatialDiscretizations
+```
+```@docs
+    NodalTensor
+    ModalTensor
+```
+
+### Multidimensional operators 
+The following subtypes of `AbstractMultidimensional <: AbstractApproximationType` employ multidimensional operators. 
+
+```@meta
+CurrentModule = SpatialDiscretizations
+```
+```@docs
+    NodalMulti
+    ModalMulti
+    NodalMultiDiagE
+    ModalMultiDiagE
+```

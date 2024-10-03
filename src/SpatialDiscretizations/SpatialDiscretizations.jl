@@ -68,36 +68,66 @@ export AbstractApproximationType,
 abstract type AbstractApproximationType end
 abstract type AbstractTensorProduct <: AbstractApproximationType end
 abstract type AbstractMultidimensional <: AbstractApproximationType end
+@doc raw"""
+    NodalTensor(p::Int)
 
-"""Nodal approximation using tensor-product operators"""
+Approximation type for a nodal formulation based on tensor-product volume and facet 
+quadrature rules.
+"""
 struct NodalTensor <: AbstractTensorProduct
     p::Int
 end
 
-"""Modal approximation using tensor-product operators"""
+@doc raw"""
+    ModalTensor(p::Int)
+
+Approximation type for a modal formulation based on tensor-product volume and facet 
+quadrature rules.
+"""
 struct ModalTensor <: AbstractTensorProduct
     p::Int
 end
 
-"""Modal approximation using multidimensional operators"""
-struct ModalMulti <: AbstractMultidimensional
-    p::Int
-end
+@doc raw"""
+    NodalMulti(p::Int)
 
-"""Nodal approximation using multidimensional operators"""
+Approximation type for a nodal formulation based on multidimensional volume and facet 
+quadrature rules.
+"""
 struct NodalMulti <: AbstractMultidimensional
     p::Int
 end
 
-"""Modal approximation using diagonal-E SBP operators"""
+@doc raw"""
+    ModalMulti(p::Int)
+
+Approximation type for a modal formulation based on a multidimensional volume and facet 
+quadrature rules.
+"""
+struct ModalMulti <: AbstractMultidimensional
+    p::Int
+end
+
+@doc raw"""
+    NodalMultiDiagE(p::Int)
+
+Approximation type for a nodal formulation based on a multidimensional volume quadrature
+rule including nodes collocated with those used for facet integration.
+"""
+struct NodalMultiDiagE <: AbstractMultidimensional
+    p::Int
+end
+
+@doc raw"""
+    ModalMultiDiagE(p::Int)
+
+Approximation type for a modal formulation based on a multidimensional volume quadrature
+rule including nodes collocated with those used for facet integration.
+"""
 struct ModalMultiDiagE <: AbstractMultidimensional
     p::Int
 end
 
-"""Nodal approximation using diagonal-E SBP operators"""
-struct NodalMultiDiagE <: AbstractMultidimensional
-    p::Int
-end
 
 """Collapsed coordinate mapping χ: [-1,1]ᵈ → Ωᵣ"""
 abstract type AbstractReferenceMapping end
