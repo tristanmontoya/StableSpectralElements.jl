@@ -3,7 +3,7 @@
 
 Define a linear advection equation of the form
 ```math
-\partial_t U(\bm{x},t) + \bm{\nabla} \cdot \big( \bm{a} U(\bm{x},t) \big) = 0,
+\partial_t U(\bm{x},t) + \bm{\nabla}_{\bm{x}} \cdot \big( \bm{a} U(\bm{x},t) \big) = 0,
 ```
 with a constant advection velocity $\bm{a} \in \R^d$. A specialized constructor `LinearAdvectionEquation(a::Float64)` is provided for the one-dimensional case.
 """
@@ -23,7 +23,7 @@ end
 
 Define a linear advection-diffusion equation of the form
 ```math
-\partial_t U(\bm{x},t) + \bm{\nabla} \cdot \big( \bm{a} U(\bm{x},t) - b \bm{\nabla} U(\bm{x},t)\big) = 0,
+\partial_t U(\bm{x},t) + \bm{\nabla}_{\bm{x}} \cdot \big( \bm{a} U(\bm{x},t) - b \bm{\nabla} U(\bm{x},t)\big) = 0,
 ```
 with a constant advection velocity $\bm{a} \in \R^d$ and diffusion coefficient $b \in \R^+$. A specialized constructor `LinearAdvectionDiffusionEquation(a::Float64, b::Float64)` is provided for the one-dimensional case.
 """

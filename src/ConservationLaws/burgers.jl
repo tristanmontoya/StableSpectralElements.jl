@@ -3,7 +3,7 @@
 
 Define an inviscid Burgers' equation of the form
 ```math
-\partial_t U(\bm{x},t) + \bm{\nabla} \cdot \big(\tfrac{1}{2}\bm{a} U(\bm{x},t)^2 \big) = 0,
+\partial_t U(\bm{x},t) + \bm{\nabla}_{\bm{x}} \cdot \big(\tfrac{1}{2}\bm{a} U(\bm{x},t)^2 \big) = 0,
 ```
 where $\bm{a} \in \R^d$. A specialized constructor `InviscidBurgersEquation()` is provided for the one-dimensional case with `a = (1.0,)`.
 """
@@ -19,12 +19,12 @@ struct InviscidBurgersEquation{d} <: AbstractConservationLaw{d, FirstOrder, 1}
     end
 end
 
-@doc raw"""x
+@doc raw"""
     ViscousBurgersEquation(a::NTuple{d,Float64}, b::Float64) where {d}
 
 Define a viscous Burgers' equation of the form
 ```math
-\partial_t U(\bm{x},t) + \bm{\nabla} \cdot \big(\tfrac{1}{2}\bm{a} U(\bm{x},t)^2 - b \bm{\nabla} U(\bm{x},t)\big) = 0,
+\partial_t U(\bm{x},t) + \bm{\nabla}_{\bm{x}} \cdot \big(\tfrac{1}{2}\bm{a} U(\bm{x},t)^2 - b \bm{\nabla} U(\bm{x},t)\big) = 0,
 ```
 where $\bm{a} \in \R^d$ and $b \in \R^+$. A specialized constructor `ViscousBurgersEquation(b::Float64)` is provided for the one-dimensional case with `a = (1.0,)`.
 """
