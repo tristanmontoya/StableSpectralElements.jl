@@ -148,7 +148,6 @@ struct ExactMetrics <: AbstractMetrics end
 struct ConservativeCurlMetrics <: AbstractMetrics end
 const ChanWilcoxMetrics = ConservativeCurlMetrics
 
-
 @doc raw"""
     ReferenceApproximation(approx_type, reference_element, D, V, Vf, R, W, B, V_plot,
                            reference_mapping)
