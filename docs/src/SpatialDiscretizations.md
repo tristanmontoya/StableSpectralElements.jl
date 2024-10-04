@@ -1,7 +1,7 @@
 # Module `SpatialDiscretizations`
 
 ## Overview
-Discretizations in StableSpectralElements.jl are constructed by first building a local approximation on a canonical reference element, denoted generically as $\hat{\Omega} \subset \mathbb{R}^d$, and using a bijective transformation $\bm{X}^{(\kappa)} : \hat{\Omega} \rightarrow \Omega^{(\kappa)}$ to construct the approximation on each physical element of the mesh $\mathcal{T}^h = \{ \Omega^{(\kappa)}\}_{\kappa \in \{1:N_e\}}$ in terms of the associated operators on the reference element. An example of such a mapping is shown below.
+Discretizations in StableSpectralElements.jl are constructed by first building a local approximation on a canonical reference element, denoted generically as $\hat{\Omega} \subset \mathbb{R}^d$, and using a bijective transformation $\bm{X}^{(\kappa)} : \hat{\Omega} \rightarrow \Omega^{(\kappa)}$ to construct the approximation on each physical element of the mesh $\{ \Omega^{(\kappa)}\}_{\kappa \in \{1:N_e\}}$ in terms of the associated operators on the reference element. An example of such a mapping is shown below, where we also depict the collapsed coordinate transformation $\bm{\chi} : [-1,1]^d \to \hat{\Omega}$ which may be used to construct operators with a tensor-product structure on the reference simplex.
 
 ![Mesh mapping](./assets/meshmap.svg)
 
@@ -19,8 +19,17 @@ These element types are used in the constructor for StableSpectralElements.jl's 
 
 All the information used to define the spatial discretization on the physical domain $\Omega$ is contained within a `SpatialDiscretization` structure, which is constructed using a `ReferenceApproximation` and a `MeshData` from StartUpDG.jl, which are stored as the fields `reference_approximation` and `mesh`. When the constructor for a `SpatialDiscretization` is called, the grid metrics are computed and stored in a `GeometricFactors` structure, with the corresponding field being `geometric_factors`. 
 
+## Data types
+
+```@meta
+CurrentModule = SpatialDiscretizations
+```
+```@docs
+    ReferenceApproximation
+```
+
 ## Approximation types 
-Listed below are approximation types supported by StableSpectralElements.jl.
+Listed below are approximation types (i.e. subtypes of `AbstractApproximationType`) supported by StableSpectralElements.jl.
 
 ### Tensor-product operators 
 The following subtypes of `AbstractTensorProduct <: AbstractApproximationType` employ tensor-product operators.

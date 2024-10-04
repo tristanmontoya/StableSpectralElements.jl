@@ -148,7 +148,39 @@ struct ExactMetrics <: AbstractMetrics end
 struct ConservativeCurlMetrics <: AbstractMetrics end
 const ChanWilcoxMetrics = ConservativeCurlMetrics
 
-"""Operators for local approximation on reference element"""
+
+@doc raw"""
+    ReferenceApproximation(approx_type, reference_element, D, V, Vf, R, W, B, V_plot,
+                           reference_mapping)
+
+Data structure defining the discretization on the reference element, containing the
+following fields:
+- `approx_type::AbstractApproximationType`: Type of operators used for the discretization
+  on the reference element(`NodalTensor`, `ModalTensor`, `NodalMulti`, `ModalMulti`
+  `NodalMultiDiagE`, `ModalMultiDiagE`)
+- `reference_element::StartUpDG.RefElemData`: Data structure containing quadrature node
+  positions and operators used for defining the mapping from reference to physical space;
+  contains the field `element_type::StartUpDG.AbstractElemShape` which determines the shape
+  of the reference element (currently, StableSpectralElements.jl supports the options
+  `Line`,`Tri`, `Quad`, `Hex`, and `Tet`)
+- `D::NTuple{d, <:LinearMap}`: Tuple of operators of size `N_q` by `N_q` approximating each
+  partial derivative at the volume quadrature nodes
+- `V::LinearMap`: Generalized Vandermonde matrix of size `N_q` by `N_p` mapping solution
+  degrees of freedom to values at volume quadrature nodes
+- `Vf::LinearMap`: Generalized Vandermonde matrix of size `N_f` by `N_p` mapping solution
+  degrees of freedom to values at facet quadrature nodes
+- `R::LinearMap`: Interpolation/extrapolation operator of size `N_f` by `N_q` which maps
+  nodal data from volume quadrature nodes to facet quadrature nodes 
+- `W::Diagonal`: Volume quadrature weight matrix of size `N_q` by `N_q`
+- `B::Diagonal`: Facet quadrature weight matrix of size `N_f` by `N_f`
+- `V_plot::LinearMap`: Generalized Vandermonde matrix mapping solution degrees of freedom
+  to plotting nodes
+- `reference_mapping::AbstractReferenceMapping`: Optional collapsed coordinate
+  transformation (either `ReferenceMapping` or `NoMapping`); if such a mapping is used (i.e. not `NoMapping`), the discrete derivative operators approximate partial derivatives 
+  with respect to components of the collapsed coordinate system
+Outer constructors are provided to construct the discrete operators by dispatching on each
+combination of subtypes of AbstractApproximationType` and `AbstractElementShape`. 
+"""
 struct ReferenceApproximation{RefElemType,
     ApproxType,
     D_type,
