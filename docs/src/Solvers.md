@@ -13,7 +13,7 @@ semi_discrete_residual(dudt::AbstractArray{Float64,3},
                        solver::Solver,
                        t::Float64)
 ```
-The first parameter contains the time derivative to be computed in place, the second parameter is the current solution state, and the fourth parameter is the time $t$. The third parameter, which is of type `Solver`, contains the all the information defining the spatial discretization as well as preallocated arrays used for temporary storage. The particular algorithm used for computing the semi-discrete residual is then dispatched based on the particular parametric subtype of `Solver` which is passed into the `semi_discrete_residual!` function.
+The first parameter contains the time derivative to be computed in place, the second parameter is the current solution state, and the fourth parameter is the time $t$. The third parameter, which is of type `Solver`, contains all the information defining the spatial discretization as well as preallocated arrays used for temporary storage. The particular algorithm used for computing the semi-discrete residual is then dispatched based on the particular parametric subtype of `Solver` which is passed into the `semi_discrete_residual!` function.
 
 ## Reference
 
