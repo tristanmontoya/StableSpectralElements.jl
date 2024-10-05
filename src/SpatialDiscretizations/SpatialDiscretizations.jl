@@ -149,14 +149,14 @@ struct ConservativeCurlMetrics <: AbstractMetrics end
 const ChanWilcoxMetrics = ConservativeCurlMetrics
 
 @doc raw"""
-    ReferenceApproximation(approx_type, reference_element, D, V, Vf, R, W, B, V_plot,
-                           reference_mapping)
+    ReferenceApproximation(approx_type::AbstractReferenceMapping,
+                           element_type::AbstractElemShape, kwargs...)
 
 Data structure defining the discretization on the reference element, containing the
 following fields:
 - `approx_type::AbstractApproximationType`: Type of operators used for the discretization
-  on the reference element(`NodalTensor`, `ModalTensor`, `NodalMulti`, `ModalMulti`
-  `NodalMultiDiagE`, `ModalMultiDiagE`)
+  on the reference element ([`NodalTensor`](@ref), [`ModalTensor`](@ref), [`NodalMulti`]
+  (@ref), [`ModalMulti`](@ref), [`NodalMultiDiagE`](@ref), or [`ModalMultiDiagE`](@ref))
 - `reference_element::StartUpDG.RefElemData`: Data structure containing quadrature node
   positions and operators used for defining the mapping from reference to physical space;
   contains the field `element_type::StartUpDG.AbstractElemShape` which determines the shape
