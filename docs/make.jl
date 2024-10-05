@@ -10,9 +10,10 @@ makedocs(
     authors = "Tristan Montoya",
     pages = [
         "Home" => "index.md",
-        "Reference" => [
+        "Modules" => [
             "`ConservationLaws`" => "ConservationLaws.md",
             "`SpatialDiscretizations`" => "SpatialDiscretizations.md",
+            "`Solvers`" => "Solvers.md",
         ],
     ],
     format = Documenter.HTML(

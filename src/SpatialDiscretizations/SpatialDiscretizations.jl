@@ -153,7 +153,8 @@ const ChanWilcoxMetrics = ConservativeCurlMetrics
                            element_type::StartUpDG.AbstractElemShape, kwargs...)
 
 Data structure defining the discretization on the reference element, containing the
-following fields:
+following fields, which are defined according to the approximation type, element type, and 
+other parameters passed into the outer constructor:
 - `approx_type::AbstractApproximationType`: Type of operators used for the discretization
   on the reference element ([`NodalTensor`](@ref), [`ModalTensor`](@ref), [`NodalMulti`]
   (@ref), [`ModalMulti`](@ref), [`NodalMultiDiagE`](@ref), or [`ModalMultiDiagE`](@ref))

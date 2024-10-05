@@ -21,7 +21,7 @@ where $\rho(\bm{x},t) \in \mathbb{R}$ is the fluid density, $\bm{V}(\bm{x},t) \i
 ```math
 P(\bm{x},t) = (\gamma - 1)\Big(E(\bm{x},t) - \frac{1}{2}\rho(\bm{x},t) \lVert \bm{V}(\bm{x},t)\rVert^2\Big).
 ```
-The specific heat ratio is specified as a parameter `γ::Float64`, which must be greater than unity.
+The specific heat ratio is specified as a parameter $\gamma$, which must be greater than unity.
 """
 struct EulerEquations{d, N_c} <: AbstractConservationLaw{d, FirstOrder, N_c}
     γ::Float64
