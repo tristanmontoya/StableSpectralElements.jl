@@ -5,7 +5,7 @@
 <p align=center>
 <img src="docs/src/assets/visualization.png" alt="drawing" style="width:300px;"/>
 
-**StableSpectralElements.jl** is a Julia framework for the numerical solution of hyperbolic and mixed hyperbolic-parabolic conservation laws on general unstructured grids using [provably stable discontinuous spectral-element methods with the summation-by-parts property](https://tjbmontoya.com/papers/MontoyaPhDThesis24.pdf), with an emphasis on dispatched strategies for the evaluation of a broad class of discretization operators. StableSpectralElements.jl supports shared-memory parallelization through multithreading. 
+**StableSpectralElements.jl** is a Julia framework for the numerical solution of hyperbolic and mixed hyperbolic-parabolic conservation laws on general unstructured grids using [provably stable discontinuous spectral-element methods with the summation-by-parts property](https://tjbmontoya.com/papers/MontoyaPhDThesis24.pdf), with an emphasis on dispatched strategies for the evaluation of a broad class of discretization operators.
 
 ## Installation
 
