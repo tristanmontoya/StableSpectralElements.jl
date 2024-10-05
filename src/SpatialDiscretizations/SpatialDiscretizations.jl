@@ -150,7 +150,7 @@ const ChanWilcoxMetrics = ConservativeCurlMetrics
 
 @doc raw"""
     ReferenceApproximation(approx_type::AbstractReferenceMapping,
-                           element_type::AbstractElemShape, kwargs...)
+                           element_type::StartUpDG.AbstractElemShape, kwargs...)
 
 Data structure defining the discretization on the reference element, containing the
 following fields:
@@ -178,7 +178,7 @@ following fields:
   transformation (either `ReferenceMapping` or `NoMapping`); if such a mapping is used (i.e. not `NoMapping`), the discrete derivative operators approximate partial derivatives 
   with respect to components of the collapsed coordinate system
 Outer constructors are provided to construct the discrete operators by dispatching on each
-combination of subtypes of `AbstractApproximationType` and `AbstractElementShape`. 
+combination of subtypes of `AbstractApproximationType` and `StartUpDG.AbstractElemShape`. 
 """
 struct ReferenceApproximation{RefElemType,
     ApproxType,
