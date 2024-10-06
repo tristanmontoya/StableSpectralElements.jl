@@ -79,6 +79,14 @@ struct ReferenceOperator <: AbstractStrategy end
 struct Serial <: AbstractParallelism end
 struct Threaded <: AbstractParallelism end
 
+@doc raw"""
+    StandardForm(; mapping_form = SkewSymmetricMapping(),
+                   inviscid_numerical_flux = LaxFriedrichsNumericalFlux(),
+                   viscous_numerical_flux = BR1())
+
+Type used for dispatch indicating the use of a standard (i.e. not flux-differencing) weak-form discontinuous spectral-element method. The `mapping_form` argument can be set to 
+`StandardMapping()` to recover a standard discontinuous Galerkin formulation.
+"""
 Base.@kwdef struct StandardForm{MappingForm, InviscidNumericalFlux, ViscousNumericalFlux} <:
                    AbstractResidualForm
     mapping_form::MappingForm = SkewSymmetricMapping()
@@ -86,6 +94,16 @@ Base.@kwdef struct StandardForm{MappingForm, InviscidNumericalFlux, ViscousNumer
     viscous_numerical_flux::ViscousNumericalFlux = BR1()
 end
 
+@doc raw"""
+    FluxDifferencingForm(; mapping_form = SkewSymmetricMapping(),
+                   inviscid_numerical_flux = LaxFriedrichsNumericalFlux(),
+                   viscous_numerical_flux = BR1(),
+                   two_point_flux = EntropyConservativeFlux())
+
+Type used for dispatch indicating the use of a flux-differencing (e.g. entropy-stable or 
+kinetic-energy-preserving) discontinuous spectral-element formulation based on two-point
+flux functions.
+"""
 Base.@kwdef struct FluxDifferencingForm{MappingForm,
     InviscidNumericalFlux,
     ViscousNumericalFlux,
@@ -96,6 +114,13 @@ Base.@kwdef struct FluxDifferencingForm{MappingForm,
     two_point_flux::TwoPointFlux = EntropyConservativeFlux()
 end
 
+@doc raw"""
+    ReferenceOperators{D_type, Dt_type, V_type, Vt_type, R_type, Rt_type} <:
+       AbstractDiscretizationOperators
+
+Set of operators and nodal values of geometric factors used to evaluate the
+semi-discrete residual for the [`StandardForm`](@ref) in reference space.
+"""
 struct ReferenceOperators{D_type, Dt_type, V_type, Vt_type, R_type, Rt_type} <:
        AbstractDiscretizationOperators
     D::D_type
@@ -112,6 +137,13 @@ struct ReferenceOperators{D_type, Dt_type, V_type, Vt_type, R_type, Rt_type} <:
     n_f::Array{Float64, 3} # d x N_f x N_e
 end
 
+@doc raw"""
+    PhysicalOperators{d, VOL_type, FAC_type, V_type, R_type} <:
+       AbstractDiscretizationOperators
+
+Set of operators used to evaluate the semi-discrete residual for the [`StandardForm`](@ref)
+by precomputing matrices for each physical element.
+"""
 struct PhysicalOperators{d, VOL_type, FAC_type, V_type, R_type} <:
        AbstractDiscretizationOperators
     VOL::Vector{NTuple{d, VOL_type}}
@@ -121,6 +153,14 @@ struct PhysicalOperators{d, VOL_type, FAC_type, V_type, R_type} <:
     n_f::Array{Float64, 3} # d x N_f x N_e
 end
 
+@doc raw"""
+    FluxDifferencingOperators{S_type, C_type, V_type, Vt_type, R_type, Rt_type} <:
+       AbstractDiscretizationOperators
+
+Set of operators and nodal values of geometric factors used to evaluate the semi-discrete 
+residual for the [`FluxDifferencingForm`](@ref) in reference space. Note that no 
+physical-operator formulation is implemented for the flux-differencing form.
+"""
 struct FluxDifferencingOperators{S_type, C_type, V_type, Vt_type, R_type, Rt_type} <:
        AbstractDiscretizationOperators
     S::S_type
@@ -202,6 +242,20 @@ struct PreAllocatedArraysSecondOrder <: AbstractPreAllocatedArrays
     end
 end
 
+@doc raw"""
+    Solver{ConservationLaw <: AbstractConservationLaw, 
+           Operators <: AbstractDiscretizationOperators,
+           MassSolver <: AbstractMassMatrixSolver,
+           ResidualForm <: AbstractMassMatrixSolver,
+           Parallelism <: AbstractParallelism,
+           PreAllocatedArrays <: AbstractPreAllocatedArrays}
+
+Composite type defining the spatial discretization which is passed into
+[`semi_discrete_residual!`](@ref) function to compute the time derivative within an
+ordinary differential equation solver from 
+[OrdinaryDiffEq.jl](https://github.com/SciML/OrdinaryDiffEq.jl). The algorithm used to
+compute the semi-discrete residual is dispatched based on the type parameters.
+"""
 struct Solver{ConservationLaw,
     Operators,
     MassSolver,
@@ -217,6 +271,8 @@ struct Solver{ConservationLaw,
     preallocated_arrays::PreAllocatedArrays
 end
 
+# Gets tuple containing the number of nodal/modal coefficients, number of conservative
+# variables, and number of mesh elements from the solver
 function Base.size(solver::Solver{
         <:AbstractConservationLaw{d, <:AbstractPDEType, N_c},
 }) where {
@@ -319,6 +375,9 @@ function Solver(conservation_law::AbstractConservationLaw{d, SecondOrder, N_c},
         PreAllocatedArraysSecondOrder(d, N_q, N_f, N_c, N_e, N_p))
 end
 
+# Gets tuple containing the number of nodal/modal coefficients, number of conservative
+# variables, and number of mesh elements from the spatial discretization and 
+# conservation law
 @inline function get_dof(spatial_discretization::SpatialDiscretization{d},
         ::AbstractConservationLaw{d, PDEType, N_c}) where {d, PDEType, N_c}
     return (spatial_discretization.reference_approximation.N_p,
@@ -358,7 +417,7 @@ end
     return u0
 end
 
-"""Returns an array of initial data as nodal or modal DOF"""
+# Returns an array of initial data as nodal or modal DOF
 @inline function initialize(initial_data, spatial_discretization::SpatialDiscretization)
     (; J_q) = spatial_discretization.geometric_factors
     (; V, W) = spatial_discretization.reference_approximation
@@ -391,7 +450,27 @@ end
 
     return ODEProblem(semi_discrete_residual!, u0, tspan, solver)
 end
+@doc raw"""
+    semi_discrete_residual!(dudt::AbstractArray{Float64,3},
+                           u::AbstractArray{Float64, 3},
+                           solver::Solver,
+                           t::Float64)
 
+In-place function for evaluating the right-hand side of $\underline{u}'(t) = \underline{R}(\underline{u}(t),t)$ within the ordinary differential equation solver.
+# Arguments
+- `dudt::AbstractArray{Float64,3}`: Time derivative (first index is nodal or modal
+  coefficient, second index is solution variable, third index is mesh element) 
+- `u::AbstractArray{Float64,3}`: Current global solution state (first index is nodal or
+  modal coefficient, second index is solution variable, third index is mesh element) 
+- `solver::Solver`: Parameter of type [`Solver`](@ref) containing all the information    
+  defining the spatial discretization, the algorithms used to evaluate the semi-discrete 
+  residual, and preallocated arrays used for temporary storage; type parameters of Solver 
+  are used to dispatch the resulting algorithm based on the equation type, operator type, 
+  mass matrix solver (i.e. `CholeskySolver`, `DiagonalSolver`, or `WeightAdjustedSolver`),
+  residual form (i.e. `StandardForm` or `FluxDifferencingForm`), and parallelism 
+  (i.e. `Serial` or `Threaded`).
+- `t::Float64`: Time variable
+"""
 @timeit "semi-disc. residual" function semi_discrete_residual!(dudt::AbstractArray{Float64,
             3},
         u::AbstractArray{Float64, 3},

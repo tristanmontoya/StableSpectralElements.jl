@@ -1,4 +1,4 @@
-""" Semi-discrete residual operator as a LinearMap"""
+# Express the semi-discrete residual operator as a LinearMap
 struct LinearResidual{SolverType} <: LinearMap{Float64}
     solver::SolverType
 end

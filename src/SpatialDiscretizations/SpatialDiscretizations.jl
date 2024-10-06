@@ -74,7 +74,7 @@ abstract type AbstractMultidimensional <: AbstractApproximationType end
 Approximation type for a nodal formulation of polynomial degree $p$ based on
 tensor-product volume and facet quadrature rules (generalized Vandermonde matrix is
 identity, derivative and interpolation/extrapolation operators have tensor-product
-structure).
+structure). Currently supports `Line`, `Tri`, `Tet`, `Quad`, and `Hex` element types.
 """
 struct NodalTensor <: AbstractTensorProduct
     p::Int
@@ -86,7 +86,7 @@ end
 Approximation type for a modal formulation of polynomial degree $p$ based on tensor-product
 volume and facet quadrature rules (generalized Vandermonde matrix is not necessarily
 identity, derivative and interpolation/extrapolation operators have tensor-product
-structure).
+structure). Currently supports `Tri` and `Tet` element types.
 """
 struct ModalTensor <: AbstractTensorProduct
     p::Int
@@ -97,7 +97,8 @@ end
 
 Approximation type for a nodal formulation based on multidimensional volume and facet 
 quadrature rules (generalized Vandermonde matrix is identity, derivative and 
-interpolation/extrapolation operators are dense).
+interpolation/extrapolation operators are dense). Currently supports `Tri` and `Tet` element
+types.
 """
 struct NodalMulti <: AbstractMultidimensional
     p::Int
@@ -108,7 +109,8 @@ end
 
 Approximation type for a modal formulation of polynomial degree $p$ based on 
 multidimensional volume and facet quadrature rules (generalized Vandermonde, derivative and
-interpolation/extrapolation operators are all dense).
+interpolation/extrapolation operators are all dense). Currently supports `Tri` and `Tet`
+element types.
 """
 struct ModalMulti <: AbstractMultidimensional
     p::Int
@@ -117,8 +119,11 @@ end
 @doc raw"""
     NodalMultiDiagE(p::Int)
 
-Approximation type for a nodal formulation of polynomial degree $p$ based on a multidimensional volume quadrature rule including nodes collocated with those used for
-facet integration (generalized Vandermonde matrix is identity, derivative operator is dense, interpolation/extrapolation operator picks out values at facet quadrature nodes).
+Approximation type for a nodal formulation of polynomial degree $p$ based on a 
+multidimensional volume quadrature rule including nodes collocated with those used for
+facet integration (generalized Vandermonde matrix is identity, derivative operator is 
+dense, interpolation/extrapolation operator picks out values at facet quadrature nodes).
+Currently supports only the `Tri` element type.
 """
 struct NodalMultiDiagE <: AbstractMultidimensional
     p::Int
@@ -129,13 +134,15 @@ end
 
 Approximation type for a modal formulation based on a multidimensional volume quadrature
 rule of polynomial degree $p$ including nodes collocated with those used for facet
-integration (generalized Vandermonde and derivative operators are dense, interpolation/extrapolation operator picks out values at facet quadrature nodes).
+integration (generalized Vandermonde and derivative operators are dense, interpolation/
+extrapolation operator picks out values at facet quadrature nodes). Currently supports only
+the `Tri` element type.
 """
 struct ModalMultiDiagE <: AbstractMultidimensional
     p::Int
 end
 
-"""Collapsed coordinate mapping χ: [-1,1]ᵈ → Ωᵣ"""
+# Collapsed coordinate mapping
 abstract type AbstractReferenceMapping end
 struct NoMapping <: AbstractReferenceMapping end
 struct ReferenceMapping <: AbstractReferenceMapping
@@ -162,7 +169,7 @@ other parameters passed into the outer constructor:
   positions and operators used for defining the mapping from reference to physical space;
   contains the field `element_type::StartUpDG.AbstractElemShape` which determines the shape
   of the reference element (currently, StableSpectralElements.jl supports the options
-  `Line`,`Tri`, `Quad`, `Hex`, and `Tet`)
+  `Line`, `Quad`, `Hex`, `Tri`, and `Tet`)
 - `D::NTuple{d, <:LinearMap}`: Tuple of operators of size `N_q` by `N_q` approximating each
   partial derivative at the volume quadrature nodes
 - `V::LinearMap`: Generalized Vandermonde matrix of size `N_q` by `N_p` mapping solution
@@ -243,6 +250,36 @@ struct ReferenceApproximation{RefElemType,
     end
 end
 
+@doc raw"""
+    GeometricFactors(J_q::Matrix{Float64}, 
+                     Λ_q::Array{Float64, 4}, 
+                     J_f::Matrix{Float64},
+                     nJf::Array{Float64, 3},
+                     nJq::Array{Float64, 4})
+Nodal values of geometric factors used by the solver to construct discretizations on the physical element. Contains the following fields:
+- `J_q::Matrix{Float64}`: Jacobian determinant $J$ of the mapping from reference 
+  coordinates $\bm{\xi} \in \hat{\Omega}$ to physical coordinates 
+  $\bm{x} \in \Omega^{(\kappa)}$ at volume quadrature nodes; first dimension is node index 
+  (size `N_q`), second is element index (size `N_e`)
+- `Λ_q::Array{Float64, 4}`: Metric terms $J \partial \xi_l / \partial x_m$ at volume
+  quadrature nodes; first index is node index (size `N_q`), next two are $l$ and $m$ (size 
+  `d`), last is element index (size `N_e`)
+- `J_f::Matrix{Float64}`: Facet area element at facet quadrature nodes;
+  first index is node index (size `N_f`), second is element index (size `N_e`)
+- `nJf::Array{Float64, 3}`: Scaled surface normal vector at facet quadrature nodes; first
+  index is component of normal vector (size `d`), second is node index (size `N_f`), third 
+  is element index (size `N_e`)
+- `nJq::Array{Float64, 4}`: Scaled surface normal vector to a given facet computed using
+  the volume metrics (used in flux differencing); first index is component of normal vector (size `d`), second component is reference facet index, third is volume quadrature node index (size `N_q`), last is element index (size `N_e`)
+
+!!! note 
+    When using sum-factorization algorithms in collapsed coordinates with a `StandardForm
+    ` solver and a `ReferenceOperator` strategy, `apply_reference_mapping!` overwrites
+    `Λ_q` to contain the metrics associated with the composite mapping from $[-1,1]^d$ to $\Omega^{(\kappa)}$. See (6.2) and (6.3) in the following paper:
+    - T. Montoya and D. W. Zingg (2024). Efficient tensor-product spectral-element
+      operators with the summation-by-parts property on curved triangles and tetrahedra. 
+      *SIAM Journal on Scientific Computing* 46(4):A2270-A2297.
+"""
 struct GeometricFactors
     J_q::Matrix{Float64} # N_q x N_e
     Λ_q::Array{Float64, 4} # N_q x d x d x N_e
@@ -251,7 +288,14 @@ struct GeometricFactors
     nJq::Array{Float64, 4} # d x num_faces x N_q x N_e
 end
 
-"""Data for constructing the global spatial discretization"""
+@doc raw"""
+    SpatialDiscretization(mesh::StartUpDG.MeshData,
+                          reference_approximation::ReferenceApproximation,
+                          metric_type::AbstractMetrics, kwargs...)
+
+Composite type containing data for constructing the discretization on the reference element
+as well as the mesh and associated metric terms.
+"""
 struct SpatialDiscretization{d, MeshType, ReferenceApproximationType}
     mesh::MeshType
     N_e::Int
@@ -347,10 +391,10 @@ function SpatialDiscretization(mesh::MeshType,
               for m in 1:d))
 end
 
-"""Use this when there are no collapsed coordinates"""
+# Use this when there are no collapsed coordinates
 @inline apply_reference_mapping(geometric_factors::GeometricFactors, ::NoMapping) = geometric_factors
 
-"""Express all metric terms in terms of collapsed coordinates"""
+# Express all metric terms in terms of collapsed coordinates
 function apply_reference_mapping(geometric_factors::GeometricFactors,
         reference_mapping::ReferenceMapping)
     (; J_q, Λ_q, J_f, nJf, nJq) = geometric_factors
@@ -366,9 +410,7 @@ function apply_reference_mapping(geometric_factors::GeometricFactors,
     return GeometricFactors(J_q, Λ_η, J_f, nJf, nJq)
 end
 
-"""
-Get derivative operators in reference coordinates from collapsed coordinates
-"""
+# Get derivative operators in reference coordinates from collapsed coordinates
 function reference_derivative_operators(D_η::NTuple{d, LinearMap},
         reference_mapping::ReferenceMapping) where {d}
     (; Λ_ref, J_ref) = reference_mapping
@@ -379,9 +421,7 @@ function reference_derivative_operators(D_η::NTuple{d, LinearMap}, ::NoMapping)
     return D_η
 end
 
-"""
-Check if the normals are equal and opposite under the mapping
-"""
+# Check if the normals are equal and opposite under the mapping (i.e. watertight mesh)
 function check_normals(spatial_discretization::SpatialDiscretization{d}) where {d}
     (; geometric_factors, mesh, N_e) = spatial_discretization
     return Tuple([maximum(abs.(geometric_factors.nJf[m, :, k] +
@@ -389,9 +429,7 @@ function check_normals(spatial_discretization::SpatialDiscretization{d}) where {
                   for k in 1:N_e] for m in 1:d)
 end
 
-"""
-Check if the facet nodes are conforming
-"""
+# Check if the facet nodes are conforming
 function check_facet_nodes(spatial_discretization::SpatialDiscretization{d}) where {d}
     (; mesh, N_e) = spatial_discretization
     return Tuple([maximum(abs.(mesh.xyzf[m][:, k] - mesh.xyzf[m][mesh.mapP[:, k]]))
@@ -399,9 +437,7 @@ function check_facet_nodes(spatial_discretization::SpatialDiscretization{d}) whe
                  for m in 1:d)
 end
 
-"""
-Check if the SBP property is satisfied on the reference element
-"""
+# Check if the SBP property is satisfied on the reference element
 function check_sbp_property(reference_approximation::ReferenceApproximation{
         <:RefElemData{d},
 }) where {
@@ -418,9 +454,7 @@ function check_sbp_property(reference_approximation::ReferenceApproximation{
                  for m in 1:d)
 end
 
-"""
-Check if the SBP property is satisfied on the physical element
-"""
+# Check if the SBP property is satisfied on the physical element
 function check_sbp_property(spatial_discretization::SpatialDiscretization{d},
         k::Int = 1) where {d}
     (; W, D, R, B) = spatial_discretization.reference_approximation
@@ -435,10 +469,7 @@ function check_sbp_property(spatial_discretization::SpatialDiscretization{d},
     return Tuple(maximum(abs.(convert(Matrix, Q[n] + Q[n]' - E[n]))) for n in 1:d)
 end
 
-"""
-Average of vertex positions (not necessarily actual centroid).
-Use only for plotting.
-"""
+# Average of vertex positions (not necessarily actual centroid).
 function centroids(spatial_discretization::SpatialDiscretization{d}) where {d}
     (; xyz) = spatial_discretization.mesh
     return [Tuple(sum(xyz[m][:, k]) / length(xyz[m][:, k]) for m in 1:d)
@@ -446,9 +477,7 @@ function centroids(spatial_discretization::SpatialDiscretization{d}) where {d}
             k in 1:(spatial_discretization.N_e)]
 end
 
-"""
-Trace inequality constant from Chan et al. (2016)
-"""
+# Trace inequality constant from Chan et al. (2016)
 function trace_constant(reference_approximation::ReferenceApproximation)
     (; B, Vf, W, V) = reference_approximation
     return maximum(eigvals(Matrix(Vf' * B * Vf), Matrix(V' * W * V)))

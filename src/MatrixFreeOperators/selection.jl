@@ -1,6 +1,5 @@
-"""
-Select the nodes corresponding to `facet_node_ids` from a vector of volume nodes (avoids multiplication by zeros)
-"""
+# Select the nodes corresponding to `facet_node_ids` from a vector of volume nodes (avoids 
+# multiplication by zeros)
 struct SelectionMap <: LinearMaps.LinearMap{Float64}
     facet_ids::Vector{Int} # vol node inds for each fac node
     volume_ids::Tuple{Vararg{Vector{Int}}} # fac node inds for each vol node

@@ -1,7 +1,4 @@
-"""
-Warped tensor-product operator (e.g. for Dubiner-type bases)
-"""
-
+# Warped tensor-product operator (e.g. for Dubiner-type bases)
 struct WarpedTensorProductMap3D{A_type, B_type, C_type, σᵢ_type, σₒ_type} <:
        LinearMaps.LinearMap{Float64}
     A::A_type
@@ -37,43 +34,16 @@ struct WarpedTensorProductMap3D{A_type, B_type, C_type, σᵢ_type, σₒ_type} 
     end
 end
 
-#=
-struct WarpedTensorProductMap3D{N,M1,M2,M3} <: LinearMaps.LinearMap{Float64}
-    A::SArray{Tuple{M1,N},Float64}
-    B::SArray{Tuple{M1,N,N},Float64}
-    C::SArray{Tuple{M1,N,N,N},Float64}
-    σᵢ::SArray{Tuple{N,N,N},Int}
-    σₒ::SArray{Tuple{M1,M2,M3},Int}
-    N2::SVector{N,Int}
-    N3::SMatrix{N,N,Int}
-
-    function WarpedTensorProductMap3D(
-        A::SArray{Tuple{M1,N}},
-        B::SArray{Tuple{M1,N,N}},
-        C::SArray{Tuple{M1,N,N,N}},
-        σᵢ::SArray{Tuple{N,N,N}},
-        σₒ::SArray{Tuple{M1,M2,M3}}) where {N,M1,M2,M3}
-        return new{N,M1,M2,M3}(A, B, C, σᵢ, σₒ,
-        SVector{M1}(count(a -> a>0, σᵢ[β1,1,:]) for β1 in 1:N),
-        SMatrix{M1,M2}(count(a -> a>0, σᵢ[β1,β2,:]) 
-            for β1 in 1:N, β2 in 1:N))
-    end
-end
-=#
-
 @inline Base.size(L::WarpedTensorProductMap3D) = L.size
 
-"""
-Evaluate the matrix-vector product
-
-(Lx)[σₒ[α1,α2,α3]] = ∑_{β1,β2,β3} A[α1,β1] B[α2,β1,β2] C[α3,β1,β2,β3] 
-    * x[σᵢ[β1,β2,β3]]
-                   = ∑_{β1,β2} A[α1,β1] B[α2,β1,β2]
-     * (∑_{β3} C[α3,β1,β2,β3] x[σᵢ[β1,β2,β3]])
-                   = ∑_{β1,β2} A[α1,β1] B[α2,β1,β2] Z[β1,β2,α3]
-                   = ∑_{β1} A[α1,β1] (∑_{β2} B[α2,β1,β2] Z[β1,β2,α3])
-                   = ∑_{β1} A[α1,β1] W[β1,α2,α3]
-"""
+# Evaluate the matrix-vector product
+# (Lx)[σₒ[α1,α2,α3]] = ∑_{β1,β2,β3} A[α1,β1] B[α2,β1,β2] C[α3,β1,β2,β3] 
+#     * x[σᵢ[β1,β2,β3]]
+#                    = ∑_{β1,β2} A[α1,β1] B[α2,β1,β2]
+#     * (∑_{β3} C[α3,β1,β2,β3] x[σᵢ[β1,β2,β3]])
+#                    = ∑_{β1,β2} A[α1,β1] B[α2,β1,β2] Z[β1,β2,α3]
+#                    = ∑_{β1} A[α1,β1] (∑_{β2} B[α2,β1,β2] Z[β1,β2,α3])
+#                    = ∑_{β1} A[α1,β1] W[β1,α2,α3]
 @inline function LinearAlgebra.mul!(y::AbstractVector,
         L::WarpedTensorProductMap3D,
         x::AbstractVector)
@@ -113,17 +83,14 @@ Evaluate the matrix-vector product
     return y
 end
 
-"""
-Evaluate the matrix-vector product
-
-(Lx)[σᵢ[β1,β2,β3]] = ∑_{α1,α2,α3} C[α3,β1,β2,β3] B[α2,β1,β2] A[α1,β1]
-    * x[σₒ[α1,α2,α3]]
-                   = ∑_{α2,α3} C[α3,β1,β2,β3] B[α2,β1,β2]
-    * (∑_{α1} A[α1,β1] x[σₒ[α1,α2,α3]])
-                   = ∑_{α2,α3} C[α3,β1,β2,β3] B[α2,β1,β2] W[β1,α2,α3]
-                   = ∑_{α3} C[α3,β1,β2,β3] (∑_{α2} B[α2,β1,β2] W[β1,α2,α3])
-                   = ∑_{α3} C[α3,β1,β2,β3] Z[β1,β2,α3]
-"""
+# Evaluate the matrix-vector product
+# (Lx)[σᵢ[β1,β2,β3]] = ∑_{α1,α2,α3} C[α3,β1,β2,β3] B[α2,β1,β2] A[α1,β1]
+#    * x[σₒ[α1,α2,α3]]
+#                    = ∑_{α2,α3} C[α3,β1,β2,β3] B[α2,β1,β2]
+#    * (∑_{α1} A[α1,β1] x[σₒ[α1,α2,α3]])
+#                    = ∑_{α2,α3} C[α3,β1,β2,β3] B[α2,β1,β2] W[β1,α2,α3]
+#                    = ∑_{α3} C[α3,β1,β2,β3] (∑_{α2} B[α2,β1,β2] W[β1,α2,α3])
+#                    = ∑_{α3} C[α3,β1,β2,β3] Z[β1,β2,α3]
 @inline function LinearMaps._unsafe_mul!(y::AbstractVector,
         L::LinearMaps.TransposeMap{Float64,
             <:WarpedTensorProductMap3D},

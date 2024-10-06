@@ -1,9 +1,7 @@
 abstract type ConservationAnalysis <: AbstractAnalysis end
 abstract type AbstractConservationAnalysisResults <: AbstractAnalysisResults end
 
-"""
-Evaluate change in ∫udx  
-"""
+# Evaluate change in ∫udx  
 struct PrimaryConservationAnalysis{V_type} <: ConservationAnalysis
     WJ::Vector{Diagonal{Float64, Vector{Float64}}}
     N_c::Int
@@ -13,9 +11,7 @@ struct PrimaryConservationAnalysis{V_type} <: ConservationAnalysis
     dict_name::String
 end
 
-"""
-Evaluate change in  ∫½u²dx  
-"""
+# Evaluate change in  ∫½u²dx  
 struct EnergyConservationAnalysis{V_type, MassSolver} <: ConservationAnalysis
     mass_solver::MassSolver
     N_c::Int

@@ -44,14 +44,11 @@ end
 
 const BurgersType{d} = Union{InviscidBurgersEquation{d}, ViscousBurgersEquation{d}}
 
+# Default constructors
 InviscidBurgersEquation() = InviscidBurgersEquation((1.0,))
 ViscousBurgersEquation(b::Float64) = ViscousBurgersEquation((1.0,), b)
 
-"""
-Evaluate the flux for the inviscid Burgers' equation
-
-`F(u) = a ½u^2`
-"""
+# Evaluate the flux F(u) = a u^2/2 for the inviscid Burgers' equation
 function physical_flux!(f::AbstractArray{Float64, 3},
         conservation_law::InviscidBurgersEquation{d},
         u::AbstractMatrix{Float64}) where {d}
@@ -60,11 +57,7 @@ function physical_flux!(f::AbstractArray{Float64, 3},
     end
 end
 
-"""
-Evaluate the flux for the viscous Burgers' equation
-
-`F(u,q) = a ½u^2 - bq`
-"""
+# Evaluate the flux F(u,q) = a u^2/2 - bq for the viscous Burgers' equation 
 function physical_flux!(f::AbstractArray{Float64, 3},
         conservation_law::ViscousBurgersEquation{d},
         u::AbstractMatrix{Float64},
@@ -75,11 +68,8 @@ function physical_flux!(f::AbstractArray{Float64, 3},
     end
 end
 
-"""
-Evaluate the interface normal solution for the viscous Burgers' equation using the BR1 approach
-
-`U*(u⁻, u⁺, n) = ½(u⁻ + u⁺)n`
-"""
+# Evaluate the interface normal solution U*(u⁻, u⁺, n) = ½(u⁻ + u⁺)n 
+# for the viscous Burgers' equation using the BR1 approach 
 @inline function numerical_flux!(u_nstar::AbstractArray{Float64, 3},
         ::ViscousBurgersEquation{d},
         ::BR1,
@@ -93,11 +83,8 @@ Evaluate the interface normal solution for the viscous Burgers' equation using t
     end
 end
 
-"""
-Evaluate the numerical flux for the viscous Burgers' equation using the BR1 approach
-
-F*(u⁻, u⁺, q⁻, q⁺, n) = ½(F²(u⁻,q⁻) + F²(u⁺, q⁺))⋅n
-"""
+# Evaluate the numerical flux for the viscous Burgers' equation using the BR1 approach
+# F*(u⁻, u⁺, q⁻, q⁺, n) = ½(F²(u⁻,q⁻) + F²(u⁺, q⁺))⋅n
 @inline function numerical_flux!(f_star::AbstractMatrix{Float64},
         conservation_law::ViscousBurgersEquation{d},
         ::BR1,

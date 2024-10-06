@@ -1,9 +1,9 @@
-"""Duffy transform from the square to triangle"""
+# Duffy transform from the square to triangle
 @inline function χ(::Tri, η::Union{NTuple{2, Float64}, NTuple{2, Vector{Float64}}})
     return (0.5 .* (1.0 .+ η[1]) .* (1.0 .- η[2]) .- 1.0, η[2])
 end
 
-"""Duffy transform from the cube to tetrahedron"""
+# Duffy transform from the cube to tetrahedron
 @inline function χ(::Tet, η::Union{NTuple{3, Float64}, NTuple{3, Vector{Float64}}})
     ξ_pri = (0.5 .* (1.0 .+ η[1]) .* (1.0 .- η[3]) .- 1.0, η[2], η[3])
     ξ_pyr = (ξ_pri[1], 0.5 .* (1.0 .+ η[2]) .* (1.0 .- η[3]) .- 1.0, ξ_pri[3])

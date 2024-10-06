@@ -1,6 +1,4 @@
-"""
-Warped tensor-product operator (e.g. for Dubiner-type bases)
-"""
+# Warped tensor-product operator (e.g. for Dubiner-type bases)
 struct WarpedTensorProductMap2D{A_type, B_type, σᵢ_type, σₒ_type} <:
        LinearMaps.LinearMap{Float64}
     A::A_type
@@ -26,13 +24,10 @@ end
 
 @inline Base.size(L::WarpedTensorProductMap2D) = L.size
 
-"""
-Evaluate the matrix-vector product
-
-(Lx)[σₒ[α1,α2]] = ∑_{β1,β2} A[α1,β1] B[α2,β1,β2] x[σᵢ[β1,β2]] 
-                = ∑_{β1} A[α1,β1] (∑_{β2} B[α2,β1,β2] x[σᵢ[β1,β2]]) 
-                = ∑_{β1} A[α1,β1] Z[β1,α2]
-"""
+# Evaluate the matrix-vector product
+# (Lx)[σₒ[α1,α2]] = ∑_{β1,β2} A[α1,β1] B[α2,β1,β2] x[σᵢ[β1,β2]] 
+#                 = ∑_{β1} A[α1,β1] (∑_{β2} B[α2,β1,β2] x[σᵢ[β1,β2]]) 
+#                 = ∑_{β1} A[α1,β1] Z[β1,α2]
 @inline function LinearAlgebra.mul!(y::AbstractVector,
         L::WarpedTensorProductMap2D,
         x::AbstractVector)
@@ -59,13 +54,10 @@ Evaluate the matrix-vector product
     return y
 end
 
-"""
-Evaluate the matrix-vector product
-
-(Lx)[σᵢ[β1,β2]] = ∑_{α1,α2} B[α2,β1,β2] A[α1,β1] x[σₒ[α1,α2]] 
-                = ∑_{α2} B[α2,β1,β2] (∑_{α1} A[α1,β1] x[σₒ[α1,α2]] )
-                = ∑_{α2} B[α2,β1,β2] Z[β1,α2])
-"""
+# Evaluate the matrix-vector product
+# (Lx)[σᵢ[β1,β2]] = ∑_{α1,α2} B[α2,β1,β2] A[α1,β1] x[σₒ[α1,α2]] 
+#                 = ∑_{α2} B[α2,β1,β2] (∑_{α1} A[α1,β1] x[σₒ[α1,α2]] )
+#                 = ∑_{α2} B[α2,β1,β2] Z[β1,α2])
 @inline function LinearMaps._unsafe_mul!(y::AbstractVector,
         L::LinearMaps.TransposeMap{Float64,
             <:WarpedTensorProductMap2D},

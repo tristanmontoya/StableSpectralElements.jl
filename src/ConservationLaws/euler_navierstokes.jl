@@ -54,9 +54,7 @@ end
 
 const EulerType{d} = Union{EulerEquations{d}, NavierStokesEquations{d}}
 
-"""
-Evaluate the flux for the Euler equations
-"""
+# Evaluate the flux for the Euler equations
 @inline function physical_flux(conservation_law::EulerType{d},
         u::AbstractVector{Float64}) where {d}
     (; γ_minus_1) = conservation_law
@@ -168,9 +166,8 @@ end
             physical_flux(conservation_law, u_R, n_f))
 end
 
-"""
-Entropy-conservative, kinetic-energy-preserving, and pressure-equilibrium-preserving numerical flux from Ranocha (see his 2018 PhD thesis)
-"""
+# Entropy-conservative, kinetic-energy-preserving, and pressure-equilibrium-preserving  
+# numerical flux from Ranocha (see his 2018 PhD thesis)
 @inline function compute_two_point_flux(conservation_law::EulerType{d},
         ::EntropyConservativeFlux,
         u_L::AbstractVector{Float64},
@@ -226,6 +223,14 @@ end
         (f_ρ * V_avg[m] + p_avg * n[m] for m in 1:d)...,
         f_ρ * C + 0.5 * (p_L * Vn_R + p_R * Vn_L))
 end
+
+@doc raw"""
+    IsentropicVortex(conservation_law::EulerEquations{2};
+                     Ma = 0.4, θ = π/4, R = 1.0, β = 1.0,
+                     σ = 1.0, x_0 = (0.0, 0.0))
+
+Isentropic vortex test case for `EulerEquations{2}`
+"""
 struct IsentropicVortex <: AbstractGridFunction{2}
     γ::Float64
     Ma::Float64
@@ -242,7 +247,7 @@ struct IsentropicVortex <: AbstractGridFunction{2}
             R::Float64 = 1.0,
             β::Float64 = 1.0,
             σ::Float64 = 1.0,
-            x_0::NTuple{2, Float64} = (0.0, 0.0),)
+            x_0::NTuple{2, Float64} = (0.0, 0.0))
         return new(conservation_law.γ, Ma, θ, R, β, σ^2, x_0, 4)
     end
 end
@@ -260,13 +265,13 @@ end
     return SVector{4}(ρ, ρ * v[1], ρ * v[2], E)
 end
 
-"""
-Periodic wave test case used in the following papers:
-- Veilleux et al., "Stable Spectral Difference approach using Raviart-Thomas elements for 3D computations on tetrahedral grids," JSC 2022.
-- Pazner and Persson, "Approximate tensor-product preconditioners for very high order discontinuous Galerkin methods," JCP 2018.
-- Jiang and Shu, "Efficient Implementation of Weighted ENO Schemes," JCP 1996.
+@doc raw"""
+    EulerPeriodicTest(conservation_law::EulerEquations{d},
+                      strength = 0.2, L = 2.0)
 
-Domain should be [0,2]ᵈ.
+Periodic wave test case for `EulerEquations{d}` on the domain $\Omega = [0,L]^d$, based on the following paper:
+- G.-S. Jiang and C.-W. Shu (1996). Efficient implementation of weighted ENO schemes. 
+  *Journal of Computational Physics* 126(1): 202-228.
 """
 struct EulerPeriodicTest{d} <: AbstractGridFunction{d}
     γ::Float64
@@ -288,9 +293,11 @@ end
     return SVector{d + 2}(ρ, fill(ρ, d)..., 1.0 / (f.γ - 1.0) + 0.5 * ρ * d)
 end
 
-"""Inviscid 3D Taylor-Green vortex, I think I got this version of it from Shadpey and Zingg, "Entropy-Stable Multidimensional Summation-by-Parts Discretizations on hp-Adaptive Curvilinear Grids for Hyperbolic Conservation Laws," JSC 2020.
+@doc raw"""
+    TaylorGreenVortex(conservation_law::EulerEquations{3}, Ma = 0.1)
 
-Domain should be [0,2π]³.
+Inviscid Taylor-Green vortex initial condition for `EulerEquations{3}` on the domain
+$\Omega = [0, 2\pi]^3$.
 """
 struct TaylorGreenVortex <: AbstractGridFunction{3}
     γ::Float64
@@ -312,9 +319,11 @@ end
     return SVector{5}(1.0, u, v, 0.0, p / (f.γ - 1) + 0.5 * (u^2 + v^2))
 end
 
-"""
-Kelvin-Helmholtz Instability from Ranocha et al.
-Domain should be [0,2]²
+@doc raw"""
+    KelvinHelmholtzInstability(conservation_law::EulerEquations{2}, ρ_0 = 0.5)
+
+Kelvin-Helmholtz instability initial condition for `EulerEquations{2}` on the domain
+$\Omega = [0,2]^2$
 """
 struct KelvinHelmholtzInstability <: AbstractGridFunction{2}
     γ::Float64

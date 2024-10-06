@@ -50,11 +50,7 @@ function LinearAdvectionDiffusionEquation(a::Float64, b::Float64)
     LinearAdvectionDiffusionEquation((a,), b)
 end
 
-"""
-Evaluate the flux for the linear advection equation
-
-`F(u) = au`
-"""
+# Evaluate the flux F(u) = au for the linear advection equation
 function physical_flux!(f::AbstractArray{Float64, 3},
         conservation_law::LinearAdvectionEquation{d},
         u::AbstractMatrix{Float64}) where {d}
@@ -64,11 +60,7 @@ function physical_flux!(f::AbstractArray{Float64, 3},
     return f
 end
 
-"""
-Evaluate the flux for the linear advection-diffusion equation
-
-`F(u,q) = au - bq`
-"""
+# Evaluate the flux F(u,q) = au - bq for the linear advection-diffusion equation
 function physical_flux!(f::AbstractArray{Float64, 3},
         conservation_law::LinearAdvectionDiffusionEquation{d},
         u::AbstractMatrix{Float64},
@@ -78,11 +70,8 @@ function physical_flux!(f::AbstractArray{Float64, 3},
     end
 end
 
-"""
-Evaluate the interface normal solution for the (advection-)diffusion equation using the BR1 approach
-
-`U*(u⁻, u⁺, n) = ½(u⁻ + u⁺)n`
-"""
+# Evaluate the interface normal solution U*(u⁻, u⁺, n) = (u⁻ + u⁺)n/2 for the (advection-)
+# diffusion equation using the BR1 approach
 function numerical_flux!(u_nstar::AbstractArray{Float64, 3},
         ::LinearAdvectionDiffusionEquation{d},
         ::BR1,
@@ -96,11 +85,8 @@ function numerical_flux!(u_nstar::AbstractArray{Float64, 3},
     end
 end
 
-"""
-Evaluate the numerical flux for the (advection-)diffusion equation using the BR1 approach (note that this gets added to the f_star from the advective flux)
-
-`F*(u⁻, u⁺, q⁻, q⁺, n) = ½(F²(u⁻,q⁻) + F²(u⁺, q⁺))⋅n`
-"""
+# Evaluate the numerical flux F*(u⁻, u⁺, q⁻, q⁺, n) = (F²(u⁻,q⁻) + F²(u⁺, q⁺))⋅n/2 for the # (advection-)diffusion equation using the BR1 approach (note that this gets added to the 
+# f_star from the advective flux
 function numerical_flux!(f_star::AbstractMatrix{Float64},
         conservation_law::LinearAdvectionDiffusionEquation{d},
         ::BR1,

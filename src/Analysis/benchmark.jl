@@ -1,5 +1,7 @@
 
-"""This removes the threading and considers just one element. Note that this probably will not work with the Euler equations as the facet states at adjacent elements are left undefined and thus may lead to non-physical states when used to compute the fluxes"""
+# This removes the threading and considers just one element. Note that this probably will 
+# not work with the Euler equations as the facet states at adjacent elements are left 
+# undefined and thus may lead to non-physical states when used to compute the fluxes.
 @views @timeit "semi-disc. residual" function rhs_benchmark!(dudt::AbstractArray{Float64,
             3},
         u::AbstractArray{Float64, 3},

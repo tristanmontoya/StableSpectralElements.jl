@@ -36,12 +36,19 @@ export physical_flux,
     NoTwoPointFlux,
     ExactSolution
 
+@doc raw"""
+    AbstractConservationLaw{d, PDEType, N_c}
+
+Abstract type for a conservation law, where `d` is the number of spatial dimensions,
+`PDEType <: AbstractPDEType` is either `FirstOrder` or `SecondOrder`, and `N_c` is the number of conservative
+variables.
+"""
 abstract type AbstractConservationLaw{d, PDEType, N_c} end
 abstract type AbstractPDEType end
-struct FirstOrder <: AbstractPDEType end
-struct SecondOrder <: AbstractPDEType end
+struct FirstOrder <: AbstractPDEType end # PDE with only first derivatives
+struct SecondOrder <: AbstractPDEType end # PDE with first and second derivatives
 
-"""First-order numerical fluxes"""
+# First-order numerical fluxes
 abstract type AbstractInviscidNumericalFlux end
 struct NoInviscidFlux <: AbstractInviscidNumericalFlux end
 struct LaxFriedrichsNumericalFlux <: AbstractInviscidNumericalFlux
@@ -54,12 +61,12 @@ struct EntropyConservativeNumericalFlux <: AbstractInviscidNumericalFlux end
 struct CentralNumericalFlux <: AbstractInviscidNumericalFlux end
 LaxFriedrichsNumericalFlux() = LaxFriedrichsNumericalFlux(1.0)
 
-"""Second-order numerical fluxes"""
+# Second-order numerical fluxes
 abstract type AbstractViscousNumericalFlux end
 struct BR1 <: AbstractViscousNumericalFlux end
 struct NoViscousFlux <: AbstractViscousNumericalFlux end
 
-"""Two-point fluxes (for split forms and entropy-stable schemes)"""
+# Two-point fluxes (for split forms and entropy-stable schemes)
 abstract type AbstractTwoPointFlux end
 struct ConservativeFlux <: AbstractTwoPointFlux end
 struct EntropyConservativeFlux <: AbstractTwoPointFlux end
@@ -120,13 +127,13 @@ end
     end
 end
 
-""" 
-Algorithm based on the Taylor series trick from Ismail and Roe (2009). There are further optimizations that could be made, but let's leave it like this for now.
-"""
+# Algorithm based on the Taylor series trick from Ismail and Roe (2009). There are further 
+# optimizations that could be made, but let's leave it like this for now.
 @inline function logmean(x::Float64, y::Float64)
     # f = (y/x - 1) / (y/x + 1)
     #   = (y - x) / (x + y)
-    # rearrange to avoid divisions using trick from https://trixi-framework.github.io/Trixi.jl/stable/reference-trixi/#Trixi.ln_mean
+    # rearrange to avoid divisions using trick from 
+    # https://trixi-framework.github.io/Trixi.jl/stable/reference-trixi/#Trixi.ln_mean
     f² = (x * (x - 2 * y) + y * y) / (x * (x + 2 * y) + y * y)
     if f² < 1.0e-4
         return (x + y) * 105 / (210 + f² * (70 + f² * (42 + f² * 30)))
@@ -148,7 +155,7 @@ end
     end
 end
 
-"""Generic structure for exact solution to PDE (may be deprecated in future versions)"""
+# Generic structure for exact solution to PDE (may be deprecated in future versions)
 struct ExactSolution{d, ConservationLaw, InitialData, SourceTerm} <: AbstractGridFunction{d}
     conservation_law::ConservationLaw
     initial_data::InitialData

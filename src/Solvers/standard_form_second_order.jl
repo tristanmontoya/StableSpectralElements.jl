@@ -1,3 +1,5 @@
+# Compute the auxiliary variable for a second-order PDE (note that only physical-operator 
+# form is implemented for now)
 @inline @views function auxiliary_variable!(dudt::AbstractArray{Float64, 3},
         solver::Solver{<:AbstractConservationLaw{d,
                 SecondOrder},
@@ -31,6 +33,8 @@
     end
 end
 
+# Compute the time derivative variable for a second-order PDE (note that only 
+# physical-operator form is implemented for now)
 @inline @views function time_derivative!(dudt::AbstractArray{Float64, 3},
         solver::Solver{<:AbstractConservationLaw{d,
                 SecondOrder},

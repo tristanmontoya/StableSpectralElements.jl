@@ -1,4 +1,4 @@
-"""Analyze results from grid refinement studies"""
+# Analyze results from grid refinement studies
 struct RefinementAnalysis{ExactSolution} <: AbstractAnalysis
     exact_solution::ExactSolution
     sequence_path::String
