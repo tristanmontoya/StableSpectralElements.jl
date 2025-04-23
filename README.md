@@ -14,7 +14,7 @@ StableSpectralElements.jl is a registered Julia package (compatible with Julia v
 using Pkg; Pkg.add("StableSpectralElements")
 ```
 
-For further information on the functionality and usage of this package, please refer to the [example notebooks](https://github.com/tristanmontoya/StableSpectralElements.jl/tree/main/examples/) as well as the [documentation](https://tjbmontoya.com/StableSpectralElements.jl/dev/), or feel free to [send me an email](mailto:tristan.montoya@mail.utoronto.ca). If you suspect something is not working properly, or have an idea for how to improve StableSpectralElements.jl, [please file an issue](https://github.com/tristanmontoya/StableSpectralElements.jl/issues). Contributions from the community are always welcome!
+For further information on the functionality and usage of this package, please refer to the [example notebooks](https://github.com/tristanmontoya/StableSpectralElements.jl/tree/main/examples/) as well as the [documentation](https://tjbmontoya.com/StableSpectralElements.jl/dev/), or feel free to [send me an email](mailto:tristan.montoya@alumni.utoronto.ca). If you suspect something is not working properly, or have an idea for how to improve StableSpectralElements.jl, [please file an issue](https://github.com/tristanmontoya/StableSpectralElements.jl/issues). Contributions from the community are always welcome!
 
 ## Citing
 
