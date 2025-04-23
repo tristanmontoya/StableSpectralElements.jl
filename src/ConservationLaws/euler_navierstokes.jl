@@ -229,7 +229,7 @@ end
                      Ma = 0.4, θ = π/4, R = 1.0, β = 1.0,
                      σ = 1.0, x_0 = (0.0, 0.0))
 
-Isentropic vortex test case for `EulerEquations{2}`
+Isentropic vortex test case for `EulerEquations{2}`.
 """
 struct IsentropicVortex <: AbstractGridFunction{2}
     γ::Float64

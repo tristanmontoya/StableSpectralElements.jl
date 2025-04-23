@@ -130,7 +130,7 @@ end
 function WeightAdjustedSolver(spatial_discretization::SpatialDiscretization,
         operator_algorithm = DefaultOperatorAlgorithm();
         assume_orthonormal::Bool = true,
-        tol = 1.0e-13,)
+        tol = 1.0e-13)
     (; V, W) = spatial_discretization.reference_approximation
     (; J_q) = spatial_discretization.geometric_factors
 

@@ -141,7 +141,8 @@ end
     return SVector{1}(n[m] * conservation_law.a[m] * flux_1d for m in 1:d)
 end
 
-function evaluate(exact_solution::ExactSolution{1,
+function evaluate(
+        exact_solution::ExactSolution{1,
             InviscidBurgersEquation{1},
             InitialDataGassner,
             SourceTermGassner},

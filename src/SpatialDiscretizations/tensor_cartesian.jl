@@ -2,7 +2,7 @@ function ReferenceApproximation(approx_type::NodalTensor,
         element_type::Line;
         mapping_degree::Int = 1,
         N_plot::Int = 10,
-        volume_quadrature_rule = LGLQuadrature(approx_type.p),)
+        volume_quadrature_rule = LGLQuadrature(approx_type.p))
     reference_element = RefElemData(Line(),
         Polynomial{MultidimensionalQuadrature}(),
         mapping_degree,
@@ -36,7 +36,7 @@ function ReferenceApproximation(approx_type::NodalTensor,
         mapping_degree::Int = 1,
         N_plot::Int = 10,
         volume_quadrature_rule = LGLQuadrature(approx_type.p),
-        facet_quadrature_rule = LGLQuadrature(approx_type.p),)
+        facet_quadrature_rule = LGLQuadrature(approx_type.p))
 
     # one-dimensional operators
     nodes_1D = quadrature(Line(), volume_quadrature_rule)[1]
@@ -88,7 +88,7 @@ function ReferenceApproximation(approx_type::NodalTensor,
         mapping_degree::Int = 1,
         N_plot::Int = 10,
         volume_quadrature_rule = LGLQuadrature(approx_type.p),
-        facet_quadrature_rule = LGLQuadrature(approx_type.p),)
+        facet_quadrature_rule = LGLQuadrature(approx_type.p))
 
     # one-dimensional operators
     nodes_1D = quadrature(Line(), volume_quadrature_rule)[1]

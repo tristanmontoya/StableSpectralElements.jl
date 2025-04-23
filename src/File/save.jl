@@ -26,7 +26,7 @@ function save_project(@nospecialize(conservation_law::AbstractConservationLaw),
         tspan::NTuple{2, Float64},
         results_path::String;
         overwrite = false,
-        clear = false,)
+        clear = false)
     results_path = new_path(results_path, overwrite, clear)
 
     save(string(results_path, "project.jld2"),
@@ -83,7 +83,8 @@ function save_callback(results_path::String,
     condition(u, t, integrator) = ((integrator.iter + restart_step) % interval) == 0
     affect!(integrator) = save_solution(integrator, results_path, restart_step)
 
-    return CallbackSet(DiscreteCallback(condition, affect!, save_positions = (true, false)),
+    return CallbackSet(
+        DiscreteCallback(condition, affect!, save_positions = (true, false)),
         PresetTimeCallback([tspan[1], tspan[2]], affect!,
             save_positions = (true, false)))
 end

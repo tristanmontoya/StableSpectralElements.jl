@@ -4,7 +4,7 @@ function ReferenceApproximation(approx_type::ModalMulti,
         N_plot::Int = 10,
         volume_quadrature_rule = DefaultQuadrature(2 *
                                                    approx_type.p),
-        facet_quadrature_rule = DefaultQuadrature(2 * approx_type.p),)
+        facet_quadrature_rule = DefaultQuadrature(2 * approx_type.p))
     d = dim(element_type)
     (; p) = approx_type
 
@@ -46,7 +46,7 @@ function ReferenceApproximation(approx_type::NodalMulti,
         N_plot::Int = 10,
         volume_quadrature_rule = DefaultQuadrature(2 *
                                                    approx_type.p),
-        facet_quadrature_rule = DefaultQuadrature(2 * approx_type.p),)
+        facet_quadrature_rule = DefaultQuadrature(2 * approx_type.p))
     d = dim(element_type)
     (; p) = approx_type
 
@@ -78,7 +78,7 @@ function ReferenceApproximation(approx_type::ModalMultiDiagE,
         element_type::AbstractElemShape;
         sbp_type::SBP = SBP{Hicken}(),
         mapping_degree::Int = 1,
-        N_plot::Int = 10,)
+        N_plot::Int = 10)
     d = dim(element_type)
 
     volume_quadrature_rule, facet_quadrature_rule = diagE_sbp_nodes(element_type, sbp_type,
@@ -112,7 +112,7 @@ function ReferenceApproximation(approx_type::NodalMultiDiagE,
         element_type::AbstractElemShape;
         sbp_type::SBP = SBP{Hicken}(),
         mapping_degree::Int = 1,
-        N_plot::Int = 10,)
+        N_plot::Int = 10)
     d = dim(element_type)
 
     volume_quadrature_rule, facet_quadrature_rule = diagE_sbp_nodes(element_type, sbp_type,

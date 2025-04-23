@@ -9,32 +9,32 @@ using ..GridFunctions
 import ..GridFunctions: evaluate
 
 export physical_flux,
-    physical_flux!,
-    numerical_flux!,
-    entropy,
-    conservative_to_entropy!,
-    entropy_to_conservative!,
-    compute_two_point_flux,
-    wave_speed,
-    logmean,
-    inv_logmean,
-    AbstractConservationLaw,
-    AbstractPDEType,
-    FirstOrder,
-    SecondOrder,
-    AbstractInviscidNumericalFlux,
-    AbstractViscousNumericalFlux,
-    NoInviscidFlux,
-    NoViscousFlux,
-    LaxFriedrichsNumericalFlux,
-    CentralNumericalFlux,
-    BR1,
-    EntropyConservativeNumericalFlux,
-    AbstractTwoPointFlux,
-    ConservativeFlux,
-    EntropyConservativeFlux,
-    NoTwoPointFlux,
-    ExactSolution
+       physical_flux!,
+       numerical_flux!,
+       entropy,
+       conservative_to_entropy!,
+       entropy_to_conservative!,
+       compute_two_point_flux,
+       wave_speed,
+       logmean,
+       inv_logmean,
+       AbstractConservationLaw,
+       AbstractPDEType,
+       FirstOrder,
+       SecondOrder,
+       AbstractInviscidNumericalFlux,
+       AbstractViscousNumericalFlux,
+       NoInviscidFlux,
+       NoViscousFlux,
+       LaxFriedrichsNumericalFlux,
+       CentralNumericalFlux,
+       BR1,
+       EntropyConservativeNumericalFlux,
+       AbstractTwoPointFlux,
+       ConservativeFlux,
+       EntropyConservativeFlux,
+       NoTwoPointFlux,
+       ExactSolution
 
 @doc raw"""
     AbstractConservationLaw{d, PDEType, N_c}
@@ -164,7 +164,7 @@ struct ExactSolution{d, ConservationLaw, InitialData, SourceTerm} <: AbstractGri
 
     function ExactSolution(conservation_law::AbstractConservationLaw{d, PDEType, N_c},
             initial_data::AbstractGridFunction{d};
-            periodic::Bool = false,) where {d, PDEType, N_c}
+            periodic::Bool = false) where {d, PDEType, N_c}
         return new{d,
             typeof(conservation_law),
             typeof(initial_data),
@@ -196,11 +196,11 @@ export InviscidBurgersEquation, ViscousBurgersEquation
 include("burgers.jl")
 
 export EulerEquations,
-    NavierStokesEquations,
-    EulerPeriodicTest,
-    TaylorGreenVortex,
-    IsentropicVortex,
-    KelvinHelmholtzInstability
+       NavierStokesEquations,
+       EulerPeriodicTest,
+       TaylorGreenVortex,
+       IsentropicVortex,
+       KelvinHelmholtzInstability
 include("euler_navierstokes.jl")
 
 end

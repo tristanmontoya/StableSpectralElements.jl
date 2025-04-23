@@ -60,7 +60,7 @@ function analyze(analysis::ErrorAnalysis{d},
         exact_solution,
         t::Float64 = 0.0;
         normalize = false,
-        write_to_file = true,) where {d}
+        write_to_file = true) where {d}
     (; N_c, N_e, J_q, w_err, V_err, volq_to_err, xyzq, total_volume, results_path) = analysis
 
     u_approx = Matrix{Float64}(undef, size(V_err, 1), N_c)

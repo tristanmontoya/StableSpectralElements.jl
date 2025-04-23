@@ -22,10 +22,10 @@ struct WarpedTensorProductMap3D{A_type, B_type, C_type, σᵢ_type, σₒ_type} 
             σᵢ,
             σₒ,
             [count(a -> a > 0,
-                σᵢ[β1, 1, :])
+                 σᵢ[β1, 1, :])
              for β1 in axes(σᵢ, 1)],
             [count(a -> a > 0,
-                σᵢ[β1, β2, :])
+                 σᵢ[β1, β2, :])
              for β1 in axes(σᵢ, 1),
             β2 in axes(σᵢ, 2)],
             (size(A, 1) * size(B, 1) *

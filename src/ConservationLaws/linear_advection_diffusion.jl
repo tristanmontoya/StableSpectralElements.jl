@@ -127,7 +127,8 @@ end
     return SVector{1}(sum(n[m] * conservation_law.a[m] * flux_1d for m in 1:d))
 end
 
-function evaluate(exact_solution::ExactSolution{d,
+function evaluate(
+        exact_solution::ExactSolution{d,
             LinearAdvectionEquation{d},
             <:AbstractGridFunction{d},
             NoSourceTerm{d}},
@@ -144,7 +145,8 @@ function evaluate(exact_solution::ExactSolution{d,
     return evaluate(initial_data, z)
 end
 
-function evaluate(exact_solution::ExactSolution{d,
+function evaluate(
+        exact_solution::ExactSolution{d,
             LinearAdvectionDiffusionEquation{d},
             InitialDataGaussian{d},
             NoSourceTerm{d}},
@@ -164,7 +166,8 @@ function evaluate(exact_solution::ExactSolution{d,
     return SVector{1}(A * (t₀ / (t + t₀))^(0.5 * d) * exp.(-r² / (4.0 * b * (t₀ + t))))
 end
 
-function evaluate(exact_solution::ExactSolution{d,
+function evaluate(
+        exact_solution::ExactSolution{d,
             LinearAdvectionDiffusionEquation{d},
             InitialDataSine{d},
             NoSourceTerm{d}},

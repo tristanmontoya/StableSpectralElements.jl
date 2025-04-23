@@ -2,12 +2,12 @@ module MatrixFreeOperators
 
 using LinearAlgebra, LinearMaps, MuladdMacro, StaticArrays, Octavian, TimerOutputs
 export AbstractOperatorAlgorithm,
-    BLASAlgorithm,
-    GenericMatrixAlgorithm,
-    GenericTensorProductAlgorithm,
-    DefaultOperatorAlgorithm,
-    SelectionMap,
-    make_operator
+       BLASAlgorithm,
+       GenericMatrixAlgorithm,
+       GenericTensorProductAlgorithm,
+       DefaultOperatorAlgorithm,
+       SelectionMap,
+       make_operator
 
 abstract type AbstractOperatorAlgorithm end
 struct DefaultOperatorAlgorithm <: AbstractOperatorAlgorithm end

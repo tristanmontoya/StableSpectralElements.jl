@@ -162,7 +162,7 @@ function ReferenceApproximation(approx_type::AbstractTensorProduct,
         volume_quadrature_rule = (LGQuadrature(approx_type.p),
             LGQuadrature(approx_type.p)),
         facet_quadrature_rule = LGQuadrature(approx_type.p),
-        sum_factorize_vandermonde = true,)
+        sum_factorize_vandermonde = true)
 
     # one-dimensional operators
     η_1D, q, V_1D, D_1D, I_1D, R_L, R_R = operators_1d(volume_quadrature_rule)
@@ -229,7 +229,7 @@ function ReferenceApproximation(approx_type::AbstractTensorProduct,
         facet_quadrature_rule = (LGQuadrature(approx_type.p),
             GaussQuadrature(approx_type.p, 1,
                 0)),
-        sum_factorize_vandermonde = true,)
+        sum_factorize_vandermonde = true)
 
     # one-dimensional operators
     η_1D, q, V_1D, D_1D, I_1D, R_L, R_R = operators_1d(volume_quadrature_rule)
@@ -263,9 +263,9 @@ function ReferenceApproximation(approx_type::AbstractTensorProduct,
         η3_to_ηf2 = OctavianMap(vandermonde(Line(), q[3], η_f2) / V_1D[3])
     end
     R = [η1_to_ηf1 ⊗ R_L[2] ⊗ η3_to_ηf2
-        R_R[1] ⊗ η2_to_ηf1 ⊗ η3_to_ηf2
-        R_L[1] ⊗ η2_to_ηf1 ⊗ η3_to_ηf2
-        η1_to_ηf1 ⊗ η2_to_ηf2 ⊗ R_L[3]]
+         R_R[1] ⊗ η2_to_ηf1 ⊗ η3_to_ηf2
+         R_L[1] ⊗ η2_to_ηf1 ⊗ η3_to_ηf2
+         η1_to_ηf1 ⊗ η2_to_ηf2 ⊗ R_L[3]]
 
     # reference element data (mainly used for mapping, normals, etc.)
     reference_element = RefElemData(Tet(),

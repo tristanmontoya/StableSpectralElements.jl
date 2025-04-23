@@ -136,7 +136,7 @@ function uniform_periodic_mesh(reference_element::RefElemData{d},
         random_rotate::Bool = false,
         collapsed_orientation::Bool = false,
         strategy::AbstractMeshGenStrategy = Uniform(),
-        tol::Float64 = 1.0e-12,) where {d}
+        tol::Float64 = 1.0e-12) where {d}
     VXY, EtoV = cartesian_mesh(reference_element.element_type, M, strategy)
     N_e = size(EtoV, 1)
 
@@ -155,24 +155,26 @@ function uniform_periodic_mesh(reference_element::RefElemData{d},
         @inbounds for k in 1:N_e
             EtoV_new = sort(EtoV[k, :], rev = true)
             X = hcat([[VXY[1][EtoV_new[m]] - VXY[1][EtoV_new[1]]
-                VXY[2][EtoV_new[m]] - VXY[2][EtoV_new[1]]
-                VXY[3][EtoV_new[m]] - VXY[3][EtoV_new[1]]] for m in 2:4]...)
+                       VXY[2][EtoV_new[m]] - VXY[2][EtoV_new[1]]
+                       VXY[3][EtoV_new[m]] - VXY[3][EtoV_new[1]]] for m in 2:4]...)
 
             if det(X) < 0
                 EtoV[k, :] = [EtoV_new[2]
-                    EtoV_new[1]
-                    EtoV_new[3]
-                    EtoV_new[4]]
+                              EtoV_new[1]
+                              EtoV_new[3]
+                              EtoV_new[4]]
             else
                 EtoV[k, :] = EtoV_new
             end
         end
     end
 
-    return make_periodic(MeshData([limits[m][1] .+
-                                   0.5 * (limits[m][2] - limits[m][1]) * (VXY[m] .+ 1.0)
-                                   for
-                                   m in 1:d]...,
+    return make_periodic(
+        MeshData(
+            [limits[m][1] .+
+             0.5 * (limits[m][2] - limits[m][1]) * (VXY[m] .+ 1.0)
+             for
+             m in 1:d]...,
             EtoV,
             reference_element),
         tol = tol)
@@ -197,13 +199,13 @@ function cartesian_mesh(::Tri, M::NTuple{2, Int}, ::ZigZag)
         bot_right = (j + 1) * (M[2] + 1) + i
         EtoV = vcat(EtoV,
             [bot_mid bot_left bot_left+1
-                bot_left+1 bot_mid+1 bot_mid
-                bot_right+1 bot_right bot_mid
-                bot_mid bot_mid+1 bot_right+1
-                bot_mid+2 bot_mid+1 bot_left+1
-                bot_left+1 bot_left+2 bot_mid+2
-                bot_right+1 bot_mid+1 bot_mid+2
-                bot_mid+2 bot_right+2 bot_right+1])
+             bot_left+1 bot_mid+1 bot_mid
+             bot_right+1 bot_right bot_mid
+             bot_mid bot_mid+1 bot_right+1
+             bot_mid+2 bot_mid+1 bot_left+1
+             bot_left+1 bot_left+2 bot_mid+2
+             bot_right+1 bot_mid+1 bot_mid+2
+             bot_mid+2 bot_right+2 bot_right+1])
     end
     return (VX, VY), EtoV
 end
@@ -360,7 +362,8 @@ function GeometricFactors(mesh::MeshData{3},
     Λ_q = Array{Float64, 4}(undef, N_q, 3, 3, N_e)
 
     @inbounds @views for k in 1:N_e
-        rxJ, sxJ, txJ, ryJ, syJ, tyJ, rzJ, szJ, tzJ, J = geometric_factors(x[:, k], y[:, k],
+        rxJ, sxJ, txJ, ryJ, syJ, tyJ, rzJ, szJ, tzJ, J = geometric_factors(
+            x[:, k], y[:, k],
             z[:, k], Dr, Ds,
             Dt)
 
@@ -505,7 +508,8 @@ end
     return GeometricFactors(J_q, Λ_q, J_f, nJf, nJq)
 end
 
-function uniform_periodic_mesh(reference_approximation::ReferenceApproximation{
+function uniform_periodic_mesh(
+        reference_approximation::ReferenceApproximation{
             <:RefElemData{3,
                 Tet},
             <:Union{NodalTensor,
@@ -514,7 +518,7 @@ function uniform_periodic_mesh(reference_approximation::ReferenceApproximation{
         M::NTuple{3, Int};
         random_rotate::Bool = false,
         strategy::AbstractMeshGenStrategy = Uniform(),
-        tol = 1e-10,)
+        tol = 1e-10)
     return uniform_periodic_mesh(reference_approximation.reference_element,
         limits,
         M,
@@ -524,14 +528,15 @@ function uniform_periodic_mesh(reference_approximation::ReferenceApproximation{
         tol = tol)
 end
 
-function uniform_periodic_mesh(reference_approximation::ReferenceApproximation{
+function uniform_periodic_mesh(
+        reference_approximation::ReferenceApproximation{
             <:RefElemData{d},
         },
         limits::NTuple{d, NTuple{2, Float64}},
         M::NTuple{d, Int};
         random_rotate::Bool = false,
         strategy::AbstractMeshGenStrategy = Uniform(),
-        tol = 1.0e-10,) where {d}
+        tol = 1.0e-10) where {d}
     return uniform_periodic_mesh(reference_approximation.reference_element,
         limits,
         M,

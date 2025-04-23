@@ -4,7 +4,7 @@ function RefElemData(elem::Tri,
         volume_quadrature_rule = (LGQuadrature(approx_type.p),
             LGQuadrature(approx_type.p)),
         facet_quadrature_rule = LGQuadrature(approx_type.p),
-        Nplot = 10,)
+        Nplot = 10)
     fv = face_vertices(elem) # set faces for triangle
 
     # Construct matrices on reference elements
@@ -70,7 +70,7 @@ function RefElemData(elem::Tet,
             LGQuadrature(approx_type.p)),
         facet_quadrature_rule = (LGQuadrature(approx_type.p),
             LGQuadrature(approx_type.p)),
-        Nplot = 10,)
+        Nplot = 10)
     fv = face_vertices(elem)
 
     # Construct matrices on reference elements

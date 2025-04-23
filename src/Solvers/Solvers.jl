@@ -5,21 +5,21 @@ using StaticArrays
 using MuladdMacro
 using SparseArrays
 using LinearAlgebra:
-    Diagonal,
-    eigvals,
-    inv,
-    mul!,
-    lmul!,
-    diag,
-    diagm,
-    factorize,
-    cholesky,
-    ldiv!,
-    Factorization,
-    Cholesky,
-    Symmetric,
-    I,
-    UniformScaling
+                     Diagonal,
+                     eigvals,
+                     inv,
+                     mul!,
+                     lmul!,
+                     diag,
+                     diagm,
+                     factorize,
+                     cholesky,
+                     ldiv!,
+                     Factorization,
+                     Cholesky,
+                     Symmetric,
+                     I,
+                     UniformScaling
 using TimerOutputs
 using LinearMaps: LinearMap, UniformScalingMap, TransposeMap
 using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
@@ -31,38 +31,38 @@ using ..SpatialDiscretizations
 using ..GridFunctions
 
 export AbstractResidualForm,
-    StandardForm,
-    FluxDifferencingForm,
-    AbstractMappingForm,
-    AbstractStrategy,
-    AbstractDiscretizationOperators,
-    AbstractMassMatrixSolver,
-    AbstractParallelism,
-    ReferenceOperators,
-    PhysicalOperators,
-    FluxDifferencingOperators,
-    AbstractPreAllocatedArrays,
-    PreAllocatedArraysFirstOrder,
-    PreAllocatedArraysSecondOrder,
-    PhysicalOperator,
-    ReferenceOperator,
-    Solver,
-    StandardMapping,
-    SkewSymmetricMapping,
-    Serial,
-    Threaded,
-    get_dof,
-    semi_discrete_residual!,
-    auxiliary_variable!,
-    make_operators,
-    entropy_projection!,
-    facet_correction!,
-    nodal_values!,
-    time_derivative!,
-    project_function!,
-    flux_differencing_operators,
-    initialize,
-    semidiscretize
+       StandardForm,
+       FluxDifferencingForm,
+       AbstractMappingForm,
+       AbstractStrategy,
+       AbstractDiscretizationOperators,
+       AbstractMassMatrixSolver,
+       AbstractParallelism,
+       ReferenceOperators,
+       PhysicalOperators,
+       FluxDifferencingOperators,
+       AbstractPreAllocatedArrays,
+       PreAllocatedArraysFirstOrder,
+       PreAllocatedArraysSecondOrder,
+       PhysicalOperator,
+       ReferenceOperator,
+       Solver,
+       StandardMapping,
+       SkewSymmetricMapping,
+       Serial,
+       Threaded,
+       get_dof,
+       semi_discrete_residual!,
+       auxiliary_variable!,
+       make_operators,
+       entropy_projection!,
+       facet_correction!,
+       nodal_values!,
+       time_derivative!,
+       project_function!,
+       flux_differencing_operators,
+       initialize,
+       semidiscretize
 
 abstract type AbstractResidualForm end
 abstract type AbstractMappingForm end
@@ -277,7 +277,7 @@ function Base.size(solver::Solver{
         <:AbstractConservationLaw{d, <:AbstractPDEType, N_c},
 }) where {
         d,
-        N_c,
+        N_c
 }
     N_p = size(solver.operators.V, 2)
     N_e = size(solver.preallocated_arrays.CI, 2)
@@ -433,10 +433,11 @@ end
         tspan::NTuple{2, Float64},
         strategy::AbstractStrategy = ReferenceOperator(),
         alg::AbstractOperatorAlgorithm = DefaultOperatorAlgorithm();
-        mass_matrix_solver::AbstractMassMatrixSolver = default_mass_matrix_solver(spatial_discretization,
+        mass_matrix_solver::AbstractMassMatrixSolver = default_mass_matrix_solver(
+            spatial_discretization,
             alg),
-        parallelism::AbstractParallelism = Threaded(),) where {d,
-        PDEType,
+        parallelism::AbstractParallelism = Threaded()) where {d,
+        PDEType
 }
     u0 = initialize(initial_data, spatial_discretization)
 
@@ -471,7 +472,8 @@ In-place function for evaluating the right-hand side of $\underline{u}'(t) = \un
   (i.e. `Serial` or `Threaded`).
 - `t::Float64`: Time variable
 """
-@timeit "semi-disc. residual" function semi_discrete_residual!(dudt::AbstractArray{Float64,
+@timeit "semi-disc. residual" function semi_discrete_residual!(
+        dudt::AbstractArray{Float64,
             3},
         u::AbstractArray{Float64, 3},
         solver::Solver{<:AbstractConservationLaw{<:Any,
@@ -492,7 +494,8 @@ In-place function for evaluating the right-hand side of $\underline{u}'(t) = \un
     return dudt
 end
 
-@timeit "semi-disc. residual" function semi_discrete_residual!(dudt::AbstractArray{Float64,
+@timeit "semi-disc. residual" function semi_discrete_residual!(
+        dudt::AbstractArray{Float64,
             3},
         u::AbstractArray{Float64, 3},
         solver::Solver{<:AbstractConservationLaw{<:Any,
@@ -513,7 +516,8 @@ end
     return dudt
 end
 
-@timeit "semi-disc. residual" function semi_discrete_residual!(dudt::AbstractArray{Float64,
+@timeit "semi-disc. residual" function semi_discrete_residual!(
+        dudt::AbstractArray{Float64,
             3},
         u::AbstractArray{Float64, 3},
         solver::Solver{<:AbstractConservationLaw{<:Any,
@@ -538,7 +542,8 @@ end
     return dudt
 end
 
-@timeit "semi-disc. residual" function semi_discrete_residual!(dudt::AbstractArray{Float64,
+@timeit "semi-disc. residual" function semi_discrete_residual!(
+        dudt::AbstractArray{Float64,
             3},
         u::AbstractArray{Float64, 3},
         solver::Solver{<:AbstractConservationLaw{<:Any,
@@ -564,12 +569,12 @@ end
 end
 
 export CholeskySolver,
-    WeightAdjustedSolver,
-    DiagonalSolver,
-    mass_matrix,
-    mass_matrix_inverse,
-    mass_matrix_solve!,
-    default_mass_matrix_solver
+       WeightAdjustedSolver,
+       DiagonalSolver,
+       mass_matrix,
+       mass_matrix_inverse,
+       mass_matrix_solve!,
+       default_mass_matrix_solver
 include("mass_matrix.jl")
 
 include("operators.jl")

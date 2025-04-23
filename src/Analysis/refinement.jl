@@ -56,12 +56,12 @@ function analyze(analysis::RefinementErrorAnalysis, n_grids = 100)
             eoc = [eoc; fill(NaN, 1, N_c)]
         else
             error = [error
-                transpose(load(string(results_path, "error.jld2"))["error"])]
+                     transpose(load(string(results_path, "error.jld2"))["error"])]
             eoc = [eoc
-                transpose([(log(error[i, e]) - log(error[i - 1, e])) /
-                           (log((dof[i, 1] * dof[i, 2])^(-1.0 / d)) -
-                            log((dof[i - 1, 1] * dof[i - 1, 2])^(-1.0 / d)))
-                           for e in 1:N_c])]
+                   transpose([(log(error[i, e]) - log(error[i - 1, e])) /
+                              (log((dof[i, 1] * dof[i, 2])^(-1.0 / d)) -
+                               log((dof[i - 1, 1] * dof[i - 1, 2])^(-1.0 / d)))
+                              for e in 1:N_c])]
         end
 
         if !isfile(string(sequence_path, "grid_", i + 1, "/error.jld2"))
@@ -76,7 +76,7 @@ end
 function analyze(analysis::RefinementAnalysis,
         n_grids = 100;
         max_derivs::Bool = false,
-        use_weight_adjusted_mass_matrix::Bool = true,)
+        use_weight_adjusted_mass_matrix::Bool = true)
     (; sequence_path, exact_solution) = analysis
 
     results_path = string(sequence_path, "grid_1/")
@@ -91,7 +91,8 @@ function analyze(analysis::RefinementAnalysis,
     N_t = last(time_steps)
     u, _ = load_solution(results_path, N_t)
 
-    error = transpose(analyze(ErrorAnalysis(results_path, conservation_law,
+    error = transpose(analyze(
+        ErrorAnalysis(results_path, conservation_law,
             spatial_discretization),
         u,
         exact_solution))
@@ -103,11 +104,13 @@ function analyze(analysis::RefinementAnalysis,
     end
 
     if max_derivs
-        conservation_results = analyze(PrimaryConservationAnalysis(results_path,
+        conservation_results = analyze(
+            PrimaryConservationAnalysis(results_path,
                 conservation_law,
                 spatial_discretization),
             time_steps)
-        energy_results = analyze(EnergyConservationAnalysis(results_path,
+        energy_results = analyze(
+            EnergyConservationAnalysis(results_path,
                 conservation_law,
                 spatial_discretization,
                 mass_solver),
@@ -115,12 +118,14 @@ function analyze(analysis::RefinementAnalysis,
         conservation = [maximum(abs.(conservation_results.dEdt[:, e])) for e in 1:N_c]'
         energy = [maximum((energy_results.dEdt[:, e])) for e in 1:N_c]'
     else
-        conservation = transpose(analyze(PrimaryConservationAnalysis(results_path,
+        conservation = transpose(analyze(
+            PrimaryConservationAnalysis(results_path,
                 conservation_law,
                 spatial_discretization),
             0,
             N_t)[3])
-        energy = transpose(analyze(EnergyConservationAnalysis(results_path,
+        energy = transpose(analyze(
+            EnergyConservationAnalysis(results_path,
                 conservation_law,
                 spatial_discretization,
                 mass_solver),
@@ -156,46 +161,51 @@ function analyze(analysis::RefinementAnalysis,
             N_t = last(time_steps)
             u, _ = load_solution(results_path, N_t)
             error = [error
-                transpose(analyze(ErrorAnalysis(results_path,
-                    conservation_law,
-                    spatial_discretization),
-                u,
-                exact_solution))]
+                     transpose(analyze(
+                         ErrorAnalysis(results_path,
+                             conservation_law,
+                             spatial_discretization),
+                         u,
+                         exact_solution))]
             eoc = [eoc
-                transpose([(log(error[i, e]) - log(error[i - 1, e])) /
-                           (log((dof[i, 1] * dof[i, 2])^(-1.0 / d)) -
-                            log((dof[i - 1, 1] * dof[i - 1, 2])^(-1.0 / d)))
-                           for e in 1:N_c])]
+                   transpose([(log(error[i, e]) - log(error[i - 1, e])) /
+                              (log((dof[i, 1] * dof[i, 2])^(-1.0 / d)) -
+                               log((dof[i - 1, 1] * dof[i - 1, 2])^(-1.0 / d)))
+                              for e in 1:N_c])]
 
             if max_derivs
-                conservation_results = analyze(PrimaryConservationAnalysis(results_path,
+                conservation_results = analyze(
+                    PrimaryConservationAnalysis(results_path,
                         conservation_law,
                         spatial_discretization),
                     time_steps)
-                energy_results = analyze(EnergyConservationAnalysis(results_path,
+                energy_results = analyze(
+                    EnergyConservationAnalysis(results_path,
                         conservation_law,
                         spatial_discretization,
                         mass_solver),
                     time_steps)
                 conservation = [conservation
-                    [maximum(abs.(conservation_results.dEdt[:, e]))
-                     for e in 1:N_c]']
+                                [maximum(abs.(conservation_results.dEdt[:, e]))
+                                 for e in 1:N_c]']
                 energy = [energy
-                    [maximum((energy_results.dEdt[:, e])) for e in 1:N_c]']
+                          [maximum((energy_results.dEdt[:, e])) for e in 1:N_c]']
             else
                 conservation = [conservation
-                    transpose(analyze(PrimaryConservationAnalysis(results_path,
-                        conservation_law,
-                        spatial_discretization),
-                    0,
-                    N_t)[3])]
+                                transpose(analyze(
+                                    PrimaryConservationAnalysis(results_path,
+                                        conservation_law,
+                                        spatial_discretization),
+                                    0,
+                                    N_t)[3])]
                 energy = [energy
-                    transpose(analyze(EnergyConservationAnalysis(results_path,
-                        conservation_law,
-                        spatial_discretization,
-                        mass_solver),
-                    0,
-                    N_t)[3])]
+                          transpose(analyze(
+                              EnergyConservationAnalysis(results_path,
+                                  conservation_law,
+                                  spatial_discretization,
+                                  mass_solver),
+                              0,
+                              N_t)[3])]
             end
         end
 
@@ -208,7 +218,8 @@ function analyze(analysis::RefinementAnalysis,
     return RefinementAnalysisResults(error, eoc, dof, conservation, energy)
 end
 
-@recipe function plot(analysis::Vector{
+@recipe function plot(
+        analysis::Vector{
             <:Union{RefinementAnalysis, RefinementErrorAnalysis},
         },
         results::Vector{<:Union{RefinementAnalysisResults,
@@ -217,7 +228,7 @@ end
         pairs = true,
         xlims = nothing,
         reference_line = nothing,
-        e = 1,)
+        e = 1)
     results_path = string(analysis.sequence_path, "grid_1/")
     if !isfile(string(results_path, "error.jld2"))
         error("File not found!")
@@ -296,7 +307,7 @@ function tabulate_analysis(results::RefinementAnalysisResults; e = 1, print_late
             "Conservation Metric",
             "Energy Metric",
             "\$L^2\$ Error",
-            "Order",
+            "Order"
         ]
         pretty_table(tab,
             header = latex_header,
@@ -315,7 +326,7 @@ function tabulate_analysis(results::RefinementAnalysisResults; e = 1, print_late
             "Conservation Metric",
             "Energy Metric",
             "L² Error",
-            "Order",
+            "Order"
         ],
         formatters = (ft_nomissing,
             ft_printf("%d", [1]),
@@ -341,7 +352,7 @@ function tabulate_analysis_for_paper(results::NTuple{2, RefinementAnalysisResult
         "Error Metric",
         "",
         "Order",
-        "",
+        ""
     ])
     pretty_table(tab,
         header = latex_header,

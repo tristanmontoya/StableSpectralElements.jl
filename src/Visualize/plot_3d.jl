@@ -11,7 +11,7 @@ function low_order_subdivision(reference_nodes::NTuple{3, Vector{Float64}},
     (N_p, N_e) = size(physical_nodes[1])
 
     cells = [MeshCell(VTKCellTypes.VTK_TETRA,
-        connectivity[mod1(i, N_sub), :] .+ N_p * div(i - 1, N_sub))
+                 connectivity[mod1(i, N_sub), :] .+ N_p * div(i - 1, N_sub))
              for i in 1:(N_sub * N_e)]
 
     return points, cells
@@ -49,7 +49,7 @@ function low_order_subdivision(p_vis::Int,
     (N_p, N_e) = size(xp)
 
     cells = [MeshCell(VTKCellTypes.VTK_TETRA,
-        connectivity[mod1(i, N_sub), :] .+ N_p * div(i - 1, N_sub))
+                 connectivity[mod1(i, N_sub), :] .+ N_p * div(i - 1, N_sub))
              for i in 1:(N_sub * N_e)]
 
     return points, cells, V_quad_to_plot
@@ -61,7 +61,7 @@ function postprocess_vtk(spatial_discretization::SpatialDiscretization{3},
         e = 1,
         p_vis = nothing,
         p_map = nothing,
-        variable_name = "u",)
+        variable_name = "u")
     (; reference_element, V, V_plot) = spatial_discretization.reference_approximation
     (; mesh, x_plot) = spatial_discretization
     (; rstp) = reference_element
@@ -80,7 +80,8 @@ function postprocess_vtk(spatial_discretization::SpatialDiscretization{3},
     end
 end
 
-@recipe function plot(obj::Union{SpatialDiscretization{3},
+@recipe function plot(
+        obj::Union{SpatialDiscretization{3},
             ReferenceApproximation{<:RefElemData{3}}};
         volume_quadrature = true,
         facet_quadrature = true,
@@ -101,7 +102,7 @@ end
         facet_inds = nothing,
         element_inds = nothing,
         mark_vertices = false,
-        outline_facets = false,)
+        outline_facets = false)
     aspect_ratio --> :equal
     legend --> false
     grid --> false
@@ -302,7 +303,8 @@ end
                         @series begin
                             color --> facet_color_inds[z]
                             linewidth --> grid_line_width
-                            X(rf[((i - 1) * N1 + 1 + nodes_per_facet * (facet_inds[z] - 1)):(i * N1 + nodes_per_facet * (facet_inds[z] - 1))],
+                            X(
+                                rf[((i - 1) * N1 + 1 + nodes_per_facet * (facet_inds[z] - 1)):(i * N1 + nodes_per_facet * (facet_inds[z] - 1))],
                                 sf[((i - 1) * N1 + 1 + nodes_per_facet * (facet_inds[z] - 1)):(i * N1 + nodes_per_facet * (facet_inds[z] - 1))],
                                 tf[((i - 1) * N1 + 1 + nodes_per_facet * (facet_inds[z] - 1)):(i * N1 + nodes_per_facet * (facet_inds[z] - 1))])
                         end
@@ -387,7 +389,8 @@ end
     end
 end
 
-function plot_ref_elem(reference_approximation::ReferenceApproximation{
+function plot_ref_elem(
+        reference_approximation::ReferenceApproximation{
             <:RefElemData{3,
                 Tet},
             <:Union{NodalTensor,

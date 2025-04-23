@@ -1,6 +1,6 @@
 function load_solution(results_path::String,
         time_step::Union{Int, String} = 0;
-        load_du = false,)
+        load_du = false)
     dict = load(string(results_path, "sol_", time_step, ".jld2"))
     if load_du
         return dict["u"], dict["du"], dict["t"]

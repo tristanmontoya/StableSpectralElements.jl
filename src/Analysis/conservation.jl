@@ -166,7 +166,8 @@ function evaluate_conservation_residual(analysis::EnergyConservationAnalysis,
     return dEdt
 end
 
-@inline @views function evaluate_conservation_residual(analysis::EntropyConservationAnalysis,
+@inline @views function evaluate_conservation_residual(
+        analysis::EntropyConservationAnalysis,
         u::Array{Float64, 3},
         dudt::Array{Float64, 3})
     (; mass_solver, conservation_law, N_c, N_e, V, WJ) = analysis
@@ -190,7 +191,7 @@ end
 
 function analyze(analysis::EntropyConservationAnalysis,
         time_steps::Vector{Int};
-        normalize = false,)
+        normalize = false)
     (; results_path, dict_name) = analysis
     N_t = length(time_steps)
     t = Vector{Float64}(undef, N_t)
@@ -272,7 +273,7 @@ end
 @recipe function plot(results::ConservationAnalysisResultsWithDerivative,
         e::Int = 1;
         net_change = true,
-        derivative = true,)
+        derivative = true)
     xlabel --> latexstring("t")
     labels = [LaTeXString("Net change"), LaTeXString("Time derivative")]
     fontfamily --> "Computer Modern"

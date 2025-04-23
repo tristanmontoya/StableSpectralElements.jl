@@ -1,4 +1,5 @@
-function ReferenceOperators(reference_approximation::ReferenceApproximation{
+function ReferenceOperators(
+        reference_approximation::ReferenceApproximation{
             <:RefElemData{d},
         },
         alg::AbstractOperatorAlgorithm,
@@ -36,7 +37,8 @@ function ReferenceOperators(reference_approximation::ReferenceApproximation{
         n_f)
 end
 
-function FluxDifferencingOperators(reference_approximation::ReferenceApproximation{
+function FluxDifferencingOperators(
+        reference_approximation::ReferenceApproximation{
             <:RefElemData{d},
         },
         alg::AbstractOperatorAlgorithm,
@@ -115,11 +117,12 @@ function PhysicalOperators(spatial_discretization::SpatialDiscretization{d},
 
     @inbounds for k in 1:N_e
         M⁻¹ = mass_matrix_inverse(mass_solver, k)
-        VOL[k] = Tuple(make_operator(M⁻¹ *
-                                     Matrix(V' *
-                                            sum(D[m]' * Diagonal(W * Λ_q[:, m, n, k])
-                                                for m in 1:d)),
-            alg) for n in 1:d)
+        VOL[k] = Tuple(make_operator(
+                           M⁻¹ *
+                           Matrix(V' *
+                                  sum(D[m]' * Diagonal(W * Λ_q[:, m, n, k])
+                           for m in 1:d)),
+                           alg) for n in 1:d)
         FAC[k] = make_operator(-M⁻¹ * Matrix(V' * R' * Diagonal(B * J_f[:, k])), alg)
         @inbounds for m in 1:d
             n_f[m, :, k] = nJf[m, :, k] ./ J_f[:, k]
@@ -144,12 +147,13 @@ function PhysicalOperators(spatial_discretization::SpatialDiscretization{d},
 
     @inbounds for k in 1:N_e
         M⁻¹ = mass_matrix_inverse(mass_solver, k)
-        VOL[k] = Tuple(make_operator(M⁻¹ * Matrix(V' * (sum(D[m]' *
-                                                 Diagonal(0.5 * W * Λ_q[:, m, n, k]) -
-                                                 Diagonal(0.5 * W * Λ_q[:, m, n, k]) * D[m]
-                                                 for m in 1:d) +
-                                             R' * Diagonal(0.5 * B * nJf[n, :, k]) * R)),
-            alg) for n in 1:d)
+        VOL[k] = Tuple(make_operator(
+                           M⁻¹ * Matrix(V' * (sum(D[m]' *
+                                       Diagonal(0.5 * W * Λ_q[:, m, n, k]) -
+                                       Diagonal(0.5 * W * Λ_q[:, m, n, k]) * D[m]
+                           for m in 1:d) +
+                                   R' * Diagonal(0.5 * B * nJf[n, :, k]) * R)),
+                           alg) for n in 1:d)
         FAC[k] = make_operator(-M⁻¹ * Matrix(V' * R' * Diagonal(B * J_f[:, k])), alg)
         @inbounds for m in 1:d
             n_f[m, :, k] = nJf[m, :, k] ./ J_f[:, k]

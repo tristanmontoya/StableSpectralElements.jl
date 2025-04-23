@@ -3,18 +3,18 @@ module GridFunctions
 using StaticArrays
 
 export AbstractGridFunction,
-    ConstantFunction,
-    InitialDataSine,
-    InitialDataCosine,
-    InitialDataGaussian,
-    InitialDataSinCos,
-    DerivativeSinCos,
-    InitialDataGassner,
-    BurgersSolution,
-    SourceTermGassner,
-    GaussianNoise,
-    NoSourceTerm,
-    evaluate
+       ConstantFunction,
+       InitialDataSine,
+       InitialDataCosine,
+       InitialDataGaussian,
+       InitialDataSinCos,
+       DerivativeSinCos,
+       InitialDataGassner,
+       BurgersSolution,
+       SourceTermGassner,
+       GaussianNoise,
+       NoSourceTerm,
+       evaluate
 
 abstract type AbstractGridFunction{d} end
 

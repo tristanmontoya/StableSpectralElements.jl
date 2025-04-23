@@ -15,7 +15,7 @@ function low_order_subdivision(reference_nodes::NTuple{2, Vector{Float64}},
     (N_p, N_e) = size(physical_nodes[1])
 
     cells = [MeshCell(VTKCellTypes.VTK_TRIANGLE,
-        connectivity[mod1(i, N_sub), :] .+ N_p * div(i - 1, N_sub))
+                 connectivity[mod1(i, N_sub), :] .+ N_p * div(i - 1, N_sub))
              for i in 1:(N_sub * N_e)]
 
     return points, cells
@@ -25,7 +25,7 @@ function postprocess_vtk(spatial_discretization::SpatialDiscretization{2},
         filename::String,
         u::Array{Float64, 3};
         e = 1,
-        variable_name = "u",)
+        variable_name = "u")
     (; V_plot, reference_element) = spatial_discretization.reference_approximation
     (; x_plot) = spatial_discretization
     (; rstp) = reference_element
@@ -42,7 +42,7 @@ function postprocess_vtk_high_order(spatial_discretization::SpatialDiscretizatio
         filename::String,
         u::Array{Float64, 3};
         e = 1,
-        variable_name = "u",)
+        variable_name = "u")
     (; V_plot, reference_element) = spatial_discretization.reference_approximation
     (; x_plot, N_e) = spatial_discretization
     (; rstp) = reference_element
@@ -51,7 +51,7 @@ function postprocess_vtk_high_order(spatial_discretization::SpatialDiscretizatio
     N_plot = size(V_plot, 1)
 
     cells = [MeshCell(VTKCellTypes.VTK_LAGRANGE_TRIANGLE,
-        collect(((k - 1) * N_plot + 1):(k * N_plot)))
+                 collect(((k - 1) * N_plot + 1):(k * N_plot)))
              for k in 1:N_e]
 
     u_nodal = vec(Matrix(V_plot * u[:, e, :]))
@@ -61,7 +61,8 @@ function postprocess_vtk_high_order(spatial_discretization::SpatialDiscretizatio
     end
 end
 
-@recipe function plot(obj::Union{SpatialDiscretization{2},
+@recipe function plot(
+        obj::Union{SpatialDiscretization{2},
             ReferenceApproximation{<:RefElemData{2}}};
         volume_quadrature = true,
         facet_quadrature = true,
@@ -76,7 +77,7 @@ end
         facet_node_color = 2,
         mapping_node_color = 3,
         grid_line_width = 2.0,
-        edge_line_width = 3.0,)
+        edge_line_width = 3.0)
     aspect_ratio --> 1.0
     legend --> false
     grid --> false
