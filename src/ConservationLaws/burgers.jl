@@ -104,7 +104,7 @@ end
         u_out::AbstractVector{Float64},
         n_f) where {d}
     a_n = sum(conservation_law.a[m] * n_f[m] for m in 1:d)
-    return max.(abs.(a_n * u_in), abs.(a_n * u_out))
+    return max(abs(a_n * u_in[1]), abs(a_n * u_out[1]))
 end
 
 @inline function compute_two_point_flux(conservation_law::BurgersType{d},
