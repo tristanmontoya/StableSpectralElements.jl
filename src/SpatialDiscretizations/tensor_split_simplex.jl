@@ -6,7 +6,7 @@ using SparseArrays
 Computes tensor-product nodes on a quadrilateral 
 **Inputs**
 * `p`: degree of the operator 
-* `opertype`: the type of 1d operator used to construct the SST-SBP method (lgl or csbp)
+* `opertype`: the type of 1d operator used to construct the SST-SBP method (lgl)
 * `n1d`: number of nodes in the 1D operator 
 
 **Outputs** 
@@ -15,17 +15,51 @@ Computes tensor-product nodes on a quadrilateral
 """
 function tensor_quad_nodes(p::Int;opertype::String="lgl", n1d::Int=-1)
     if opertype=="lgl"
-        z,w = quadrature(Line(), GaussLobattoQuadrature(p,0,0))
+        q,w = quadrature(Line(), GaussLobattoQuadrature(p,0,0))
 
-        Q = length(z)
-        x = repeat(z, Q)                 # x-coordinates: repeated for each row
-        y = repeat(z, inner=Q)           # y-coordinates: tiled for each column
-        xy = [x'; y']                   # 2 × n^2 matrix: each column is a 2D node
+        Q = length(q)
+        x = repeat(q, Q)          
+        y = repeat(q, inner=Q)   
+        xy = [x'; y']                 
         return xy, w
     else 
         error("Operator not implemented. Must be 'lgl.")
     end
 end
+
+"""
+### SummationByParts.tensor_lgl_hex_nodes
+
+Computes tensor-product nodes on a hexahedron
+**Inputs**
+* `p`: degree of the operator 
+* `opertype`: the type of 1d operator used to construct the SST-SBP method (lgl)
+* `n1d`: number of nodes in the 1D operator 
+
+**Outputs** 
+* `xyz`: node coordinates
+* `w`: weights of the 1D operator 
+"""
+function tensor_hex_nodes(p::Int; opertype::String="lgl", n1d::Int=-1)
+
+    if opertype=="lgl"
+        q,w = quadrature(Line(), GaussLobattoQuadrature(p,0,0))
+
+        Q = length(q)
+
+        x = repeat(q, Q * Q)                
+        y = repeat(repeat(q, inner=Q), outer=Q)   
+        z = repeat(q, inner=Q^2)                     
+
+        xyz = [x'; y'; z']
+
+        return xyz, w
+    else 
+        error("Operator not implemented. Must be 'lgl.")
+    end
+end
+
+
 """
 ### SummationByParts.square_quad_map
 
@@ -55,6 +89,44 @@ function square_quad_map(xp::Array{T},quad_vert::Array{T}) where T
     end
     return x 
 end
+
+"""
+### SummationByParts.cube_hex_map.jl 
+
+Maps points in the standard cube domain, [-1,1]^3, to any hexahedron 
+
+**Inputs** 
+* `xp`: points in the standard cube domain 
+* `hex_vert`: coordinates of the vertices of the general hexahedron element
+
+**Outputs** 
+* `x`: the mapped points in the hexahedral element 
+"""
+function cube_hex_map(xp::Array{T},hex_vert::Array{T}) where T
+    xi = xp[1]
+    eta = xp[2]
+    zeta = xp[3]
+    psi = []
+
+    push!(psi, 1/8*(1-xi)*(1-eta)*(1-zeta))
+    push!(psi, 1/8*(1+xi)*(1-eta)*(1-zeta))
+    push!(psi, 1/8*(1-xi)*(1+eta)*(1-zeta))
+    push!(psi, 1/8*(1+xi)*(1+eta)*(1-zeta))
+    push!(psi, 1/8*(1-xi)*(1-eta)*(1+zeta))
+    push!(psi, 1/8*(1+xi)*(1-eta)*(1+zeta))
+    push!(psi, 1/8*(1-xi)*(1+eta)*(1+zeta))
+    push!(psi, 1/8*(1+xi)*(1+eta)*(1+zeta))
+
+    x = zeros(3,1)
+    for i=1:3
+        for j=1:8
+            x[i] += hex_vert[j,i]*psi[j]
+        end
+    end
+
+    return x 
+end
+
 """
 ### SummationByParts.square_to_tri_map
 
@@ -97,25 +169,59 @@ function get_quad_vert()
 end
 
 """
-### SummationByParts.perp_to_equi_tri_map 
+### SummationByParts.get_quad_vert
 
-Maps nodes from the standard right triangle to an equilateral triangle 
-
-**Inputs** 
-* `x`: matrix containing coordinates of nodes in the right triange 
+Returns the vertices of the 4 hexahedra obtained by splitting the 
+standard tetrahedron with vertices [-1 -1 -1; 1 -1 -1; -1 1 -1; -1 -1 1]
 
 **Outputs** 
-* `xequi`: matrix containing coordinates of nodes in the equilateral triangle 
+* `hex_vert`: vertices of the 4 hexahedra 
 """
-function perp_to_equi_tri_map(x::Array{T}) where T
-    vtx = T[-1 -1/sqrt(3); 1 -1/sqrt(3); 0 2/sqrt(3)]
-    xequi = zeros(size(x))
-    for i = 1:2
-        xequi[i,:] .= -0.5 .* (x[1,:].+x[2,:])*vtx[1,i] .+
-                    0.5 .*(x[1,:].+1.0)*vtx[2,i] .+
-                    0.5 .*(x[2,:].+1.0)*vtx[3,i]
+function get_hex_vert(;T=Float64)
+    v1 = T[-1 -1 -1]
+    v2 = T[1 -1 -1]
+    v3 = T[-1 1 -1]
+    v4 = T[-1 -1 1]
+    v5 = T[0 0 -1]
+    v6 = T[-1 0 -1]
+    v7 = T[0 -1 -1]
+    v8 = T[-1 0 0]
+    v9 = T[-1 -1 0]
+    v10 = T[0 -1 0]
+    v11 = T[-1/3 -1/3 -1]
+    v12 = T[-1/3 -1/3 -1/3]
+    v13 = T[-1 -1/3 -1/3]
+    v14 = T[-1/3 -1 -1/3]
+    v15 = T[-1/2 -1/2 -1/2]
+    hex_vert = [[v2; v5; v7; v11; v10; v12; v14; v15],
+                [v5; v3; v11; v6; v12; v8; v15; v13],
+                [v7; v11; v1; v6; v14; v15; v9; v13],
+                [v10; v4; v12; v8; v14; v9; v15; v13]]
+    return hex_vert
+end
+
+"""
+### SummationByParts.cube_to_tet_map.jl 
+Maps points from the standard cube domain, [-1,1]^3, to the hexahedra
+generated in the split-tetrahedron
+
+**Inputs** 
+* `xi`: the point in the stadard cube element 
+
+**Outputs**
+* `x`: the correspoinding points in the 4 hexahedra in the split-tetrahedron
+"""
+function cube_to_tet_map(xi::Array{T}) where T
+    hex_vert = get_hex_vert()
+    n = size(xi,2)
+    x = zeros(3,4*n)
+    for i=0:3 
+        for j=1:n
+            xp = cube_hex_map(xi[:,j], Matrix(hex_vert[i+1]))
+            x[:,i*n+j] = xp 
+        end
     end
-    return xequi
+    return x
 end
 
 """
@@ -177,6 +283,117 @@ function metric_tri!(xp::Array{T},quad_vert::Array{T},dxi::SubArray{T},dx::SubAr
     dx[2,1]=∂ξ∂y
     dx[3,1]=∂η∂x
     dx[4,1]=∂η∂y
+end
+
+"""
+### SummationByParts.metric_tet
+
+Computes the metric terms for a point mapped from the standard cube domain 
+to a hexahedron in the split-tetrahedron
+
+**Inputs** 
+* `xp`: the coordinates of the point in the standard cube domain 
+* `hex_vert`: A matrix containing the vertices of the hexahedron in the split-tetrahedron
+
+**Outputs** 
+* `dxi`: A column vector containing the metric terms [dx/dxi,dx/deta,dx/dzeta,dy/dxi,dy/deta,dy/dzeta,dz/dxi,dz/deta,dz/dzeta]
+* `dx`: A column vector containing the metric terms [dxi/dx,dxi/dy,dxi/dz,deta/dx,deta/dy,deta/dz,dzeta/dx,dzeta/dy,dzeta/dz]
+* `Jac`: The metric Jacobian 
+"""
+function metric_tet!(xp::Array{T},hex_vert::Array{T},dxi::SubArray{T},dx::SubArray{T},Jac::SubArray{T}) where T
+    ξ = xp[1]
+    η = xp[2]
+    ζ = xp[3]
+    ∂Ψ∂ξ = []
+    ∂Ψ∂η = []
+    ∂Ψ∂ζ = []
+
+    push!(∂Ψ∂ξ, -1/8*(1-η)*(1-ζ))
+    push!(∂Ψ∂ξ, 1/8*(1-η)*(1-ζ))
+    push!(∂Ψ∂ξ, -1/8*(1+η)*(1-ζ))
+    push!(∂Ψ∂ξ, 1/8*(1+η)*(1-ζ))
+    push!(∂Ψ∂ξ, -1/8*(1-η)*(1+ζ))
+    push!(∂Ψ∂ξ, 1/8*(1-η)*(1+ζ))
+    push!(∂Ψ∂ξ, -1/8*(1+η)*(1+ζ))
+    push!(∂Ψ∂ξ, 1/8*(1+η)*(1+ζ))
+
+    push!(∂Ψ∂η, -1/8*(1-ξ)*(1-ζ))
+    push!(∂Ψ∂η, -1/8*(1+ξ)*(1-ζ))
+    push!(∂Ψ∂η, 1/8*(1-ξ)*(1-ζ))
+    push!(∂Ψ∂η, 1/8*(1+ξ)*(1-ζ))
+    push!(∂Ψ∂η, -1/8*(1-ξ)*(1+ζ))
+    push!(∂Ψ∂η, -1/8*(1+ξ)*(1+ζ))
+    push!(∂Ψ∂η, 1/8*(1-ξ)*(1+ζ))
+    push!(∂Ψ∂η, 1/8*(1+ξ)*(1+ζ))
+
+    push!(∂Ψ∂ζ, -1/8*(1-ξ)*(1-η))
+    push!(∂Ψ∂ζ, -1/8*(1+ξ)*(1-η))
+    push!(∂Ψ∂ζ, -1/8*(1-ξ)*(1+η))
+    push!(∂Ψ∂ζ, -1/8*(1+ξ)*(1+η))
+    push!(∂Ψ∂ζ, 1/8*(1-ξ)*(1-η))
+    push!(∂Ψ∂ζ, 1/8*(1+ξ)*(1-η))
+    push!(∂Ψ∂ζ, 1/8*(1-ξ)*(1+η))
+    push!(∂Ψ∂ζ, 1/8*(1+ξ)*(1+η))
+
+    ∂x∂ξ = 0.0
+    ∂x∂η = 0.0
+    ∂x∂ζ = 0.0
+    ∂y∂ξ = 0.0
+    ∂y∂η = 0.0
+    ∂y∂ζ = 0.0 
+    ∂z∂ξ = 0.0 
+    ∂z∂η = 0.0
+    ∂z∂ζ = 0.0
+
+    for j=1:8
+        ∂x∂ξ += hex_vert[j,1]*∂Ψ∂ξ[j]
+        ∂x∂η += hex_vert[j,1]*∂Ψ∂η[j]
+        ∂x∂ζ += hex_vert[j,1]*∂Ψ∂ζ[j]
+
+        ∂y∂ξ += hex_vert[j,2]*∂Ψ∂ξ[j]
+        ∂y∂η += hex_vert[j,2]*∂Ψ∂η[j]
+        ∂y∂ζ += hex_vert[j,2]*∂Ψ∂ζ[j]
+
+        ∂z∂ξ += hex_vert[j,3]*∂Ψ∂ξ[j]
+        ∂z∂η += hex_vert[j,3]*∂Ψ∂η[j]
+        ∂z∂ζ += hex_vert[j,3]*∂Ψ∂ζ[j]
+    end
+
+    J = (∂x∂ξ*∂y∂η*∂z∂ζ + ∂x∂η*∂y∂ζ*∂z∂ξ + ∂x∂ζ*∂y∂ξ*∂z∂η - 
+            ∂x∂ζ*∂y∂η*∂z∂ξ - ∂x∂η*∂y∂ξ*∂z∂ζ - ∂x∂ξ*∂y∂ζ*∂z∂η)
+    
+    ∂ξ∂x = 1/J * (∂y∂η*∂z∂ζ - ∂y∂ζ*∂z∂η) 
+    ∂η∂x = 1/J * (∂y∂ζ*∂z∂ξ - ∂y∂ξ*∂z∂ζ)
+    ∂ζ∂x = 1/J * (∂y∂ξ*∂z∂η - ∂y∂η*∂z∂ξ)
+    
+    ∂ξ∂y = 1/J * (∂x∂ζ*∂z∂η - ∂x∂η*∂z∂ζ)
+    ∂η∂y = 1/J * (∂x∂ξ*∂z∂ζ - ∂x∂ζ*∂z∂ξ)
+    ∂ζ∂y = 1/J * (∂x∂η*∂z∂ξ - ∂x∂ξ*∂z∂η)
+
+    ∂ξ∂z = 1/J * (∂x∂η*∂y∂ζ - ∂x∂ζ*∂y∂η)
+    ∂η∂z = 1/J * (∂x∂ζ*∂y∂ξ - ∂x∂ξ*∂y∂ζ)
+    ∂ζ∂z = 1/J * (∂x∂ξ*∂y∂η - ∂x∂η*∂y∂ξ)
+
+    Jac[1,1]=J
+    dxi[1,1]=∂x∂ξ
+    dxi[2,1]=∂x∂η
+    dxi[3,1]=∂x∂ζ
+    dxi[4,1]=∂y∂ξ
+    dxi[5,1]=∂y∂η
+    dxi[6,1]=∂y∂ζ
+    dxi[7,1]=∂z∂ξ
+    dxi[8,1]=∂z∂η
+    dxi[9,1]=∂z∂ζ
+
+    dx[1,1]=∂ξ∂x
+    dx[2,1]=∂ξ∂y
+    dx[3,1]=∂ξ∂z
+    dx[4,1]=∂η∂x
+    dx[5,1]=∂η∂y
+    dx[6,1]=∂η∂z
+    dx[7,1]=∂ζ∂x
+    dx[8,1]=∂ζ∂y
+    dx[9,1]=∂ζ∂z
 end
 
 """
@@ -300,6 +517,59 @@ function facet_nodes_square(n::Int)
 end
 
 """
+### SummationByParts.normals_cube
+
+Returns the normals on the standard cube domain [-1,1]^3 
+
+**Inputs** 
+* `nf`: the number of facet nodes 
+
+**Outputs** 
+* `N`: the normals at each facet node 
+"""
+function normals_cube(nf::Int; T=Float64)
+   
+    dim=3
+    N = zeros(T, (dim,nf,6)) # normal vector for each facet
+
+    N[1,:,1] .= -1.0
+    N[1,:,2] .= 1.0
+    N[2,:,3] .= -1.0
+    N[2,:,4] .= 1.0
+    N[3,:,5] .= -1.0
+    N[3,:,6] .= 1.0
+
+    return N
+end
+
+"""
+### SummationByParts.facet_nodes_cube
+
+Returns the global node index of each facet node in a cube element
+
+**Inputs** 
+* `n`: The number of nodes in the element 
+
+**Outputs**
+* `facet_node_idx`: The global node index for the facet nodes 
+"""
+function facet_nodes_cube(n::Int)
+ 
+    n1 = convert(Int, round(n^(1/3)))
+    nf = convert(Int, round(n^(2/3)))
+    facet_node_idx = zeros(Int, (6,nf))
+
+    facet_node_idx[1,:] = 1:n1:n
+    facet_node_idx[2,:] = n1:n1:n
+    facet_node_idx[3,:] = collect(Iterators.flatten([1:n1...] .+ (i-1)*nf for i in 1:n1))'
+    facet_node_idx[4,:] = collect(Iterators.flatten([nf+1-n1:nf...] .+ (i-1)*nf for i in 1:n1))'
+    facet_node_idx[5,:] = 1:nf 
+    facet_node_idx[6,:] = n+1-nf:n
+
+    return facet_node_idx
+end
+
+"""
 ### SummationByParts.map_tensor_operators_to_tri
 
 Maps the tensor-product operator to the quadrilateral elements in the split-triangle
@@ -388,6 +658,110 @@ function map_tensor_operators_to_tri(p::Int; opertype::String="lgl", n1d::Int=-1
 
     return Hs,Qs,Ds,Es,Ns,Ss
 end
+"""
+### SummationByParts.map_tensor_operators_to_tet
+
+Maps the tensor-product operator to the hexahedral elements in the split-tetrahedron
+
+**Inputs**
+* `p`: degree of the operator 
+* `opertype`: the type of 1d operator used to construct the SST-SBP method (lgl or csbp)
+* `n1d`: number of nodes in the 1D operator 
+
+**Outputs** 
+* `Hs`: A list of the norm matrices
+* `Qs`: A list of the Q matrices
+* `Ds`: A list of the D matrices 
+* `Es`: A list of the boundary integration operators
+* `Ns`: A list of the normal matrices 
+"""
+function map_tensor_operators_to_tet(p::Int; opertype::String="lgl", n1d::Int=-1, T=Float64)
+    dim = 3
+    xc, B = tensor_hex_nodes(p, opertype=opertype, n1d=n1d)   #nodes on cube
+    n = size(xc,2)
+    n1 = round(n^(1/3))
+    nf = convert(Int, round(n1^2))
+
+    # qf = 2*(p+1)-3 
+    # cub_lgl, vtx_lgl = SummationByParts.Cubature.quadrature(qf, internal=false)
+    # perm = sortperm(vec(SymCubatures.calcnodes(cub_lgl, vtx_lgl)))
+    # B = SymCubatures.calcweights(cub_lgl)[perm]
+    B = vec(kron(B,B))
+
+    hex_vert = get_hex_vert()
+    Nhat = normals_cube(nf) 
+    facet_node_idx = facet_nodes_cube(n) 
+
+    dxis = []
+    dxs = []
+    Js = []
+    Ns = []
+    for i = 1:4
+        dxi = zeros(9,n)
+        dx = zeros(9,n)
+        J = zeros(1,n)
+        N = zeros(3,n)
+        for j=1:n
+            metric_tet!(xc[:,j],hex_vert[i],view(dxi,:,j),view(dx,:,j),view(J,:,j))
+        end
+        push!(dxis, dxi)
+        push!(dxs, dx)
+        push!(Js, J)
+
+        N = zeros(T,(dim,nf,2*dim))
+        for k=1:6
+            for id=1:dim
+                N[id,:,k] = J[facet_node_idx[k,:]].*(dx[id,facet_node_idx[k,:]].*Nhat[1,:,k] .+ 
+                                                     dx[dim+id,facet_node_idx[k,:]].*Nhat[2,:,k] .+
+                                                     dx[2*dim+id,facet_node_idx[k,:]].*Nhat[3,:,k])
+            end
+        end
+        push!(Ns, N)
+    end
+
+    Hhat, Qhat, Dhat, Ehat, Rhat = tensor_operators(p, dim, opertype=opertype, n1d=n1d, T=T)
+    Es = []
+    for k=1:dim+1
+        E = zeros(T, (n,n,dim))
+        for i=1:dim
+            for j=1:2*dim
+                E[:,:,i] += Rhat[:,:,j]'*diagm(Ns[k][i,:,j].*B)*Rhat[:,:,j]
+            end
+        end
+        push!(Es,E)
+    end
+
+    Hs = []
+    Qs = []
+    Ds = []
+    for i=1:dim+1
+        Q = zeros(T, (n,n,dim))
+        E = Es[i]
+        D = zeros(T, (n,n,dim))
+        H = diagm(vec(Js[i]))*Hhat 
+        push!(Hs, H)
+        Sx = 0.5*(diagm(vec(Js[i]).*dxs[i][1,:]) * Qhat[:,:,1] + diagm(vec(Js[i]).*dxs[i][1+dim,:]) * Qhat[:,:,2] + diagm(vec(Js[i]).*dxs[i][1+2*dim,:]) * Qhat[:,:,3]) - 
+             0.5*(Qhat[:,:,1]' * diagm(vec(Js[i]).*dxs[i][1,:]) + Qhat[:,:,2]' * diagm(vec(Js[i]).*dxs[i][1+dim,:]) + Qhat[:,:,3]' * diagm(vec(Js[i]).*dxs[i][1+2*dim,:]))
+        Sy = 0.5*(diagm(vec(Js[i]).*dxs[i][2,:]) * Qhat[:,:,1] + diagm(vec(Js[i]).*dxs[i][2+dim,:]) * Qhat[:,:,2] + diagm(vec(Js[i]).*dxs[i][2+2*dim,:]) * Qhat[:,:,3]) - 
+             0.5*(Qhat[:,:,1]' * diagm(vec(Js[i]).*dxs[i][2,:]) + Qhat[:,:,2]' * diagm(vec(Js[i]).*dxs[i][2+dim,:]) + Qhat[:,:,3]' * diagm(vec(Js[i]).*dxs[i][2+2*dim,:]))
+        Sz = 0.5*(diagm(vec(Js[i]).*dxs[i][3,:]) * Qhat[:,:,1] + diagm(vec(Js[i]).*dxs[i][3+dim,:]) * Qhat[:,:,2] + diagm(vec(Js[i]).*dxs[i][3+2*dim,:]) * Qhat[:,:,3]) - 
+             0.5*(Qhat[:,:,1]' * diagm(vec(Js[i]).*dxs[i][3,:]) + Qhat[:,:,2]' * diagm(vec(Js[i]).*dxs[i][3+dim,:]) + Qhat[:,:,3]' * diagm(vec(Js[i]).*dxs[i][3+2*dim,:]))
+        
+        Q[:,:,1] = Sx + 0.5.*E[:,:,1]
+        Q[:,:,2] = Sy + 0.5.*E[:,:,2]
+        Q[:,:,3] = Sz + 0.5.*E[:,:,3]
+        push!(Qs, Q)
+        D[:,:,1] = inv(H)*Q[:,:,1]
+        D[:,:,2] = inv(H)*Q[:,:,2]
+        D[:,:,3] = inv(H)*Q[:,:,3]
+        # D[:,:,1] = diagm(vec(dxs[i][1,:]))*Dhat[:,:,1] + diagm(vec(dxs[i][4,:]))*Dhat[:,:,2] + diagm(vec(dxs[i][7,:]))*Dhat[:,:,3]
+        # D[:,:,2] = diagm(vec(dxs[i][2,:]))*Dhat[:,:,1] + diagm(vec(dxs[i][5,:]))*Dhat[:,:,2] + diagm(vec(dxs[i][8,:]))*Dhat[:,:,3]
+        # D[:,:,3] = diagm(vec(dxs[i][3,:]))*Dhat[:,:,1] + diagm(vec(dxs[i][6,:]))*Dhat[:,:,2] + diagm(vec(dxs[i][9,:]))*Dhat[:,:,3]
+        push!(Ds, D)
+    end 
+
+    return Hs,Qs,Ds,Es,Ns
+end
 
 """
 ### SummationByParts.global_node_index_tri
@@ -415,6 +789,50 @@ function global_node_index_tri(p::Int;opertype::String="lgl",n1d::Int=-1, T=Floa
     
     loc_glob_idx = []
     for k = 1:3
+        x = zeros(Int,(2,n))
+        x[1,:] = 1:n
+        for i=1:n
+            xgidx = xg .- xt[:,(k-1)*n+i]
+            col_norm = [norm(xgidx[:, j]) for j in 1:size(xg,2)]
+            ig = argmin(col_norm)
+            x[2,i] = ig
+        end
+        push!(loc_glob_idx, x)
+    end
+    return xg, loc_glob_idx
+end
+
+"""
+### SummationByParts.global_node_index_tet
+
+Returns the local to global node index on the split-tetrahedron element 
+
+**Inputs**
+* `p`: degree of the operator 
+* `opertype`: the type of 1d operator used to construct the TSS-SBP operator (lgl or csbp)
+* `n1d`: number of nodes in the 1D operator 
+
+**Outputs** 
+* `xg`: Coordinates of global nodes in the split-tetrahedron
+* `loc_glob_idx`: Local to global index matching 
+"""
+function global_node_index_tet(p::Int; opertype::String="lgl",n1d::Int=-1, T=Float64)
+    xh,_ = tensor_hex_nodes(p,opertype=opertype,n1d=n1d)
+    xt = cube_to_tet_map(xh)
+    n = size(xh,2)
+
+    facet_node_idx = facet_nodes_cube(n)
+    xg = copy(xt)
+    remove_idx = collect(Iterators.flatten([n.+facet_node_idx[1,:], 
+                                            (2*n).+facet_node_idx[2,:],
+                                            (2*n).+facet_node_idx[3,:],
+                                            (3*n).+facet_node_idx[1,:],
+                                            (3*n).+facet_node_idx[4,:],
+                                            (3*n).+facet_node_idx[6,:]]))
+    xg = xg[:, filter(x -> !(x in remove_idx), 1:size(xg, 2))]
+
+    loc_glob_idx = []
+    for k = 1:4
         x = zeros(Int,(2,n))
         x[1,:] = 1:n
         for i=1:n
@@ -513,6 +931,61 @@ function construct_split_operator_tri(p::Int; opertype::String="lgl", n1d::Int=-
     return Matrix(H),Q,D,E,S
 end
 
+"""
+### SummationByParts.construct_split_operator_tet
+
+Returns TSS-SBP operators on the reference tetrahedron 
+
+**Inputs**
+* `p`: degree of the operator 
+* `opertype`: the type of 1d operator used to construct the TSS-SBP operator (lgl or csbp)
+* `n1d`: number of nodes in the 1D operator 
+
+**Outputs**
+* `H`: The TSS norm matrix 
+* `Q`: The TSS Q matrix 
+* `D`: The TSS D matrix 
+* `E`: The TSS boundary integration operator
+"""
+function construct_split_operator_tet(p::Int; opertype::String="lgl", n1d::Int=-1, T=Float64)
+    Hs,Qs,Ds,Es,_ = map_tensor_operators_to_tet(p, opertype=opertype, n1d=n1d)
+    xg, loc_glob_idx = global_node_index_tet(p, opertype=opertype, n1d=n1d)
+    n = size(Hs[1],1)
+    nglob = size(xg,2) 
+    dim = 3
+
+    H = spzeros(nglob,nglob)
+    Q = [spzeros(nglob,nglob),spzeros(nglob,nglob),spzeros(nglob,nglob)]
+    D = [spzeros(nglob,nglob),spzeros(nglob,nglob),spzeros(nglob,nglob)]
+    E = [spzeros(nglob,nglob),spzeros(nglob,nglob),spzeros(nglob,nglob)]
+    for k=1:dim+1
+        for i=1:n
+            for j=1:n 
+                glob_idx = loc_glob_idx[k]
+                Z = construct_zmatrix(glob_idx,i,j,nglob)
+                if Hs[k][i,j]!=0.0
+                    H[:,:] += (Hs[k][i,j]*Z)
+                end
+                for id=1:dim
+                    if Qs[k][i,j,id]!=0.0
+                        Q[id] += (Qs[k][i,j,id]*Z)
+                    end
+                    if Es[k][i,j,id]!=0.0 
+                        E[id] += (Es[k][i,j,id]*Z)
+                    end
+                end
+            end
+        end
+    end
+    
+    for id=1:dim 
+        D[id] = inv(Matrix(H))*Q[id]
+    end
+    Q = [Matrix(m) for m in Q]
+    D = [Matrix(m) for m in D]
+    E = [Matrix(m) for m in E]
+    return Matrix(H),Q,D,E
+end
 
 """
 ### SummationByParts.global_node_index_tri_facet
@@ -656,77 +1129,183 @@ function construct_split_facet_operator_tri(p::Int; opertype::String="lgl", n1d:
     return B, N, R, E
 end
 
-function construct_line_tss_quadrature(p::Int; opertype::String="lgl", n1d::Int=-1, T=Float64)
-    dim = 2 
-    _, Bhat = tensor_quad_nodes(p,opertype=opertype,n1d=n1d)
-    nf = length(Bhat)
+"""
+### SummationByParts.global_node_index_tet_facet
+
+Returns the coordinates of the facet nodes and the 
+local and global node index for the facet nodes on the tetrahedron 
+
+**Inputs**
+* `p`: degree of the operator 
+* `opertype`: the type of 1d operator used to construct the TSS-SBP operator (lgl or csbp)
+* `n1d`: number of nodes in the 1D operator 
+
+**Outputs** 
+* `xf`: Coordinates of the facet nodes on the tetrahedron
+* `loc_glob_facet_idx`: The local to global index mapping of the facet nodes
+"""
+function global_node_index_tet_facet(p::Int;opertype::String="lgl",n1d::Int=-1, T=Float64)
+    dim = 3
+    xh,_= tensor_hex_nodes(p, opertype=opertype, n1d=n1d)
+    xt = cube_to_tet_map(xh)
+    xg,_ = global_node_index_tet(p, opertype=opertype, n1d=n1d)
+    n = size(xh,2)
+    n1 = convert(Int, round(n^(1/dim)))
+    nf = n1^(dim-1)
     
-    xf, loc_glob_idx = global_node_index_tri_facet(p, opertype=opertype, n1d=n1d)
+    facet_node_idx = facet_nodes_cube(n)
+    xf = zeros(T, (dim, dim*nf-3*n1+1, dim+1))
+    keep_idx = []
+    push!(keep_idx, collect(Iterators.flatten([facet_node_idx[3,:],
+                                               (n.+facet_node_idx[3,:]), 
+                                               ((3*n).+facet_node_idx[5,:])])))
+    # push!(keep_idx, collect(Iterators.flatten([(n.+facet_node_idx[2,:]), 
+    #                                             (2*n).+(facet_node_idx[4,:]),
+    #                                             (3*n).+(facet_node_idx[2,:])])))
+    push!(keep_idx, collect(Iterators.flatten([(n.+facet_node_idx[2,:]), 
+                                                (2*n).+ collect(Iterators.flatten([reverse(facet_node_idx[4,:][i:min(i+n1-1, end)]) for i in 1:n1:length(facet_node_idx[4,:])])),
+                                                (3*n).+ collect(Iterators.flatten([reverse(facet_node_idx[2,:][i:min(i+n1-1, end)]) for i in 1:n1:length(facet_node_idx[2,:])]))])))                                            
+    push!(keep_idx, collect(Iterators.flatten([(facet_node_idx[1,:]), 
+                                                (2*n).+(facet_node_idx[1,:]),
+                                                (3*n).+(facet_node_idx[3,:])])))
+    # push!(keep_idx, collect(Iterators.flatten([(facet_node_idx[5,:]), 
+    #                                             (n).+(facet_node_idx[5,:]),
+    #                                             (2*n).+(facet_node_idx[5,:])])))
+    push!(keep_idx, collect(Iterators.flatten([(facet_node_idx[5,:]), 
+                                                (n).+(facet_node_idx[5,:]),
+                                                (2*n).+ reverse(facet_node_idx[5,:])])))
+
+    unique_idx = [[keep_idx[1][1]],[keep_idx[2][1]],[keep_idx[3][1]],[keep_idx[4][1]]]
+    for k=1:dim+1
+        xtf = xt[:,keep_idx[k]]
+        for i=2:nf*dim
+            xtf_temp = xtf .- xtf[:,i]
+            col_norm = [norm(xtf_temp[:, j]) for j in 1:size(xtf,2)]
+            idx = argmin(col_norm[1:(i-1)])
+            if norm(xtf_temp[:,idx]) > 1e-14
+                push!(unique_idx[k],keep_idx[k][i])
+            end
+        end
+    end
+
+    for k=1:dim+1
+        xf[:,:,k] = xt[:,unique_idx[k]]
+    end
+    xfall= zeros(T,(dim,nf,dim*(dim+1)))
+    xfall[:,:,1] = xt[:,facet_node_idx[3,:]]
+    xfall[:,:,2] = xt[:,(n.+facet_node_idx[3,:])]
+    xfall[:,:,3] = xt[:,((3*n).+facet_node_idx[5,:])]
+    xfall[:,:,4] = xt[:,(n.+facet_node_idx[2,:])]
+    xfall[:,:,5] = xt[:,(2*n).+(facet_node_idx[4,:])]
+    xfall[:,:,6] = xt[:,(3*n).+(facet_node_idx[2,:])]
+    xfall[:,:,7] = xt[:,(facet_node_idx[1,:])]
+    xfall[:,:,8] = xt[:,(2*n).+(facet_node_idx[1,:])]
+    xfall[:,:,9] = xt[:,(3*n).+(facet_node_idx[3,:])]
+    xfall[:,:,10] = xt[:,(facet_node_idx[5,:])]
+    xfall[:,:,11] = xt[:,(n).+(facet_node_idx[5,:])]
+    xfall[:,:,12] = xt[:,(2*n).+(facet_node_idx[5,:])]
+
+    loc_glob_facet_idx = []
+    for k = 1:(dim*(dim+1))
+        x = zeros(Int,(3,nf))
+        x[1,:] = 1:nf
+        for i=1:nf
+            xfidx = xf[:,:,convert(Int,ceil(k/dim))] .- xfall[:,i,k] 
+            col_norm = [norm(xfidx[:, j]) for j in 1:size(xf,2)]
+            ig = argmin(col_norm)
+            x[2,i] = ig
+        end
+        for i=1:nf
+            xgidx = xg .- xfall[:,i,k]
+            col_norm = [norm(xgidx[:, j]) for j in 1:size(xg,2)]
+            ig = argmin(col_norm)
+            x[3,i] = ig
+        end
+        push!(loc_glob_facet_idx, x)
+    end
+    return xf, loc_glob_facet_idx
+end
+
+"""
+### SummationByParts.construct_split_facet_operator_tet
+
+Constructs the TSS-SBP facet operators on the tetrahedron
+
+**Inputs**
+* `p`: degree of the operator 
+* `opertype`: the type of 1d operator used to construct the TSS-SBP operator (lgl or csbp)
+* `n1d`: number of nodes in the 1D operator 
+
+**Outputs** 
+* `B`: The TSS facet quadrature weights 
+* `N`: The TSS normal matrix 
+* `R`: The TSS extrapolation matrix operator 
+* `E`: The TSS boundary integration operator 
+"""
+function construct_split_facet_operator_tet(p::Int; opertype::String="lgl", n1d::Int=-1, T=Float64)
+    dim = 3 
+    # qf = 2*(p+1)-3 
+    # cub_lgl, vtx_lgl = SummationByParts.Cubature.quadrature(qf, internal=false)
+    # perm = sortperm(vec(SymCubatures.calcnodes(cub_lgl, vtx_lgl)))
+    # B1 = SymCubatures.calcweights(cub_lgl)[perm]
+    _, B1 = tensor_quad_nodes(p,opertype=opertype,n1d=n1d)
+
+    Bhat = kron(diagm(B1),diagm(B1))
+    _,_,_,_,Nhat = map_tensor_operators_to_tet(p,opertype=opertype,n1d=n1d)
+    n1 = length(B1)
+    nf = n1^(dim-1)
+    n = (dim+1)*n1^dim - (dim+dim^(dim-2))*n1^(dim-1) + (dim-2)*((dim+1)*n1 - 2) + 1
+    # N_idx = [1 3; 2 2; 3 1; 1 5] #first column contains element number, and second column contains facet number of the element
+    # N_idx = [[1 3; 2 3; 4 5],[2 2; 3 4; 4 2],[1 1; 3 1; 4 3],[1 5; 2 5; 3 5]]
+    N_idx = [[1 3; 2 3; 4 5],[2 2; 3 4; 4 2],[1 1; 3 1; 4 3],[1 5; 2 5; 3 5]]
+    
+    xf, loc_glob_idx = global_node_index_tet_facet(p,opertype=opertype,n1d=n1d)
     nglob = size(xf,2) 
     B = zeros(T,(nglob,nglob,dim+1))
+    N = zeros(T, (dim, nglob,dim+1))
     for k=1:dim+1
         for i=1:dim
             glob_idx = loc_glob_idx[(k-1)*dim+i]
             for j=1:nf
                 Z = construct_zmatrix(glob_idx,j,j,nglob)
-                B[:,:,k] += (Bhat[j]*Z)
+                B[:,:,k] += (Bhat[j,j]*Z)
             end
         end
     end
-
-    _,_,_,_,Nhat,_ = map_tensor_operators_to_tri(p, opertype=opertype, n1d=n1d)
-    N_idx = [[2 2; 3 4],[3 1; 1 1],[1 3; 2 3]]
-    N = zeros(T, (dim, nglob,dim+1))
+    
     for id=1:dim
         for k=1:dim+1
             jj = dim*(k-1)
-            idx_vec=(collect(Iterators.flatten([loc_glob_idx[jj+1][2,:],loc_glob_idx[jj+2][2,:]])))
+            idx_vec=(collect(Iterators.flatten([loc_glob_idx[jj+1][2,:],loc_glob_idx[jj+2][2,:],loc_glob_idx[jj+3][2,:]])))
             idx = [findfirst(isequal(num), idx_vec) for num in 1:nglob]
             N[id,:,k] = collect(Iterators.flatten([Nhat[N_idx[k][1,1]][id,:,N_idx[k][1,2]],
-                                                   Nhat[N_idx[k][2,1]][id,:,N_idx[k][2,2]]]))[idx]
+                                                   Nhat[N_idx[k][2,1]][id,:,N_idx[k][2,2]],
+                                                   Nhat[N_idx[k][3,1]][id,:,N_idx[k][3,2]]]))[idx]
         end
     end
+    # N = ones(T, (dim, size(xf,2),dim+1))
+    # for k=1:dim+1
+    #     for i=1:dim 
+    #         N[i,:,k] = Nhat[N_idx[k,1]][i,:,N_idx[k,2]] * N[i,:,k]
+    #     end
+    # end
 
-    return vec(xf[1,:,3]), diag(abs.(B[:,:,3].*N[2,:,3]))
-end
+    R = zeros(T, (nglob,n,dim+1))
+    for k=1:dim+1 
+        jj = dim*(k-1)
+        loc_idx = unique(collect(Iterators.flatten([loc_glob_idx[jj+1][2,:],loc_glob_idx[jj+2][2,:],loc_glob_idx[jj+3][2,:]])))
+        glob_idx = unique(collect(Iterators.flatten([loc_glob_idx[jj+1][3,:],loc_glob_idx[jj+2][3,:],loc_glob_idx[jj+3][3,:]])))
+        for i=1:nglob
+            R[loc_idx[i],glob_idx[i],k] = 1.0
+        end 
+    end
 
-
-
-"""
-### SummationByParts.stat_sst_sbp
-
-Returns DOF and numbor of nonzero elements for SST SBP operators
-
-**Inputs**
-* `p`: degree of the operator 
-* `dim`: dimesion (2d or 3d)
-* `opertype`: the type of 1d operator used to construct the SST-SBP method (lgl or csbp)
-* `n1d`: number of nodes in the 1D operator 
-
-**Outputs** 
-* `dof`: degrees of freedom in the element (number of nodes)
-* `nnz`: number of nonzero elements in the derivative matrix
-"""
-function stat_sst_sbp(p::Int,dim::Int; opertype::String="lgl", n1d::Int=-1)
-    if opertype=="lgl"
-        n1=p+1
-        nn = n1
-    elseif opertype=="csbp"
-        if n1d==-1
-            n1d=4*p 
+    # xg, _ = global_node_index_tet(p)
+    E = zeros(T, (n,n,dim))
+    for i=1:dim 
+        for k=1:dim+1
+            E[:,:,i] += R[:,:,k]'*diagm(N[i,:,k])*B[:,:,k]*R[:,:,k]
         end
-        n1=n1d 
-        nn = 2*p
-    else 
-        error("Operator not implemented. Should choose between 'lgl' and 'csbp'.")
     end
-    # n1 = p+1
-    dof = (dim+1)*n1^dim - (dim+dim^(dim-2))*n1^(dim-1) + (dim-2)*((dim+1)*n1 - 2) + 1
-    # nnz = (dim*p + 1)*dof
-    if opertype=="lgl"
-        nnz = (nn+(nn-1)*(dim-1))*dof
-    elseif opertype=="csbp"
-        nnz = (nn+(nn-1)*(dim-1))*dof #(4*p*(dim+1)*(2*dim)) + (nn+(nn-1)*(dim-1))*(dof-(4*p*(dim+1)*(2*dim)))
-    end
-    return dof, nnz
+    return B, N, R, E
 end
