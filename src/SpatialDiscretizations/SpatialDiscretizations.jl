@@ -45,6 +45,7 @@ export AbstractApproximationType,
        NodalMulti,
        ModalMultiDiagE,
        NodalMultiDiagE,
+       NodalTPSS,
        AbstractReferenceMapping,
        AbstractMetrics,
        ExactMetrics,
@@ -132,13 +133,30 @@ end
 @doc raw"""
     ModalMultiDiagE(p::Int)
 
-Approximation type for a modal formulation based on a multidimensional volume quadrature
+Approximation type for a modal formulation based on a multidimensional volume quadrature 
 rule of polynomial degree $p$ including nodes collocated with those used for facet
 integration (generalized Vandermonde and derivative operators are dense, interpolation/
 extrapolation operator picks out values at facet quadrature nodes). Currently supports only
 the `Tri` element type.
 """
 struct ModalMultiDiagE <: AbstractMultidimensional
+    p::Int
+end
+
+@doc raw"""
+    nodalTPSS
+
+Approximation type for a nodal formulation based on a "tensor product split simplex" 
+oeprator. A tensor-product of a 1D SBP rule based off LGL (diagonal E operator)
+quadrature rule is mapped into a quad/hex subdomains of a split simplex. The subdomains 
+are reassembled in a continuous Galerkin formulation. Note: the mesh is not actually 
+split into quads/hexes. The splitting is only for the construction of the reference
+element. Generalized Vandermonde matrix is identity and interpolation/extrapolation 
+operator picks out values at facet quadrature nodes See: https://arxiv.org/abs/2408.10494. 
+Supports bot the 'Tri' and 'Tet' element type. 
+"""
+
+struct NodalTPSS <: AbstractMultidimensional
     p::Int
 end
 
@@ -509,6 +527,7 @@ include("tensor_cartesian.jl")
 export reference_geometric_factors, operators_1d
 include("tensor_simplex.jl")
 
+include("tensor_split_simplex.jl")
 export GeometricFactors,
        metrics,
        uniform_periodic_mesh,
