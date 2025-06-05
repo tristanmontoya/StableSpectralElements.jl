@@ -1,3 +1,5 @@
+using LinearAlgebra
+using SparseArrays
 """
 ### SummationByParts.tensor_lgl_quad_nodes
 
@@ -13,7 +15,7 @@ Computes tensor-product nodes on a quadrilateral
 """
 function tensor_quad_nodes(p::Int;opertype::String="lgl", n1d::Int=-1)
     if opertype=="lgl"
-        z,w = quadrature(Line(), GaussLobattoQuadrature(10,0,0))
+        z,w = quadrature(Line(), GaussLobattoQuadrature(p,0,0))
 
         Q = length(z)
         x = repeat(z, Q)                 # x-coordinates: repeated for each row
@@ -24,7 +26,35 @@ function tensor_quad_nodes(p::Int;opertype::String="lgl", n1d::Int=-1)
         error("Operator not implemented. Must be 'lgl.")
     end
 end
+"""
+### SummationByParts.square_quad_map
 
+Maps points in the standard square domain, [-1,1]^2, to any quadrilateral 
+
+**Inputs** 
+* `xp`: points in the standard square domain 
+* `quad_vert`: coordinates of the vertices of the general quadrilateral element
+
+**Outputs** 
+* `x`: the mapped points in the quadrilateral element 
+"""
+function square_quad_map(xp::Array{T},quad_vert::Array{T}) where T
+    xi = xp[1]
+    eta = xp[2]
+    psi = []
+    push!(psi, 1/4*(1-xi)*(1-eta))
+    push!(psi, 1/4*(1+xi)*(1-eta))
+    push!(psi, 1/4*(1-xi)*(1+eta))
+    push!(psi, 1/4*(1+xi)*(1+eta))
+    
+    x = zeros(2,1)
+    for i=1:2
+        for j=1:4
+            x[i] += quad_vert[j,i]*psi[j]
+        end
+    end
+    return x 
+end
 """
 ### SummationByParts.square_to_tri_map
 
@@ -172,13 +202,14 @@ function tensor_operators(p::Int, dim::Int; opertype::String="lgl", n1d::Int=-1,
         LGL_quadrature = LGLQuadrature(p)
         _,w = quadrature(Line(),LGL_quadrature)
         _, _, _, D1, _, _, _ = operators_1d(LGL_quadrature)
+        D1 = Matrix(D1)
         H1 = Diagonal(w)
-        Q1 = H1*Matrix(D1)
+        Q1 = H1*D1
         E1 = Q1 + Q1'
+        n = length(w)
     else 
         error("Operator not implemented. Must be 'lgl'.")
     end
-
     In = I(n)
     tR = zeros(T,(n,1)); tR[end] = 1.0
     tL = zeros(T,(n,1)); tL[1] = 1.0
@@ -698,121 +729,4 @@ function stat_sst_sbp(p::Int,dim::Int; opertype::String="lgl", n1d::Int=-1)
         nnz = (nn+(nn-1)*(dim-1))*dof #(4*p*(dim+1)*(2*dim)) + (nn+(nn-1)*(dim-1))*(dof-(4*p*(dim+1)*(2*dim)))
     end
     return dof, nnz
-end
-
-"""
-### SummationByParts.csbp_interior_operators
-
-Returns the interior centered finite difference operators of CSBP derivative matrix 
-
-**Inputs** 
-* `p`: The degree of the derivative operator 
-
-**Outputs**
-* `Qint`: The Q matrix filled with centered finite difference operators in rows correspoinding to the interior nodes
-"""
-function csbp_interior_operators(p::Int; T=Float64)
-    s = convert(Int,p/2) #+ mod(p,2)
-    m = 2*s+1
-    r = s+2 #convert(Int, ceil(s/2))+2
-    Qint = zeros(T,(1,m))
-    if p <= 2
-        Qint[r:end] = T[1/2]
-    elseif p<=4
-        Qint[r:end] = T[8,-1]./12
-    elseif p<=6
-        Qint[r:end] = T[45,-9,1]./60
-    elseif p<=8
-        Qint[r:end] = T[672,-168,32,-3]./840
-    elseif p<=10
-        Qint[r:end] = T[2100,-600,150,-25,2]./2520
-    end
-
-    Qint[1:r-2] = -reverse(Qint[r:end])
-    return Qint
-end
-"""
-### SummationByParts.build_csbp_operators
-
-Constructs CSBP operators 
-
-**Inputs** 
-* `p`: The degree of the operator 
-* `n`: The number of nodes 
-
-**Outputs** 
-* `H`: The norm matrix 
-* `Q`: The Q matrix 
-* `E`: The E matrix
-* `D`: The derivative matrix
-"""
-function build_csbp_operators(p::Int,n::Int; T=Float64)
-    @assert(n >= 2*(2*p))
-    q = 2*p
-
-    cub,vtx = SummationByParts.Cubature.getLineCubatureGregory(q,n)
-    x = SymCubatures.calcnodes(cub,vtx)
-    w = SymCubatures.calcweights(cub)
-    perm = sortperm(vec(x))
-    x = x[perm]
-    w = w[perm]
-
-    s = p
-    Q = zeros(T, (n,n))
-    Qint = csbp_interior_operators(2*p)
-    for i=1:n 
-        if i>s && i<=n-s
-            Q[i,i-s:i+s] = Qint 
-        end
-    end
-
-    V, Vdx = OrthoPoly.vandermonde(p, x)
-    r = 2*s
-    Qhat = Q[1:r,1:r]
-    Hhat = diagm(w[1:r])
-    Ehat = zeros(T,(n,n))[1:r,1:r]; Ehat[1,1]=-1.0; 
-    Dhat = (diagm(1.0./w)*Q)[1:r,r+1:r+s]
-    Vhat = V[1:r,:]
-    Vdxhat = Vdx[1:r,:]
-    Ahat = (Vdxhat - Dhat*V[r+1:r+s,:])
-
-    Qhat = pocs(Qhat,Hhat,Ehat,Vhat,Ahat)
-    Q[1:r,1:r] = Qhat 
-    Q[end-r+1:end,end-r+1:end] = -reverse(Qhat)
-    H = diagm(w)
-    E = zeros(T,(n,n)); E[1,1]=-1.0; E[end,end]=1.0
-    D = inv(H)*Q
-    return H,Q,E,D
-end
-
-"""
-### SummationByParts.pocs
-
-Constructs SBP operators using the Projection Onto Convex Sets (POCS) algorithm
-
-**Inputs** 
-* `Q`: The Q matrix 
-* `H`: The H matix 
-* `E`: The E matrix 
-* `V`: The Vandermonde matrix computed at the element nodes 
-* `A`: A matrix containing the derivative error, i.e., Vdx - D*V
-
-**Outputs**
-* `Q`: The Q matrix
-"""
-function pocs(Q::Array{T,2},H::Array{T,2},E::Array{T,2},V::Array{T,2},A::Array{T,2}) where T
-    tol = 4e-14
-    err1 = 1.0
-    err2 = 1.0
-  
-    while ((err1 > tol) || (err2 > tol))
-        Q = 0.5.*(E + Q - Q')
-        Q = Q + (H*A - Q*V)*pinv(V) 
-        
-        err1 = norm(Q + Q' - E)
-        err2 = norm(Q*V - H*A)
-        # println("err1: ", err1, "   ", "err2: ", err2)
-    end
-  
-    return Q
 end

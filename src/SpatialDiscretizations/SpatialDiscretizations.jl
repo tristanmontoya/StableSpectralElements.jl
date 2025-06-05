@@ -45,6 +45,7 @@ export AbstractApproximationType,
        NodalMulti,
        ModalMultiDiagE,
        NodalMultiDiagE,
+       NodalTPSS,
        AbstractReferenceMapping,
        AbstractMetrics,
        ExactMetrics,
@@ -155,7 +156,7 @@ operator picks out values at facet quadrature nodes See: https://arxiv.org/abs/2
 Supports bot the 'Tri' and 'Tet' element type. 
 """
 
-struct nodalTPSS <: AbstractMultidimensional
+struct NodalTPSS <: AbstractMultidimensional
     p::Int
 end
 
@@ -526,6 +527,7 @@ include("tensor_cartesian.jl")
 export reference_geometric_factors, operators_1d
 include("tensor_simplex.jl")
 
+include("tensor_split_simplex.jl")
 export GeometricFactors,
        metrics,
        uniform_periodic_mesh,

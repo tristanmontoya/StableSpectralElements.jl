@@ -146,7 +146,7 @@ function ReferenceApproximation(approx_type::NodalMultiDiagE,
         V_plot)
 end
 
-function ReferenceApproximation(approx_type::nodalTPSS,
+function ReferenceApproximation(approx_type::NodalTPSS,
     element_type::Tri;
     mapping_degree::Int = 1)
 
