@@ -187,7 +187,7 @@ function ReferenceApproximation(approx_type::NodalTPSS,
     R = SelectionMap(match_coordinate_vectors(rstf, rstq), length(wq))
     return ReferenceApproximation(approx_type,
         reference_element,
-        Tuple((D[m]) for m in 1:2),
+        Tuple(OctavianMap(D[m]) for m in 1:2),
         V,
         R,
         R,
