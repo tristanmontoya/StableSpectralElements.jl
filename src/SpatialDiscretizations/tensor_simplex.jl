@@ -156,7 +156,6 @@ function operators_1d(quadrature_rule::NTuple{d, AbstractQuadratureRule}) where 
 end
 
 function operators_1d(quadrature_rule::AbstractQuadratureRule)
-
     η_1D, q, V_1D, D_1D, I_1D, R_L, R_R = fill((), 7)
     η, _ = quadrature(Line(), quadrature_rule)
     η_1D = η
