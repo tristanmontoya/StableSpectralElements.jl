@@ -143,7 +143,7 @@ end
 function quadrature(::Tet, quadrature_rule::NTuple{3, AbstractQuadratureRule})
     r1d_1, w1d_1 = quadrature(Line(), quadrature_rule[1])
     r1d_2, w1d_2 = quadrature(Line(), quadrature_rule[2])
-    r1d_3, w1d_3 = quadrature(Line(), quadrature_rule[3])a
+    r1d_3, w1d_3 = quadrature(Line(), quadrature_rule[3])
     w_grid = meshgrid(w1d_1, w1d_2, w1d_3)
     r_grid = meshgrid(r1d_1, r1d_2, r1d_3)
     w2d = w_grid[1] .* w_grid[2] .* w_grid[3]

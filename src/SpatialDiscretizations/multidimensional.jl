@@ -194,7 +194,7 @@ function ReferenceApproximation(approx_type::NodalTPSS,
         V_plot)
 end
 
-function ReferenceApproximation(approx_type::TPSS,
+function ReferenceApproximation(approx_type::NodalTPSS,
     element_type::Tet;
     mapping_degree::Int = 1)
 
