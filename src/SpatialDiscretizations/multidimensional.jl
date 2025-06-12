@@ -167,7 +167,6 @@ function ReferenceApproximation(approx_type::NodalTPSS,
     end
     x_f = xf[1, :, 3]
     w_f = zeros(length(B[:, 1, 1]))
-
     # weights are scaled by normals
     for i in 1:length(B[:, 1, 1])
         w_f[i] = B[i, i, 1] * N[1, i, 1]
