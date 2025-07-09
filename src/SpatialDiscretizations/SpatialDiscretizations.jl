@@ -46,6 +46,8 @@ export AbstractApproximationType,
        ModalMultiDiagE,
        NodalMultiDiagE,
        NodalTPSS,
+       NodalTPSSOpt,
+       NodalTPSSLGL,
        AbstractReferenceMapping,
        AbstractMetrics,
        ExactMetrics,
@@ -147,7 +149,7 @@ end
     nodalTPSS
 
 Approximation type for a nodal formulation based on a "tensor product split simplex" 
-oeprator. A tensor-product of a 1D SBP rule based off LGL (diagonal E operator)
+oeprator. A tensor-product of a 1D diagonal norm classical finite difference SBP operator
 quadrature rule is mapped into a quad/hex subdomains of a split simplex. The subdomains 
 are reassembled in a continuous Galerkin formulation. Note: the mesh is not actually 
 split into quads/hexes. The splitting is only for the construction of the reference
@@ -157,6 +159,40 @@ Supports bot the 'Tri' and 'Tet' element type.
 """
 
 struct NodalTPSS <: AbstractMultidimensional
+    p::Int
+end
+
+@doc raw"""
+    nodalTPSS
+
+Approximation type for a nodal formulation based on a "tensor product split simplex" 
+oeprator. A tensor-product of a 1D diagona-norm Mattson truncation error optimized SBP operator
+is mapped into a quad/hex subdomains of a split simplex. The subdomains 
+are reassembled in a continuous Galerkin formulation. Note: the mesh is not actually 
+split into quads/hexes. The splitting is only for the construction of the reference
+element. Generalized Vandermonde matrix is identity and interpolation/extrapolation 
+operator picks out values at facet quadrature nodes See: https://arxiv.org/abs/2408.10494. 
+Supports bot the 'Tri' and 'Tet' element type. 
+"""
+
+struct NodalTPSSOpt <: AbstractMultidimensional
+    p::Int
+end
+
+@doc raw"""
+    nodalTPSS
+
+Approximation type for a nodal formulation based on a "tensor product split simplex" 
+oeprator. A tensor-product of a 1D SBP rule based off LGL (diagonal E operator)
+quadrature rule is mapped into a quad/hex subdomains of a split simplex. The subdomains 
+are reassembled in a continuous Galerkin formulation. Note: the mesh is not actually 
+split into quads/hexes. The splitting is only for the construction of the reference
+element. Generalized Vandermonde matrix is identity and interpolation/extrapolation 
+operator picks out values at facet quadrature nodes See: https://arxiv.org/abs/2408.10494. 
+Supports bot the 'Tri' and 'Tet' element type. 
+"""
+
+struct NodalTPSSLGL <: AbstractMultidimensional
     p::Int
 end
 
@@ -526,8 +562,11 @@ include("tensor_cartesian.jl")
 
 export reference_geometric_factors, operators_1d
 include("tensor_simplex.jl")
-
+include("optimized.jl")
 include("tensor_split_simplex.jl")
+
+
+
 export GeometricFactors,
        metrics,
        uniform_periodic_mesh,

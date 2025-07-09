@@ -1,5 +1,7 @@
+using StableSpectralElements
 using LinearAlgebra
 using SparseArrays
+
 """
 ### SummationByParts.tensor_lgl_quad_nodes
 
@@ -16,15 +18,19 @@ Computes tensor-product nodes on a quadrilateral
 function tensor_quad_nodes(p::Int; opertype::String = "lgl", n1d::Int = -1)
     if opertype == "lgl"
         q, w = quadrature(Line(), GaussLobattoQuadrature(p, 0, 0))
-
-        Q = length(q)
-        x = repeat(q, Q)
-        y = repeat(q, inner = Q)
-        xy = [x'; y']
-        return xy, w
+    elseif opertype == "opt"
+        (~, ~, H, q) = get_1d_opt(7)
+        w = diag(H)
+    elseif opertype == "csbp"
+        q, w = classic() 
     else
-        error("Operator not implemented. Must be 'lgl.")
+        error("Operator not implemented. Must be 'lgl, 'opt', or 'csbp'.")
     end
+    Q = length(q)
+    x = repeat(q, Q)
+    y = repeat(q, inner = Q)
+    xy = [x'; y']
+    return xy, w
 end
 
 """
@@ -54,7 +60,7 @@ function tensor_hex_nodes(p::Int; opertype::String = "lgl", n1d::Int = -1)
 
         return xyz, w
     else
-        error("Operator not implemented. Must be 'lgl.")
+        error("Operator not implemented. Must be 'lgl or 'opt'.")
     end
 end
 
@@ -425,8 +431,14 @@ function tensor_operators(
         Q1 = H1 * D1
         E1 = Q1 + Q1'
         n = length(w)
+    elseif opertype =="opt"
+        (D1, Q1, H1, ~) = get_1d_opt(7)
+        E1 = Q1 + Q1'
+        n = size(H1,1)
+    elseif opertype == "csbp"
+        q, w = classic() 
     else
-        error("Operator not implemented. Must be 'lgl'.")
+        error("Operator not implemented. Must be 'lgl, 'opt', or 'csbp'.")
     end
     In = I(n)
     tR = zeros(T, (n, 1))
@@ -903,6 +915,32 @@ function construct_zmatrix(glob_idx::Array{T}, i::Int, j::Int, nglob::Int) where
 end
 
 """
+### SummationByParts.construct_pmatrix
+
+Constructs the P matrix 
+
+**inputs** 
+* `l': subdomain number for which we calculate P
+
+**Outputs** 
+* `Z`: The Z matrix used to patch the split-elements in continuous Galerkin fashion
+"""
+function construct_pmatrix(np::Int, nd::Int, l::Int, p::Int; opertype::String = "lgl", n1d::Int = -1) where {T}
+    ~, loc_glob_idx = global_node_index_tri(p, opertype = opertype, n1d = n1d)
+    map = loc_glob_idx[l]
+    display(map)
+    P = zeros(np,nd)
+    for i = 1:nd
+        e = zeros(np,1)
+        ihat = map[2,i]
+        e[ihat] = 1
+        P[:,i] = e
+    end
+    return P
+end
+
+
+"""
 ### SummationByParts.construct_split_operator_tri
 
 Returns TSS-SBP operators on the reference triangle 
@@ -1373,3 +1411,345 @@ function construct_split_facet_operator_tet(
     end
     return B, N, R, E
 end
+
+"""
+### SummationByParts.csbp_interior_operators
+
+Returns the interior centered finite difference operators of CSBP derivative matrix 
+
+**Inputs** 
+* `p`: The degree of the derivative operator 
+
+**Outputs**
+* `Qint`: The Q matrix filled with centered finite difference operators in rows correspoinding to the interior nodes
+"""
+function csbp_interior_operators(p::Int; T=Float64)
+    s = convert(Int,p/2) #+ mod(p,2)
+    m = 2*s+1
+    r = s+2 #convert(Int, ceil(s/2))+2
+    Qint = zeros(T,(1,m))
+    if p <= 2
+        Qint[r:end] = T[1/2]
+    elseif p<=4
+        Qint[r:end] = T[8,-1]./12
+    elseif p<=6
+        Qint[r:end] = T[45,-9,1]./60
+    elseif p<=8
+        Qint[r:end] = T[672,-168,32,-3]./840
+    elseif p<=10
+        Qint[r:end] = T[2100,-600,150,-25,2]./2520
+    end
+
+    Qint[1:r-2] = -reverse(Qint[r:end])
+    return Qint
+end
+"""
+### SummationByParts.build_csbp_operators
+
+Constructs CSBP operators 
+
+**Inputs** 
+* `p`: The degree of the operator 
+* `n`: The number of nodes 
+
+**Outputs** 
+* `H`: The norm matrix 
+* `Q`: The Q matrix 
+* `E`: The E matrix
+* `D`: The derivative matrix
+"""
+function build_csbp_operators(p::Int,n::Int; T=Float64)
+    @assert(n >= 2*(2*p))
+    q = 2*p
+
+    cub,vtx = SummationByParts.Cubature.getLineCubatureGregory(q,n)
+    x = SymCubatures.calcnodes(cub,vtx)
+    w = SymCubatures.calcweights(cub)
+    perm = sortperm(vec(x))
+    x = x[perm]
+    w = w[perm]
+
+    s = p
+    Q = zeros(T, (n,n))
+    Qint = csbp_interior_operators(2*p)
+    for i=1:n 
+        if i>s && i<=n-s
+            Q[i,i-s:i+s] = Qint 
+        end
+    end
+
+    V, Vdx = OrthoPoly.vandermonde(p, x)
+    r = 2*s
+    Qhat = Q[1:r,1:r]
+    Hhat = diagm(w[1:r])
+    Ehat = zeros(T,(n,n))[1:r,1:r]; Ehat[1,1]=-1.0; 
+    Dhat = (diagm(1.0./w)*Q)[1:r,r+1:r+s]
+    Vhat = V[1:r,:]
+    Vdxhat = Vdx[1:r,:]
+    Ahat = (Vdxhat - Dhat*V[r+1:r+s,:])
+
+    Qhat = pocs(Qhat,Hhat,Ehat,Vhat,Ahat)
+    Q[1:r,1:r] = Qhat 
+    Q[end-r+1:end,end-r+1:end] = -reverse(Qhat)
+    H = diagm(w)
+    E = zeros(T,(n,n)); E[1,1]=-1.0; E[end,end]=1.0
+    D = inv(H)*Q
+    return H,Q,E,D
+end
+
+"""
+### SummationByParts.pocs
+
+Constructs SBP operators using the Projection Onto Convex Sets (POCS) algorithm
+
+**Inputs** 
+* `Q`: The Q matrix 
+* `H`: The H matix 
+* `E`: The E matrix 
+* `V`: The Vandermonde matrix computed at the element nodes 
+* `A`: A matrix containing the derivative error, i.e., Vdx - D*V
+
+**Outputs**
+* `Q`: The Q matrix
+"""
+function pocs(Q::Array{T,2},H::Array{T,2},E::Array{T,2},V::Array{T,2},A::Array{T,2}) where T
+    tol = 4e-14
+    err1 = 1.0
+    err2 = 1.0
+  
+    while ((err1 > tol) || (err2 > tol))
+        Q = 0.5.*(E + Q - Q')
+        Q = Q + (H*A - Q*V)*pinv(V) 
+        
+        err1 = norm(Q + Q' - E)
+        err2 = norm(Q*V - H*A)
+        # println("err1: ", err1, "   ", "err2: ", err2)
+    end
+  
+    return Q
+end
+
+
+function construct_split_operator_tri_new(
+        p::Int; opertype::String = "lgl", n1d::Int = -1, T = Float64)
+    Hs, Qs, Ds, Es, _, Ss = map_tensor_operators_to_tri(p, opertype = opertype, n1d = n1d)
+    xg, loc_glob_idx = global_node_index_tri(p, opertype = opertype, n1d = n1d)
+    nd = size(Hs[1], 1)
+    nglob = size(xg, 2)
+    dim = 2
+    H = spzeros(nglob, nglob)
+    D = spzeros(nglob, nglob)
+    for k in 1:(dim + 1)
+        P = construct_pmatrix(nglob,nd,k,p,opertype = "lgl", n1d = -1)
+        H += P*Hs[k]*P'
+    end
+    for k in 1:(dim + 1)
+        P = construct_pmatrix(nglob,nd,k,p,opertype = "lgl", n1d = -1)
+        D+= inv(H)*P*Hs[k]*Ds[k][:,:,1]*P'
+    end
+    return H, D
+end
+
+# left multiplies a vector f by the binary matrix P^T
+# note that P^T*f takes the entires of f which correspond to rows of P which have a 1
+function multiply_Pt(f::Vector{Int64}, p::Int, l::Int; opertype::String = "lgl", n1d::Int = -1)
+    ~, loc_glob_idx = global_node_index_tri(p, opertype = opertype, n1d = n1d)
+    map = loc_glob_idx[l]
+    idx = map[2,:]
+    Ptf =f[idx]
+    return Ptf
+end
+
+# left multiplies a vector f by the binary matrix P
+# note that P*f takes the entires of f which correspond to rows of P which have a 1
+function multiply_P(f::Vector{Int64}, p::Int, l::Int; opertype::String = "lgl", n1d::Int = -1)
+    xg, loc_glob_idx = global_node_index_tri(p, opertype = opertype, n1d = n1d)
+    map = loc_glob_idx[l]
+    idx = map[2,:]
+    Pf = zeros(size(xg)[2])
+    Pf[idx] = f
+    return Pf
+end
+
+# multipies f on the left by D
+function multiply_D(f::Vector{Int64},p::Int; opertype::String = "lgl", n1d::Int = -1, T = Float64)
+    Hs, Qs, Ds, Es, _, Ss = map_tensor_operators_to_tri(p, opertype = opertype, n1d = n1d)
+    xg, loc_glob_idx = global_node_index_tri(p, opertype = opertype, n1d = n1d)
+    nd = size(Hs[1], 1)
+    nglob = size(xg, 2)
+    dim = 2
+    Df = zeros(nglob,1)
+    H = spzeros(nglob, nglob)
+    for k in 1:(dim + 1)
+        P = construct_pmatrix(nglob,nd,k,p,opertype = "lgl", n1d = -1)
+        H += P*Hs[k]*P'
+    end
+    for k in 1:(dim + 1)
+        map = loc_glob_idx[k]
+        idx = map[2,:]
+        F1 = f[idx]
+        F2 = Hs[k]*Ds[k][:,:,1]*F1
+        Df[idx] += F2
+    end   
+    Df = inv(H)*Df
+    return Df
+end
+
+function map_tensor_operators_to_tri_new(
+    p::Int; opertype::String = "lgl", n1d::Int = -1, T = Float64)
+dim = 2
+xs, B = tensor_quad_nodes(p, opertype = opertype, n1d = n1d) #nodes on square
+n = size(xs, 2)
+nf = convert(Int, sqrt(n))
+
+quad_vert = get_quad_vert()
+Nhat = normals_square(convert(Int, sqrt(n)))
+facet_node_idx = facet_nodes_square(n)
+
+dxis = []
+dxs = []
+Js = []
+Ns = []
+for i in 1:3
+    dxi = zeros(4, n)
+    dx = zeros(4, n)
+    J = zeros(1, n)
+    for j in 1:n
+        metric_tri!(
+            xs[:, j], quad_vert[i], view(dxi, :, j), view(dx, :, j), view(J, :, j))
+    end
+    push!(dxis, dxi)
+    push!(dxs, dx) # array of column vectors containing metric terms [dξ/dx,dξ/dy,dη/dx,dη/dy]
+    push!(Js, J) # array of the determinant of the jacobian matricies
+
+    N = zeros(T, (dim, nf, 4))
+    for k in 1:4
+        N[1, :, k] = J[facet_node_idx[k, :]] .*
+                     (dx[1, facet_node_idx[k, :]] .* Nhat[1, :, k] .+
+                      dx[3, facet_node_idx[k, :]] .* Nhat[2, :, k])
+        N[2, :, k] = J[facet_node_idx[k, :]] .*
+                     (dx[2, facet_node_idx[k, :]] .* Nhat[1, :, k] .+
+                      dx[4, facet_node_idx[k, :]] .* Nhat[2, :, k])
+    end
+    push!(Ns, N)
+end
+
+Hhat, Qhat, Dhat, Ehat, Rhat = tensor_operators(
+    p, dim, opertype = opertype, n1d = n1d, T = T)
+Es = []
+for k in 1:(dim + 1)
+    E = zeros(T, (n, n, dim))
+    for i in 1:dim
+        for j in 1:4
+            E[:, :, i] += Rhat[:, :, j]' * diagm(Ns[k][i, :, j] .* B) * Rhat[:, :, j]
+        end
+    end
+    push!(Es, E)
+end
+
+Hs = []
+Qs = []
+Ds = []
+Ss = []
+for i in 1:(dim + 1)
+    S = zeros(T, (n, n, dim))
+    Q = zeros(T, (n, n, dim))
+    E = Es[i]
+    D = zeros(T, (n, n, dim))
+    H = diagm(vec(Js[i])) * Hhat
+    push!(Hs, H)
+    L11 = diagm(vec(Js[i]).*dxs[i][1,:])
+    L12 = diagm(vec(Js[i]).*dxs[i][2,:])
+    L21 = diagm(vec(Js[i]).*dxs[i][3,:])
+    L22 = diagm(vec(Js[i]).*dxs[i][4,:])
+    S[:, :, 1] = 0.5*(Hhat*L11*Dhat[:,:,1]-Dhat[:,:,1]'*L11*Hhat + Hhat*L21*Dhat[:,:,2]-Dhat[:,:,2]'*L21*Hhat)
+    
+    S[:, :, 2] = 0.5*(Hhat*L12*Dhat[:,:,1]-Dhat[:,:,1]'*L12*Hhat + Hhat*L22*Dhat[:,:,2]-Dhat[:,:,2]'*L22*Hhat) 
+    push!(Ss, S)
+    Q[:, :, 1] = S[:, :, 1] + 0.5 .* E[:, :, 1]
+    Q[:, :, 2] = S[:, :, 2] + 0.5 .* E[:, :, 2]
+    push!(Qs, Q)
+    D[:, :, 1] = inv(H) * Q[:, :, 1]
+    D[:, :, 2] = inv(H) * Q[:, :, 2]
+    push!(Ds, D)
+end
+return Hs, Qs, Ds, Es, Ns, Ss
+end
+
+# constructs the D matrix in a matrix free format from 1D tensor operator
+function construct_D_matrix_free(p; opertype= "lgl", n1d = -1, T = Float64)
+    dim = 2
+    xs, B = tensor_quad_nodes(p, opertype = opertype, n1d = n1d) #nodes on square
+    n = size(xs, 2)
+    nf = convert(Int, sqrt(n))
+    Hs, ~, ~, ~, ~, ~ = map_tensor_operators_to_tri(p, opertype = opertype, n1d = n1d)
+    nd = size(Hs[1], 1)
+    xg, ~ = global_node_index_tri(p, opertype = opertype, n1d = n1d)
+    nglob = size(xg, 2)   
+    nd = size(Hs[1], 1)
+    quad_vert = get_quad_vert()
+    Nhat = normals_square(convert(Int, sqrt(n)))
+    facet_node_idx = facet_nodes_square(n)
+    
+    dxis = []
+    dxs = []
+    Js = []
+    Ns = []
+    for i in 1:3
+        dxi = zeros(4, n)
+        dx = zeros(4, n)
+        J = zeros(1, n)
+        for j in 1:n
+            metric_tri!(
+                xs[:, j], quad_vert[i], view(dxi, :, j), view(dx, :, j), view(J, :, j))
+        end
+        push!(dxis, dxi)
+        push!(dxs, dx) # array of column vectors containing metric terms [dξ/dx,dξ/dy,dη/dx,dη/dy]
+        push!(Js, J) # array of the determinant of the jacobian matricies
+    
+        N = zeros(T, (dim, nf, 4))
+        for k in 1:4
+            N[1, :, k] = J[facet_node_idx[k, :]] .*
+                         (dx[1, facet_node_idx[k, :]] .* Nhat[1, :, k] .+
+                          dx[3, facet_node_idx[k, :]] .* Nhat[2, :, k])
+            N[2, :, k] = J[facet_node_idx[k, :]] .*
+                         (dx[2, facet_node_idx[k, :]] .* Nhat[1, :, k] .+
+                          dx[4, facet_node_idx[k, :]] .* Nhat[2, :, k])
+        end
+        push!(Ns, N)
+    end
+    
+    Hhat, Qhat, Dhat, Ehat, Rhat = tensor_operators(
+        p, dim, opertype = opertype, n1d = n1d, T = T)
+    Es = []
+    for k in 1:(dim + 1)
+        E = zeros(T, (n, n, dim))
+        for i in 1:dim
+            for j in 1:4
+                E[:, :, i] += Rhat[:, :, j]' * diagm(Ns[k][i, :, j] .* B) * Rhat[:, :, j]
+            end
+        end
+        push!(Es, E)
+    end
+    display(size(Es[1]))
+    Dx = zeros(nglob,nglob)
+    Dy = zeros(nglob,nglob)
+
+    H = spzeros(nglob, nglob)
+    for k in 1:(dim + 1)
+        P = construct_pmatrix(nglob,nd,k,p,opertype = "lgl", n1d = -1)
+        H += P*Hs[k]*P'
+    end
+    for k = 1:(dim+1)
+        L11 = diagm(vec(Js[k]).*dxs[k][1,:])
+        L12 = diagm(vec(Js[k]).*dxs[k][2,:])
+        L21 = diagm(vec(Js[k]).*dxs[k][3,:])
+        L22 = diagm(vec(Js[k]).*dxs[k][4,:])
+        H_k = diagm(vec(Js[k])) * Hhat
+        P = construct_pmatrix(nglob,nd,k,p,opertype = "lgl", n1d = -1)
+        Dx += inv(H)*P*Hs[k]*(inv(H_k)*(0.5*(Hhat*L11*Dhat[:,:,1]-Dhat[:,:,1]'*L11*Hhat + Hhat*L21*Dhat[:,:,2]-Dhat[:,:,2]'*L21*Hhat)+0.5*Es[k][:,:,1]))*P'
+        Dy += inv(H)*P*Hs[k]*(inv(H_k)*(0.5*(Hhat*L12*Dhat[:,:,1]-Dhat[:,:,1]'*L12*Hhat + Hhat*L22*Dhat[:,:,2]-Dhat[:,:,2]'*L22*Hhat)+0.5*Es[k][:,:,2]))*P'
+    end
+return Dx, Dy
+
+end    

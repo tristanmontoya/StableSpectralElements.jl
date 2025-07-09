@@ -126,7 +126,10 @@ function ReferenceApproximation(approx_type::NodalMultiDiagE,
 
     sbp_element = RefElemData(element_type, sbp_type, approx_type.p)
 
-    (; rstq, rstf, rstp, wq) = reference_element
+    (; rstq, rstf, rstp, wq, nrstJ) = reference_element
+
+    display(nrstJ)
+    display(rstf)
 
     VDM = vandermonde(element_type, approx_type.p, rstq...)
     V = LinearMap(I, length(wq))
@@ -136,6 +139,8 @@ function ReferenceApproximation(approx_type::NodalMultiDiagE,
                          Diagonal(wq))
     #R = LinearMap(sbp_element.Vf) # SparseMatrixCSC
     R = SelectionMap(match_coordinate_vectors(rstf, rstq), length(wq))
+    display(R)
+    display(V)
 
     return ReferenceApproximation(approx_type,
         reference_element,
@@ -150,14 +155,14 @@ function ReferenceApproximation(approx_type::NodalTPSS,
         element_type::Tri;
         mapping_degree::Int = 1)
     B, N, R, E_facet = construct_split_facet_operator_tri(
-        approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
+        approx_type.p, opertype = "csbp", n1d = 8, T = Float64)
     H, Q, D, E_volume, S = construct_split_operator_tri(
-        approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
+        approx_type.p, opertype = "csbp", n1d = 8, T = Float64)
 
     xg, lob_glob_idx = global_node_index_tri(
-        approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
+        approx_type.p, opertype = "csbp", n1d = 8, T = Float64)
     xf, lob_glob_facet_idx = global_node_index_tri_facet(
-        approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
+        approx_type.p, opertype = "csbp", n1d = 8, T = Float64)
 
     x_v = xg[1, :]
     y_v = xg[2, :]
@@ -167,7 +172,8 @@ function ReferenceApproximation(approx_type::NodalTPSS,
     end
     x_f = xf[1, :, 3]
     w_f = zeros(length(B[:, 1, 1]))
-    # weights are scaled by normals
+
+    # facet weights are scaled by normals such that sum of weights = 2
     for i in 1:length(B[:, 1, 1])
         w_f[i] = B[i, i, 1] * N[1, i, 1]
     end
@@ -179,7 +185,9 @@ function ReferenceApproximation(approx_type::NodalTPSS,
         quad_rule_vol = volume_quadrature_rule,
         quad_rule_face = facet_quadrature_rule,
         Nplot = 10)
-    (; rstq, rstf, rstp, wq) = reference_element
+    (; rstq, rstf, rstp, wq, nrstJ) = reference_element
+
+    display(nrstJ)
     VDM = vandermonde(element_type, approx_type.p, rstq...)
     V = LinearMap(I, length(wq))
     V_plot = (vandermonde(element_type, approx_type.p, rstp...) *
@@ -194,6 +202,112 @@ function ReferenceApproximation(approx_type::NodalTPSS,
         R,
         R,
         V_plot)
+end
+
+function ReferenceApproximation(approx_type::NodalTPSSOpt,
+    element_type::Tri;
+    mapping_degree::Int = 1)
+B, N, R, E_facet = construct_split_facet_operator_tri(
+    approx_type.p, opertype = "opt", n1d = 8, T = Float64)
+H, Q, D, E_volume, S = construct_split_operator_tri(
+    approx_type.p, opertype = "opt", n1d = 8, T = Float64)
+
+xg, lob_glob_idx = global_node_index_tri(
+    approx_type.p, opertype = "opt", n1d = 8, T = Float64)
+xf, lob_glob_facet_idx = global_node_index_tri_facet(
+    approx_type.p, opertype = "opt", n1d = 8, T = Float64)
+
+x_v = xg[1, :]
+y_v = xg[2, :]
+w_v = zeros(length(H[:, 1]))
+for i in 1:length(H[:, 1])
+    w_v[i] = H[i, i]
+end
+x_f = xf[1, :, 3]
+w_f = zeros(length(B[:, 1, 1]))
+
+# facet weights are scaled by normals such that sum of weights = 2
+for i in 1:length(B[:, 1, 1])
+    w_f[i] = B[i, i, 1] * N[1, i, 1]
+end
+
+volume_quadrature_rule = tuple(x_v, y_v, w_v)
+facet_quadrature_rule = tuple(x_f, w_f)
+reference_element = RefElemData(element_type,
+    mapping_degree,
+    quad_rule_vol = volume_quadrature_rule,
+    quad_rule_face = facet_quadrature_rule,
+    Nplot = 10)
+(; rstq, rstf, rstp, wq, nrstJ) = reference_element
+
+display(nrstJ)
+VDM = vandermonde(element_type, approx_type.p, rstq...)
+V = LinearMap(I, length(wq))
+V_plot = (vandermonde(element_type, approx_type.p, rstp...) *
+          inv(VDM' * Diagonal(wq) * VDM) *
+          VDM' *
+          Diagonal(wq))
+R = SelectionMap(match_coordinate_vectors(rstf, rstq), length(wq))
+return ReferenceApproximation(approx_type,
+    reference_element,
+    Tuple(OctavianMap(D[m]) for m in 1:2),
+    V,
+    R,
+    R,
+    V_plot)
+end
+
+function ReferenceApproximation(approx_type::NodalTPSSLGL,
+    element_type::Tri;
+    mapping_degree::Int = 1)
+B, N, R, E_facet = construct_split_facet_operator_tri(
+    approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
+H, Q, D, E_volume, S = construct_split_operator_tri(
+    approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
+
+xg, lob_glob_idx = global_node_index_tri(
+    approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
+xf, lob_glob_facet_idx = global_node_index_tri_facet(
+    approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
+
+x_v = xg[1, :]
+y_v = xg[2, :]
+w_v = zeros(length(H[:, 1]))
+for i in 1:length(H[:, 1])
+    w_v[i] = H[i, i]
+end
+x_f = xf[1, :, 3]
+w_f = zeros(length(B[:, 1, 1]))
+
+# facet weights are scaled by normals such that sum of weights = 2
+for i in 1:length(B[:, 1, 1])
+    w_f[i] = B[i, i, 1] * N[1, i, 1]
+end
+
+volume_quadrature_rule = tuple(x_v, y_v, w_v)
+facet_quadrature_rule = tuple(x_f, w_f)
+reference_element = RefElemData(element_type,
+    mapping_degree,
+    quad_rule_vol = volume_quadrature_rule,
+    quad_rule_face = facet_quadrature_rule,
+    Nplot = 10)
+(; rstq, rstf, rstp, wq, nrstJ) = reference_element
+
+display(nrstJ)
+VDM = vandermonde(element_type, approx_type.p, rstq...)
+V = LinearMap(I, length(wq))
+V_plot = (vandermonde(element_type, approx_type.p, rstp...) *
+          inv(VDM' * Diagonal(wq) * VDM) *
+          VDM' *
+          Diagonal(wq))
+R = SelectionMap(match_coordinate_vectors(rstf, rstq), length(wq))
+return ReferenceApproximation(approx_type,
+    reference_element,
+    Tuple(OctavianMap(D[m]) for m in 1:2),
+    V,
+    R,
+    R,
+    V_plot)
 end
 
 function ReferenceApproximation(approx_type::NodalTPSS,
