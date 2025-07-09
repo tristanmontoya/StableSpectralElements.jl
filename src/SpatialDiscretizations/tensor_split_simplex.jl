@@ -19,10 +19,10 @@ function tensor_quad_nodes(p::Int; opertype::String = "lgl", n1d::Int = -1)
     if opertype == "lgl"
         q, w = quadrature(Line(), GaussLobattoQuadrature(p, 0, 0))
     elseif opertype == "opt"
-        (~, ~, H, q) = get_1d_opt(7)
+        (~, ~, H, q) = get_1d_opt(p)
         w = diag(H)
     elseif opertype == "csbp"
-        q, w = classic() 
+        q, w = quadrature(Line(), GaussLobattoQuadrature(p, 0, 0))
     else
         error("Operator not implemented. Must be 'lgl, 'opt', or 'csbp'.")
     end
@@ -432,11 +432,11 @@ function tensor_operators(
         E1 = Q1 + Q1'
         n = length(w)
     elseif opertype =="opt"
-        (D1, Q1, H1, ~) = get_1d_opt(7)
+        (D1, Q1, H1, ~) = get_1d_opt(p)
         E1 = Q1 + Q1'
         n = size(H1,1)
     elseif opertype == "csbp"
-        q, w = classic() 
+        q, w = quadrature(Line(), GaussLobattoQuadrature(p, 0, 0)) 
     else
         error("Operator not implemented. Must be 'lgl, 'opt', or 'csbp'.")
     end
