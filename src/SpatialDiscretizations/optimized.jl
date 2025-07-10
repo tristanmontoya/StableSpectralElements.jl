@@ -89,7 +89,7 @@ function get_1d_opt(p::Int)
         d = d1+d2+d3
         h = 1/(2*d+(N-7))
     
-        x = zeros(N,1)
+        x = zeros(N)
         x[2] = d1*h
         x[3] = (d1+d2)*h
         x[4] = d*h
@@ -159,7 +159,7 @@ function get_1d_opt(p::Int)
         d = d1+d2+d3
         h = 1/(2*d+(N-7))
         
-        x = zeros(N,1)
+        x = zeros(N)
         x[2] = d1*h
         x[3] = (d1+d2)*h
         x[4] = d*h
@@ -244,7 +244,7 @@ function get_1d_opt(p::Int)
         d = d1+d2+d3
         h = 1/(2*d+(N-7))
         
-        x = zeros(N,1)
+        x = zeros(N)
         x[2] = d1*h
         x[3] = (d1+d2)*h
         x[4] = d*h
