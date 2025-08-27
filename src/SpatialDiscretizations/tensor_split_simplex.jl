@@ -17,12 +17,19 @@ Computes tensor-product nodes on a quadrilateral
 """
 function tensor_quad_nodes(p::Int; opertype::String = "lgl", n1d::Int = -1)
     if opertype == "lgl"
-        q, w = quadrature(Line(), GaussLobattoQuadrature(p, 0, 0))
+        q, w = quadrature(Line(), GaussLobattoQuadrature(p, 0, 0)) # note: degree p operator has deg 2p-1 quadrature 
     elseif opertype == "opt"
         (~, ~, H, q) = get_1d_opt(p)
         w = diag(H)
+    elseif opertype == "optimal"
+        (~, ~, H, q) = get_1d_optimal(p)
+        w = diag(H)
+    elseif opertype == "minimal"
+        (~, ~, H, q) = get_1d_minimal(p)
+        w = diag(H)
     elseif opertype == "csbp"
-        q, w = quadrature(Line(), GaussLobattoQuadrature(p, 0, 0))
+        (~, ~, H, q) = get_1d_csbp(p)
+        w = diag(H)
     else
         error("Operator not implemented. Must be 'lgl, 'opt', or 'csbp'.")
     end
@@ -49,19 +56,30 @@ Computes tensor-product nodes on a hexahedron
 function tensor_hex_nodes(p::Int; opertype::String = "lgl", n1d::Int = -1)
     if opertype == "lgl"
         q, w = quadrature(Line(), GaussLobattoQuadrature(p, 0, 0))
-
-        Q = length(q)
-
-        x = repeat(q, Q * Q)
-        y = repeat(repeat(q, inner = Q), outer = Q)
-        z = repeat(q, inner = Q^2)
-
-        xyz = [x'; y'; z']
-
-        return xyz, w
+    elseif opertype == "opt"
+        (~, ~, H, q) = get_1d_opt(p)
+        w = diag(H)
+    elseif opertype == "optimal"
+        (~, ~, H, q) = get_1d_optimal(p)
+        w = diag(H)
+    elseif opertype == "minimal"
+        (~, ~, H, q) = get_1d_minimal(p)
+        w = diag(H)
+    elseif opertype == "csbp"
+        (~, ~, H, q) = get_1d_csbp(p)
+        w = diag(H)
     else
         error("Operator not implemented. Must be 'lgl or 'opt'.")
     end
+    Q = length(q)
+
+    x = repeat(q, Q * Q)
+    y = repeat(repeat(q, inner = Q), outer = Q)
+    z = repeat(q, inner = Q^2)
+
+    xyz = [x'; y'; z']
+
+    return xyz, w
 end
 
 """
@@ -435,8 +453,18 @@ function tensor_operators(
         (D1, Q1, H1, ~) = get_1d_opt(p)
         E1 = Q1 + Q1'
         n = size(H1,1)
+    elseif opertype =="optimal"
+        (D1, Q1, H1, ~) = get_1d_optimal(p)
+        E1 = Q1 + Q1'
+        n = size(H1,1)
+    elseif opertype =="minimal"
+        (D1, Q1, H1, ~) = get_1d_minimal(p)
+        E1 = Q1 + Q1'
+        n = size(H1,1)
     elseif opertype == "csbp"
-        q, w = quadrature(Line(), GaussLobattoQuadrature(p, 0, 0)) 
+        (D1, Q1, H1, ~) = get_1d_csbp(p)
+        E1 = Q1 + Q1' 
+        n = size(H1,1)
     else
         error("Operator not implemented. Must be 'lgl, 'opt', or 'csbp'.")
     end
@@ -606,11 +634,10 @@ function map_tensor_operators_to_tri(
     xs, B = tensor_quad_nodes(p, opertype = opertype, n1d = n1d) #nodes on square
     n = size(xs, 2)
     nf = convert(Int, sqrt(n))
-
     quad_vert = get_quad_vert()
     Nhat = normals_square(convert(Int, sqrt(n)))
     facet_node_idx = facet_nodes_square(n)
-
+    
     dxis = []
     dxs = []
     Js = []
@@ -626,7 +653,6 @@ function map_tensor_operators_to_tri(
         push!(dxis, dxi)
         push!(dxs, dx)
         push!(Js, J)
-
         N = zeros(T, (dim, nf, 4))
         for k in 1:4
             N[1, :, k] = J[facet_node_idx[k, :]] .*
@@ -638,7 +664,7 @@ function map_tensor_operators_to_tri(
         end
         push!(Ns, N)
     end
-
+    
     Hhat, Qhat, Dhat, Ehat, Rhat = tensor_operators(
         p, dim, opertype = opertype, n1d = n1d, T = T)
     Es = []
@@ -928,7 +954,6 @@ Constructs the P matrix
 function construct_pmatrix(np::Int, nd::Int, l::Int, p::Int; opertype::String = "lgl", n1d::Int = -1) where {T}
     ~, loc_glob_idx = global_node_index_tri(p, opertype = opertype, n1d = n1d)
     map = loc_glob_idx[l]
-    display(map)
     P = zeros(np,nd)
     for i = 1:nd
         e = zeros(np,1)
@@ -1731,7 +1756,6 @@ function construct_D_matrix_free(p; opertype= "lgl", n1d = -1, T = Float64)
         end
         push!(Es, E)
     end
-    display(size(Es[1]))
     Dx = zeros(nglob,nglob)
     Dy = zeros(nglob,nglob)
 

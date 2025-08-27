@@ -48,6 +48,8 @@ export AbstractApproximationType,
        NodalTPSS,
        NodalTPSSOpt,
        NodalTPSSLGL,
+       NodalTPSSOptimal,
+       NodalTPSSMinimal,
        AbstractReferenceMapping,
        AbstractMetrics,
        ExactMetrics,
@@ -193,6 +195,14 @@ Supports bot the 'Tri' and 'Tet' element type.
 """
 
 struct NodalTPSSLGL <: AbstractMultidimensional
+    p::Int
+end
+
+struct NodalTPSSMinimal <: AbstractMultidimensional
+    p::Int
+end
+
+struct NodalTPSSOptimal <: AbstractMultidimensional
     p::Int
 end
 
@@ -563,6 +573,7 @@ include("tensor_cartesian.jl")
 export reference_geometric_factors, operators_1d
 include("tensor_simplex.jl")
 include("optimized.jl")
+include("csbp.jl")
 include("tensor_split_simplex.jl")
 
 
