@@ -22,7 +22,7 @@ using LinearAlgebra:
                      UniformScaling
 using TimerOutputs
 using LinearMaps: LinearMap, UniformScalingMap, TransposeMap
-using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
+using OrdinaryDiffEq: ODEProblem, solve
 using StartUpDG: num_faces
 
 using ..MatrixFreeOperators

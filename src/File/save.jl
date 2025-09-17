@@ -41,7 +41,7 @@ function save_project(@nospecialize(conservation_law::AbstractConservationLaw),
     return results_path
 end
 
-function save_solution(integrator::ODEIntegrator,
+function save_solution(integrator,
         results_path::String,
         restart_step::Int = 0)
     time_step = integrator.iter + restart_step

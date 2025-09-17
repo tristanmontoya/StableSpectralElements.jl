@@ -1,8 +1,7 @@
 module File
 
 using JLD2: save, load, save_object, load_object
-using OrdinaryDiffEq:
-                      ODEIntegrator,
+using OrdinaryDiffEq: 
                       ODEProblem, ODESolution, DiscreteCallback, CallbackSet,
                       get_du
 using DiffEqCallbacks: PresetTimeCallback
