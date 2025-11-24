@@ -3,6 +3,7 @@ module SpatialDiscretizations
 using LinearAlgebra: I, inv, Diagonal, diagm, kron, transpose, det, eigvals, mul!
 using Random: rand, shuffle
 using LinearMaps: LinearMap, ⊗
+
 using StartUpDG:
                  MeshData,
                  basis,
@@ -10,8 +11,10 @@ using StartUpDG:
                  grad_vandermonde,
                  diagE_sbp_nodes,
                  quad_nodes,
-                 NodesAndModes.quad_nodes_tri,
-                 NodesAndModes.quad_nodes_tet,
+#                 NodesAndModes.quad_nodes_tri,
+#                 NodesAndModes.quad_nodes_tet,
+#                 NodesAndModes.WHZ_quad_nodes_tri,
+#                 NodesAndModes.WHZ_quad_nodes_tet,
                  face_vertices,
                  nodes,
                  num_faces,
@@ -26,11 +29,14 @@ using StartUpDG:
                  make_periodic,
                  jaskowiec_sukumar_quad_nodes,
                  Hicken,
+                 WHZ,
                  geometric_factors,
                  MultidimensionalQuadrature
 using Jacobi: zgrjm, wgrjm, zgj, wgj, zglj, wglj
 
 using ..MatrixFreeOperators
+
+using NodesAndModes
 
 using Reexport
 @reexport using StartUpDG: RefElemData, AbstractElemShape, Line, Quad, Tri, Tet, Hex, SBP
@@ -50,6 +56,7 @@ export AbstractApproximationType,
        NodalTPSSLGL,
        NodalTPSSOptimal,
        NodalTPSSMinimal,
+       MatrixFreeTPSSLGL,
        AbstractReferenceMapping,
        AbstractMetrics,
        ExactMetrics,
@@ -205,6 +212,11 @@ end
 struct NodalTPSSOptimal <: AbstractMultidimensional
     p::Int
 end
+
+struct MatrixFreeTPSSLGL <: AbstractMultidimensional
+    p::Int
+end
+
 
 # Collapsed coordinate mapping
 abstract type AbstractReferenceMapping end

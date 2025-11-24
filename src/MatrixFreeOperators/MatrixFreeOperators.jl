@@ -31,6 +31,9 @@ include("octavian.jl")
 export ZeroMap
 include("zero.jl")
 
+export SplitSimplexMap
+include("split_simplex.jl")
+
 # union of all types that don't actually do any floating-point operations
 const NoOp = Union{SelectionMap,
     ZeroMap,
