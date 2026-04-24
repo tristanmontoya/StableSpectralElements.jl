@@ -3,7 +3,7 @@ module SpatialDiscretizations
 using LinearAlgebra: I, inv, Diagonal, diagm, kron, transpose, det, eigvals, mul!
 using Random: rand, shuffle
 using LinearMaps: LinearMap, ⊗
-
+import StartUpDG: RefElemData
 using StartUpDG:
                  MeshData,
                  basis,
