@@ -11,8 +11,10 @@ using StartUpDG:
                  grad_vandermonde,
                  diagE_sbp_nodes,
                  quad_nodes,
-                 NodesAndModes.quad_nodes_tri,
-                 NodesAndModes.quad_nodes_tet,
+#                 NodesAndModes.quad_nodes_tri,
+#                 NodesAndModes.quad_nodes_tet,
+#                 NodesAndModes.WHZ_quad_nodes_tri,
+#                 NodesAndModes.WHZ_quad_nodes_tet,
                  face_vertices,
                  nodes,
                  num_faces,
@@ -27,11 +29,14 @@ using StartUpDG:
                  make_periodic,
                  jaskowiec_sukumar_quad_nodes,
                  Hicken,
+                 WHZ,
                  geometric_factors,
                  MultidimensionalQuadrature
 using Jacobi: zgrjm, wgrjm, zgj, wgj, zglj, wglj
 
 using ..MatrixFreeOperators
+
+using NodesAndModes
 
 using Reexport
 @reexport using StartUpDG: RefElemData, AbstractElemShape, Line, Quad, Tri, Tet, Hex, SBP
@@ -46,6 +51,12 @@ export AbstractApproximationType,
        NodalMulti,
        ModalMultiDiagE,
        NodalMultiDiagE,
+       NodalTPSS,
+       NodalTPSSOpt,
+       NodalTPSSLGL,
+       NodalTPSSOptimal,
+       NodalTPSSMinimal,
+       MatrixFreeTPSSLGL,
        AbstractReferenceMapping,
        AbstractMetrics,
        ExactMetrics,
@@ -133,7 +144,7 @@ end
 @doc raw"""
     ModalMultiDiagE(p::Int)
 
-Approximation type for a modal formulation based on a multidimensional volume quadrature
+Approximation type for a modal formulation based on a multidimensional volume quadrature 
 rule of polynomial degree $p$ including nodes collocated with those used for facet
 integration (generalized Vandermonde and derivative operators are dense, interpolation/
 extrapolation operator picks out values at facet quadrature nodes). Currently supports only
@@ -142,6 +153,70 @@ the `Tri` element type.
 struct ModalMultiDiagE <: AbstractMultidimensional
     p::Int
 end
+
+@doc raw"""
+    nodalTPSS
+
+Approximation type for a nodal formulation based on a "tensor product split simplex" 
+oeprator. A tensor-product of a 1D diagonal norm classical finite difference SBP operator
+quadrature rule is mapped into a quad/hex subdomains of a split simplex. The subdomains 
+are reassembled in a continuous Galerkin formulation. Note: the mesh is not actually 
+split into quads/hexes. The splitting is only for the construction of the reference
+element. Generalized Vandermonde matrix is identity and interpolation/extrapolation 
+operator picks out values at facet quadrature nodes See: https://arxiv.org/abs/2408.10494. 
+Supports bot the 'Tri' and 'Tet' element type. 
+"""
+
+struct NodalTPSS <: AbstractMultidimensional
+    p::Int
+end
+
+@doc raw"""
+    nodalTPSS
+
+Approximation type for a nodal formulation based on a "tensor product split simplex" 
+oeprator. A tensor-product of a 1D diagona-norm Mattson truncation error optimized SBP operator
+is mapped into a quad/hex subdomains of a split simplex. The subdomains 
+are reassembled in a continuous Galerkin formulation. Note: the mesh is not actually 
+split into quads/hexes. The splitting is only for the construction of the reference
+element. Generalized Vandermonde matrix is identity and interpolation/extrapolation 
+operator picks out values at facet quadrature nodes See: https://arxiv.org/abs/2408.10494. 
+Supports bot the 'Tri' and 'Tet' element type. 
+"""
+
+struct NodalTPSSOpt <: AbstractMultidimensional
+    p::Int
+end
+
+@doc raw"""
+    nodalTPSS
+
+Approximation type for a nodal formulation based on a "tensor product split simplex" 
+oeprator. A tensor-product of a 1D SBP rule based off LGL (diagonal E operator)
+quadrature rule is mapped into a quad/hex subdomains of a split simplex. The subdomains 
+are reassembled in a continuous Galerkin formulation. Note: the mesh is not actually 
+split into quads/hexes. The splitting is only for the construction of the reference
+element. Generalized Vandermonde matrix is identity and interpolation/extrapolation 
+operator picks out values at facet quadrature nodes See: https://arxiv.org/abs/2408.10494. 
+Supports bot the 'Tri' and 'Tet' element type. 
+"""
+
+struct NodalTPSSLGL <: AbstractMultidimensional
+    p::Int
+end
+
+struct NodalTPSSMinimal <: AbstractMultidimensional
+    p::Int
+end
+
+struct NodalTPSSOptimal <: AbstractMultidimensional
+    p::Int
+end
+
+struct MatrixFreeTPSSLGL <: AbstractMultidimensional
+    p::Int
+end
+
 
 # Collapsed coordinate mapping
 abstract type AbstractReferenceMapping end
@@ -509,6 +584,11 @@ include("tensor_cartesian.jl")
 
 export reference_geometric_factors, operators_1d
 include("tensor_simplex.jl")
+include("optimized.jl")
+include("csbp.jl")
+include("tensor_split_simplex.jl")
+
+
 
 export GeometricFactors,
        metrics,
