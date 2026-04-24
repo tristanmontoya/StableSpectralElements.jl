@@ -196,7 +196,7 @@ struct PreAllocatedArraysFirstOrder <: AbstractPreAllocatedArrays
             N_c,
             N_e,
             temp_size = N_q,
-            N_r = Threads.nthreads())
+            N_r = Threads.maxthreadid())
         return new(Array{Float64}(undef, N_q, N_c, d, N_r),
             Array{Float64}(undef, N_f, N_c, N_r),
             Array{Float64}(undef, N_f, N_c, N_r),
@@ -227,7 +227,7 @@ struct PreAllocatedArraysSecondOrder <: AbstractPreAllocatedArrays
             N_c,
             N_e,
             temp_size = N_q,
-            N_r = Threads.nthreads())
+            N_r = Threads.maxthreadid())
         return new(Array{Float64}(undef, N_q, N_c, d, N_r),
             Array{Float64}(undef, N_f, N_c, N_r),
             Array{Float64}(undef, N_f, N_c, N_r),
@@ -351,7 +351,7 @@ function Solver(conservation_law::AbstractConservationLaw{d, FirstOrder, N_c},
         form,
         parallelism,
         PreAllocatedArraysFirstOrder(d, N_q, N_f, N_c, N_e, N_p,
-            Threads.nthreads()))
+            Threads.maxthreadid()))
 end
 
 function Solver(conservation_law::AbstractConservationLaw{d, SecondOrder, N_c},
@@ -372,7 +372,8 @@ function Solver(conservation_law::AbstractConservationLaw{d, SecondOrder, N_c},
         spatial_discretization.mesh.mapP,
         form,
         parallelism,
-        PreAllocatedArraysSecondOrder(d, N_q, N_f, N_c, N_e, N_p))
+        PreAllocatedArraysSecondOrder(d, N_q, N_f, N_c, N_e, N_p,
+            Threads.maxthreadid()))
 end
 
 # Gets tuple containing the number of nodal/modal coefficients, number of conservative
