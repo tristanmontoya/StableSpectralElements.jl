@@ -155,6 +155,20 @@ function operators_1d(quadrature_rule::NTuple{d, AbstractQuadratureRule}) where 
     return η_1D, q, V_1D, D_1D, I_1D, R_L, R_R
 end
 
+function operators_1d(quadrature_rule::AbstractQuadratureRule)
+    η_1D, q, V_1D, D_1D, I_1D, R_L, R_R = fill((), 7)
+    η, _ = quadrature(Line(), quadrature_rule)
+    η_1D = η
+    q = length(η_1D) - 1
+    V_1D = vandermonde(Line(), q, η_1D)
+    D_1D = OctavianMap(grad_vandermonde(Line(), q, η_1D) / V_1D)
+    I_1D = LinearMap(I, q + 1)
+    R_L = OctavianMap(vandermonde(Line(), q, [-1.0]) / V_1D)
+    R_R = OctavianMap(vandermonde(Line(), q, [1.0]) / V_1D)
+
+    return η_1D, q, V_1D, D_1D, I_1D, R_L, R_R
+end
+
 function ReferenceApproximation(approx_type::AbstractTensorProduct,
         ::Tri;
         mapping_degree::Int = 1,
@@ -193,6 +207,8 @@ function ReferenceApproximation(approx_type::AbstractTensorProduct,
         volume_quadrature_rule = volume_quadrature_rule,
         facet_quadrature_rule = facet_quadrature_rule,
         Nplot = N_plot)
+    
+    (; rstq, rstf, rstp, wq) = reference_element
 
     # construct nodal or modal scheme (different Vandermonde matrix)
     if approx_type isa ModalTensor
