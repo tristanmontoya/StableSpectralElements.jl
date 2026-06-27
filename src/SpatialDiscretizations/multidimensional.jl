@@ -2,9 +2,9 @@ function ReferenceApproximation(approx_type::ModalMulti,
         element_type::AbstractElemShape;
         mapping_degree::Int = 1,
         N_plot::Int = 10,
-        volume_quadrature_rule = WorkuHickenZinggQuadrature(2 *
+        volume_quadrature_rule = DefaultQuadrature(2 *
                                                    approx_type.p),
-        facet_quadrature_rule = WorkuHickenZinggQuadrature(2 * approx_type.p))
+        facet_quadrature_rule = DefaultQuadrature(2 * approx_type.p))
     d = dim(element_type)
     (; p) = approx_type
 
@@ -76,7 +76,7 @@ end
 
 function ReferenceApproximation(approx_type::ModalMultiDiagE,
         element_type::AbstractElemShape;
-        sbp_type::SBP = SBP{WHZ}(),
+        sbp_type::SBP = SBP{Hicken}(),
         mapping_degree::Int = 1,
         N_plot::Int = 10)
     d = dim(element_type)
@@ -96,7 +96,6 @@ function ReferenceApproximation(approx_type::ModalMultiDiagE,
 
     V = OctavianMap(vandermonde(element_type, approx_type.p, rstq...))
     V_plot = OctavianMap(vandermonde(element_type, approx_type.p, rstp...))
-    #R = LinearMap(sbp_element.Vf) # SparseMatrixCSC
     R = SelectionMap(match_coordinate_vectors(rstf, rstq), length(wq))
 
     return ReferenceApproximation(approx_type,
@@ -110,7 +109,7 @@ end
 
 function ReferenceApproximation(approx_type::NodalMultiDiagE,
         element_type::AbstractElemShape;
-        sbp_type::SBP = SBP{WHZ}(),
+        sbp_type::SBP = SBP{Hicken}(),
         mapping_degree::Int = 1,
         N_plot::Int = 10)
     d = dim(element_type)
@@ -126,7 +125,7 @@ function ReferenceApproximation(approx_type::NodalMultiDiagE,
 
     sbp_element = RefElemData(element_type, sbp_type, approx_type.p)
 
-    (; rstq, rstf, rstp, wq, nrstJ) = reference_element
+    (; rstq, rstf, rstp, wq) = reference_element
 
     VDM = vandermonde(element_type, approx_type.p, rstq...)
     V = LinearMap(I, length(wq))
@@ -134,7 +133,6 @@ function ReferenceApproximation(approx_type::NodalMultiDiagE,
                          inv(VDM' * Diagonal(wq) * VDM) *
                          VDM' *
                          Diagonal(wq))
-    #R = LinearMap(sbp_element.Vf) # SparseMatrixCSC
     R = SelectionMap(match_coordinate_vectors(rstf, rstq), length(wq))
 
     return ReferenceApproximation(approx_type,
@@ -149,15 +147,15 @@ end
 function ReferenceApproximation(approx_type::NodalTPSS,
         element_type::Tri;
         mapping_degree::Int = 1)
-    B, N, R, E_facet = construct_split_facet_operator_tri(
-        approx_type.p, opertype = "csbp", n1d = 8, T = Float64)
-    H, Q, D, E_volume, S = construct_split_operator_tri(
-        approx_type.p, opertype = "csbp", n1d = 8, T = Float64)
+    B, N, _, _ = construct_split_facet_operator_tri(
+        approx_type.p, operator_type = "csbp", n1d = 8, T = Float64)
+    H, _, D, _, _ = construct_split_operator_tri(
+        approx_type.p, operator_type = "csbp", n1d = 8, T = Float64)
 
-    xg, lob_glob_idx = global_node_index_tri(
-        approx_type.p, opertype = "csbp", n1d = 8, T = Float64)
-    xf, lob_glob_facet_idx = global_node_index_tri_facet(
-        approx_type.p, opertype = "csbp", n1d = 8, T = Float64)
+    xg, _ = global_node_index_tri(
+        approx_type.p, operator_type = "csbp", n1d = 8, T = Float64)
+    xf, _ = global_node_index_tri_facet(
+        approx_type.p, operator_type = "csbp", n1d = 8, T = Float64)
 
     x_v = xg[1, :]
     y_v = xg[2, :]
@@ -180,7 +178,7 @@ function ReferenceApproximation(approx_type::NodalTPSS,
         quad_rule_vol = volume_quadrature_rule,
         quad_rule_face = facet_quadrature_rule,
         Nplot = 10)
-    (; rstq, rstf, rstp, wq, nrstJ) = reference_element
+    (; rstq, rstf, rstp, wq) = reference_element
 
     VDM = vandermonde(element_type, approx_type.p, rstq...)
     V = LinearMap(I, length(wq))
@@ -198,70 +196,18 @@ function ReferenceApproximation(approx_type::NodalTPSS,
         V_plot)
 end
 
-function ReferenceApproximation(approx_type::NodalTPSSOpt,
-        element_type::Tri;
-        mapping_degree::Int = 1)
-    B, N, R, E_facet = construct_split_facet_operator_tri(
-        approx_type.p, opertype = "opt", n1d = 8, T = Float64)
-    H, Q, D, E_volume, S = construct_split_operator_tri(
-        approx_type.p, opertype = "opt", n1d = 8, T = Float64)
-
-    xg, lob_glob_idx = global_node_index_tri(
-        approx_type.p, opertype = "opt", n1d = 8, T = Float64)
-    xf, lob_glob_facet_idx = global_node_index_tri_facet(
-        approx_type.p, opertype = "opt", n1d = 8, T = Float64)
-
-    x_v = xg[1, :]
-    y_v = xg[2, :]
-    w_v = zeros(length(H[:, 1]))
-    for i in 1:length(H[:, 1])
-        w_v[i] = H[i, i]
-    end
-    x_f = xf[1, :, 3]
-    w_f = zeros(length(B[:, 1, 1]))
-
-    # facet weights are scaled by normals such that sum of weights = 2
-    for i in 1:length(B[:, 1, 1])
-        w_f[i] = B[i, i, 1] * N[1, i, 1]
-    end
-
-    volume_quadrature_rule = tuple(x_v, y_v, w_v)
-    facet_quadrature_rule = tuple(x_f, w_f)
-    reference_element = RefElemData(element_type,
-        mapping_degree,
-        quad_rule_vol = volume_quadrature_rule,
-        quad_rule_face = facet_quadrature_rule,
-        Nplot = 10)
-    (; rstq, rstf, rstp, wq, nrstJ) = reference_element
-
-    VDM = vandermonde(element_type, approx_type.p, rstq...)
-    V = LinearMap(I, length(wq))
-    V_plot = (vandermonde(element_type, approx_type.p, rstp...) *
-            inv(VDM' * Diagonal(wq) * VDM) *
-            VDM' *
-            Diagonal(wq))
-    R = SelectionMap(match_coordinate_vectors(rstf, rstq), length(wq))
-    return ReferenceApproximation(approx_type,
-        reference_element,
-        Tuple(OctavianMap(D[m]) for m in 1:2),
-        V,
-        R,
-        R,
-        V_plot)
-end
-
 function ReferenceApproximation(approx_type::NodalTPSSLGL,
         element_type::Tri;
         mapping_degree::Int = 1)
-    B, N, R, E_facet = construct_split_facet_operator_tri(
-        approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
-    H, Q, D, E_volume, S = construct_split_operator_tri(
-        approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
+    B, N, _, _ = construct_split_facet_operator_tri(
+        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+    H, _, D, _, _ = construct_split_operator_tri(
+        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
 
-    xg, lob_glob_idx = global_node_index_tri(
-        approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
-    xf, lob_glob_facet_idx = global_node_index_tri_facet(
-        approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
+    xg, _ = global_node_index_tri(
+        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+    xf, _ = global_node_index_tri_facet(
+        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
 
     x_v = xg[1, :]
     y_v = xg[2, :]
@@ -284,14 +230,14 @@ function ReferenceApproximation(approx_type::NodalTPSSLGL,
         quad_rule_vol = volume_quadrature_rule,
         quad_rule_face = facet_quadrature_rule,
         Nplot = 10)
-    (; rstq, rstf, rstp, wq, nrstJ) = reference_element
+    (; rstq, rstf, rstp, wq) = reference_element
 
     VDM = vandermonde(element_type, approx_type.p, rstq...)
     V = LinearMap(I, length(wq))
     V_plot = (vandermonde(element_type, approx_type.p, rstp...) *
-            inv(VDM' * Diagonal(wq) * VDM) *
-            VDM' *
-            Diagonal(wq))
+              inv(VDM' * Diagonal(wq) * VDM) *
+              VDM' *
+              Diagonal(wq))
     R = SelectionMap(match_coordinate_vectors(rstf, rstq), length(wq))
     return ReferenceApproximation(approx_type,
         reference_element,
@@ -305,14 +251,14 @@ end
 function ReferenceApproximation(approx_type::NodalTPSSLGL,
         element_type::Tet;
         mapping_degree::Int = 1)
-    B, N, R, E_facet = construct_split_facet_operator_tet(
-        approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
-    H, Q, D, E_volume = construct_split_operator_tet(
-        approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
-    xg, lob_glob_idx = global_node_index_tet(
-        approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
-    xf, lob_glob_facet_idx = global_node_index_tet_facet(
-        approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
+    B, N, _, _ = construct_split_facet_operator_tet(
+        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+    H, _, D, _ = construct_split_operator_tet(
+        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+    xg, _ = global_node_index_tet(
+        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+    xf, _ = global_node_index_tet_facet(
+        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
     x_v = xg[1, :]
     y_v = xg[2, :]
     z_v = xg[3, :]
@@ -356,15 +302,15 @@ end
 function ReferenceApproximation(approx_type::NodalTPSSMinimal,
         element_type::Tri;
         mapping_degree::Int = 1)
-    B, N, R, E_facet = construct_split_facet_operator_tri(
-        approx_type.p, opertype = "minimal", n1d = 8, T = Float64)
-    H, Q, D, E_volume, S = construct_split_operator_tri(
-        approx_type.p, opertype = "minimal", n1d = 8, T = Float64)
+    B, N, _, _ = construct_split_facet_operator_tri(
+        approx_type.p, operator_type = "minimal", n1d = 8, T = Float64)
+    H, _, D, _, _ = construct_split_operator_tri(
+        approx_type.p, operator_type = "minimal", n1d = 8, T = Float64)
 
-    xg, lob_glob_idx = global_node_index_tri(
-        approx_type.p, opertype = "minimal", n1d = 8, T = Float64)
-    xf, lob_glob_facet_idx = global_node_index_tri_facet(
-        approx_type.p, opertype = "minimal", n1d = 8, T = Float64)
+    xg, _ = global_node_index_tri(
+        approx_type.p, operator_type = "minimal", n1d = 8, T = Float64)
+    xf, _ = global_node_index_tri_facet(
+        approx_type.p, operator_type = "minimal", n1d = 8, T = Float64)
 
     x_v = xg[1, :]
     y_v = xg[2, :]
@@ -387,14 +333,14 @@ function ReferenceApproximation(approx_type::NodalTPSSMinimal,
         quad_rule_vol = volume_quadrature_rule,
         quad_rule_face = facet_quadrature_rule,
         Nplot = 10)
-    (; rstq, rstf, rstp, wq, nrstJ) = reference_element
+    (; rstq, rstf, rstp, wq) = reference_element
 
     VDM = vandermonde(element_type, approx_type.p, rstq...)
     V = LinearMap(I, length(wq))
     V_plot = (vandermonde(element_type, approx_type.p, rstp...) *
-            inv(VDM' * Diagonal(wq) * VDM) *
-            VDM' *
-            Diagonal(wq))
+              inv(VDM' * Diagonal(wq) * VDM) *
+              VDM' *
+              Diagonal(wq))
     R = SelectionMap(match_coordinate_vectors(rstf, rstq), length(wq))
     return ReferenceApproximation(approx_type,
         reference_element,
@@ -408,15 +354,15 @@ end
 function ReferenceApproximation(approx_type::NodalTPSSOptimal,
         element_type::Tri;
         mapping_degree::Int = 1)
-    B, N, R, E_facet = construct_split_facet_operator_tri(
-        approx_type.p, opertype = "optimal", n1d = 8, T = Float64)
-    H, Q, D, E_volume, S = construct_split_operator_tri(
-        approx_type.p, opertype = "optimal", n1d = 8, T = Float64)
+    B, N, _, _ = construct_split_facet_operator_tri(
+        approx_type.p, operator_type = "optimal", n1d = 8, T = Float64)
+    H, _, D, _, _ = construct_split_operator_tri(
+        approx_type.p, operator_type = "optimal", n1d = 8, T = Float64)
 
-    xg, lob_glob_idx = global_node_index_tri(
-        approx_type.p, opertype = "optimal", n1d = 8, T = Float64)
-    xf, lob_glob_facet_idx = global_node_index_tri_facet(
-        approx_type.p, opertype = "optimal", n1d = 8, T = Float64)
+    xg, _ = global_node_index_tri(
+        approx_type.p, operator_type = "optimal", n1d = 8, T = Float64)
+    xf, _ = global_node_index_tri_facet(
+        approx_type.p, operator_type = "optimal", n1d = 8, T = Float64)
 
     x_v = xg[1, :]
     y_v = xg[2, :]
@@ -439,14 +385,14 @@ function ReferenceApproximation(approx_type::NodalTPSSOptimal,
         quad_rule_vol = volume_quadrature_rule,
         quad_rule_face = facet_quadrature_rule,
         Nplot = 10)
-    (; rstq, rstf, rstp, wq, nrstJ) = reference_element
+    (; rstq, rstf, rstp, wq) = reference_element
 
     VDM = vandermonde(element_type, approx_type.p, rstq...)
     V = LinearMap(I, length(wq))
     V_plot = (vandermonde(element_type, approx_type.p, rstp...) *
-            inv(VDM' * Diagonal(wq) * VDM) *
-            VDM' *
-            Diagonal(wq))
+              inv(VDM' * Diagonal(wq) * VDM) *
+              VDM' *
+              Diagonal(wq))
     R = SelectionMap(match_coordinate_vectors(rstf, rstq), length(wq))
     return ReferenceApproximation(approx_type,
         reference_element,
@@ -458,16 +404,16 @@ function ReferenceApproximation(approx_type::NodalTPSSOptimal,
 end
 
 function ReferenceApproximation(approx_type::NodalTPSSMinimal,
-    element_type::Tet;
-    mapping_degree::Int = 1)
-    B, N, R, E_facet = construct_split_facet_operator_tet(
-        approx_type.p, opertype = "minimal", n1d = 8, T = Float64)
-    H, Q, D, E_volume = construct_split_operator_tet(
-        approx_type.p, opertype = "minimal", n1d = 8, T = Float64)
-    xg, lob_glob_idx = global_node_index_tet(
-        approx_type.p, opertype = "minimal", n1d = 8, T = Float64)
-    xf, lob_glob_facet_idx = global_node_index_tet_facet(
-        approx_type.p, opertype = "minimal", n1d = 8, T = Float64)
+        element_type::Tet;
+        mapping_degree::Int = 1)
+    B, N, _, _ = construct_split_facet_operator_tet(
+        approx_type.p, operator_type = "minimal", n1d = 8, T = Float64)
+    H, _, D, _ = construct_split_operator_tet(
+        approx_type.p, operator_type = "minimal", n1d = 8, T = Float64)
+    xg, _ = global_node_index_tet(
+        approx_type.p, operator_type = "minimal", n1d = 8, T = Float64)
+    xf, _ = global_node_index_tet_facet(
+        approx_type.p, operator_type = "minimal", n1d = 8, T = Float64)
     x_v = xg[1, :]
     y_v = xg[2, :]
     z_v = xg[3, :]
@@ -509,16 +455,16 @@ function ReferenceApproximation(approx_type::NodalTPSSMinimal,
 end
 
 function ReferenceApproximation(approx_type::NodalTPSSOptimal,
-    element_type::Tet;
-    mapping_degree::Int = 1)
-    B, N, R, E_facet = construct_split_facet_operator_tet(
-        approx_type.p, opertype = "optimal", n1d = 8, T = Float64)
-    H, Q, D, E_volume = construct_split_operator_tet(
-        approx_type.p, opertype = "optimal", n1d = 8, T = Float64)
-    xg, lob_glob_idx = global_node_index_tet(
-        approx_type.p, opertype = "optimal", n1d = 8, T = Float64)
-    xf, lob_glob_facet_idx = global_node_index_tet_facet(
-        approx_type.p, opertype = "optimal", n1d = 8, T = Float64)
+        element_type::Tet;
+        mapping_degree::Int = 1)
+    B, N, _, _ = construct_split_facet_operator_tet(
+        approx_type.p, operator_type = "optimal", n1d = 8, T = Float64)
+    H, _, D, _ = construct_split_operator_tet(
+        approx_type.p, operator_type = "optimal", n1d = 8, T = Float64)
+    xg, _ = global_node_index_tet(
+        approx_type.p, operator_type = "optimal", n1d = 8, T = Float64)
+    xf, _ = global_node_index_tet_facet(
+        approx_type.p, operator_type = "optimal", n1d = 8, T = Float64)
     x_v = xg[1, :]
     y_v = xg[2, :]
     z_v = xg[3, :]
@@ -560,19 +506,19 @@ function ReferenceApproximation(approx_type::NodalTPSSOptimal,
 end
 
 function ReferenceApproximation(approx_type::MatrixFreeTPSSLGL,
-    element_type::Tri;
-    mapping_degree::Int = 1)
-    
-    Hs, _, _, Es, _, _, dxs = map_tensor_operators_to_tri(approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
-    B, N, R, _ = construct_split_facet_operator_tri(
-        approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
-    H, _, _, _,_ = construct_split_operator_tri(
-        approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
+        element_type::Tri;
+        mapping_degree::Int = 1)
+    Hs, _, _, Es, _, _, dxs = map_tensor_operators_to_tri(
+        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+    B, N, _, _ = construct_split_facet_operator_tri(
+        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+    H, _, _, _, _ = construct_split_operator_tri(
+        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
 
-    xg, lob_glob_idx = global_node_index_tri(
-        approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
+    xg, loc_glob_idx = global_node_index_tri(
+        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
     xf, _ = global_node_index_tri_facet(
-        approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
+        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
 
     x_v = xg[1, :]
     y_v = xg[2, :]
@@ -595,33 +541,31 @@ function ReferenceApproximation(approx_type::MatrixFreeTPSSLGL,
         quad_rule_vol = volume_quadrature_rule,
         quad_rule_face = facet_quadrature_rule,
         Nplot = 10)
-    (; rstq, rstf, rstp, wq, nrstJ) = reference_element
+    (; rstq, rstf, rstp, wq) = reference_element
 
     VDM = vandermonde(element_type, approx_type.p, rstq...)
     V = LinearMap(I, length(wq))
     V_plot = (vandermonde(element_type, approx_type.p, rstp...) *
-            inv(VDM' * Diagonal(wq) * VDM) *
-            VDM' *
-            Diagonal(wq))
+              inv(VDM' * Diagonal(wq) * VDM) *
+              VDM' *
+              Diagonal(wq))
     R = SelectionMap(match_coordinate_vectors(rstf, rstq), length(wq))
 
     # tensor product of 1D differentiation matrix
     LGL_quadrature = LGLQuadrature(approx_type.p)
-    _, _, _, D_1D, I_1D, _, _ = operators_1d((LGL_quadrature,LGL_quadrature)) # need to give a tuple of quad rules 
-    D = (I_1D[1] ⊗ D_1D[2],D_1D[1] ⊗ I_1D[2])
-    Dt = (D[1]',D[2]')
-    #D = (D_1D[1], D_1D[2])
-    #Dt = (D_1D[1]',D_1D[2]')
+    _, _, _, D_1D, I_1D, _, _ = operators_1d((LGL_quadrature, LGL_quadrature)) # need to give a tuple of quad rules
+    D = (I_1D[1] ⊗ D_1D[2], D_1D[1] ⊗ I_1D[2])
+    Dt = (D[1]', D[2]')
 
-    # invert H and convert to array 
+    # invert H and convert to array
     Hinv = diag(inv(H))
 
     # try speed up by storing E as just a matrix, each col is the diagonal of E
-     E = hcat(diag(Es[1][:,:,1]), diag(Es[1][:,:,2]),
-        diag(Es[2][:,:,1]), diag(Es[2][:,:,2]),
-        diag(Es[3][:,:,1]), diag(Es[3][:,:,2]));
+    E = hcat(diag(Es[1][:, :, 1]), diag(Es[1][:, :, 2]),
+        diag(Es[2][:, :, 1]), diag(Es[2][:, :, 2]),
+        diag(Es[3][:, :, 1]), diag(Es[3][:, :, 2]))
 
-     L = hcat(
+    L = hcat(
         diag(Hs[1]) .* dxs[1][1, :], diag(Hs[1]) .* dxs[1][2, :],
         diag(Hs[1]) .* dxs[1][3, :], diag(Hs[1]) .* dxs[1][4, :],
         diag(Hs[2]) .* dxs[2][1, :], diag(Hs[2]) .* dxs[2][2, :],
@@ -630,11 +574,11 @@ function ReferenceApproximation(approx_type::MatrixFreeTPSSLGL,
         diag(Hs[3]) .* dxs[3][3, :], diag(Hs[3]) .* dxs[3][4, :])
 
     # mapping indices
-    map = (lob_glob_idx[k][2, :] for k in 1:3) |> Tuple
+    map = (loc_glob_idx[k][2, :] for k in 1:3) |> Tuple
 
     return ReferenceApproximation(approx_type,
         reference_element,
-        Tuple(SplitSimplexMap(D,Dt,Hinv,E,L,map,m,2,length(map[1])) for m = 1:2),
+        Tuple(SplitSimplexMap(D, Dt, Hinv, E, L, map, m, 2, length(map[1])) for m in 1:2),
         V,
         R,
         R,
@@ -642,19 +586,19 @@ function ReferenceApproximation(approx_type::MatrixFreeTPSSLGL,
 end
 
 function ReferenceApproximation(approx_type::MatrixFreeTPSSLGL,
-    element_type::Tet;
-    mapping_degree::Int = 1)
-    
-    Hs, _, _, Es, _, dxs = map_tensor_operators_to_tet(approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
-    B, N, R, _ = construct_split_facet_operator_tet(
-        approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
+        element_type::Tet;
+        mapping_degree::Int = 1)
+    Hs, _, _, Es, _, dxs = map_tensor_operators_to_tet(
+        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+    B, N, _, _ = construct_split_facet_operator_tet(
+        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
     H, _, _, _ = construct_split_operator_tet(
-        approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
+        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
 
-    xg, lob_glob_idx = global_node_index_tet(
-        approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
+    xg, loc_glob_idx = global_node_index_tet(
+        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
     xf, _ = global_node_index_tet_facet(
-        approx_type.p, opertype = "lgl", n1d = 8, T = Float64)
+        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
 
     x_v = xg[1, :]
     y_v = xg[2, :]
@@ -684,46 +628,60 @@ function ReferenceApproximation(approx_type::MatrixFreeTPSSLGL,
     VDM = vandermonde(element_type, approx_type.p, rstq...)
     V = LinearMap(I, length(wq))
     V_plot = (vandermonde(element_type, approx_type.p, rstp...) *
-            inv(VDM' * Diagonal(wq) * VDM) *
-            VDM' *
-            Diagonal(wq))
+              inv(VDM' * Diagonal(wq) * VDM) *
+              VDM' *
+              Diagonal(wq))
     R = SelectionMap(match_coordinate_vectors(rstf, rstq), length(wq))
 
     # tensor product of 1D differentiation matrix
     LGL_quadrature = LGLQuadrature(approx_type.p)
-    _, _, _, D_1D, I_1D, _, _ = operators_1d((LGL_quadrature,LGL_quadrature,LGL_quadrature)) # need to give a tuple of quad rules 
-    D = (I_1D[1] ⊗ (I_1D[1] ⊗ D_1D[2]), I_1D[2] ⊗ (D_1D[1] ⊗ I_1D[2]), D_1D[2] ⊗ (I_1D[1] ⊗ I_1D[2]))
-    Dt = (D[1]',D[2]',D[3]')
+    _, _, _, D_1D, I_1D, _, _ = operators_1d((
+        LGL_quadrature, LGL_quadrature, LGL_quadrature)) # need to give a tuple of quad rules
+    D = (I_1D[1] ⊗ (I_1D[1] ⊗ D_1D[2]), I_1D[2] ⊗ (D_1D[1] ⊗ I_1D[2]),
+        D_1D[2] ⊗ (I_1D[1] ⊗ I_1D[2]))
+    Dt = (D[1]', D[2]', D[3]')
 
-    # invert H and convert to array 
+    # invert H and convert to array
     Hinv = diag(inv(H))
     # try speed up by storing E as just a matrix, each col is the diagonal of E
     E = hcat(
-        diag(Es[1][:,:,1]), diag(Es[1][:,:,2]), diag(Es[1][:,:,3]),
-        diag(Es[2][:,:,1]), diag(Es[2][:,:,2]), diag(Es[2][:,:,3]),
-        diag(Es[3][:,:,1]), diag(Es[3][:,:,2]), diag(Es[3][:,:,3]),
-        diag(Es[4][:,:,1]), diag(Es[4][:,:,2]), diag(Es[4][:,:,3]))
+        diag(Es[1][:, :, 1]), diag(Es[1][:, :, 2]), diag(Es[1][:, :, 3]),
+        diag(Es[2][:, :, 1]), diag(Es[2][:, :, 2]), diag(Es[2][:, :, 3]),
+        diag(Es[3][:, :, 1]), diag(Es[3][:, :, 2]), diag(Es[3][:, :, 3]),
+        diag(Es[4][:, :, 1]), diag(Es[4][:, :, 2]), diag(Es[4][:, :, 3]))
 
     L = hcat(
-        diag(Hs[1]) .* dxs[1][1, :], diag(Hs[1]) .* dxs[1][2, :], diag(Hs[1]) .* dxs[1][3, :],
-        diag(Hs[1]) .* dxs[1][4, :], diag(Hs[1]) .* dxs[1][5, :], diag(Hs[1]) .* dxs[1][6, :],
-        diag(Hs[1]) .* dxs[1][7, :], diag(Hs[1]) .* dxs[1][8, :], diag(Hs[1]) .* dxs[1][9, :],
-        diag(Hs[2]) .* dxs[2][1, :], diag(Hs[2]) .* dxs[2][2, :], diag(Hs[2]) .* dxs[2][3, :],
-        diag(Hs[2]) .* dxs[2][4, :], diag(Hs[2]) .* dxs[2][5, :], diag(Hs[2]) .* dxs[2][6, :],
-        diag(Hs[2]) .* dxs[2][7, :], diag(Hs[2]) .* dxs[2][8, :], diag(Hs[2]) .* dxs[2][9, :],
-        diag(Hs[3]) .* dxs[3][1, :], diag(Hs[3]) .* dxs[3][2, :], diag(Hs[3]) .* dxs[3][3, :],
-        diag(Hs[3]) .* dxs[3][4, :], diag(Hs[3]) .* dxs[3][5, :], diag(Hs[3]) .* dxs[3][6, :],
-        diag(Hs[3]) .* dxs[3][7, :], diag(Hs[3]) .* dxs[3][8, :], diag(Hs[3]) .* dxs[3][9, :],
-        diag(Hs[4]) .* dxs[4][1, :], diag(Hs[4]) .* dxs[4][2, :], diag(Hs[4]) .* dxs[4][3, :],
-        diag(Hs[4]) .* dxs[4][4, :], diag(Hs[4]) .* dxs[4][5, :], diag(Hs[4]) .* dxs[4][6, :],
-        diag(Hs[4]) .* dxs[4][7, :], diag(Hs[4]) .* dxs[4][8, :], diag(Hs[4]) .* dxs[4][9, :])
-   
+        diag(Hs[1]) .* dxs[1][1, :], diag(Hs[1]) .* dxs[1][2, :], diag(Hs[1]) .*
+                                                                  dxs[1][3, :],
+        diag(Hs[1]) .* dxs[1][4, :], diag(Hs[1]) .* dxs[1][5, :], diag(Hs[1]) .*
+                                                                  dxs[1][6, :],
+        diag(Hs[1]) .* dxs[1][7, :], diag(Hs[1]) .* dxs[1][8, :], diag(Hs[1]) .*
+                                                                  dxs[1][9, :],
+        diag(Hs[2]) .* dxs[2][1, :], diag(Hs[2]) .* dxs[2][2, :], diag(Hs[2]) .*
+                                                                  dxs[2][3, :],
+        diag(Hs[2]) .* dxs[2][4, :], diag(Hs[2]) .* dxs[2][5, :], diag(Hs[2]) .*
+                                                                  dxs[2][6, :],
+        diag(Hs[2]) .* dxs[2][7, :], diag(Hs[2]) .* dxs[2][8, :], diag(Hs[2]) .*
+                                                                  dxs[2][9, :],
+        diag(Hs[3]) .* dxs[3][1, :], diag(Hs[3]) .* dxs[3][2, :], diag(Hs[3]) .*
+                                                                  dxs[3][3, :],
+        diag(Hs[3]) .* dxs[3][4, :], diag(Hs[3]) .* dxs[3][5, :], diag(Hs[3]) .*
+                                                                  dxs[3][6, :],
+        diag(Hs[3]) .* dxs[3][7, :], diag(Hs[3]) .* dxs[3][8, :], diag(Hs[3]) .*
+                                                                  dxs[3][9, :],
+        diag(Hs[4]) .* dxs[4][1, :], diag(Hs[4]) .* dxs[4][2, :], diag(Hs[4]) .*
+                                                                  dxs[4][3, :],
+        diag(Hs[4]) .* dxs[4][4, :], diag(Hs[4]) .* dxs[4][5, :], diag(Hs[4]) .*
+                                                                  dxs[4][6, :],
+        diag(Hs[4]) .* dxs[4][7, :], diag(Hs[4]) .* dxs[4][8, :], diag(Hs[4]) .*
+                                                                  dxs[4][9, :])
+
     # mapping indices
-    map = (lob_glob_idx[k][2, :] for k in 1:4) |> Tuple
+    map = (loc_glob_idx[k][2, :] for k in 1:4) |> Tuple
 
     return ReferenceApproximation(approx_type,
         reference_element,
-        Tuple(SplitSimplexMap(D,Dt,Hinv,E,L,map,m,3,length(map[1])) for m = 1:3),
+        Tuple(SplitSimplexMap(D, Dt, Hinv, E, L, map, m, 3, length(map[1])) for m in 1:3),
         V,
         R,
         R,

@@ -207,7 +207,7 @@ function ReferenceApproximation(approx_type::AbstractTensorProduct,
         volume_quadrature_rule = volume_quadrature_rule,
         facet_quadrature_rule = facet_quadrature_rule,
         Nplot = N_plot)
-    
+
     (; rstq, rstf, rstp, wq) = reference_element
 
     # construct nodal or modal scheme (different Vandermonde matrix)
