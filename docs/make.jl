@@ -1,9 +1,5 @@
-import Pkg
-Pkg.add("Documenter")
 using Documenter
 using StableSpectralElements
-
-push!(LOAD_PATH, "../src/")
 
 makedocs(
     sitename = "StableSpectralElements.jl",

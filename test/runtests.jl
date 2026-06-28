@@ -59,6 +59,106 @@ end
     @test energy ≈ 0.0 atol = tol
 end
 
+@testset "Advection 2D Energy-Conservative NodalTPSS Tri" begin
+    tpss_p = 2
+    (l2, conservation, energy) = test_driver(
+        ReferenceApproximation(NodalTPSS(tpss_p), Tri(), mapping_degree = tpss_p),
+        LinearAdvectionEquation((1.0, 1.0)),
+        InitialDataSine(1.0, (2 * π, 2 * π)),
+        StandardForm(
+            mapping_form = SkewSymmetricMapping(),
+            inviscid_numerical_flux = LaxFriedrichsNumericalFlux(0.0),
+        ),
+        ReferenceOperator(),
+        DefaultOperatorAlgorithm(),
+        1.0,
+        1,
+        0.1,
+        0.01,
+        0.0,
+        "test_advection_2d_tpss",
+    )
+
+    @test l2 ≈ 0.43485592779254456 atol = tol
+    @test conservation ≈ 0.0 atol = tol
+    @test energy ≈ 0.0 atol = tol
+end
+
+@testset "Advection 2D Energy-Conservative NodalTPSSLGL Tri" begin
+    tpss_p = 2
+    (l2, conservation, energy) = test_driver(
+        ReferenceApproximation(NodalTPSSLGL(tpss_p), Tri(), mapping_degree = tpss_p),
+        LinearAdvectionEquation((1.0, 1.0)),
+        InitialDataSine(1.0, (2 * π, 2 * π)),
+        StandardForm(
+            mapping_form = SkewSymmetricMapping(),
+            inviscid_numerical_flux = LaxFriedrichsNumericalFlux(0.0),
+        ),
+        ReferenceOperator(),
+        DefaultOperatorAlgorithm(),
+        1.0,
+        1,
+        0.1,
+        0.01,
+        0.0,
+        "test_advection_2d_tpss_lgl",
+    )
+
+    @test l2 ≈ 0.33519391720788677 atol = tol
+    @test conservation ≈ 0.0 atol = tol
+    @test energy ≈ 0.0 atol = tol
+end
+
+@testset "Advection 2D Energy-Conservative NodalTPSSMinimal Tri" begin
+    tpss_p = 2
+    (l2, conservation, energy) = test_driver(
+        ReferenceApproximation(NodalTPSSMinimal(tpss_p), Tri(), mapping_degree = tpss_p),
+        LinearAdvectionEquation((1.0, 1.0)),
+        InitialDataSine(1.0, (2 * π, 2 * π)),
+        StandardForm(
+            mapping_form = SkewSymmetricMapping(),
+            inviscid_numerical_flux = LaxFriedrichsNumericalFlux(0.0),
+        ),
+        ReferenceOperator(),
+        DefaultOperatorAlgorithm(),
+        1.0,
+        1,
+        0.1,
+        0.01,
+        0.0,
+        "test_advection_2d_tpss_minimal",
+    )
+
+    @test l2 ≈ 0.41100030076934896 atol = tol
+    @test conservation ≈ 0.0 atol = tol
+    @test energy ≈ 0.0 atol = tol
+end
+
+@testset "Advection 2D Energy-Conservative NodalTPSSOptimal Tri" begin
+    tpss_p = 2
+    (l2, conservation, energy) = test_driver(
+        ReferenceApproximation(NodalTPSSOptimal(tpss_p), Tri(), mapping_degree = tpss_p),
+        LinearAdvectionEquation((1.0, 1.0)),
+        InitialDataSine(1.0, (2 * π, 2 * π)),
+        StandardForm(
+            mapping_form = SkewSymmetricMapping(),
+            inviscid_numerical_flux = LaxFriedrichsNumericalFlux(0.0),
+        ),
+        ReferenceOperator(),
+        DefaultOperatorAlgorithm(),
+        1.0,
+        1,
+        0.1,
+        0.01,
+        0.0,
+        "test_advection_2d_tpss_optimal",
+    )
+
+    @test l2 ≈ 0.4148060750887028 atol = tol
+    @test conservation ≈ 0.0 atol = tol
+    @test energy ≈ 0.0 atol = tol
+end
+
 @testset "Advection 2D FluxDiff NodalTensor Quad" begin
     (l2, conservation, _) = test_driver(
         ReferenceApproximation(NodalTensor(p), Quad(), mapping_degree = p),
@@ -124,6 +224,31 @@ end
     (l2, conservation, energy) = advection_3d()
 
     @test l2 ≈ 0.1876141674772107 atol = tol
+    @test conservation ≈ 0.0 atol = tol
+    @test energy ≈ 0.0 atol = tol
+end
+
+@testset "Advection 3D Energy-Conservative NodalTPSSLGL Tet" begin
+    tpss_p = 2
+    (l2, conservation, energy) = test_driver(
+        ReferenceApproximation(NodalTPSSLGL(tpss_p), Tet(), mapping_degree = tpss_p),
+        LinearAdvectionEquation((1.0, 1.0, 1.0)),
+        InitialDataSine(1.0, (2 * π, 2 * π, 2 * π)),
+        StandardForm(
+            mapping_form = SkewSymmetricMapping(),
+            inviscid_numerical_flux = LaxFriedrichsNumericalFlux(0.0),
+        ),
+        ReferenceOperator(),
+        DefaultOperatorAlgorithm(),
+        1.0,
+        1,
+        0.1,
+        0.01,
+        0.0,
+        "test_advection_3d_tpss_lgl",
+    )
+
+    @test l2 ≈ 0.4184609838459122 atol = tol
     @test conservation ≈ 0.0 atol = tol
     @test energy ≈ 0.0 atol = tol
 end

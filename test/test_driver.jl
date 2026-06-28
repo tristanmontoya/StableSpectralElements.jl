@@ -76,7 +76,7 @@ function test_driver(
 
     sol = solve(
         ode_problem,
-        CarpenterKennedy2N54(),
+        default_time_integrator(),
         adaptive = false,
         dt = dt,
         callback = save_callback(results_path, (0.0, T), floor(Int, 1.0 / (dt * 50))),

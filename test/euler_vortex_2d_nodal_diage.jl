@@ -58,7 +58,7 @@ function euler_vortex_2d_diage(M::Int = 4)
     dt = T / 1000
     sol = solve(
         ode,
-        CarpenterKennedy2N54(),
+        default_time_integrator(),
         dt = dt,
         adaptive = false,
         save_everystep = false,

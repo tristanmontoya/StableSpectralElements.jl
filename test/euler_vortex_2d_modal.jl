@@ -56,7 +56,7 @@ function euler_vortex_2d_modal(M::Int = 4)
 
     sol = solve(
         ode,
-        CarpenterKennedy2N54(),
+        default_time_integrator(),
         dt = dt,
         adaptive = false,
         save_everystep = false,

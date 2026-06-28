@@ -59,7 +59,7 @@ function advection_3d()
 
     sol = solve(
         ode_problem,
-        CarpenterKennedy2N54(),
+        default_time_integrator(),
         adaptive = false,
         dt = dt,
         save_everystep = false,

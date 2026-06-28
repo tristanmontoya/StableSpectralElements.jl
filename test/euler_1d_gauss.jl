@@ -1,16 +1,16 @@
+function euler_1d_gauss_exact_solution(x, t)
+    γ = 1.4
+    ρ = 1.0 + 0.2sin(π * x)
+    v = 1.0
+    E = 1.0 / (γ - 1) + 0.5 * ρ
+    return SVector{3}(ρ, ρ * v, E)
+end
+
 function euler_1d_gauss()
     T = 2.0
     L = 2.0
 
     conservation_law = EulerEquations{1}(1.4)
-
-    function exact_sol(x, t)
-        γ = 1.4
-        ρ = 1.0 + 0.2sin(π * x)
-        v = 1.0
-        E = 1.0 / (γ - 1) + 0.5 * ρ
-        return SVector{3}(ρ, ρ * v, E)
-    end
 
     p = 5
     M = 4
@@ -31,7 +31,7 @@ function euler_1d_gauss()
     ode = semidiscretize(
         conservation_law,
         spatial_discretization,
-        exact_sol,
+        euler_1d_gauss_exact_solution,
         form,
         (0.0, T),
         ReferenceOperator(),
@@ -41,7 +41,7 @@ function euler_1d_gauss()
     results_path = save_project(
         conservation_law,
         spatial_discretization,
-        exact_sol,
+        euler_1d_gauss_exact_solution,
         form,
         (0.0, T),
         "results/euler_1d/",
@@ -53,7 +53,7 @@ function euler_1d_gauss()
 
     sol = solve(
         ode,
-        CarpenterKennedy2N54(),
+        default_time_integrator(),
         dt = dt,
         adaptive = false,
         save_everystep = false,
@@ -62,7 +62,7 @@ function euler_1d_gauss()
 
     error_analysis = ErrorAnalysis(results_path, conservation_law, spatial_discretization)
 
-    error_results = analyze(error_analysis, last(sol.u), exact_sol, T)
+    error_results = analyze(error_analysis, last(sol.u), euler_1d_gauss_exact_solution, T)
 
     time_steps = load_time_steps(results_path)
     conservation_results = analyze(

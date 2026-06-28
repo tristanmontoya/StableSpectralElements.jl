@@ -22,7 +22,7 @@ using LinearAlgebra:
                      UniformScaling
 using TimerOutputs
 using LinearMaps: LinearMap, UniformScalingMap, TransposeMap
-using OrdinaryDiffEq: ODEProblem, solve
+using OrdinaryDiffEq: CarpenterKennedy2N54, ODEProblem, solve
 using StartUpDG: num_faces
 
 using ..MatrixFreeOperators
@@ -62,7 +62,8 @@ export AbstractResidualForm,
        project_function!,
        flux_differencing_operators,
        initialize,
-       semidiscretize
+       semidiscretize,
+       default_time_integrator
 
 abstract type AbstractResidualForm end
 abstract type AbstractMappingForm end
@@ -425,6 +426,22 @@ end
     (; xyzq) = spatial_discretization.mesh
 
     return project_function(initial_data, V, W, J_q, xyzq)
+end
+
+@doc raw"""
+    default_time_integrator()
+
+Return the default explicit time integration algorithm used by package examples and tests.
+This is the fourth-order, five-stage, low-storage Runge-Kutta method of Carpenter and
+Kennedy (1994), with `williamson_condition = false`.
+
+# References
+- M. H. Carpenter, C. A. Kennedy (1994)
+  Fourth-order 2N-storage Runge-Kutta schemes.
+  NASA TM 109112.
+"""
+function default_time_integrator()
+    return CarpenterKennedy2N54(williamson_condition = false)
 end
 
 @inline function semidiscretize(conservation_law::AbstractConservationLaw{d, PDEType},
