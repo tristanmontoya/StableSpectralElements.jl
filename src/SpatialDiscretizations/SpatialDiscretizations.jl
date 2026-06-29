@@ -46,6 +46,11 @@ export AbstractApproximationType,
        NodalMulti,
        ModalMultiDiagE,
        NodalMultiDiagE,
+       NodalTPSS,
+       NodalTPSSLGL,
+       NodalTPSSOptimal,
+       NodalTPSSMinimal,
+       MatrixFreeTPSSLGL,
        AbstractReferenceMapping,
        AbstractMetrics,
        ExactMetrics,
@@ -143,6 +148,61 @@ struct ModalMultiDiagE <: AbstractMultidimensional
     p::Int
 end
 
+@doc raw"""
+    NodalTPSS(p::Int)
+
+Approximation type for a nodal formulation of polynomial degree $p$ based on tensor-product
+split-simplex operators using a one-dimensional classical finite-difference SBP operator.
+Currently supports `Tri` and `Tet` element types.
+"""
+struct NodalTPSS <: AbstractMultidimensional
+    p::Int
+end
+
+@doc raw"""
+    NodalTPSSLGL(p::Int)
+
+Approximation type for a nodal formulation of polynomial degree $p$ based on tensor-product
+split-simplex operators using a one-dimensional LGL SBP operator. Currently supports
+`Tri` and `Tet` element types.
+"""
+struct NodalTPSSLGL <: AbstractMultidimensional
+    p::Int
+end
+
+@doc raw"""
+    NodalTPSSMinimal(p::Int)
+
+Approximation type for a nodal formulation of polynomial degree $p$ based on tensor-product
+split-simplex operators using a minimal one-dimensional SBP operator. Currently supports
+`Tri` and `Tet` element types.
+"""
+struct NodalTPSSMinimal <: AbstractMultidimensional
+    p::Int
+end
+
+@doc raw"""
+    NodalTPSSOptimal(p::Int)
+
+Approximation type for a nodal formulation of polynomial degree $p$ based on tensor-product
+split-simplex operators using an optimized one-dimensional SBP operator. Currently
+supports `Tri` and `Tet` element types.
+"""
+struct NodalTPSSOptimal <: AbstractMultidimensional
+    p::Int
+end
+
+@doc raw"""
+    MatrixFreeTPSSLGL(p::Int)
+
+Approximation type for a matrix-free nodal formulation of polynomial degree $p$ based on
+tensor-product split-simplex operators using a one-dimensional LGL SBP operator. Currently
+supports `Tri` and `Tet` element types.
+"""
+struct MatrixFreeTPSSLGL <: AbstractMultidimensional
+    p::Int
+end
+
 # Collapsed coordinate mapping
 abstract type AbstractReferenceMapping end
 struct NoMapping <: AbstractReferenceMapping end
@@ -165,7 +225,9 @@ following fields, which are defined according to the approximation type, element
 other parameters passed into the outer constructor:
 - `approx_type::AbstractApproximationType`: Type of operators used for the discretization
   on the reference element ([`NodalTensor`](@ref), [`ModalTensor`](@ref), [`NodalMulti`]
-  (@ref), [`ModalMulti`](@ref), [`NodalMultiDiagE`](@ref), or [`ModalMultiDiagE`](@ref))
+  (@ref), [`ModalMulti`](@ref), [`NodalMultiDiagE`](@ref), [`ModalMultiDiagE`](@ref),
+  [`NodalTPSS`](@ref), [`NodalTPSSLGL`](@ref), [`NodalTPSSMinimal`](@ref),
+  [`NodalTPSSOptimal`](@ref), or [`MatrixFreeTPSSLGL`](@ref))
 - `reference_element::StartUpDG.RefElemData`: Data structure containing quadrature node
   positions and operators used for defining the mapping from reference to physical space;
   contains the field `element_type::StartUpDG.AbstractElemShape` which determines the shape
@@ -509,6 +571,9 @@ include("tensor_cartesian.jl")
 
 export reference_geometric_factors, operators_1d
 include("tensor_simplex.jl")
+include("optimized.jl")
+include("csbp.jl")
+include("tensor_split_simplex.jl")
 
 export GeometricFactors,
        metrics,
