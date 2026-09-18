@@ -97,36 +97,66 @@ end
     return -u[1] * log(p / (u[1]^γ)) * inv_γ_minus_1
 end
 
-@inline function conservative_to_entropy!(w::AbstractVector{Float64},
-        conservation_law::EulerType{d},
-        u::AbstractVector{Float64}) where {d}
+@inline function conservative_to_entropy!(
+    w::AbstractVector{Float64},
+    conservation_law::EulerType{d},
+    u::AbstractVector{Float64},
+) where {d}
+
     (; γ, γ_minus_1, inv_γ_minus_1) = conservation_law
-    k = (0.5 / u[1]) * (sum(u[m + 1]^2 for m in 1:d))
-    p = γ_minus_1 * (u[end] - k)
+
+    ρ = u[1]
+
+    ke_num = 0.0
+    @inbounds for m in 1:d
+        um = u[m + 1]
+        ke_num += um * um
+    end
+
+    k = 0.5 * ke_num / ρ
+
+    p = γ_minus_1 * (u[d + 2] - k)
     inv_p = 1.0 / p
-    w[1] = inv_γ_minus_1 * (γ - log(p / (u[1]^γ))) - k * inv_p
+
+    logp = log(p)
+    logρ = log(ρ)
+
+    w[1] = inv_γ_minus_1 * (γ - (logp - γ * logρ)) - k * inv_p
+
     @inbounds for m in 1:d
         w[m + 1] = u[m + 1] * inv_p
     end
-    w[d + 2] = -u[1] * inv_p
+
+    w[d + 2] = -ρ * inv_p
+
     return
 end
+@inline function entropy_to_conservative!(
+    u::AbstractVector{Float64},
+    conservation_law::EulerType{d},
+    w::AbstractVector{Float64},
+) where {d}
 
-@inline function entropy_to_conservative!(u::AbstractVector{Float64},
-        conservation_law::EulerType{d},
-        w::AbstractVector{Float64}) where {d}
     (; γ, γ_minus_1, inv_γ_minus_1) = conservation_law
 
-    w = w * γ_minus_1
-    k = sum(w[m + 1]^2 for m in 1:d) / (2 * w[d + 2])
-    s = γ - w[1] + k
-    ρe = (γ_minus_1 / ((-w[d + 2])^γ))^inv_γ_minus_1 * exp(-s * inv_γ_minus_1)
+    k = γ_minus_1 * sum(w[m + 1]^2 for m in 1:d) / (2 * w[d + 2])
 
-    u[1] = -w[d + 2] * ρe
+    s = γ - γ_minus_1 * w[1] + k
+
+    wd2 = γ_minus_1 * w[d + 2]
+
+    ρe = exp(
+        (log(γ_minus_1) - γ * log(-wd2) - s) * inv_γ_minus_1
+    )
+
+    u[1] = -wd2 * ρe
+
     @inbounds for m in 1:d
-        u[m + 1] = w[m + 1] * ρe
+        u[m + 1] = γ_minus_1 * w[m + 1] * ρe
     end
+
     u[d + 2] = ρe * (1 - k)
+
     return
 end
 
