@@ -198,6 +198,8 @@ include("burgers.jl")
 export EulerEquations,
        NavierStokesEquations,
        EulerPeriodicTest,
+       EulerGaussianPulse,
+       EulerCosineWave,
        TaylorGreenVortex,
        IsentropicVortex,
        KelvinHelmholtzInstability
