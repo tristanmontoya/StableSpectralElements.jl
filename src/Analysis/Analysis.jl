@@ -34,7 +34,8 @@ using Plots:
 using LaTeXStrings: LaTeXString, latexstring
 using SparseArrays: sparse, blockdiag, kron!
 using OrdinaryDiffEq:
-                      ODESolution, solve, RK4,
+                      OrdinaryDiffEqAlgorithm,
+                      ODESolution, ODEIntegrator, solve, RK4,
                       step!, reinit!
 using StartUpDG: MeshData, vandermonde
 using RecipesBase
