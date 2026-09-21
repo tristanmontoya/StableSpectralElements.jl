@@ -2,9 +2,9 @@ function ReferenceApproximation(approx_type::ModalMulti,
         element_type::AbstractElemShape;
         mapping_degree::Int = 1,
         N_plot::Int = 10,
-        volume_quadrature_rule = DefaultQuadrature(2 *
+        volume_quadrature_rule = WorkuHickenZinggQuadrature(2 *
                                                    approx_type.p),
-        facet_quadrature_rule = DefaultQuadrature(2 * approx_type.p))
+        facet_quadrature_rule = WorkuHickenZinggQuadrature(2 * approx_type.p))
     d = dim(element_type)
     (; p) = approx_type
 
@@ -76,7 +76,7 @@ end
 
 function ReferenceApproximation(approx_type::ModalMultiDiagE,
         element_type::AbstractElemShape;
-        sbp_type::SBP = SBP{Hicken}(),
+        sbp_type::SBP = SBP{WHZ}(),
         mapping_degree::Int = 1,
         N_plot::Int = 10)
     d = dim(element_type)
@@ -109,7 +109,7 @@ end
 
 function ReferenceApproximation(approx_type::NodalMultiDiagE,
         element_type::AbstractElemShape;
-        sbp_type::SBP = SBP{Hicken}(),
+        sbp_type::SBP = SBP{WHZ}(),
         mapping_degree::Int = 1,
         N_plot::Int = 10)
     d = dim(element_type)
@@ -148,14 +148,14 @@ function ReferenceApproximation(approx_type::NodalTPSS,
         element_type::Tri;
         mapping_degree::Int = 1)
     B, N, _, _ = construct_split_facet_operator_tri(
-        approx_type.p, operator_type = "csbp", n1d = 8, T = Float64)
+        approx_type.p+1, operator_type = "csbp", n1d = 8, T = Float64)
     H, _, D, _, _ = construct_split_operator_tri(
-        approx_type.p, operator_type = "csbp", n1d = 8, T = Float64)
+        approx_type.p+1, operator_type = "csbp", n1d = 8, T = Float64)
 
     xg, _ = global_node_index_tri(
-        approx_type.p, operator_type = "csbp", n1d = 8, T = Float64)
+        approx_type.p+1, operator_type = "csbp", n1d = 8, T = Float64)
     xf, _ = global_node_index_tri_facet(
-        approx_type.p, operator_type = "csbp", n1d = 8, T = Float64)
+        approx_type.p+1, operator_type = "csbp", n1d = 8, T = Float64)
 
     x_v = xg[1, :]
     y_v = xg[2, :]
@@ -200,14 +200,14 @@ function ReferenceApproximation(approx_type::NodalTPSSLGL,
         element_type::Tri;
         mapping_degree::Int = 1)
     B, N, _, _ = construct_split_facet_operator_tri(
-        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+        approx_type.p+1, operator_type = "lgl", n1d = 8, T = Float64)
     H, _, D, _, _ = construct_split_operator_tri(
-        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+        approx_type.p+1, operator_type = "lgl", n1d = 8, T = Float64)
 
     xg, _ = global_node_index_tri(
-        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+        approx_type.p+1, operator_type = "lgl", n1d = 8, T = Float64)
     xf, _ = global_node_index_tri_facet(
-        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+        approx_type.p+1, operator_type = "lgl", n1d = 8, T = Float64)
 
     x_v = xg[1, :]
     y_v = xg[2, :]
@@ -252,13 +252,13 @@ function ReferenceApproximation(approx_type::NodalTPSSLGL,
         element_type::Tet;
         mapping_degree::Int = 1)
     B, N, _, _ = construct_split_facet_operator_tet(
-        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+        approx_type.p+2,operator_type = "lgl", n1d = 8, T = Float64)
     H, _, D, _ = construct_split_operator_tet(
-        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+        approx_type.p+2, operator_type = "lgl", n1d = 8, T = Float64)
     xg, _ = global_node_index_tet(
-        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+        approx_type.p+2, operator_type = "lgl", n1d = 8, T = Float64)
     xf, _ = global_node_index_tet_facet(
-        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+        approx_type.p+2, operator_type = "lgl", n1d = 8, T = Float64)
     x_v = xg[1, :]
     y_v = xg[2, :]
     z_v = xg[3, :]
@@ -303,14 +303,14 @@ function ReferenceApproximation(approx_type::NodalTPSSMinimal,
         element_type::Tri;
         mapping_degree::Int = 1)
     B, N, _, _ = construct_split_facet_operator_tri(
-        approx_type.p, operator_type = "minimal", n1d = 8, T = Float64)
+        approx_type.p+1, operator_type = "minimal", n1d = 8, T = Float64)
     H, _, D, _, _ = construct_split_operator_tri(
-        approx_type.p, operator_type = "minimal", n1d = 8, T = Float64)
+        approx_type.p+1, operator_type = "minimal", n1d = 8, T = Float64)
 
     xg, _ = global_node_index_tri(
-        approx_type.p, operator_type = "minimal", n1d = 8, T = Float64)
+        approx_type.p+1, operator_type = "minimal", n1d = 8, T = Float64)
     xf, _ = global_node_index_tri_facet(
-        approx_type.p, operator_type = "minimal", n1d = 8, T = Float64)
+        approx_type.p+1, operator_type = "minimal", n1d = 8, T = Float64)
 
     x_v = xg[1, :]
     y_v = xg[2, :]
@@ -355,14 +355,14 @@ function ReferenceApproximation(approx_type::NodalTPSSOptimal,
         element_type::Tri;
         mapping_degree::Int = 1)
     B, N, _, _ = construct_split_facet_operator_tri(
-        approx_type.p, operator_type = "optimal", n1d = 8, T = Float64)
+        approx_type.p+1, operator_type = "optimal", n1d = 8, T = Float64)
     H, _, D, _, _ = construct_split_operator_tri(
-        approx_type.p, operator_type = "optimal", n1d = 8, T = Float64)
+        approx_type.p+1, operator_type = "optimal", n1d = 8, T = Float64)
 
     xg, _ = global_node_index_tri(
-        approx_type.p, operator_type = "optimal", n1d = 8, T = Float64)
+        approx_type.p+1, operator_type = "optimal", n1d = 8, T = Float64)
     xf, _ = global_node_index_tri_facet(
-        approx_type.p, operator_type = "optimal", n1d = 8, T = Float64)
+        approx_type.p+1, operator_type = "optimal", n1d = 8, T = Float64)
 
     x_v = xg[1, :]
     y_v = xg[2, :]
@@ -407,13 +407,13 @@ function ReferenceApproximation(approx_type::NodalTPSSMinimal,
         element_type::Tet;
         mapping_degree::Int = 1)
     B, N, _, _ = construct_split_facet_operator_tet(
-        approx_type.p, operator_type = "minimal", n1d = 8, T = Float64)
+        approx_type.p+2, operator_type = "minimal", n1d = 8, T = Float64)
     H, _, D, _ = construct_split_operator_tet(
-        approx_type.p, operator_type = "minimal", n1d = 8, T = Float64)
+        approx_type.p+2, operator_type = "minimal", n1d = 8, T = Float64)
     xg, _ = global_node_index_tet(
-        approx_type.p, operator_type = "minimal", n1d = 8, T = Float64)
+        approx_type.p+2, operator_type = "minimal", n1d = 8, T = Float64)
     xf, _ = global_node_index_tet_facet(
-        approx_type.p, operator_type = "minimal", n1d = 8, T = Float64)
+        approx_type.p+2, operator_type = "minimal", n1d = 8, T = Float64)
     x_v = xg[1, :]
     y_v = xg[2, :]
     z_v = xg[3, :]
@@ -458,13 +458,13 @@ function ReferenceApproximation(approx_type::NodalTPSSOptimal,
         element_type::Tet;
         mapping_degree::Int = 1)
     B, N, _, _ = construct_split_facet_operator_tet(
-        approx_type.p, operator_type = "optimal", n1d = 8, T = Float64)
+        approx_type.p+2, operator_type = "optimal", n1d = 8, T = Float64)
     H, _, D, _ = construct_split_operator_tet(
-        approx_type.p, operator_type = "optimal", n1d = 8, T = Float64)
+        approx_type.p+2, operator_type = "optimal", n1d = 8, T = Float64)
     xg, _ = global_node_index_tet(
-        approx_type.p, operator_type = "optimal", n1d = 8, T = Float64)
+        approx_type.p+2, operator_type = "optimal", n1d = 8, T = Float64)
     xf, _ = global_node_index_tet_facet(
-        approx_type.p, operator_type = "optimal", n1d = 8, T = Float64)
+        approx_type.p+2, operator_type = "optimal", n1d = 8, T = Float64)
     x_v = xg[1, :]
     y_v = xg[2, :]
     z_v = xg[3, :]
@@ -509,16 +509,16 @@ function ReferenceApproximation(approx_type::MatrixFreeTPSSLGL,
         element_type::Tri;
         mapping_degree::Int = 1)
     Hs, _, _, Es, _, _, dxs = map_tensor_operators_to_tri(
-        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+        approx_type.p+1, operator_type = "lgl", n1d = 8, T = Float64)
     B, N, _, _ = construct_split_facet_operator_tri(
-        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+        approx_type.p+1, operator_type = "lgl", n1d = 8, T = Float64)
     H, _, _, _, _ = construct_split_operator_tri(
-        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+        approx_type.p+1, operator_type = "lgl", n1d = 8, T = Float64)
 
     xg, loc_glob_idx = global_node_index_tri(
-        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+        approx_type.p+1, operator_type = "lgl", n1d = 8, T = Float64)
     xf, _ = global_node_index_tri_facet(
-        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+        approx_type.p+1, operator_type = "lgl", n1d = 8, T = Float64)
 
     x_v = xg[1, :]
     y_v = xg[2, :]
@@ -589,16 +589,16 @@ function ReferenceApproximation(approx_type::MatrixFreeTPSSLGL,
         element_type::Tet;
         mapping_degree::Int = 1)
     Hs, _, _, Es, _, dxs = map_tensor_operators_to_tet(
-        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+        approx_type.p+2, operator_type = "lgl", n1d = 8, T = Float64)
     B, N, _, _ = construct_split_facet_operator_tet(
-        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+        approx_type.p+2, operator_type = "lgl", n1d = 8, T = Float64)
     H, _, _, _ = construct_split_operator_tet(
-        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+        approx_type.p+2, operator_type = "lgl", n1d = 8, T = Float64)
 
     xg, loc_glob_idx = global_node_index_tet(
-        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+        approx_type.p+2, operator_type = "lgl", n1d = 8, T = Float64)
     xf, _ = global_node_index_tet_facet(
-        approx_type.p, operator_type = "lgl", n1d = 8, T = Float64)
+        approx_type.p+2, operator_type = "lgl", n1d = 8, T = Float64)
 
     x_v = xg[1, :]
     y_v = xg[2, :]
