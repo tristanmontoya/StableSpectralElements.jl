@@ -23,10 +23,12 @@ function ReferenceOperators(
         BJf[k] = Diagonal(B .* J_f[:, k])
     end
 
+    # V and Vᵀ are always applied with "DefaultOperatorAlgorithm" which will call the warped tensor-product application
+    # if V and Vᵀ are CC-SBP operators, if nodal DiagE/TPSS/Omega then V should be identity and if modal diagE/Omega, it should be Octavian.
     return ReferenceOperators(Tuple(make_operator(D[m], alg) for m in 1:d),
         Tuple(transpose(make_operator(D[m], alg)) for m in 1:d),
-        make_operator(V, alg),
-        transpose(make_operator(V, alg)),
+        make_operator(V, DefaultOperatorAlgorithm()),
+        transpose(make_operator(V, DefaultOperatorAlgorithm())),
         make_operator(R, alg),
         transpose(make_operator(R, alg)),
         W,
@@ -67,8 +69,8 @@ function FluxDifferencingOperators(
 
     return FluxDifferencingOperators(S,
         C,
-        make_operator(V, alg),
-        transpose(make_operator(V, alg)),
+        make_operator(V, DefaultOperatorAlgorithm()),
+        transpose(make_operator(V, DefaultOperatorAlgorithm())),
         make_operator(R, alg),
         transpose(make_operator(R, alg)),
         W,
