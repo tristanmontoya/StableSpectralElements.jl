@@ -70,8 +70,8 @@ function WeightAdjustedSolver(J_q::Matrix{Float64},
 
     return WeightAdjustedSolver(I,
         J⁻¹W,
-        make_operator(V, operator_algorithm),
-        make_operator(V', operator_algorithm))
+        make_operator(V, DefaultOperatorAlgorithm()),
+        make_operator(V', DefaultOperatorAlgorithm()))
 end
 
 function WeightAdjustedSolver(J_q::Matrix{Float64},
