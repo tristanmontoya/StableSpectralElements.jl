@@ -1,0 +1,26 @@
+Run ended at: 2026-09-21_15:13:10
+Run finished at: 2026-09-21_15:13:17
+Operator type: NodalOmega
+Algorithm: DefaultOperatorAlgorithm()
+S type Tuple{Matrix{Float64}, Matrix{Float64}, Matrix{Float64}}
+V type LinearMaps.UniformScalingMap{Bool}
+Vᵀ type LinearMaps.UniformScalingMap{Bool}
+R type OctavianMap
+Rᵀ type OctavianMap
+p_vec: [1]
+M_vec: [1]
+Domain length L: 1.0
+End time T: 0.2
+Upwind (1.0)/symmetric flux (0.0): 1.0
+Mesh warping parameter: 0.03125
+Error matrix (rows=M_vec, cols=p_vec):
+0.09786037223307434
+
+DOF matrix (rows=M_vec, cols=p_vec):
+24.0
+
+dt matrix (rows=M_vec, cols=p_vec):
+0.0005
+
+Run times (seconds) for each (M,p) pair (rows=M_vec, cols=p_vec):
+0.046838998794555664

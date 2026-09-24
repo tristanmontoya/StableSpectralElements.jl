@@ -321,7 +321,7 @@ struct IsentropicVortex <: AbstractGridFunction{2}
     end
 end
 
-#= @inline function evaluate(f::IsentropicVortex, x::NTuple{2, Float64}, t::Float64 = 0.0)
+@inline function evaluate(f::IsentropicVortex, x::NTuple{2, Float64}, t::Float64 = 0.0)
     (; γ, Ma, θ, R, β, σ², x_0) = f
     x_rel = ((x[1] - x_0[1]) / R, (x[2] - x_0[2]) / R)
     Ω = β * exp(-0.5 / σ² * (x_rel[1]^2 + x_rel[2]^2))
@@ -332,9 +332,9 @@ end
     p = (ρ^γ) / γ
     E = p / (γ - 1) + 0.5 * ρ * (v[1]^2 + v[2]^2)
     return SVector{4}(ρ, ρ * v[1], ρ * v[2], E)
-end =#
+end
 
-@inline function evaluate(f::IsentropicVortex,x::NTuple{2, Float64},t::Float64)
+#= @inline function evaluate(f::IsentropicVortex,x::NTuple{2, Float64},t::Float64)
 
     (; γ, Ma, θ, R, β, σ², x_0) = f
     # Freestream convection velocity
@@ -352,7 +352,7 @@ end =#
     E = p / (γ - 1) + 0.5 * ρ * (v[1]^2 + v[2]^2)
 
     return SVector{4}(ρ, ρ*v[1], ρ*v[2], E)
-end
+end =#
 
 # similar to the euler periodic but a gaussian. Note this problem is not periodic 
 struct EulerGaussianPulse{d} <: AbstractGridFunction{d}

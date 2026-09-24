@@ -59,8 +59,7 @@ function RefElemData(elem::Tri,
         M,
         Pq,
         (Dr, Ds),
-        LIFT,
-        Nplot)
+        LIFT)
 end
 
 function RefElemData(elem::Tet,
@@ -131,6 +130,5 @@ function RefElemData(elem::Tet,
         M,
         Pq,
         (Dr, Ds, Dt),
-        LIFT,
-        Nplot)
+        LIFT)
 end
