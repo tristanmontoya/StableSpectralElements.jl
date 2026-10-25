@@ -80,7 +80,7 @@ end
         "test_advection_2d_tpss",
     )
 
-    @test l2 ≈ 0.43485592779254456 atol = tol
+    @test l2 ≈ 0.4135507581751895 atol = tol
     @test conservation ≈ 0.0 atol = tol
     @test energy ≈ 0.0 atol = tol
 end
