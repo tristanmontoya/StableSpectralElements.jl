@@ -98,11 +98,10 @@ end
 end
 
 @inline function conservative_to_entropy!(
-    w::AbstractVector{Float64},
-    conservation_law::EulerType{d},
-    u::AbstractVector{Float64},
+        w::AbstractVector{Float64},
+        conservation_law::EulerType{d},
+        u::AbstractVector{Float64}
 ) where {d}
-
     (; γ, γ_minus_1, inv_γ_minus_1) = conservation_law
 
     ρ = u[1]
@@ -132,11 +131,10 @@ end
     return
 end
 @inline function entropy_to_conservative!(
-    u::AbstractVector{Float64},
-    conservation_law::EulerType{d},
-    w::AbstractVector{Float64},
+        u::AbstractVector{Float64},
+        conservation_law::EulerType{d},
+        w::AbstractVector{Float64}
 ) where {d}
-
     (; γ, γ_minus_1, inv_γ_minus_1) = conservation_law
 
     k = γ_minus_1 * sum(w[m + 1]^2 for m in 1:d) / (2 * w[d + 2])
