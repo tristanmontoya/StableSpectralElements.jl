@@ -19,18 +19,6 @@ using LinearAlgebra:
                      rank,
                      cond
 using JLD2: save, load, save_object, load_object
-using Plots:
-             plot,
-             savefig,
-             plot!,
-             scatter,
-             text,
-             annotate!,
-             vline!,
-             grid,
-             theme_palette,
-             twinx,
-             @layout
 using LaTeXStrings: LaTeXString, latexstring
 using SparseArrays: sparse, blockdiag, kron!
 using OrdinaryDiffEq:

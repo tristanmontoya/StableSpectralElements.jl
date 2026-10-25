@@ -2,8 +2,6 @@
 module Visualize
 
 using LaTeXStrings: latexstring
-using Plots.PlotMeasures
-using Plots: plot, plot!, savefig
 using StartUpDG:
                  RefElemData,
                  MeshData,
@@ -38,7 +36,7 @@ using ..File: new_path
 export visualize, Plotter
 include("plot_1d.jl")
 
-export low_order_subdivision, postprocess_vtk, outline_element, plot_ref_elem
+export low_order_subdivision, postprocess_vtk, outline_element
 include("plot_2d.jl")
 include("plot_3d.jl")
 end
