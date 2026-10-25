@@ -1,6 +1,7 @@
 push!(LOAD_PATH, "../")
 using Test, StableSpectralElements, OrdinaryDiffEq, TimerOutputs, StaticArrays, Plots
 
+include("csbp.jl")
 include("test_driver.jl")
 include("burgers_fluxdiff_1d.jl")
 include("euler_1d_gauss.jl")
