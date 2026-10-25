@@ -8,6 +8,7 @@ include("euler_vortex_2d_nodal_diage.jl")
 include("euler_vortex_2d_modal.jl")
 include("advection_3d.jl")
 include("euler_3d.jl")
+include("sparse_operators.jl")
 
 const tol = 1.0e-10
 const p = 4

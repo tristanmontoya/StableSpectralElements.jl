@@ -51,7 +51,7 @@ end
                 i = row_index[ii]
                 if i < j
                     # evaluate two-point flux
-                   F_ij = compute_two_point_flux(conservation_law,
+                    F_ij = compute_two_point_flux(conservation_law,
                         two_point_flux,
                         u_q[i, :],
                         u_q[j, :])
@@ -186,68 +186,6 @@ end
     return
 end
 
-# Entropy projection with sparse facet interpolation
-@inline @views function entropy_projection!(mass_solver::AbstractMassMatrixSolver,
-    conservation_law::AbstractConservationLaw,
-    u_q::AbstractMatrix,
-    u_f::AbstractMatrix,
-    w_q::AbstractMatrix,
-    w_f::AbstractMatrix,
-    w::AbstractMatrix,
-    V::LinearMap,
-    Vᵀ::LinearMap,
-    R::SparseMatrixCSC,
-    WJ::Diagonal,
-    u::AbstractMatrix,
-    k::Int)
-    
-    mul!(u_q, V, u)
-    @inbounds for i in axes(u_q, 1)
-        conservative_to_entropy!(w_q[i, :], conservation_law, u_q[i, :])
-    end
-
-    # project entropy variables and store modal coeffs in w
-    lmul!(WJ, w_q)
-    mul!(w, Vᵀ, w_q)
-    mass_matrix_solve!(mass_solver, k, w, w_q) # w = M[k] \ w
-    
-    # get nodal values of projected entropy variables
-    mul!(w_q, V, w)
-    mul!(w_f, R, w_q)
-    
-    # convert back to conservative variables
-    @inbounds for i in axes(u_q, 1)
-        entropy_to_conservative!(u_q[i, :], conservation_law, w_q[i, :])
-    end
-    @inbounds for i in axes(u_f, 1)
-        entropy_to_conservative!(u_f[i, :], conservation_law, w_f[i, :])
-    end
-end
-
-# specialized for nodal schemes WITH SPARSE R(not necessarily diagonal-E)
-@inline @views function entropy_projection!(::AbstractMassMatrixSolver,
-    conservation_law::AbstractConservationLaw,
-    u_q::AbstractMatrix,
-    u_f::AbstractMatrix,
-    w_q::AbstractMatrix,
-    w_f::AbstractMatrix,
-    w::AbstractMatrix,
-    V::UniformScalingMap, # nodal
-    ::LinearMap,
-    R::SparseMatrixCSC, #will be sparse 
-    ::Diagonal,
-    u::AbstractMatrix,
-    ::Int)
-    mul!(u_q, V, u)
-    @inbounds for i in axes(u, 1)
-        conservative_to_entropy!(w_q[i, :], conservation_law, u_q[i, :])
-    end
-    mul!(w_f, R, w_q)
-    @inbounds for i in axes(u_f, 1)
-        entropy_to_conservative!(u_f[i, :], conservation_law, w_f[i, :])
-    end
-end
-
 # specialized for nodal schemes (not necessarily diagonal-E)
 @inline @views function entropy_projection!(::AbstractMassMatrixSolver,
         conservation_law::AbstractConservationLaw,
@@ -258,7 +196,7 @@ end
         w::AbstractMatrix,
         V::UniformScalingMap, # nodal
         ::LinearMap,
-        R::LinearMap, # not just SelectionMap
+        R::Union{LinearMap, SparseMatrixCSC}, # not just SelectionMap
         ::Diagonal,
         u::AbstractMatrix,
         ::Int)
@@ -282,7 +220,7 @@ end
         w::AbstractMatrix,
         V::LinearMap, # not just UniformScalingMap
         Vᵀ::LinearMap,
-        R::Union{LinearMap, AbstractMatrix}, # not just SelectionMap
+        R::Union{LinearMap, SparseMatrixCSC}, # not just SelectionMap
         WJ::Diagonal,
         u::AbstractMatrix,
         k::Int)

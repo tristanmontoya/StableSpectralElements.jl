@@ -1,6 +1,7 @@
 module MatrixFreeOperators
 
-using LinearAlgebra, LinearMaps, MuladdMacro, StaticArrays, Octavian, TimerOutputs, SparseArrays
+using LinearAlgebra, LinearMaps, MuladdMacro, StaticArrays, Octavian, TimerOutputs
+using SparseArrays
 export AbstractOperatorAlgorithm,
        BLASAlgorithm,
        GenericMatrixAlgorithm,
@@ -15,6 +16,14 @@ struct DefaultOperatorAlgorithm <: AbstractOperatorAlgorithm end
 struct BLASAlgorithm <: AbstractOperatorAlgorithm end
 struct GenericMatrixAlgorithm <: AbstractOperatorAlgorithm end
 struct GenericTensorProductAlgorithm <: AbstractOperatorAlgorithm end
+
+"""
+    SparseMatrixAlgorithm()
+
+Apply differentiation and facet interpolation operators as sparse matrices with
+`ReferenceOperator()`. Preserve identity and selection maps, and keep modal
+interpolation operators in their default representations.
+"""
 struct SparseMatrixAlgorithm <: AbstractOperatorAlgorithm end
 
 export WarpedTensorProductMap2D, WarpedTensorProductMap3D
@@ -86,15 +95,14 @@ function make_operator(map::LinearMaps.KroneckerMap{Float64, <:NTuple{3, LinearM
     make_operator(map.maps[3], GenericMatrixAlgorithm())
 end
 
-# Sparse Array
+# Sparse matrix application
 function make_operator(matrix::AbstractMatrix, ::SparseMatrixAlgorithm)
-    sparse(Matrix(matrix))
+    sparse(matrix)
 end
 make_operator(map::NoOp, ::SparseMatrixAlgorithm) = map
 
-function make_operator(map::LinearMap, ::SparseMatrixAlgorithm) 
+function make_operator(map::LinearMap, ::SparseMatrixAlgorithm)
     sparse(Matrix(map))
 end
-make_operator(matrix::Diagonal, ::SparseMatrixAlgorithm) = sparse(Matrix(matrix))
 
 end
