@@ -13,7 +13,6 @@ Returns `(D, Q, H, x)`, where `D` is the differentiation matrix, `Q = H * D`,
   Summation by parts for finite difference approximations for d/dx.
   [DOI: 10.1006/jcph.1994.1005](https://doi.org/10.1006/jcph.1994.1005)
 """
-
 function get_1d_csbp(p)
     L = 2
     if p == 1
