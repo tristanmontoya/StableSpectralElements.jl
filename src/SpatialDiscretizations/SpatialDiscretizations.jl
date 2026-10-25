@@ -151,9 +151,7 @@ end
 @doc raw"""
     NodalTPSS(p::Int)
 
-Approximation type for a nodal formulation of polynomial degree $p$ based on tensor-product
-split-simplex operators using a one-dimensional classical finite-difference SBP operator.
-Currently supports `Tri` and `Tet` element types.
+Approximation type for a nodal formulation of polynomial degree $p$ based on tensor-product split-simplex operators using a one-dimensional classical finite-difference SBP operator. Supports `Tri` elements with degrees 1–3; the underlying one-dimensional degree is `p + 1`.
 """
 struct NodalTPSS <: AbstractMultidimensional
     p::Int
@@ -173,9 +171,7 @@ end
 @doc raw"""
     NodalTPSSMinimal(p::Int)
 
-Approximation type for a nodal formulation of polynomial degree $p$ based on tensor-product
-split-simplex operators using a minimal one-dimensional SBP operator. Currently supports
-`Tri` and `Tet` element types.
+Approximation type for a nodal formulation of polynomial degree $p$ based on tensor-product split-simplex operators using a minimal one-dimensional SBP operator. Supports degrees 1–5 on `Tri` elements and degrees 1–4 on `Tet` elements; the underlying one-dimensional degree is `p + d - 1` in dimension `d`.
 """
 struct NodalTPSSMinimal <: AbstractMultidimensional
     p::Int
@@ -184,9 +180,7 @@ end
 @doc raw"""
     NodalTPSSOptimal(p::Int)
 
-Approximation type for a nodal formulation of polynomial degree $p$ based on tensor-product
-split-simplex operators using an optimized one-dimensional SBP operator. Currently
-supports `Tri` and `Tet` element types.
+Approximation type for a nodal formulation of polynomial degree $p$ based on tensor-product split-simplex operators using an optimized one-dimensional SBP operator. Supports degrees 1–5 on `Tri` elements and degrees 1–4 on `Tet` elements; the underlying one-dimensional degree is `p + d - 1` in dimension `d`.
 """
 struct NodalTPSSOptimal <: AbstractMultidimensional
     p::Int
