@@ -20,9 +20,9 @@ using LinearAlgebra:
                      Symmetric,
                      I,
                      UniformScaling
-using TimerOutputs
+using TimerOutputs, BenchmarkTools
 using LinearMaps: LinearMap, UniformScalingMap, TransposeMap
-using OrdinaryDiffEq: CarpenterKennedy2N54, ODEProblem, solve
+using OrdinaryDiffEq: ODEProblem, OrdinaryDiffEqAlgorithm, solve
 using StartUpDG: num_faces
 
 using ..MatrixFreeOperators
@@ -62,8 +62,7 @@ export AbstractResidualForm,
        project_function!,
        flux_differencing_operators,
        initialize,
-       semidiscretize,
-       default_time_integrator
+       semidiscretize
 
 abstract type AbstractResidualForm end
 abstract type AbstractMappingForm end
@@ -197,7 +196,7 @@ struct PreAllocatedArraysFirstOrder <: AbstractPreAllocatedArrays
             N_c,
             N_e,
             temp_size = N_q,
-            N_r = Threads.maxthreadid())
+            N_r = Threads.nthreads())
         return new(Array{Float64}(undef, N_q, N_c, d, N_r),
             Array{Float64}(undef, N_f, N_c, N_r),
             Array{Float64}(undef, N_f, N_c, N_r),
@@ -228,7 +227,7 @@ struct PreAllocatedArraysSecondOrder <: AbstractPreAllocatedArrays
             N_c,
             N_e,
             temp_size = N_q,
-            N_r = Threads.maxthreadid())
+            N_r = Threads.nthreads())
         return new(Array{Float64}(undef, N_q, N_c, d, N_r),
             Array{Float64}(undef, N_f, N_c, N_r),
             Array{Float64}(undef, N_f, N_c, N_r),
@@ -352,7 +351,7 @@ function Solver(conservation_law::AbstractConservationLaw{d, FirstOrder, N_c},
         form,
         parallelism,
         PreAllocatedArraysFirstOrder(d, N_q, N_f, N_c, N_e, N_p,
-            Threads.maxthreadid()))
+            Threads.nthreads()))
 end
 
 function Solver(conservation_law::AbstractConservationLaw{d, SecondOrder, N_c},
@@ -373,8 +372,7 @@ function Solver(conservation_law::AbstractConservationLaw{d, SecondOrder, N_c},
         spatial_discretization.mesh.mapP,
         form,
         parallelism,
-        PreAllocatedArraysSecondOrder(d, N_q, N_f, N_c, N_e, N_p,
-            Threads.maxthreadid()))
+        PreAllocatedArraysSecondOrder(d, N_q, N_f, N_c, N_e, N_p))
 end
 
 # Gets tuple containing the number of nodal/modal coefficients, number of conservative
@@ -428,22 +426,6 @@ end
     return project_function(initial_data, V, W, J_q, xyzq)
 end
 
-@doc raw"""
-    default_time_integrator()
-
-Return the default explicit time integration algorithm used by package examples and tests.
-This is the fourth-order, five-stage, low-storage Runge-Kutta method of Carpenter and
-Kennedy (1994), with `williamson_condition = false`.
-
-# References
-- M. H. Carpenter, C. A. Kennedy (1994)
-  Fourth-order 2N-storage Runge-Kutta schemes.
-  NASA TM 109112.
-"""
-function default_time_integrator()
-    return CarpenterKennedy2N54(williamson_condition = false)
-end
-
 @inline function semidiscretize(conservation_law::AbstractConservationLaw{d, PDEType},
         spatial_discretization::SpatialDiscretization{d},
         initial_data,
@@ -469,6 +451,7 @@ end
 
     return ODEProblem(semi_discrete_residual!, u0, tspan, solver)
 end
+
 @doc raw"""
     semi_discrete_residual!(dudt::AbstractArray{Float64,3},
                            u::AbstractArray{Float64, 3},
@@ -490,7 +473,7 @@ In-place function for evaluating the right-hand side of $\underline{u}'(t) = \un
   (i.e. `Serial` or `Threaded`).
 - `t::Float64`: Time variable
 """
-@timeit "semi-disc. residual" function semi_discrete_residual!(
+function semi_discrete_residual!(
         dudt::AbstractArray{Float64,
             3},
         u::AbstractArray{Float64, 3},
@@ -502,17 +485,17 @@ In-place function for evaluating the right-hand side of $\underline{u}'(t) = \un
             Serial},
         t::Float64 = 0.0)
     @inbounds for k in axes(u, 3)
-        @timeit "nodal values" nodal_values!(u, solver, k)
+        nodal_values!(u, solver, k)
     end
 
     @inbounds for k in axes(u, 3)
-        @timeit "time deriv." time_derivative!(dudt, solver, k)
+        time_derivative!(dudt, solver, k)
     end
 
     return dudt
 end
 
-@timeit "semi-disc. residual" function semi_discrete_residual!(
+function semi_discrete_residual!(
         dudt::AbstractArray{Float64,
             3},
         u::AbstractArray{Float64, 3},
@@ -534,7 +517,7 @@ end
     return dudt
 end
 
-@timeit "semi-disc. residual" function semi_discrete_residual!(
+function semi_discrete_residual!(
         dudt::AbstractArray{Float64,
             3},
         u::AbstractArray{Float64, 3},
@@ -560,7 +543,7 @@ end
     return dudt
 end
 
-@timeit "semi-disc. residual" function semi_discrete_residual!(
+function semi_discrete_residual!(
         dudt::AbstractArray{Float64,
             3},
         u::AbstractArray{Float64, 3},

@@ -5,6 +5,8 @@ using StaticArrays
 export AbstractGridFunction,
        ConstantFunction,
        InitialDataSine,
+       DataSine,
+       DataManySine,
        InitialDataCosine,
        InitialDataGaussian,
        InitialDataSinCos,
@@ -37,6 +39,33 @@ struct InitialDataSine{d} <: AbstractGridFunction{d}
     end
 end
 
+# for solutions which don't return to the initial condition
+struct DataSine{d} <: AbstractGridFunction{d}
+    # in the form of π_{i=1}^d (Asin(ω(x_i-c_i*t))) to match TPSS paper/results
+    A::Float64  # amplitude
+    ω:: NTuple{d, Float64}  # frequency in each direction (possible to have different frequencies)
+    c:: NTuple{d, Float64}  # wave speed in each direction
+    N_c::Int
+
+    function DataSine(A::Float64, ω::NTuple{d, Float64}, c::NTuple{d, Float64}) where {d}
+        return new{d}(A, ω, c, 1)
+    end
+end
+
+# multiple frequencies
+struct DataManySine{d} <: AbstractGridFunction{d}
+    A::Float64
+    ω::NTuple{d,NTuple{d,Float64}}
+    c::NTuple{d,Float64}
+    N_c::Int
+
+    function DataManySine(A::Float64,
+                      ω::NTuple{d,NTuple{d,Float64}},
+                      c::NTuple{d,Float64}) where {d}
+        new{d}(A, ω, c, 1)
+    end
+end
+
 struct InitialDataCosine{d} <: AbstractGridFunction{d}
     A::Float64  # amplitude
     k::NTuple{d, Float64}  # wave number in each direction
@@ -51,9 +80,10 @@ struct InitialDataGaussian{d} <: AbstractGridFunction{d}
     A::Float64  # amplitude
     σ::Float64 # width
     x₀::NTuple{d, Float64}
+    a::NTuple{d, Float64} # advection velocity
     N_c::Int
-    function InitialDataGaussian(A::Float64, σ::Float64, x₀::NTuple{d, Float64}) where {d}
-        return new{d}(A, σ, x₀, 1)
+    function InitialDataGaussian(A::Float64, σ::Float64, x₀::NTuple{d, Float64}, a::NTuple{d, Float64}) where {d}
+        return new{d}(A, σ, x₀, a, 1)
     end
 end
 
@@ -127,6 +157,28 @@ end
     return fill(f.A * prod(Tuple(sin(f.k[m] * x[m]) for m in 1:d)), f.N_c)
 end
 
+@inline function evaluate(f::DataSine{d},
+        x::NTuple{d, Float64},
+        t::Float64) where {d}
+    return fill(f.A * prod(Tuple(sin(f.ω[m] * (x[m] - f.c[m] * t)) for m in 1:d)), f.N_c)
+end
+
+# Initial condition with many sine frequencies
+@inline function evaluate(f::DataManySine{d},
+    x::NTuple{d,Float64},
+    t::Float64) where {d}
+    val = f.A
+
+    @inbounds for m in 1:d
+        ξ = x[m] - f.c[m]*t
+        for j in 1:d
+            val *= sin(f.ω[m][j] * ξ)
+        end
+    end
+
+    return fill(val, f.N_c)
+end
+
 @inline function evaluate(f::InitialDataCosine{d},
         x::NTuple{d, Float64},
         t::Float64 = 0.0) where {d}
@@ -134,11 +186,13 @@ end
 end
 
 @inline function evaluate(f::InitialDataGaussian{d},
-        x::NTuple{d, Float64},
-        t::Float64 = 0.0) where {d}
-    (; A, σ, x₀, N_c) = f
-    r² = sum((x[m] - x₀[m]) .^ 2 for m in 1:d)
-    return fill(A * exp.(-r² / (2.0 * σ^2)), N_c)
+    x::NTuple{d, Float64},
+    t::Float64 = 0.0) where {d}
+(; A, σ, x₀, a, N_c) = f
+
+r² = sum((x[m] - (x₀[m] + a[m] * t))^2 for m in 1:d)
+
+return fill(A * exp(-r² / (2σ^2)), N_c)
 end
 
 @inline function evaluate(f::InitialDataGassner, x::NTuple{1, Float64}, t::Float64 = 0.0)

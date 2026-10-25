@@ -1,0 +1,26 @@
+Run ended at: 2026-09-21_15:13:23
+Run finished at: 2026-09-21_15:14:00
+Operator type: NodalTPSSLGL
+Algorithm: SparseMatrixAlgorithm()
+S type Tuple{Matrix{Float64}, Matrix{Float64}, Matrix{Float64}}
+V type LinearMaps.UniformScalingMap{Bool}
+Vᵀ type LinearMaps.UniformScalingMap{Bool}
+R type SelectionMap
+Rᵀ type LinearMaps.TransposeMap{Float64, SelectionMap}
+p_vec: [1]
+M_vec: [1]
+Domain length L: 1.0
+End time T: 0.2
+Upwind (1.0)/symmetric flux (0.0): 1.0
+Mesh warping parameter: 0.03125
+Error matrix (rows=M_vec, cols=p_vec):
+0.020665739686595574
+
+DOF matrix (rows=M_vec, cols=p_vec):
+1050.0
+
+dt matrix (rows=M_vec, cols=p_vec):
+0.0005
+
+Run times (seconds) for each (M,p) pair (rows=M_vec, cols=p_vec):
+12.58178997039795

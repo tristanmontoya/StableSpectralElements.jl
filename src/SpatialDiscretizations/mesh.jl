@@ -1,6 +1,7 @@
 abstract type AbstractMeshGenStrategy end
 struct Uniform <: AbstractMeshGenStrategy end
 struct ZigZag <: AbstractMeshGenStrategy end
+struct OppositeDiagonal <: AbstractMeshGenStrategy end
 
 abstract type AbstractMeshWarping{d} end
 struct DelReyWarping{d} <: AbstractMeshWarping{d}
@@ -208,6 +209,38 @@ function cartesian_mesh(::Tri, M::NTuple{2, Int}, ::ZigZag)
              bot_mid+2 bot_right+2 bot_right+1])
     end
     return (VX, VY), EtoV
+end
+
+# Implement cartesian_mesh with top-left to bottom-right diagonal splitting
+function cartesian_mesh(::Tri, M::NTuple{2, Int}, ::OppositeDiagonal)
+    Kx, Ky = M
+    
+    # Collect LinRange into Vector{Float64} to match your meshgrid method signature
+    x1D = collect(LinRange(-1.0, 1.0, Kx + 1))
+    y1D = collect(LinRange(-1.0, 1.0, Ky + 1))
+    
+    (VY, VX) = meshgrid(y1D, x1D)
+    
+    sk = 1
+    EToV = zeros(Int, 2 * Kx * Ky, 3)
+    id(ex, ey) = ex + (ey - 1) * (Kx + 1)
+
+    for ey = 1:Ky
+        for ex = 1:Kx
+            id1 = id(ex, ey)         # Bottom-left
+            id2 = id(ex + 1, ey)     # Bottom-right
+            id3 = id(ex + 1, ey + 1) # Top-right
+            id4 = id(ex, ey + 1)     # Top-left
+
+            # Split along top-left (id4) to bottom-right (id2) diagonal
+            EToV[2*sk-1, :] = [id1 id2 id4]  # Bottom-Left Triangle (CCW)
+            EToV[2*sk,   :] = [id2 id3 id4]  # Top-Right Triangle (CCW)
+            
+            sk += 1
+        end
+    end
+
+    return (VX[:], VY[:]), EToV
 end
 
 function metrics(dxdr::SMatrix{1, 1})
@@ -562,4 +595,123 @@ function warp_mesh(mesh::MeshData{d},
         reference_approximation::ReferenceApproximation{<:RefElemData{d}},
         mesh_warping::AbstractMeshWarping{d}) where {d}
     return warp_mesh(mesh, reference_approximation.reference_element, mesh_warping)
+end
+
+function unstructured_periodic_mesh(reference_element, 
+    limits::NTuple{2, Float64},
+    h::Float64;
+    seed=1, 
+    iterations=100)
+
+    Random.seed!(seed)
+    low, high = limits
+    span = high - low
+    
+# 1. Improved Point Density
+    # Targets equilateral triangle area density
+    N_internal = ceil(Int, (span^2) / (h^2)) 
+    
+    # 2. Points Generation (Equidistant & Translated)
+    # This ensures the "slots" on the boundary are perfectly matched
+    n_intervals = max(1, round(Int, span / h))
+    boundary_step = span / n_intervals
+    
+    # Internal points start random
+    pts_internal = [(low + span * rand(), low + span * rand()) for _ in 1:N_internal]
+    
+    pts_boundary = NTuple{2, Float64}[]
+    for i in 1:(n_intervals - 1)
+        val = low + i * boundary_step
+        push!(pts_boundary, (low, val), (high, val)) # Left/Right
+        push!(pts_boundary, (val, low), (val, high)) # Bottom/Top
+    end
+    push!(pts_boundary, (low, low), (high, low), (high, high), (low, high))
+
+    # 3. Periodic Lloyd's Relaxation
+    for _ in 1:iterations
+        # --- PERIODIC TILING STEP ---
+        # Create "Ghost" copies of internal points to simulate an infinite grid
+        ghost_pts = NTuple{2, Float64}[]
+        for dx in [-span, 0.0, span]
+            for dy in [-span, 0.0, span]
+                if dx == 0 && dy == 0 continue end 
+                for p in pts_internal
+                    push!(ghost_pts, (p[1] + dx, p[2] + dy))
+                end
+            end
+        end
+
+        # Triangulate everything together so edge points see neighbors across the seam
+        all_relax_pts = vcat(pts_internal, pts_boundary, ghost_pts)
+        tri = triangulate(all_relax_pts)
+        vor = voronoi(tri)
+        
+        for i in 1:N_internal
+            c = DelaunayTriangulation.get_centroid(vor, i)
+            if isfinite(c[1]) && isfinite(c[2])
+                # Move the point, wrapping it back into the [low, high] box
+                new_x = low + mod(c[1] - low, span)
+                new_y = low + mod(c[2] - low, span)
+                pts_internal[i] = (new_x, new_y)
+            end
+        end
+    end
+
+    # 4. Final Triangulation
+    all_pts = vcat(pts_internal, pts_boundary)
+    tri = triangulate(all_pts)
+    
+    # Filter out Ghost Triangles (indices > length(all_pts) or <= 0)
+    real_tris = filter(t -> all(idx -> idx > 0 && idx <= length(all_pts), t), each_triangle(tri))
+    EToV = reduce(vcat, [[t[1] t[2] t[3]] for t in real_tris])
+
+    # 5. Extract Coordinates
+    VX = clamp.([p[1] for p in all_pts], low, high)
+    VY = clamp.([p[2] for p in all_pts], low, high)
+
+    # 6. Quality Metrics
+    max_edge_ratio = 1.0
+    min_edge_ratio = 1.0
+    for i in 1:size(EToV, 1)
+        v_idx = EToV[i, :]
+        p = [(VX[v_idx[j]], VY[v_idx[j]]) for j in 1:3]
+        sides = [norm(p[1] .- p[2]), norm(p[2] .- p[3]), norm(p[3] .- p[1])]
+        max_edge_ratio = max(max_edge_ratio, maximum(sides) / minimum(sides))
+        min_edge_ratio = min(min_edge_ratio, maximum(sides) / minimum(sides))
+    end
+
+    # 7. Construct MeshData
+    rd = reference_element.reference_element
+    md = MeshData(VX, VY, EToV, rd)
+    
+    return make_periodic(md)
+end
+
+function distmesh_unstructued_periodic_mesh(reference_element, 
+    limits::NTuple{2, Float64}, 
+    h::Float64)
+    
+    low, high = limits
+    fd(pp) = drectangle(pp, low, high, low, high)
+    
+    mesh = distmesh2d(fd, huniform, h, ((low,low), (high,high)))
+    
+    VX = zeros(length(mesh.p))
+    VY = zeros(length(mesh.p))
+    EToV = zeros(Int, length(mesh.t), 3)
+
+    for i in 1:length(mesh.p)
+        VX[i] = mesh.p[i][1]
+        VY[i] = mesh.p[i][2]
+    end
+    for i in 1:length(mesh.t)
+        EToV[i,1] = mesh.t[i][1]
+        EToV[i,2] = mesh.t[i][2]
+        EToV[i,3] = mesh.t[i][3]
+    end
+    rd = reference_element.reference_element
+
+    md = MeshData(VX, VY, EToV, rd)
+
+    return(make_periodic(md))
 end

@@ -1,0 +1,38 @@
+Run ended at: 2026-09-21_12:57:52
+Run finished at: 2026-09-21_13:04:13
+Operator type: NodalTPSSLGL
+Algorithm: Sparse
+Operator Application: ReferenceOperator()
+D type Tuple{SparseMatrixCSC{Float64, Int64}, SparseMatrixCSC{Float64, Int64}, SparseMatrixCSC{Float64, Int64}}
+Dᵀ type Tuple{Transpose{Float64, SparseMatrixCSC{Float64, Int64}}, Transpose{Float64, SparseMatrixCSC{Float64, Int64}}, Transpose{Float64, SparseMatrixCSC{Float64, Int64}}}
+V type LinearMaps.UniformScalingMap{Bool}
+Vᵀ type LinearMaps.UniformScalingMap{Bool}
+R type SelectionMap
+Rᵀ type LinearMaps.TransposeMap{Float64, SelectionMap}
+p_vec: [1]
+M_vec: [4, 6]
+advection velocity: (1.5, 0.5, 0.7071067811865475)
+omega: Gaussian
+Domain length L: 1.0
+End time T: 0.2
+Upwind (1.0)/symmetric flux (0.0): 1.0
+Mesh warping parameter: 0.03125
+Error matrix (rows=M_vec, cols=p_vec):
+0.003524890105194297
+0.001123390041068932
+
+DOF matrix (rows=M_vec, cols=p_vec):
+67200.0
+226800.0
+dt matrix (rows=M_vec, cols=p_vec):
+0.0005
+0.0005
+Setup times (seconds) for each (M,p) pair (rows=M_vec, cols=p_vec):
+24.15666913986206
+23.758635997772217
+Run times (seconds) for each (M,p) pair (rows=M_vec, cols=p_vec):
+37.29199290275574
+126.66177701950073
+Residual times (ms) for each (M,p) pair (rows=M_vec, cols=p_vec):
+0.0
+0.0

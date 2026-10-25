@@ -27,11 +27,19 @@ using StartUpDG:
                  make_periodic,
                  jaskowiec_sukumar_quad_nodes,
                  Hicken,
+                 WHZ,
                  geometric_factors,
                  MultidimensionalQuadrature
 using Jacobi: zgrjm, wgrjm, zgj, wgj, zglj, wglj
 
 using ..MatrixFreeOperators
+
+using NodesAndModes
+
+# The following three are for unstructured mesh generation
+using Random
+using DelaunayTriangulation
+using DistMesh
 
 using Reexport
 @reexport using StartUpDG: RefElemData, AbstractElemShape, Line, Quad, Tri, Tet, Hex, SBP
@@ -47,7 +55,9 @@ export AbstractApproximationType,
        ModalMultiDiagE,
        NodalMultiDiagE,
        NodalTPSS,
+       NodalTPSSOpt,
        NodalTPSSLGL,
+       NodalTPSSOpt,
        NodalTPSSOptimal,
        NodalTPSSMinimal,
        MatrixFreeTPSSLGL,
@@ -578,10 +588,13 @@ include("tensor_split_simplex.jl")
 export GeometricFactors,
        metrics,
        uniform_periodic_mesh,
+       unstructured_periodic_mesh,
+       distmesh_unstructued_periodic_mesh,
        warp_mesh,
        cartesian_mesh,
        Uniform,
        ZigZag,
+       OppositeDiagonal,
        DelReyWarping,
        ChanWarping
 include("mesh.jl")

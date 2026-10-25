@@ -30,6 +30,10 @@ struct DefaultQuadrature <: AbstractQuadratureRule
     degree::Int
 end
 
+struct WorkuHickenZinggQuadrature <: AbstractQuadratureRule
+    degree::Int
+end
+
 @inline LGLQuadrature(q::Int) = GaussLobattoQuadrature(q, 0, 0)
 @inline LGQuadrature(q::Int) = GaussQuadrature(q, 0, 0)
 @inline LGRQuadrature(q::Int) = GaussRadauQuadrature(q, 0, 0)
@@ -43,6 +47,18 @@ function meshgrid(x::Vector{Float64}, y::Vector{Float64}, z::Vector{Float64})
     return ([x[k] for i in 1:length(z), j in 1:length(y), k in 1:length(y)],
         [y[j] for i in 1:length(z), j in 1:length(y), k in 1:length(y)],
         [z[i] for i in 1:length(z), j in 1:length(y), k in 1:length(y)])
+end
+
+function quadrature(::Line, quadrature_rule::WorkuHickenZinggQuadrature)
+    return quadrature(Line(), LGQuadrature(ceil(Int, (quadrature_rule.degree - 1) / 2)))
+end
+
+function quadrature(::Tri, quadrature_rule::WorkuHickenZinggQuadrature)
+    return WHZ_quad_nodes_tri(quadrature_rule.degree)
+end
+
+function quadrature(::Tet, quadrature_rule::WorkuHickenZinggQuadrature)
+    return WHZ_quad_nodes_tet(quadrature_rule.degree)
 end
 
 function quadrature(::Line, quadrature_rule::DefaultQuadrature)

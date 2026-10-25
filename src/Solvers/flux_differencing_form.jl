@@ -11,7 +11,7 @@
         for j in (i + 1):size(u_q, 1)
 
             # evaluate two-point flux (must be symmetric)
-            F_ij = compute_two_point_flux(conservation_law,
+             F_ij = compute_two_point_flux(conservation_law,
                 two_point_flux,
                 u_q[i, :],
                 u_q[j, :])
@@ -45,7 +45,7 @@ end
     fill!(r_q, 0.0)
     @inbounds for m in 1:d
         Sm_nz = nonzeros(S[m])
-        row_index = rowvals(S[m])
+        row_index = rowvals(S[m])   
         for j in axes(u_q, 1)
             for ii in nzrange(S[m], j)
                 i = row_index[ii]
@@ -58,6 +58,7 @@ end
                     Sm_ij = Sm_nz[ii]
 
                     # apply flux-differencing operator to flux tensor
+                     
                     for e in 1:N_c
                         Fm_ij = 0.0
                         for n in 1:d
@@ -186,6 +187,68 @@ end
     return
 end
 
+# jerrys function to allow for sparse V and R
+@inline @views function entropy_projection!(mass_solver::AbstractMassMatrixSolver,
+    conservation_law::AbstractConservationLaw,
+    u_q::AbstractMatrix,
+    u_f::AbstractMatrix,
+    w_q::AbstractMatrix,
+    w_f::AbstractMatrix,
+    w::AbstractMatrix,
+    V::LinearMap,
+    Vᵀ::LinearMap,
+    R::SparseMatrixCSC,
+    WJ::Diagonal,
+    u::AbstractMatrix,
+    k::Int)
+    
+    mul!(u_q, V, u)
+    @inbounds for i in axes(u_q, 1)
+        conservative_to_entropy!(w_q[i, :], conservation_law, u_q[i, :])
+    end
+
+    # project entropy variables and store modal coeffs in w
+    lmul!(WJ, w_q)
+    mul!(w, Vᵀ, w_q)
+    mass_matrix_solve!(mass_solver, k, w, w_q) # w = M[k] \ w
+    
+    # get nodal values of projected entropy variables
+    mul!(w_q, V, w)
+    mul!(w_f, R, w_q)
+    
+    # convert back to conservative variables
+    @inbounds for i in axes(u_q, 1)
+        entropy_to_conservative!(u_q[i, :], conservation_law, w_q[i, :])
+    end
+    @inbounds for i in axes(u_f, 1)
+        entropy_to_conservative!(u_f[i, :], conservation_law, w_f[i, :])
+    end
+end
+
+# specialized for nodal schemes WITH SPARSE R(not necessarily diagonal-E)
+@inline @views function entropy_projection!(::AbstractMassMatrixSolver,
+    conservation_law::AbstractConservationLaw,
+    u_q::AbstractMatrix,
+    u_f::AbstractMatrix,
+    w_q::AbstractMatrix,
+    w_f::AbstractMatrix,
+    w::AbstractMatrix,
+    V::UniformScalingMap, # nodal
+    ::LinearMap,
+    R::SparseMatrixCSC, #will be sparse 
+    ::Diagonal,
+    u::AbstractMatrix,
+    ::Int)
+    mul!(u_q, V, u)
+    @inbounds for i in axes(u, 1)
+        conservative_to_entropy!(w_q[i, :], conservation_law, u_q[i, :])
+    end
+    mul!(w_f, R, w_q)
+    @inbounds for i in axes(u_f, 1)
+        entropy_to_conservative!(u_f[i, :], conservation_law, w_f[i, :])
+    end
+end
+
 # specialized for nodal schemes (not necessarily diagonal-E)
 @inline @views function entropy_projection!(::AbstractMassMatrixSolver,
         conservation_law::AbstractConservationLaw,
@@ -220,7 +283,7 @@ end
         w::AbstractMatrix,
         V::LinearMap, # not just UniformScalingMap
         Vᵀ::LinearMap,
-        R::LinearMap, # not just SelectionMap
+        R::Union{LinearMap, AbstractMatrix}, # not just SelectionMap
         WJ::Diagonal,
         u::AbstractMatrix,
         k::Int)
@@ -316,7 +379,6 @@ end
 
     # scale numerical flux by quadrature weights
     lmul!(BJf[k], f_f[:, :, id])
-
     # volume flux differencing term
     flux_difference!(r_q[:, :, id],
         S,

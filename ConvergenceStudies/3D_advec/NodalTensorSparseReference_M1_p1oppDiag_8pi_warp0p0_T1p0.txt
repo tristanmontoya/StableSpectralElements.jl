@@ -1,0 +1,32 @@
+Run ended at: 2026-09-21_14:50:12
+Run finished at: 2026-09-21_14:50:17
+Operator type: NodalTensor
+Algorithm: Sparse
+Operator Application: ReferenceOperator()
+D type Tuple{SparseMatrixCSC{Float64, Int64}, SparseMatrixCSC{Float64, Int64}, SparseMatrixCSC{Float64, Int64}}
+Dᵀ type Tuple{Transpose{Float64, SparseMatrixCSC{Float64, Int64}}, Transpose{Float64, SparseMatrixCSC{Float64, Int64}}, Transpose{Float64, SparseMatrixCSC{Float64, Int64}}}
+V type LinearMaps.UniformScalingMap{Bool}
+Vᵀ type LinearMaps.UniformScalingMap{Bool}
+R type SparseMatrixCSC{Float64, Int64}
+Rᵀ type Transpose{Float64, SparseMatrixCSC{Float64, Int64}}
+p_vec: [1]
+M_vec: [1]
+advection velocity: (1.5, 0.5, 0.7071067811865475)
+omega: Gaussian
+Domain length L: 1.0
+End time T: 0.2
+Upwind (1.0)/symmetric flux (0.0): 1.0
+Mesh warping parameter: 0.03125
+Error matrix (rows=M_vec, cols=p_vec):
+1.4442682041063861e-5
+
+DOF matrix (rows=M_vec, cols=p_vec):
+48.0
+dt matrix (rows=M_vec, cols=p_vec):
+0.0005
+Setup times (seconds) for each (M,p) pair (rows=M_vec, cols=p_vec):
+1.721670150756836
+Run times (seconds) for each (M,p) pair (rows=M_vec, cols=p_vec):
+0.019453048706054688
+Residual times (ms) for each (M,p) pair (rows=M_vec, cols=p_vec):
+0.0
