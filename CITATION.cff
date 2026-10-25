@@ -13,7 +13,7 @@ authors:
   - family-names: "Zingg"
     given-names: "David W."
     affiliation: "University of Toronto"
-version: "0.2.18"
+version: "0.2.19"
 date-released: "2026-10-24"
 repository-code: "https://github.com/tristanmontoya/StableSpectralElements.jl"
 url: "https://tjbmontoya.com/StableSpectralElements.jl/stable/"
