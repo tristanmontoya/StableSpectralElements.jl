@@ -7,6 +7,7 @@ function ReferenceOperators(
         nJf::Array{Float64, 3},
         J_f::Matrix{Float64}) where {d}
     (; D, W, V, R, B) = reference_approximation
+    V_alg = alg isa SparseMatrixAlgorithm ? DefaultOperatorAlgorithm() : alg
     (N_f, N_e) = size(J_f)
 
     halfWΛ = Array{Diagonal{Float64, Vector{Float64}}, 3}(undef, d, d, N_e)
@@ -25,8 +26,8 @@ function ReferenceOperators(
 
     return ReferenceOperators(Tuple(make_operator(D[m], alg) for m in 1:d),
         Tuple(transpose(make_operator(D[m], alg)) for m in 1:d),
-        make_operator(V, alg),
-        transpose(make_operator(V, alg)),
+        make_operator(V, V_alg),
+        transpose(make_operator(V, V_alg)),
         make_operator(R, alg),
         transpose(make_operator(R, alg)),
         W,
@@ -48,6 +49,7 @@ function FluxDifferencingOperators(
         nJf::Array{Float64, 3},
         J_f::Matrix{Float64}) where {d}
     (; D, W, V, R, B, approx_type, reference_element, reference_mapping) = reference_approximation
+    V_alg = alg isa SparseMatrixAlgorithm ? DefaultOperatorAlgorithm() : alg
     (N_f, N_e) = size(J_f)
 
     WJ = Vector{Diagonal{Float64, Vector{Float64}}}(undef, N_e)
@@ -67,8 +69,8 @@ function FluxDifferencingOperators(
 
     return FluxDifferencingOperators(S,
         C,
-        make_operator(V, alg),
-        transpose(make_operator(V, alg)),
+        make_operator(V, V_alg),
+        transpose(make_operator(V, V_alg)),
         make_operator(R, alg),
         transpose(make_operator(R, alg)),
         W,

@@ -196,7 +196,7 @@ end
         w::AbstractMatrix,
         V::UniformScalingMap, # nodal
         ::LinearMap,
-        R::LinearMap, # not just SelectionMap
+        R::Union{LinearMap, SparseMatrixCSC}, # not just SelectionMap
         ::Diagonal,
         u::AbstractMatrix,
         ::Int)
@@ -220,7 +220,7 @@ end
         w::AbstractMatrix,
         V::LinearMap, # not just UniformScalingMap
         Vᵀ::LinearMap,
-        R::LinearMap, # not just SelectionMap
+        R::Union{LinearMap, SparseMatrixCSC}, # not just SelectionMap
         WJ::Diagonal,
         u::AbstractMatrix,
         k::Int)

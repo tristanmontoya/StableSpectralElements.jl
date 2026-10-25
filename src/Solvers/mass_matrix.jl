@@ -68,10 +68,13 @@ function WeightAdjustedSolver(J_q::Matrix{Float64},
         J⁻¹W[k] = Diagonal(W ./ J_q[:, k])
     end
 
+    V_alg = operator_algorithm isa SparseMatrixAlgorithm ?
+            DefaultOperatorAlgorithm() : operator_algorithm
+
     return WeightAdjustedSolver(I,
         J⁻¹W,
-        make_operator(V, operator_algorithm),
-        make_operator(V', operator_algorithm))
+        make_operator(V, V_alg),
+        make_operator(V', V_alg))
 end
 
 function WeightAdjustedSolver(J_q::Matrix{Float64},
@@ -99,10 +102,13 @@ function WeightAdjustedSolver(J_q::Matrix{Float64},
         J⁻¹W[k] = Diagonal(W ./ J_q[:, k])
     end
 
+    V_alg = operator_algorithm isa SparseMatrixAlgorithm ?
+            DefaultOperatorAlgorithm() : operator_algorithm
+
     return WeightAdjustedSolver(M⁻¹,
         J⁻¹W,
-        make_operator(V, operator_algorithm),
-        make_operator(V', operator_algorithm))
+        make_operator(V, V_alg),
+        make_operator(V', V_alg))
 end
 
 function DiagonalSolver(J_q::Matrix{Float64}, ::UniformScalingMap, W::Diagonal)

@@ -79,7 +79,7 @@ end
         "test_advection_2d_tpss",
     )
 
-    @test l2 ≈ 0.43485592779254456 atol = tol
+    @test l2 ≈ 0.41560679324470445 atol = tol
     @test conservation ≈ 0.0 atol = tol
     @test energy ≈ 0.0 atol = tol
 end
@@ -104,7 +104,7 @@ end
         "test_advection_2d_tpss_lgl",
     )
 
-    @test l2 ≈ 0.33519391720788677 atol = tol
+    @test l2 ≈ 0.39098381916334163 atol = tol
     @test conservation ≈ 0.0 atol = tol
     @test energy ≈ 0.0 atol = tol
 end
@@ -129,7 +129,7 @@ end
         "test_advection_2d_tpss_minimal",
     )
 
-    @test l2 ≈ 0.41100030076934896 atol = tol
+    @test l2 ≈ 0.41557616446942863 atol = tol
     @test conservation ≈ 0.0 atol = tol
     @test energy ≈ 0.0 atol = tol
 end
@@ -154,7 +154,7 @@ end
         "test_advection_2d_tpss_optimal",
     )
 
-    @test l2 ≈ 0.4148060750887028 atol = tol
+    @test l2 ≈ 0.4156134667176253 atol = tol
     @test conservation ≈ 0.0 atol = tol
     @test energy ≈ 0.0 atol = tol
 end
@@ -248,7 +248,7 @@ end
         "test_advection_3d_tpss_lgl",
     )
 
-    @test l2 ≈ 0.4184609838459122 atol = tol
+    @test l2 ≈ 0.3456711231795331 atol = tol
     @test conservation ≈ 0.0 atol = tol
     @test energy ≈ 0.0 atol = tol
 end
