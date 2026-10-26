@@ -1,7 +1,7 @@
 # StableSpectralElements.jl
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://tjbmontoya.com/StableSpectralElements.jl/stable/) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://tjbmontoya.com/StableSpectralElements.jl/dev/) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![CI](https://github.com/tristanmontoya/StableSpectralElements.jl/actions/workflows/ci.yml/badge.svg)](https://github.com/tristanmontoya/StableSpectralElements.jl/actions/workflows/ci.yml) [![Documenter](https://github.com/tristanmontoya/StableSpectralElements.jl/actions/workflows/documenter.yml/badge.svg)](https://github.com/tristanmontoya/StableSpectralElements.jl/actions/workflows/documenter.yml) 
+[![CI](https://github.com/tristanmontoya/StableSpectralElements.jl/actions/workflows/ci.yml/badge.svg)](https://github.com/tristanmontoya/StableSpectralElements.jl/actions/workflows/ci.yml) [![Documenter](https://github.com/tristanmontoya/StableSpectralElements.jl/actions/workflows/documenter.yml/badge.svg)](https://github.com/tristanmontoya/StableSpectralElements.jl/actions/workflows/documenter.yml) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23649085.svg)](https://doi.org/10.5281/zenodo.23649085)
 <p align=center>
 <img src="docs/src/assets/visualization.png" alt="drawing" style="width:300px;"/>
 
