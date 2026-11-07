@@ -39,7 +39,6 @@ function euler_3d(M::Int = 2)
         exact_solution,
         form,
         (0.0, T),
-        parallelism = Serial(),
     )
 
     N_t = 25 * M * (p + 1)

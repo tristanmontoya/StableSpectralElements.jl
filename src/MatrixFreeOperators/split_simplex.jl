@@ -49,7 +49,15 @@ using LinearAlgebra
 
 @inline function LinearAlgebra.mul!(
         y::AbstractVector, M::SplitSimplexMap, x::AbstractVector)
-    (; D, Dt, Hinv, E, L, t1, t2, t3, map, m, dim) = M
+    (; D, Dt, Hinv, E, L, map, m, dim) = M
+
+    # With one thread, reuse the temporary arrays from the struct
+    t1, t2, t3 = if Threads.nthreads() == 1
+        (M.t1, M.t2, M.t3)
+    else  # Otherwise, allocate new temporary arrays for each thread
+        (similar(M.t1), similar(M.t2), similar(M.t3))
+    end
+
     fill!(y, 0.0)
 
     @inbounds for k in 1:(dim + 1)
@@ -82,7 +90,13 @@ end
 @inline function LinearAlgebra.mul!(
         y::AbstractArray, Mᵀ::SplitSimplexMapT, x::AbstractArray)
     M = Mᵀ.parent
-    (; D, Dt, Hinv, E, L, t1, t2, t3, map, m, dim) = M
+    (; D, Dt, Hinv, E, L, map, m, dim) = M
+
+    t1, t2, t3 = if Threads.nthreads() == 1
+        (M.t1, M.t2, M.t3)
+    else
+        (similar(M.t1), similar(M.t2), similar(M.t3))
+    end
 
     fill!(y, 0.0)
 

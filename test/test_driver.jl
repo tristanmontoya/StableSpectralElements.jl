@@ -45,7 +45,8 @@ function test_driver(
     T::Float64,
     dt::Float64,
     mesh_perturb::Float64,
-    test_name::String,
+    test_name::String;
+    solver_kwargs...,
 )
 
     spatial_discretization =
@@ -71,7 +72,8 @@ function test_driver(
         form,
         (0.0, T),
         strategy,
-        alg,
+        alg;
+        solver_kwargs...,
     )
 
     sol = solve(
@@ -86,7 +88,7 @@ function test_driver(
         ErrorAnalysis(results_path, conservation_law, spatial_discretization),
         last(sol.u),
         exact_solution,
-        1.0,
+        T,
     )
     conservation = analyze(
         PrimaryConservationAnalysis(results_path, conservation_law, spatial_discretization),
