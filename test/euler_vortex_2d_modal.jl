@@ -1,4 +1,4 @@
-function euler_vortex_2d_modal(M::Int = 4)
+function euler_vortex_2d_modal(M::Int = 4; parallelism::AbstractParallelism)
 
     mach_number = 0.4
     angle = 0.0
@@ -52,6 +52,7 @@ function euler_vortex_2d_modal(M::Int = 4)
         form,
         (0.0, T),
         ReferenceOperator(),
+        parallelism = parallelism,
     )
 
     sol = solve(

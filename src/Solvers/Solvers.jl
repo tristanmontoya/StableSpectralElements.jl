@@ -454,7 +454,8 @@ end
         mass_matrix_solver::AbstractMassMatrixSolver = default_mass_matrix_solver(
             spatial_discretization,
             alg),
-        parallelism::AbstractParallelism = Threaded()) where {d,
+        parallelism::AbstractParallelism = Threads.nthreads() == 1 ? Serial() : Threaded()) where {
+        d,
         PDEType
 }
     u0 = initialize(initial_data, spatial_discretization)

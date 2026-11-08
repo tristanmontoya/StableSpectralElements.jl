@@ -11,7 +11,9 @@ include("euler_3d.jl")
 
 const tol = 1.0e-10
 const p = 4
-@testset "Advection-Diffusion 1D ModalMulti" begin
+
+@testset "Advection-Diffusion 1D ModalMulti ($parallelism)" for parallelism in
+                                                                (Serial(), Threaded())
     (l2, conservation, _) = test_driver(
         ReferenceApproximation(ModalMulti(p), Line()),
         LinearAdvectionDiffusionEquation(1.0, 5.0e-2),
@@ -29,6 +31,7 @@ const p = 4
         1.0 / 100.0,
         0.1,
         "test_advection_diffusion_1d_dgmulti",
+        parallelism = parallelism,
     )
 
     @test l2 ≈ 6.988216111882884e-6 atol = tol
@@ -79,7 +82,7 @@ end
         "test_advection_2d_tpss",
     )
 
-    @test l2 ≈ 0.41560679324470445 atol = tol
+    @test l2 ≈ 0.006211491713299045 atol = tol
     @test conservation ≈ 0.0 atol = tol
     @test energy ≈ 0.0 atol = tol
 end
@@ -104,7 +107,37 @@ end
         "test_advection_2d_tpss_lgl",
     )
 
-    @test l2 ≈ 0.39098381916334163 atol = tol
+    @test l2 ≈ 0.13566429705860292 atol = tol
+    @test conservation ≈ 0.0 atol = tol
+    @test energy ≈ 0.0 atol = tol
+end
+
+@testset "Advection 2D Energy-Conservative MatrixFreeTPSSLGL Tri ($parallelism)" for parallelism in
+                                                                                     (
+    Serial(),
+    Threaded(),
+)
+    tpss_p = 2
+    (l2, conservation, energy) = test_driver(
+        ReferenceApproximation(MatrixFreeTPSSLGL(tpss_p), Tri(), mapping_degree = tpss_p),
+        LinearAdvectionEquation((1.0, 1.0)),
+        InitialDataSine(1.0, (2 * π, 2 * π)),
+        StandardForm(
+            mapping_form = SkewSymmetricMapping(),
+            inviscid_numerical_flux = LaxFriedrichsNumericalFlux(0.0),
+        ),
+        ReferenceOperator(),
+        DefaultOperatorAlgorithm(),
+        1.0,
+        1,
+        1.0,
+        0.01,
+        0.0,
+        "test_advection_2d_matrix_free_tpss_lgl",
+        parallelism = parallelism,
+    )
+
+    @test l2 ≈ 0.3833440470339516 atol = tol
     @test conservation ≈ 0.0 atol = tol
     @test energy ≈ 0.0 atol = tol
 end
@@ -129,7 +162,7 @@ end
         "test_advection_2d_tpss_minimal",
     )
 
-    @test l2 ≈ 0.41557616446942863 atol = tol
+    @test l2 ≈ 0.0009735630165042566 atol = tol
     @test conservation ≈ 0.0 atol = tol
     @test energy ≈ 0.0 atol = tol
 end
@@ -154,7 +187,7 @@ end
         "test_advection_2d_tpss_optimal",
     )
 
-    @test l2 ≈ 0.4156134667176253 atol = tol
+    @test l2 ≈ 0.00019455583362921314 atol = tol
     @test conservation ≈ 0.0 atol = tol
     @test energy ≈ 0.0 atol = tol
 end
@@ -208,8 +241,12 @@ end
     @test entropy ≈ 0.0 atol = tol
 end
 
-@testset "Isentropic Euler vortex FluxDiff ModalTensor Tri 2D LF" begin
-    (l2, conservation) = euler_vortex_2d_modal()
+@testset "Isentropic Euler vortex FluxDiff ModalTensor Tri 2D LF ($parallelism)" for parallelism in
+                                                                                     (
+    Serial(),
+    Threaded(),
+)
+    (l2, conservation) = euler_vortex_2d_modal(parallelism = parallelism)
 
     @test l2 ≈ [
         0.015568197027072704,
@@ -248,7 +285,7 @@ end
         "test_advection_3d_tpss_lgl",
     )
 
-    @test l2 ≈ 0.3456711231795331 atol = tol
+    @test l2 ≈ 0.044321162293318075 atol = tol
     @test conservation ≈ 0.0 atol = tol
     @test energy ≈ 0.0 atol = tol
 end
